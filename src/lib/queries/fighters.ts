@@ -1,11 +1,16 @@
 import { sql } from "@/lib/db";
 import type {
+  DirectMatchupFight,
   FighterAggregateStats,
+  FighterComparisonDetail,
+  FighterComparisonProfile,
+  FighterComparisonAverages,
   FighterCardData,
   FighterDetail,
   FighterFilters,
   FighterHistoryItem,
   FighterListResult,
+  FighterSearchResult,
   HomeStats,
 } from "@/lib/types";
 
@@ -60,6 +65,26 @@ type AggregateRow = {
   total_fight_stats: string | null;
 };
 
+type SearchRow = {
+  id: number;
+  name: string;
+  nickname: string | null;
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
+type DirectMatchupRow = {
+  fight_id: number;
+  event_name: string | null;
+  event_date: string | null;
+  winner_id: number | null;
+  method: string | null;
+  end_round: number | null;
+  end_time: string | null;
+  weight_class: string | null;
+};
+
 function mapFighter(row: FighterRow): FighterCardData {
   return {
     id: row.id,
@@ -99,6 +124,22 @@ function mapAggregate(row?: AggregateRow): FighterAggregateStats {
     controlTimeSeconds: Number(row?.control_time_seconds ?? 0),
     knockdowns: Number(row?.knockdowns ?? 0),
     totalFightStats: Number(row?.total_fight_stats ?? 0),
+  };
+}
+
+function mapComparisonAggregate(row?: AggregateRow): FighterComparisonAverages {
+  const totals = mapAggregate(row);
+  const fightCount = Math.max(1, totals.totalFightStats);
+
+  return {
+    sigStrikesLandedPerFight: totals.sigStrikesLanded / fightCount,
+    sigStrikeAccuracy: totals.sigStrikeAccuracy,
+    knockdownsPerFight: totals.knockdowns / fightCount,
+    takedownsLandedPerFight: totals.takedownsLanded / fightCount,
+    takedownAccuracy: totals.takedownAccuracy,
+    submissionAttemptsPerFight: totals.submissionAttempts / fightCount,
+    controlTimePerFightSeconds: totals.controlTimeSeconds / fightCount,
+    totalFightStats: totals.totalFightStats,
   };
 }
 
@@ -357,5 +398,142 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     fightCount: Number(fighterRow.fight_count ?? 0),
     history,
     aggregateStats: mapAggregate(aggregateRows[0]),
+  };
+}
+
+export async function searchFighters(
+  query: string,
+  limit = 8,
+): Promise<FighterSearchResult[]> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const rows = await sql<SearchRow>(
+    `select id, name, nickname, wins, losses, draws
+     from fighters
+     where name ilike $1
+     order by
+       case when lower(name) = lower($2) then 0 else 1 end,
+       case when lower(name) like lower($3) then 0 else 1 end,
+       wins desc,
+       name asc
+     limit $4`,
+    [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    nickname: row.nickname,
+    wins: row.wins,
+    losses: row.losses,
+    draws: row.draws,
+  }));
+}
+
+export async function getFighterComparisonDetail(
+  fighterAId: number,
+  fighterBId: number,
+): Promise<FighterComparisonDetail | null> {
+  const fighterRows = await sql<FighterRow>(
+    `select
+      f.*,
+      (
+        select count(*)::text
+        from fights fi
+        where fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+      ) as fight_count,
+      (
+        select fi2.weight_class
+        from fights fi2
+        where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
+        order by fi2.updated_at desc nulls last, fi2.id desc
+        limit 1
+      ) as latest_weight_class
+    from fighters f
+    where f.id in ($1, $2)`,
+    [fighterAId, fighterBId],
+  );
+
+  if (fighterRows.length !== 2) {
+    return null;
+  }
+
+  const aggregateRows = await sql<AggregateRow & { fighter_id: number }>(
+    `select
+      fighter_id,
+      sum(sig_strikes_landed)::text as sig_strikes_landed,
+      sum(sig_strikes_attempted)::text as sig_strikes_attempted,
+      sum(takedowns_landed)::text as takedowns_landed,
+      sum(takedowns_attempted)::text as takedowns_attempted,
+      sum(submission_attempts)::text as submission_attempts,
+      sum(control_time_seconds)::text as control_time_seconds,
+      sum(knockdowns)::text as knockdowns,
+      count(*)::text as total_fight_stats
+    from fight_stats
+    where fighter_id in ($1, $2)
+    group by fighter_id`,
+    [fighterAId, fighterBId],
+  );
+
+  const directMatchupRows = await sql<DirectMatchupRow>(
+    `select
+      fi.id as fight_id,
+      e.name as event_name,
+      e.event_date,
+      fi.winner_id,
+      fi.method,
+      fi.end_round,
+      fi.end_time,
+      fi.weight_class
+    from fights fi
+    left join events e on e.id = fi.event_id
+    where
+      (fi.fighter_red_id = $1 and fi.fighter_blue_id = $2)
+      or
+      (fi.fighter_red_id = $2 and fi.fighter_blue_id = $1)
+    order by e.event_date desc nulls last, fi.id desc`,
+    [fighterAId, fighterBId],
+  );
+
+  const aggregateMap = new Map(
+    aggregateRows.map((row) => [row.fighter_id, mapComparisonAggregate(row)]),
+  );
+
+  const profileMap = new Map<number, FighterComparisonProfile>(
+    fighterRows.map((row) => [
+      row.id,
+      {
+        ...mapFighter(row),
+        aggregateStats: aggregateMap.get(row.id) ?? mapComparisonAggregate(),
+      },
+    ]),
+  );
+
+  const fighterA = profileMap.get(fighterAId);
+  const fighterB = profileMap.get(fighterBId);
+
+  if (!fighterA || !fighterB) {
+    return null;
+  }
+
+  const directMatchups: DirectMatchupFight[] = directMatchupRows.map((row) => ({
+    fightId: row.fight_id,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    winnerId: row.winner_id,
+    method: row.method,
+    endRound: row.end_round,
+    endTime: row.end_time,
+    weightClass: row.weight_class,
+  }));
+
+  return {
+    fighterA,
+    fighterB,
+    directMatchups,
   };
 }

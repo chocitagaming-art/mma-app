@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { ArrowRightLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { formatRecord, formatWeight } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
@@ -11,8 +13,8 @@ type FighterCardProps = {
 
 export function FighterCard({ fighter }: FighterCardProps) {
   return (
-    <Link href={`/fighters/${fighter.id}`} className="group block h-full">
-      <Card className="flex h-full flex-col overflow-hidden border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 transition duration-300 hover:-translate-y-1 hover:border-red-400/40 hover:shadow-2xl hover:shadow-red-950/30">
+    <Card className="group flex h-full flex-col overflow-hidden border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 transition duration-300 hover:-translate-y-1 hover:border-red-400/40 hover:shadow-2xl hover:shadow-red-950/30">
+      <Link href={`/fighters/${fighter.id}`} className="block">
         <CardHeader className="space-y-4 border-b border-white/5 pb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
@@ -28,6 +30,8 @@ export function FighterCard({ fighter }: FighterCardProps) {
             </Badge>
           </div>
         </CardHeader>
+      </Link>
+      <Link href={`/fighters/${fighter.id}`} className="block flex-1">
         <CardContent className="flex-1 space-y-5 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -62,13 +66,27 @@ export function FighterCard({ fighter }: FighterCardProps) {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex items-center justify-between border-t border-white/5 px-6 py-4 text-sm text-zinc-400">
-          <span>{fighter.fightCount} logged fights</span>
-          <span className="text-red-200 transition group-hover:translate-x-1">
-            View profile →
-          </span>
-        </CardFooter>
-      </Card>
-    </Link>
+      </Link>
+      <CardFooter className="flex items-center justify-between gap-3 border-t border-white/5 px-6 py-4 text-sm text-zinc-400">
+        <span>{fighter.fightCount} logged fights</span>
+        <div className="flex items-center gap-2">
+          <Link href={`/compare?a=${fighter.id}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-zinc-300 hover:bg-white/5 hover:text-white"
+            >
+              <ArrowRightLeft />
+              Compare
+            </Button>
+          </Link>
+          <Link href={`/fighters/${fighter.id}`}>
+            <span className="text-red-200 transition group-hover:translate-x-1">
+              View profile →
+            </span>
+          </Link>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

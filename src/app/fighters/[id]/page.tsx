@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ArrowRightLeft } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { StatBar } from "@/components/stat-bar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -80,6 +82,15 @@ export default async function FighterDetailPage({
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
                     {fighter.nationality ?? "Nationality unavailable"}
                   </Badge>
+                  <Link href={`/compare?a=${fighter.id}`}>
+                    <Button
+                      variant="secondary"
+                      className="bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
+                    >
+                      <ArrowRightLeft />
+                      Compare fighter
+                    </Button>
+                  </Link>
                 </div>
               </div>
               <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-5 text-right">

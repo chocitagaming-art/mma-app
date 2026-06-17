@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/", label: "Home" },
   { href: "/fighters", label: "Fighters" },
+  { href: "/compare", label: "Compare" },
 ];
 
 export function SiteHeader() {

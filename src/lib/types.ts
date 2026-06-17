@@ -77,6 +77,49 @@ export type FighterAggregateStats = {
   totalFightStats: number;
 };
 
+export type FighterSearchResult = {
+  id: number;
+  name: string;
+  nickname: string | null;
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
+export type FighterComparisonAverages = {
+  sigStrikesLandedPerFight: number;
+  sigStrikeAccuracy: number;
+  knockdownsPerFight: number;
+  takedownsLandedPerFight: number;
+  takedownAccuracy: number;
+  submissionAttemptsPerFight: number;
+  controlTimePerFightSeconds: number;
+  totalFightStats: number;
+};
+
+export type FighterComparisonProfile = Fighter & {
+  fightCount: number;
+  latestWeightClass: string | null;
+  aggregateStats: FighterComparisonAverages;
+};
+
+export type DirectMatchupFight = {
+  fightId: number;
+  eventName: string | null;
+  eventDate: string | null;
+  winnerId: number | null;
+  method: string | null;
+  endRound: number | null;
+  endTime: string | null;
+  weightClass: string | null;
+};
+
+export type FighterComparisonDetail = {
+  fighterA: FighterComparisonProfile;
+  fighterB: FighterComparisonProfile;
+  directMatchups: DirectMatchupFight[];
+};
+
 export type FighterDetail = {
   fighter: Fighter;
   latestWeightClass: string | null;
