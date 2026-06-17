@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,12 @@ export function FighterHeadshot({
   imageClassName,
   priority = false,
 }: FighterHeadshotProps) {
+  const [imageFailed, setImageFailed] = useState(false);
   const initials = getInitials(name);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [headshotUrl]);
 
   return (
     <div
@@ -47,12 +53,12 @@ export function FighterHeadshot({
         className,
       )}
     >
-      {headshotUrl ? (
+      {headshotUrl && !imageFailed ? (
         <Image
           src={headshotUrl}
           alt={`${name} headshot`}
           fill
-          priority={priority}
+          preload={priority}
           sizes={
             size === "sm"
               ? "48px"
@@ -63,6 +69,7 @@ export function FighterHeadshot({
                   : "224px"
           }
           className={cn("object-cover object-top", imageClassName)}
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-500/20 via-zinc-900 to-zinc-950 text-center">
