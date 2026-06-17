@@ -6,6 +6,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/fighters", label: "Fighters" },
   { href: "/compare", label: "Compare" },
+  { href: "/predict", label: "Predict" },
 ];
 
 export function SiteHeader() {

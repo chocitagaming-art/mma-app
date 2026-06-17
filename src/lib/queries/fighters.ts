@@ -448,6 +448,41 @@ export async function searchFighters(
   }));
 }
 
+export async function getFighterSearchResultById(
+  fighterId: number,
+): Promise<FighterSearchResult | null> {
+  const rows = await sql<SearchRow>(
+    `select
+      id,
+      name,
+      nickname,
+      headshot_url,
+      wins,
+      losses,
+      draws
+     from fighters
+     where id = $1
+     limit 1`,
+    [fighterId],
+  );
+
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    nickname: row.nickname,
+    headshotUrl: row.headshot_url,
+    wins: row.wins,
+    losses: row.losses,
+    draws: row.draws,
+  };
+}
+
 export async function getFighterComparisonDetail(
   fighterAId: number,
   fighterBId: number,
