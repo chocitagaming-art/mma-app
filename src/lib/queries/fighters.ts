@@ -10,6 +10,7 @@ import type {
   FighterFilters,
   FighterHistoryItem,
   FighterListResult,
+  NewsArticle,
   FighterSearchResult,
   HomeStats,
 } from "@/lib/types";
@@ -87,6 +88,19 @@ type DirectMatchupRow = {
   weight_class: string | null;
 };
 
+type NewsRow = {
+  id: number;
+  headline: string;
+  summary: string | null;
+  source: string | null;
+  url: string;
+  published_at: string | null;
+  fighter_id: number | null;
+  fighter_name: string | null;
+  category: string | null;
+  relevance: string | null;
+};
+
 function mapFighter(row: FighterRow): FighterCardData {
   return {
     id: row.id,
@@ -143,6 +157,21 @@ function mapComparisonAggregate(row?: AggregateRow): FighterComparisonAverages {
     submissionAttemptsPerFight: totals.submissionAttempts / fightCount,
     controlTimePerFightSeconds: totals.controlTimeSeconds / fightCount,
     totalFightStats: totals.totalFightStats,
+  };
+}
+
+function mapNewsArticle(row: NewsRow): NewsArticle {
+  return {
+    id: row.id,
+    headline: row.headline,
+    summary: row.summary,
+    source: row.source,
+    url: row.url,
+    publishedAt: row.published_at,
+    fighterId: row.fighter_id,
+    fighterName: row.fighter_name,
+    category: row.category,
+    relevance: row.relevance ? Number(row.relevance) : null,
   };
 }
 
@@ -328,7 +357,7 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     return null;
   }
 
-  const [historyRows, aggregateRows] = await Promise.all([
+  const [historyRows, aggregateRows, newsRows] = await Promise.all([
     sql<HistoryRow>(
       `select
         fi.id as fight_id,
@@ -378,6 +407,24 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
       where fighter_id = $1`,
       [id],
     ),
+    sql<NewsRow>(
+      `select
+        n.id,
+        n.headline,
+        n.summary,
+        n.source,
+        n.url,
+        n.published_at,
+        n.fighter_id,
+        f.name as fighter_name,
+        n.category,
+        n.relevance::text
+      from news n
+      left join fighters f on f.id = n.fighter_id
+      where n.fighter_id = $1
+      order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc`,
+      [id],
+    ),
   ]);
 
   const history: FighterHistoryItem[] = historyRows.map((row) => ({
@@ -401,6 +448,7 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     fightCount: Number(fighterRow.fight_count ?? 0),
     history,
     aggregateStats: mapAggregate(aggregateRows[0]),
+    news: newsRows.map(mapNewsArticle),
   };
 }
 

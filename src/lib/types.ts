@@ -128,6 +128,26 @@ export type FighterDetail = {
   fightCount: number;
   history: FighterHistoryItem[];
   aggregateStats: FighterAggregateStats;
+  news: NewsArticle[];
+};
+
+export type NewsArticle = {
+  id: number;
+  headline: string;
+  summary: string | null;
+  source: string | null;
+  url: string;
+  publishedAt: string | null;
+  fighterId: number | null;
+  fighterName: string | null;
+  category: string | null;
+  relevance: number | null;
+};
+
+export type NewsListResult = {
+  articles: NewsArticle[];
+  categories: string[];
+  activeCategory: string;
 };
 
 export type FightCompetitor = {

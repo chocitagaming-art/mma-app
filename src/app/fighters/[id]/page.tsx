@@ -53,7 +53,7 @@ export default async function FighterDetailPage({
     notFound();
   }
 
-  const { fighter, aggregateStats, history } = detail;
+  const { fighter, aggregateStats, history, news } = detail;
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
@@ -234,6 +234,71 @@ export default async function FighterDetailPage({
             <Card className="border-dashed border-white/10 bg-white/5">
               <CardContent className="px-6 py-16 text-center text-zinc-400">
                 No fight history is available for this fighter yet.
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <SectionHeading
+          eyebrow="Noticias"
+          title={`Latest coverage on ${fighter.name}`}
+          description="Articles linked to this fighter from the news table, ordered by publication date."
+        />
+        <div className="grid gap-4">
+          {news.length ? (
+            news.map((article) => (
+              <Card
+                key={article.id}
+                className="border-white/10 bg-white/5 transition hover:border-red-400/30 hover:bg-white/[0.07]"
+              >
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                          {article.category ?? "General"}
+                        </Badge>
+                        <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                          {article.source ?? "Unknown source"}
+                        </Badge>
+                      </div>
+                      <a
+                        href={article.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xl font-semibold text-white transition hover:text-red-200"
+                      >
+                        {article.headline}
+                      </a>
+                    </div>
+                    <p className="text-sm text-zinc-400">{formatDate(article.publishedAt)}</p>
+                  </div>
+                  <p className="text-sm leading-7 text-zinc-300">
+                    {article.summary?.length
+                      ? article.summary.length > 180
+                        ? `${article.summary.slice(0, 180).trimEnd()}…`
+                        : article.summary
+                      : "No summary available for this article."}
+                  </p>
+                  <div className="border-t border-white/10 pt-4">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-medium text-red-200 transition hover:text-red-100"
+                    >
+                      Read article →
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card className="border-dashed border-white/10 bg-white/5">
+              <CardContent className="px-6 py-16 text-center text-zinc-400">
+                No related news articles are available for this fighter yet.
               </CardContent>
             </Card>
           )}
