@@ -27,7 +27,7 @@ export function formatWeight(weightGrams: number | null) {
     return "—";
   }
 
-  return `${Math.round(weightGrams / 453.592)} lb`;
+  return `${(weightGrams / 1000).toFixed(1)} kg`;
 }
 
 export function formatPercentage(value: number) {

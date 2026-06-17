@@ -19,6 +19,7 @@ import {
   formatPercentage,
   formatReach,
   formatRecord,
+  formatWeight,
 } from "@/lib/format";
 import type {
   FighterComparisonDetail,
@@ -321,6 +322,15 @@ export function CompareFightersClient({
                   rightValue={detail.fighterB.reachCm}
                   leftDisplay={formatReach(detail.fighterA.reachCm)}
                   rightDisplay={formatReach(detail.fighterB.reachCm)}
+                />
+                <ComparisonStatRow
+                  label="Weight"
+                  leftLabel={detail.fighterA.name}
+                  rightLabel={detail.fighterB.name}
+                  leftValue={detail.fighterA.weightGrams ?? 0}
+                  rightValue={detail.fighterB.weightGrams ?? 0}
+                  leftDisplay={formatWeight(detail.fighterA.weightGrams)}
+                  rightDisplay={formatWeight(detail.fighterB.weightGrams)}
                 />
               </CardContent>
             </Card>
