@@ -6,6 +6,7 @@ import { ArrowRightLeft, Swords } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ComparisonStatRow } from "@/components/comparison-stat-row";
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { FighterSearchCombobox } from "@/components/fighter-search-combobox";
 import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
@@ -119,21 +120,31 @@ export function CompareFightersClient({
           <section className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-stretch">
             <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
               <CardContent className="space-y-6 p-6">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                    Fighter A
-                  </p>
-                  <Link
-                    href={`/fighters/${detail.fighterA.id}`}
-                    className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
-                  >
-                    {detail.fighterA.name}
-                  </Link>
-                  <p className="text-zinc-400">
-                    {detail.fighterA.nickname
-                      ? `"${detail.fighterA.nickname}"`
-                      : "No nickname listed"}
-                  </p>
+                <div className="flex flex-col items-center gap-4 text-center xl:items-start xl:text-left">
+                  <FighterHeadshot
+                    name={detail.fighterA.name}
+                    headshotUrl={detail.fighterA.headshotUrl}
+                    size="xl"
+                    priority
+                    className="border-white/15 bg-black/30"
+                    imageClassName="object-contain object-top"
+                  />
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                      Fighter A
+                    </p>
+                    <Link
+                      href={`/fighters/${detail.fighterA.id}`}
+                      className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
+                    >
+                      {detail.fighterA.name}
+                    </Link>
+                    <p className="text-zinc-400">
+                      {detail.fighterA.nickname
+                        ? `"${detail.fighterA.nickname}"`
+                        : "No nickname listed"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
@@ -201,21 +212,31 @@ export function CompareFightersClient({
 
             <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
               <CardContent className="space-y-6 p-6">
-                <div className="space-y-2 text-left xl:text-right">
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                    Fighter B
-                  </p>
-                  <Link
-                    href={`/fighters/${detail.fighterB.id}`}
-                    className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
-                  >
-                    {detail.fighterB.name}
-                  </Link>
-                  <p className="text-zinc-400">
-                    {detail.fighterB.nickname
-                      ? `"${detail.fighterB.nickname}"`
-                      : "No nickname listed"}
-                  </p>
+                <div className="flex flex-col items-center gap-4 text-center xl:items-end xl:text-right">
+                  <FighterHeadshot
+                    name={detail.fighterB.name}
+                    headshotUrl={detail.fighterB.headshotUrl}
+                    size="xl"
+                    priority
+                    className="border-white/15 bg-black/30"
+                    imageClassName="object-contain object-top"
+                  />
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                      Fighter B
+                    </p>
+                    <Link
+                      href={`/fighters/${detail.fighterB.id}`}
+                      className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
+                    >
+                      {detail.fighterB.name}
+                    </Link>
+                    <p className="text-zinc-400">
+                      {detail.fighterB.nickname
+                        ? `"${detail.fighterB.nickname}"`
+                        : "No nickname listed"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-3 xl:justify-end">
                   <Badge className="border-red-400/20 bg-red-500/10 text-red-200">

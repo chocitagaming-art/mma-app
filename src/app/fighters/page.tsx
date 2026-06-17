@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { FighterCard } from "@/components/fighter-card";
 import { FightersFilterBar } from "@/components/fighters-filter-bar";
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
+import { formatRecord } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFighters } from "@/lib/queries/fighters";
@@ -86,9 +87,70 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
 
       {result.fighters.length ? (
         <>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <div className="hidden grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] gap-4 border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500 md:grid">
+              <span>Fighter</span>
+              <span>Record</span>
+              <span>Weight class</span>
+              <span>Nationality</span>
+              <span>Stance</span>
+            </div>
             {result.fighters.map((fighter) => (
-              <FighterCard key={fighter.id} fighter={fighter} />
+              <Link
+                key={fighter.id}
+                href={`/fighters/${fighter.id}`}
+                className="grid gap-4 border-b border-white/5 px-6 py-5 transition hover:bg-white/[0.04] md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
+              >
+                <div className="flex items-center gap-4">
+                  <FighterHeadshot
+                    name={fighter.name}
+                    headshotUrl={fighter.headshotUrl}
+                    size="sm"
+                    className="shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-white">{fighter.name}</p>
+                    <p className="truncate text-sm text-zinc-400">
+                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                    Record
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-white md:mt-0">
+                    {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                    Weight class
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-300 md:mt-0">
+                    {fighter.latestWeightClass ?? "Open Weight"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                    Nationality
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-300 md:mt-0">
+                    {fighter.nationality ?? "Unknown"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                      Stance
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-300 md:mt-0">
+                      {fighter.stance ?? "Unknown"}
+                    </p>
+                  </div>
+                  <span className="text-sm font-medium text-red-200">View profile →</span>
+                </div>
+              </Link>
             ))}
           </div>
           <PaginationControls

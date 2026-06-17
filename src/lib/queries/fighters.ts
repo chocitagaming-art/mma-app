@@ -25,6 +25,7 @@ type FighterRow = {
   id: number;
   name: string;
   nickname: string | null;
+  headshot_url: string | null;
   nationality: string | null;
   birth_date: string | null;
   height_cm: string | null;
@@ -69,6 +70,7 @@ type SearchRow = {
   id: number;
   name: string;
   nickname: string | null;
+  headshot_url: string | null;
   wins: number;
   losses: number;
   draws: number;
@@ -90,6 +92,7 @@ function mapFighter(row: FighterRow): FighterCardData {
     id: row.id,
     name: row.name,
     nickname: row.nickname,
+    headshotUrl: row.headshot_url,
     nationality: row.nationality,
     birthDate: row.birth_date,
     heightCm: row.height_cm ? Number(row.height_cm) : null,
@@ -412,7 +415,7 @@ export async function searchFighters(
   }
 
   const rows = await sql<SearchRow>(
-    `select id, name, nickname, wins, losses, draws
+    `select id, name, nickname, headshot_url, wins, losses, draws
      from fighters
      where name ilike $1
      order by
@@ -428,6 +431,7 @@ export async function searchFighters(
     id: row.id,
     name: row.name,
     nickname: row.nickname,
+    headshotUrl: row.headshot_url,
     wins: row.wins,
     losses: row.losses,
     draws: row.draws,

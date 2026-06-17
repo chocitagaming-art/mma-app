@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { Input } from "@/components/ui/input";
 import { formatRecord } from "@/lib/format";
 import type { FighterSearchResult } from "@/lib/types";
@@ -148,11 +149,19 @@ export function FighterSearchCombobox({
                   setOpen(false);
                 }}
               >
-                <div className="space-y-1">
-                  <p className="font-medium text-white">{fighter.name}</p>
-                  <p className="text-sm text-zinc-400">
-                    {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <FighterHeadshot
+                    name={fighter.name}
+                    headshotUrl={fighter.headshotUrl}
+                    size="sm"
+                    className="size-10 shrink-0"
+                  />
+                  <div className="space-y-1">
+                    <p className="font-medium text-white">{fighter.name}</p>
+                    <p className="text-sm text-zinc-400">
+                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-red-200">

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowRightLeft } from "lucide-react";
 
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { SectionHeading } from "@/components/section-heading";
 import { StatBar } from "@/components/stat-bar";
 import { Badge } from "@/components/ui/badge";
@@ -60,37 +61,47 @@ export default async function FighterDetailPage({
         <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
           <CardContent className="space-y-8 p-8">
             <div className="flex flex-wrap items-start justify-between gap-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold uppercase tracking-[0.35em] text-red-300">
-                    Fighter profile
-                  </p>
-                  <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                    {fighter.name}
-                  </h1>
-                  <p className="text-lg text-zinc-400">
-                    {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-                    {detail.latestWeightClass ?? "Weight class unavailable"}
-                  </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {fighter.stance ?? "Unknown stance"}
-                  </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {fighter.nationality ?? "Nationality unavailable"}
-                  </Badge>
-                  <Link href={`/compare?a=${fighter.id}`}>
-                    <Button
-                      variant="secondary"
-                      className="bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
-                    >
-                      <ArrowRightLeft />
-                      Compare fighter
-                    </Button>
-                  </Link>
+              <div className="flex flex-wrap items-center gap-6">
+                <FighterHeadshot
+                  name={fighter.name}
+                  headshotUrl={fighter.headshotUrl}
+                  size="xl"
+                  priority
+                  className="border-white/15 bg-black/30"
+                  imageClassName="object-contain object-top"
+                />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-red-300">
+                      Fighter profile
+                    </p>
+                    <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                      {fighter.name}
+                    </h1>
+                    <p className="text-lg text-zinc-400">
+                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                      {detail.latestWeightClass ?? "Weight class unavailable"}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                      {fighter.stance ?? "Unknown stance"}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                      {fighter.nationality ?? "Nationality unavailable"}
+                    </Badge>
+                    <Link href={`/compare?a=${fighter.id}`}>
+                      <Button
+                        variant="secondary"
+                        className="bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
+                      >
+                        <ArrowRightLeft />
+                        Compare fighter
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
               <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-5 text-right">

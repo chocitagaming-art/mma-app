@@ -4,6 +4,7 @@ import { ArrowRightLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { formatRecord, formatWeight } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
 
@@ -17,13 +18,21 @@ export function FighterCard({ fighter }: FighterCardProps) {
       <Link href={`/fighters/${fighter.id}`} className="block">
         <CardHeader className="space-y-4 border-b border-white/5 pb-5">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <p className="text-xl font-semibold text-white transition group-hover:text-red-200">
-                {fighter.name}
-              </p>
-              <p className="text-sm text-zinc-400">
-                {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
-              </p>
+            <div className="flex items-center gap-4">
+              <FighterHeadshot
+                name={fighter.name}
+                headshotUrl={fighter.headshotUrl}
+                size="sm"
+                className="shrink-0"
+              />
+              <div className="space-y-2">
+                <p className="text-xl font-semibold text-white transition group-hover:text-red-200">
+                  {fighter.name}
+                </p>
+                <p className="text-sm text-zinc-400">
+                  {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                </p>
+              </div>
             </div>
             <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
               {fighter.latestWeightClass ?? "Open Weight"}

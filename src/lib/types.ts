@@ -2,6 +2,7 @@ export type Fighter = {
   id: number;
   name: string;
   nickname: string | null;
+  headshotUrl: string | null;
   nationality: string | null;
   birthDate: string | null;
   heightCm: number | null;
@@ -81,6 +82,7 @@ export type FighterSearchResult = {
   id: number;
   name: string;
   nickname: string | null;
+  headshotUrl: string | null;
   wins: number;
   losses: number;
   draws: number;
