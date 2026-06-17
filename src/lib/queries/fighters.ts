@@ -415,14 +415,24 @@ export async function searchFighters(
   }
 
   const rows = await sql<SearchRow>(
-    `select id, name, nickname, headshot_url, wins, losses, draws
+    `select distinct on (lower(name))
+        id,
+        name,
+        nickname,
+        headshot_url,
+        wins,
+        losses,
+        draws
      from fighters
      where name ilike $1
      order by
+       lower(name),
+       case when headshot_url is not null then 0 else 1 end,
        case when lower(name) = lower($2) then 0 else 1 end,
        case when lower(name) like lower($3) then 0 else 1 end,
        wins desc,
-       name asc
+       losses asc,
+       id asc
      limit $4`,
     [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
   );
