@@ -57,7 +57,7 @@ export function FightersFilterBar({
     <div className="grid gap-3 lg:grid-cols-[2fr_repeat(4,minmax(0,1fr))]">
       <Input
         defaultValue={current.q}
-        placeholder="Search by fighter name"
+        placeholder="Buscar por nombre del luchador"
         className="h-11 border-white/10 bg-white/5 text-white placeholder:text-zinc-500"
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -70,10 +70,10 @@ export function FightersFilterBar({
         onValueChange={(value) => updateParam("weightClass", value ?? "all")}
       >
         <SelectTrigger className="h-11 border-white/10 bg-white/5 text-white">
-          <SelectValue placeholder="Weight class" />
+          <SelectValue placeholder="Categoría de peso" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All weight classes</SelectItem>
+          <SelectItem value="all">Todas las categorías de peso</SelectItem>
           {weightClasses.map((weightClass) => (
             <SelectItem key={weightClass} value={weightClass ?? "unknown-weight-class"}>
               {weightClass}
@@ -86,10 +86,10 @@ export function FightersFilterBar({
         onValueChange={(value) => updateParam("stance", value ?? "all")}
       >
         <SelectTrigger className="h-11 border-white/10 bg-white/5 text-white">
-          <SelectValue placeholder="Stance" />
+          <SelectValue placeholder="Guardia" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All stances</SelectItem>
+          <SelectItem value="all">Todas las guardias</SelectItem>
           {stances.map((stance) => (
             <SelectItem key={stance} value={stance ?? "unknown-stance"}>
               {stance}
@@ -102,10 +102,10 @@ export function FightersFilterBar({
         onValueChange={(value) => updateParam("nationality", value ?? "all")}
       >
         <SelectTrigger className="h-11 border-white/10 bg-white/5 text-white">
-          <SelectValue placeholder="Nationality" />
+          <SelectValue placeholder="Nacionalidad" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All nationalities</SelectItem>
+          <SelectItem value="all">Todas las nacionalidades</SelectItem>
           {nationalities.map((nationality) => (
             <SelectItem key={nationality} value={nationality ?? "unknown-nationality"}>
               {nationality}
@@ -118,12 +118,12 @@ export function FightersFilterBar({
         onValueChange={(value) => updateParam("sort", value ?? "name")}
       >
         <SelectTrigger className="h-11 border-white/10 bg-white/5 text-white">
-          <SelectValue placeholder="Sort by" />
+          <SelectValue placeholder="Ordenar por" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="name">Sort: Name</SelectItem>
-          <SelectItem value="wins">Sort: Wins</SelectItem>
-          <SelectItem value="losses">Sort: Losses</SelectItem>
+          <SelectItem value="name">Ordenar: Nombre</SelectItem>
+          <SelectItem value="wins">Ordenar: Victorias</SelectItem>
+          <SelectItem value="losses">Ordenar: Derrotas</SelectItem>
         </SelectContent>
       </Select>
     </div>

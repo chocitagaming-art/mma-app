@@ -43,10 +43,10 @@ export function formatControlTime(seconds: number) {
 
 export function formatDate(date: string | null) {
   if (!date) {
-    return "TBD";
+    return "Por definir";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat("es", {
     month: "short",
     day: "numeric",
     year: "numeric",

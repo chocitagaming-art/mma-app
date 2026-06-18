@@ -85,17 +85,17 @@ export function CompareFightersClient({
         <CardContent className="space-y-8 p-6 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <SectionHeading
-              eyebrow="Head-to-head"
-              title="Compare two UFC fighters"
-              description="Search the roster, lock in both corners, and break down striking, grappling, and direct matchup history side by side."
+              eyebrow="Cara a cara"
+              title="Comparar dos luchadores de UFC"
+              description="Busca en la plantilla, fija ambas esquinas y analiza golpeo, grappling e historial directo de enfrentamientos lado a lado."
             />
             <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-400">
-              Shareable URL updates automatically as you compare.
+              La URL compartible se actualiza automáticamente mientras comparas.
             </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-end">
             <FighterSearchCombobox
-              label="Fighter A"
+              label="Luchador A"
               value={fighterA}
               onSelect={setFighterA}
               excludeId={fighterB?.id}
@@ -106,7 +106,7 @@ export function CompareFightersClient({
               </div>
             </div>
             <FighterSearchCombobox
-              label="Fighter B"
+              label="Luchador B"
               value={fighterB}
               onSelect={setFighterB}
               excludeId={fighterA?.id}
@@ -131,7 +131,7 @@ export function CompareFightersClient({
                   />
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                      Fighter A
+                      Luchador A
                     </p>
                     <Link
                       href={`/fighters/${detail.fighterA.id}`}
@@ -142,7 +142,7 @@ export function CompareFightersClient({
                     <p className="text-zinc-400">
                       {detail.fighterA.nickname
                         ? `"${detail.fighterA.nickname}"`
-                        : "No nickname listed"}
+                        : "Sin apodo registrado"}
                     </p>
                   </div>
                 </div>
@@ -155,17 +155,17 @@ export function CompareFightersClient({
                     )}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterA.stance ?? "Unknown stance"}
+                    {detail.fighterA.stance ?? "Guardia desconocida"}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterA.latestWeightClass ?? "Open Weight"}
+                    {detail.fighterA.latestWeightClass ?? "Peso abierto"}
                   </Badge>
                 </div>
                 <Separator className="bg-white/10" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Height
+                      Altura
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {formatHeight(detail.fighterA.heightCm)}
@@ -173,7 +173,7 @@ export function CompareFightersClient({
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Reach
+                      Alcance
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {formatReach(detail.fighterA.reachCm)}
@@ -181,15 +181,15 @@ export function CompareFightersClient({
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Nationality
+                      Nacionalidad
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {detail.fighterA.nationality ?? "Unknown"}
+                      {detail.fighterA.nationality ?? "Desconocida"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Logged fights
+                      Peleas registradas
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {detail.fighterA.fightCount}
@@ -203,7 +203,7 @@ export function CompareFightersClient({
               <div className="flex min-h-24 min-w-24 items-center justify-center rounded-full border border-red-400/20 bg-red-500/10 px-6 text-center shadow-xl shadow-red-950/20">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                    Tale of the tape
+                    Comparativa física
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-white">VS</p>
                 </div>
@@ -223,7 +223,7 @@ export function CompareFightersClient({
                   />
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                      Fighter B
+                      Luchador B
                     </p>
                     <Link
                       href={`/fighters/${detail.fighterB.id}`}
@@ -234,7 +234,7 @@ export function CompareFightersClient({
                     <p className="text-zinc-400">
                       {detail.fighterB.nickname
                         ? `"${detail.fighterB.nickname}"`
-                        : "No nickname listed"}
+                        : "Sin apodo registrado"}
                     </p>
                   </div>
                 </div>
@@ -247,17 +247,17 @@ export function CompareFightersClient({
                     )}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterB.stance ?? "Unknown stance"}
+                    {detail.fighterB.stance ?? "Guardia desconocida"}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterB.latestWeightClass ?? "Open Weight"}
+                    {detail.fighterB.latestWeightClass ?? "Peso abierto"}
                   </Badge>
                 </div>
                 <Separator className="bg-white/10" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Height
+                      Altura
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {formatHeight(detail.fighterB.heightCm)}
@@ -265,7 +265,7 @@ export function CompareFightersClient({
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Reach
+                      Alcance
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {formatReach(detail.fighterB.reachCm)}
@@ -273,15 +273,15 @@ export function CompareFightersClient({
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Nationality
+                      Nacionalidad
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {detail.fighterB.nationality ?? "Unknown"}
+                      {detail.fighterB.nationality ?? "Desconocida"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                      Logged fights
+                      Peleas registradas
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
                       {detail.fighterB.fightCount}
@@ -295,11 +295,11 @@ export function CompareFightersClient({
           <section className="grid gap-6">
             <Card className="border-white/10 bg-white/5">
               <CardHeader>
-                <CardTitle className="text-white">Record and physical comparison</CardTitle>
+                <CardTitle className="text-white">Comparación de récord y físico</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ComparisonStatRow
-                  label="Wins"
+                  label="Victorias"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.wins}
@@ -308,7 +308,7 @@ export function CompareFightersClient({
                   rightDisplay={String(detail.fighterB.wins)}
                 />
                 <ComparisonStatRow
-                  label="Losses"
+                  label="Derrotas"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.losses}
@@ -318,7 +318,7 @@ export function CompareFightersClient({
                   higherIsBetter={false}
                 />
                 <ComparisonStatRow
-                  label="Draws"
+                  label="Empates"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.draws}
@@ -327,7 +327,7 @@ export function CompareFightersClient({
                   rightDisplay={String(detail.fighterB.draws)}
                 />
                 <ComparisonStatRow
-                  label="Height"
+                  label="Altura"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.heightCm}
@@ -336,7 +336,7 @@ export function CompareFightersClient({
                   rightDisplay={formatHeight(detail.fighterB.heightCm)}
                 />
                 <ComparisonStatRow
-                  label="Reach"
+                  label="Alcance"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.reachCm}
@@ -345,7 +345,7 @@ export function CompareFightersClient({
                   rightDisplay={formatReach(detail.fighterB.reachCm)}
                 />
                 <ComparisonStatRow
-                  label="Weight"
+                  label="Peso"
                   leftLabel={detail.fighterA.name}
                   rightLabel={detail.fighterB.name}
                   leftValue={detail.fighterA.weightGrams ?? 0}
@@ -359,11 +359,11 @@ export function CompareFightersClient({
             <div className="grid gap-6 xl:grid-cols-2">
               <Card className="border-white/10 bg-white/5">
                 <CardHeader>
-                  <CardTitle className="text-white">Striking stats</CardTitle>
+                  <CardTitle className="text-white">Estadísticas de golpeo</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ComparisonStatRow
-                    label="Sig. strikes landed / fight"
+                    label="Golpes sig. conectados / pelea"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.sigStrikesLandedPerFight}
@@ -376,7 +376,7 @@ export function CompareFightersClient({
                     )}
                   />
                   <ComparisonStatRow
-                    label="Sig. strike accuracy"
+                    label="Precisión de golpes sig."
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.sigStrikeAccuracy}
@@ -389,7 +389,7 @@ export function CompareFightersClient({
                     )}
                   />
                   <ComparisonStatRow
-                    label="Knockdowns / fight"
+                    label="Knockdowns / pelea"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.knockdownsPerFight}
@@ -406,11 +406,11 @@ export function CompareFightersClient({
 
               <Card className="border-white/10 bg-white/5">
                 <CardHeader>
-                  <CardTitle className="text-white">Grappling stats</CardTitle>
+                  <CardTitle className="text-white">Estadísticas de grappling</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ComparisonStatRow
-                    label="Takedowns landed / fight"
+                    label="Derribos conectados / pelea"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.takedownsLandedPerFight}
@@ -423,7 +423,7 @@ export function CompareFightersClient({
                     )}
                   />
                   <ComparisonStatRow
-                    label="Takedown accuracy"
+                    label="Precisión de derribos"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.takedownAccuracy}
@@ -436,7 +436,7 @@ export function CompareFightersClient({
                     )}
                   />
                   <ComparisonStatRow
-                    label="Submission attempts / fight"
+                    label="Intentos de sumisión / pelea"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.submissionAttemptsPerFight}
@@ -449,7 +449,7 @@ export function CompareFightersClient({
                     )}
                   />
                   <ComparisonStatRow
-                    label="Control time / fight"
+                    label="Tiempo de control / pelea"
                     leftLabel={detail.fighterA.name}
                     rightLabel={detail.fighterB.name}
                     leftValue={detail.fighterA.aggregateStats.controlTimePerFightSeconds}
@@ -468,9 +468,9 @@ export function CompareFightersClient({
 
           <section className="space-y-6">
             <SectionHeading
-              eyebrow="Direct matchup history"
-              title="Previous meetings"
-              description="Every logged fight where these two fighters shared the cage."
+              eyebrow="Historial directo"
+              title="Enfrentamientos previos"
+              description="Cada pelea registrada en la que estos dos luchadores compartieron la jaula."
             />
             {matchupSummary ? (
               <Card className="border-white/10 bg-gradient-to-r from-red-950/30 via-black/30 to-red-950/30">
@@ -485,10 +485,10 @@ export function CompareFightersClient({
                   </div>
                   <div className="text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
-                      Head-to-head
+                      Cara a cara
                     </p>
                     <p className="mt-2 text-lg text-zinc-300">
-                      {matchupSummary.draws} draw
+                      {matchupSummary.draws} empate
                       {matchupSummary.draws === 1 ? "" : "s"}
                     </p>
                   </div>
@@ -512,26 +512,26 @@ export function CompareFightersClient({
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                              {fight.weightClass ?? "Weight class unavailable"}
+                              {fight.weightClass ?? "Categoría de peso no disponible"}
                             </Badge>
                             <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
                               {fight.winnerId === detail.fighterA.id
-                                ? `${detail.fighterA.name} won`
+                                ? `${detail.fighterA.name} ganó`
                                 : fight.winnerId === detail.fighterB.id
-                                  ? `${detail.fighterB.name} won`
-                                  : "Draw / No contest"}
+                                  ? `${detail.fighterB.name} ganó`
+                                  : "Empate / Sin resultado"}
                             </Badge>
                           </div>
                           <p className="text-lg font-semibold text-white">
-                            {fight.eventName ?? "Unknown event"}
+                            {fight.eventName ?? "Evento desconocido"}
                           </p>
                           <p className="text-sm text-zinc-400">
-                            {formatDate(fight.eventDate)} · {fight.method ?? "Method unavailable"} ·
-                            {" "}Round {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
+                            {formatDate(fight.eventDate)} · {fight.method ?? "Método no disponible"} ·
+                            {" "}Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
                           </p>
                         </div>
                         <p className="text-sm font-medium text-red-200">
-                          Open fight details →
+                          Abrir detalles de la pelea →
                         </p>
                       </CardContent>
                     </Card>
@@ -542,10 +542,9 @@ export function CompareFightersClient({
                   <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
                     <Swords className="size-8 text-zinc-500" />
                     <div className="space-y-2">
-                      <p className="text-2xl font-semibold text-white">No direct fights found</p>
+                      <p className="text-2xl font-semibold text-white">No se encontraron peleas directas</p>
                       <p className="max-w-xl text-sm text-zinc-400">
-                        These fighters do not have a logged head-to-head matchup in the current
-                        database.
+                        Estos luchadores no tienen un enfrentamiento directo registrado en la base de datos actual.
                       </p>
                     </div>
                   </CardContent>
@@ -561,15 +560,15 @@ export function CompareFightersClient({
               <Swords className="size-7" />
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-semibold text-white">Build your matchup</p>
+              <p className="text-3xl font-semibold text-white">Construye tu enfrentamiento</p>
               <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-                Pick two fighters to unlock a side-by-side comparison of records, physical tools,
-                striking efficiency, grappling output, and any direct matchup history.
+                Elige dos luchadores para desbloquear una comparación lado a lado de récords, herramientas físicas,
+                eficiencia de golpeo, producción de grappling y cualquier historial directo de enfrentamientos.
               </p>
             </div>
             <Link href="/fighters">
               <Button className="bg-red-500 text-white hover:bg-red-400">
-                Browse the roster
+                Ver la plantilla
               </Button>
             </Link>
           </CardContent>

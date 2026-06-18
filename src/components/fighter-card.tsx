@@ -30,12 +30,12 @@ export function FighterCard({ fighter }: FighterCardProps) {
                   {fighter.name}
                 </p>
                 <p className="text-sm text-zinc-400">
-                  {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                  {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                 </p>
               </div>
             </div>
             <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-              {fighter.latestWeightClass ?? "Open Weight"}
+              {fighter.latestWeightClass ?? "Peso abierto"}
             </Badge>
           </div>
         </CardHeader>
@@ -45,7 +45,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Record
+                Récord
               </p>
               <p className="mt-2 text-lg font-semibold text-white">
                 {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
@@ -53,7 +53,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Weight
+                Peso
               </p>
               <p className="mt-2 text-lg font-semibold text-white">
                 {formatWeight(fighter.weightGrams)}
@@ -63,21 +63,21 @@ export function FighterCard({ fighter }: FighterCardProps) {
           <div className="grid grid-cols-2 gap-4 text-sm text-zinc-300">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Nationality
+                Nacionalidad
               </p>
-              <p className="mt-2">{fighter.nationality ?? "Unknown"}</p>
+              <p className="mt-2">{fighter.nationality ?? "Desconocida"}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                Stance
+                Guardia
               </p>
-              <p className="mt-2">{fighter.stance ?? "Unknown"}</p>
+              <p className="mt-2">{fighter.stance ?? "Desconocida"}</p>
             </div>
           </div>
         </CardContent>
       </Link>
       <CardFooter className="flex items-center justify-between gap-3 border-t border-white/5 px-6 py-4 text-sm text-zinc-400">
-        <span>{fighter.fightCount} logged fights</span>
+        <span>{fighter.fightCount} peleas registradas</span>
         <div className="flex items-center gap-2">
           <Link href={`/compare?a=${fighter.id}`}>
             <Button
@@ -86,12 +86,12 @@ export function FighterCard({ fighter }: FighterCardProps) {
               className="text-zinc-300 hover:bg-white/5 hover:text-white"
             >
               <ArrowRightLeft />
-              Compare
+              Comparar
             </Button>
           </Link>
           <Link href={`/fighters/${fighter.id}`}>
             <span className="text-red-200 transition group-hover:translate-x-1">
-              View profile →
+              Ver perfil →
             </span>
           </Link>
         </div>

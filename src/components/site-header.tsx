@@ -3,11 +3,11 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/", label: "Home" },
-  { href: "/fighters", label: "Fighters" },
-  { href: "/news", label: "News" },
-  { href: "/compare", label: "Compare" },
-  { href: "/predict", label: "Predict" },
+  { href: "/", label: "Inicio" },
+  { href: "/fighters", label: "Luchadores" },
+  { href: "/news", label: "Noticias" },
+  { href: "/compare", label: "Comparar" },
+  { href: "/predict", label: "Predicción" },
 ];
 
 export function SiteHeader() {
@@ -20,7 +20,7 @@ export function SiteHeader() {
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-red-300">
-              Fight Intelligence
+              Inteligencia de combate
             </p>
             <p className="text-lg font-semibold text-white">MMA Stats</p>
           </div>

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | MMA Stats",
   },
   description:
-    "Professional MMA fighter profiles, fight history, and stat comparisons powered by a live Neon PostgreSQL database.",
+    "Perfiles profesionales de peleadores de MMA, historial de peleas y comparaciones de estadísticas impulsadas por una base de datos Neon PostgreSQL en vivo.",
 };
 
 export default function RootLayout({
@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full bg-black text-white">

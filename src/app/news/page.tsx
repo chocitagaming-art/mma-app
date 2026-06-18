@@ -14,7 +14,7 @@ type NewsPageProps = {
 
 export const metadata: Metadata = {
   title: "Noticias",
-  description: "Latest MMA news articles linked to fighters in the live database.",
+  description: "Últimos artículos de noticias de MMA vinculados a luchadores en la base de datos en vivo.",
 };
 
 function getSingleValue(value: string | string[] | undefined) {
@@ -23,7 +23,7 @@ function getSingleValue(value: string | string[] | undefined) {
 
 function truncateSummary(summary: string | null, maxLength = 180) {
   if (!summary) {
-    return "No summary available for this article.";
+    return "No hay resumen disponible para este artículo.";
   }
 
   if (summary.length <= maxLength) {
@@ -45,8 +45,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
       <SectionHeading
         eyebrow="Noticias"
-        title="Latest MMA headlines"
-        description="Track recent stories from the news table, filter by category, and jump directly to linked fighter profiles."
+        title="Últimos titulares de MMA"
+        description="Sigue historias recientes desde la tabla de noticias, filtra por categoría y salta directamente a perfiles de luchadores vinculados."
       />
 
       <Card className="border-white/10 bg-white/5">
@@ -84,8 +84,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             })}
           </div>
           <p className="text-sm text-zinc-400">
-            Showing <span className="font-semibold text-white">{result.articles.length}</span>{" "}
-            articles{result.activeCategory ? ` in ${result.activeCategory}` : ""}.
+            Mostrando <span className="font-semibold text-white">{result.articles.length}</span>{" "}
+            artículos{result.activeCategory ? ` en ${result.activeCategory}` : ""}.
           </p>
         </CardContent>
       </Card>
@@ -105,7 +105,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         {article.category ?? "General"}
                       </Badge>
                       <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                        {article.source ?? "Unknown source"}
+                        {article.source ?? "Fuente desconocida"}
                       </Badge>
                     </div>
                     <a
@@ -126,7 +126,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                   <div className="text-sm text-zinc-400">
                     {article.fighterId && article.fighterName ? (
                       <>
-                        Linked fighter:{" "}
+                        Luchador vinculado:{" "}
                         <Link
                           href={`/fighters/${article.fighterId}`}
                           className="font-medium text-red-200 transition hover:text-red-100"
@@ -135,7 +135,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         </Link>
                       </>
                     ) : (
-                      "No linked fighter"
+                      "Sin luchador vinculado"
                     )}
                   </div>
                   <a
@@ -144,7 +144,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                     rel="noreferrer"
                     className="text-sm font-medium text-red-200 transition hover:text-red-100"
                   >
-                    Read article →
+                    Leer artículo →
                   </a>
                 </div>
               </CardContent>
@@ -153,9 +153,9 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
         ) : (
           <Card className="border-dashed border-white/10 bg-white/5">
             <CardContent className="px-6 py-16 text-center">
-              <p className="text-2xl font-semibold text-white">No news articles found</p>
+              <p className="text-2xl font-semibold text-white">No se encontraron artículos de noticias</p>
               <p className="mt-3 text-sm text-zinc-400">
-                Try another category or check back later for fresh MMA coverage.
+                Prueba otra categoría o vuelve más tarde para ver cobertura nueva de MMA.
               </p>
             </CardContent>
           </Card>

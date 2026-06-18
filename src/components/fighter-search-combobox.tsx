@@ -65,7 +65,7 @@ export function FighterSearchCombobox({
         );
 
         if (!response.ok) {
-          throw new Error("Search failed");
+          throw new Error("La búsqueda falló");
         }
 
         const data = (await response.json()) as FighterSearchResult[];
@@ -109,7 +109,7 @@ export function FighterSearchCombobox({
             }}
           >
             <X />
-            Clear
+            Limpiar
           </Button>
         ) : null}
       </div>
@@ -128,7 +128,7 @@ export function FighterSearchCombobox({
               setOpen(true);
             }
           }}
-          placeholder="Search UFC fighters by name"
+          placeholder="Buscar luchadores UFC por nombre"
           className="h-12 rounded-2xl border-white/10 bg-white/5 pl-11 text-white placeholder:text-zinc-500"
         />
       </div>
@@ -136,7 +136,7 @@ export function FighterSearchCombobox({
         <Card className="absolute z-30 mt-2 w-full border-white/10 bg-zinc-950/95 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
           <div className="max-h-80 overflow-y-auto px-2">
             {loading ? (
-              <div className="px-3 py-4 text-sm text-zinc-400">Searching fighters…</div>
+              <div className="px-3 py-4 text-sm text-zinc-400">Buscando luchadores…</div>
             ) : null}
             {results.map((fighter) => (
               <button
@@ -159,7 +159,7 @@ export function FighterSearchCombobox({
                   <div className="space-y-1">
                     <p className="font-medium text-white">{fighter.name}</p>
                     <p className="text-sm text-zinc-400">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export function FighterSearchCombobox({
                     {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                   </p>
                   <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                    Record
+                    Récord
                   </p>
                 </div>
               </button>
@@ -176,7 +176,7 @@ export function FighterSearchCombobox({
             {showEmpty ? (
               <div className="flex items-center gap-2 px-3 py-4 text-sm text-zinc-400">
                 <Swords className="size-4 text-zinc-500" />
-                No fighters matched that search.
+                Ningún luchador coincide con esa búsqueda.
               </div>
             ) : null}
           </div>

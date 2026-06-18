@@ -110,13 +110,13 @@ export function PredictFightClient({
       const data = (await response.json()) as PredictionResponse | { error: string };
 
       if (!response.ok || "error" in data) {
-        throw new Error("error" in data ? data.error : "Prediction failed.");
+        throw new Error("error" in data ? data.error : "La predicción falló.");
       }
 
       setPrediction(data);
     } catch (caughtError) {
       setPrediction(null);
-      setError(caughtError instanceof Error ? caughtError.message : "Prediction failed.");
+      setError(caughtError instanceof Error ? caughtError.message : "La predicción falló.");
     } finally {
       setLoading(false);
     }
@@ -151,7 +151,7 @@ export function PredictFightClient({
                 className="h-12 rounded-2xl bg-red-500 px-6 text-white hover:bg-red-400 disabled:bg-zinc-800"
               >
                 {loading ? <Loader2 className="animate-spin" /> : <Brain />}
-                {loading ? "Prediciendo..." : "Predict"}
+                {loading ? "Prediciendo..." : "Predecir"}
               </Button>
             </div>
             <FighterSearchCombobox

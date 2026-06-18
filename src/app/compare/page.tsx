@@ -9,9 +9,9 @@ type ComparePageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Compare fighters | MMA Stats",
+  title: "Comparar luchadores | MMA Stats",
   description:
-    "Compare two UFC fighters side by side with records, physical stats, striking, grappling, and direct matchup history.",
+    "Compara dos peleadores de UFC lado a lado con récords, estadísticas físicas, golpeo, grappling e historial directo de enfrentamientos.",
 };
 
 function getSingleValue(value: string | string[] | undefined) {

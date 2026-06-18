@@ -9,9 +9,9 @@ type PredictPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Predict fights | MMA Stats",
+  title: "Predicción de peleas | MMA Stats",
   description:
-    "Generate UFC fight win probabilities, inspect the model's top factors, and read an AI explanation in Spanish.",
+    "Genera probabilidades de victoria para peleas UFC, revisa los factores principales del modelo y lee una explicación de IA en español.",
 };
 
 function getSingleValue(value: string | string[] | undefined) {

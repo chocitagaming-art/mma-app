@@ -24,7 +24,7 @@ export function FightComparisonCard({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
-              {corner} corner
+              esquina {corner === "red" ? "roja" : "azul"}
             </p>
             <Link
               href={`/fighters/${fighter.id}`}
@@ -33,12 +33,12 @@ export function FightComparisonCard({
               {fighter.name}
             </Link>
             <p className="mt-1 text-sm text-zinc-400">
-              {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+              {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
             </p>
           </div>
           {isWinner ? (
             <Badge className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200">
-              Winner
+              Ganador
             </Badge>
           ) : null}
         </div>
@@ -46,44 +46,44 @@ export function FightComparisonCard({
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Record</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Récord</p>
             <p className="mt-2 text-white">
               {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Stance</p>
-            <p className="mt-2 text-white">{fighter.stance ?? "Unknown"}</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Guardia</p>
+            <p className="mt-2 text-white">{fighter.stance ?? "Desconocida"}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Height</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Altura</p>
             <p className="mt-2 text-white">{formatHeight(fighter.heightCm)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Reach</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Alcance</p>
             <p className="mt-2 text-white">{formatReach(fighter.reachCm)}</p>
           </div>
         </div>
         <div className="grid gap-3">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
             <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-              Significant strikes
+              Golpes significativos
             </p>
             <p className="mt-2 text-lg font-semibold text-white">
               {stats
                 ? `${stats.sigStrikesLanded}/${stats.sigStrikesAttempted}`
-                : "No stats"}
+                : "Sin estadísticas"}
             </p>
             <p className="mt-1 text-sm text-zinc-400">
               {stats ? formatPercentage(stats.sigStrikeAccuracy) : "—"}
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Takedowns</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Derribos</p>
             <p className="mt-2 text-lg font-semibold text-white">
               {stats
                 ? `${stats.takedownsLanded}/${stats.takedownsAttempted}`
-                : "No stats"}
+                : "Sin estadísticas"}
             </p>
             <p className="mt-1 text-sm text-zinc-400">
               {stats ? formatPercentage(stats.takedownAccuracy) : "—"}

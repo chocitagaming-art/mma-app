@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 
 export const metadata: Metadata = {
-  title: "MMA Stats | UFC fighter profiles and fight analytics",
+  title: "MMA Stats | Perfiles de peleadores UFC y análisis de peleas",
   description:
-    "Browse real fighter profiles, fight history, and performance stats from a live MMA database.",
+    "Explora perfiles reales de peleadores, historial de peleas y estadísticas de rendimiento desde una base de datos de MMA en vivo.",
 };
 
 export default async function HomePage() {
@@ -28,50 +28,50 @@ export default async function HomePage() {
           <div className="space-y-8">
             <div className="space-y-5">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-red-300">
-                Live Neon database
+                Base de datos Neon en vivo
               </p>
               <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-white sm:text-6xl">
                 MMA Stats
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-zinc-300">
-                A polished fight intelligence hub for exploring UFC and MMA fighter
-                profiles, matchup history, and performance trends from real event data.
+                Un centro de inteligencia de combate para explorar perfiles de peleadores de UFC y MMA,
+                historial de enfrentamientos y tendencias de rendimiento a partir de datos reales de eventos.
               </p>
             </div>
             <SearchHero />
             <div className="flex flex-wrap gap-3">
               <Link href="/fighters">
                 <Button variant="secondary" className="bg-white/10 text-white hover:bg-white/15">
-                  Browse all fighters
+                  Ver todos los luchadores
                 </Button>
               </Link>
               <Link href="/fighters?sort=wins">
                 <Button className="bg-red-500 text-white hover:bg-red-400">
-                  Top winners
+                  Más victorias
                 </Button>
               </Link>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard
-              label="Fighters"
+              label="Luchadores"
               value={stats.fighters.toLocaleString()}
-              helper="Profiles available to explore"
+              helper="Perfiles disponibles para explorar"
             />
             <StatCard
-              label="Events"
+              label="Eventos"
               value={stats.events.toLocaleString()}
-              helper="Cards captured in the database"
+              helper="Carteleras registradas en la base de datos"
             />
             <StatCard
-              label="Fights"
+              label="Peleas"
               value={stats.fights.toLocaleString()}
-              helper="Historical matchups with outcomes"
+              helper="Enfrentamientos históricos con resultados"
             />
             <StatCard
-              label="Fight stats"
+              label="Estadísticas de pelea"
               value={stats.fightStats.toLocaleString()}
-              helper="Per-fighter stat rows for comparisons"
+              helper="Filas de estadísticas por peleador para comparaciones"
             />
           </div>
         </div>
@@ -80,13 +80,13 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="Featured roster"
-            title="Recent and active fighters"
-            description="A quick look at fighters with logged activity in the current dataset."
+            eyebrow="Plantilla destacada"
+            title="Peleadores recientes y activos"
+            description="Un vistazo rápido a los peleadores con actividad registrada en el conjunto de datos actual."
           />
           <Link href="/fighters" className="hidden sm:inline-flex">
             <Button variant="ghost" className="text-zinc-300 hover:bg-white/5 hover:text-white">
-              See full roster
+              Ver plantilla completa
             </Button>
           </Link>
         </div>

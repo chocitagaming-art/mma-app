@@ -33,13 +33,13 @@ export async function generateMetadata({
 
   if (!detail) {
     return {
-      title: "Fighter not found | MMA Stats",
+      title: "Luchador no encontrado | MMA Stats",
     };
   }
 
   return {
     title: `${detail.fighter.name} | MMA Stats`,
-    description: `Fight history and aggregate performance stats for ${detail.fighter.name}.`,
+    description: `Historial de peleas y estadísticas agregadas de rendimiento de ${detail.fighter.name}.`,
   };
 }
 
@@ -73,24 +73,24 @@ export default async function FighterDetailPage({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-sm font-semibold uppercase tracking-[0.35em] text-red-300">
-                      Fighter profile
+                      Perfil del luchador
                     </p>
                     <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
                       {fighter.name}
                     </h1>
                     <p className="text-lg text-zinc-400">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-                      {detail.latestWeightClass ?? "Weight class unavailable"}
+                      {detail.latestWeightClass ?? "Categoría de peso no disponible"}
                     </Badge>
                     <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                      {fighter.stance ?? "Unknown stance"}
+                      {fighter.stance ?? "Guardia desconocida"}
                     </Badge>
                     <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                      {fighter.nationality ?? "Nationality unavailable"}
+                      {fighter.nationality ?? "Nacionalidad no disponible"}
                     </Badge>
                     <Link href={`/compare?a=${fighter.id}`}>
                       <Button
@@ -98,44 +98,44 @@ export default async function FighterDetailPage({
                         className="bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
                       >
                         <ArrowRightLeft />
-                        Compare fighter
+                        Comparar luchador
                       </Button>
                     </Link>
                   </div>
                 </div>
               </div>
               <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-5 text-right">
-                <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Record</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Récord</p>
                 <p className="mt-3 text-4xl font-semibold text-white">
                   {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                 </p>
-                <p className="mt-2 text-sm text-zinc-400">{detail.fightCount} logged fights</p>
+                <p className="mt-2 text-sm text-zinc-400">{detail.fightCount} peleas registradas</p>
               </div>
             </div>
             <Separator className="bg-white/10" />
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Height</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Altura</p>
                 <p className="mt-2 text-lg font-semibold text-white">
                   {formatHeight(fighter.heightCm)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Reach</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Alcance</p>
                 <p className="mt-2 text-lg font-semibold text-white">
                   {formatReach(fighter.reachCm)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Weight</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Peso</p>
                 <p className="mt-2 text-lg font-semibold text-white">
                   {formatWeight(fighter.weightGrams)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Nationality</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Nacionalidad</p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {fighter.nationality ?? "Unknown"}
+                  {fighter.nationality ?? "Desconocida"}
                 </p>
               </div>
             </div>
@@ -144,38 +144,38 @@ export default async function FighterDetailPage({
 
         <Card className="border-white/10 bg-white/5">
           <CardHeader>
-            <CardTitle className="text-white">Performance snapshot</CardTitle>
+            <CardTitle className="text-white">Resumen de rendimiento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <StatBar
-              label="Significant strike accuracy"
+              label="Precisión de golpes significativos"
               value={formatPercentage(aggregateStats.sigStrikeAccuracy)}
               progress={aggregateStats.sigStrikeAccuracy}
-              helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted} landed`}
+              helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted} conectados`}
             />
             <StatBar
-              label="Takedown accuracy"
+              label="Precisión de derribos"
               value={formatPercentage(aggregateStats.takedownAccuracy)}
               progress={aggregateStats.takedownAccuracy}
-              helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted} landed`}
+              helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted} conectados`}
             />
             <StatBar
-              label="Control time"
+              label="Tiempo de control"
               value={formatControlTime(aggregateStats.controlTimeSeconds)}
               progress={Math.min(1, aggregateStats.controlTimeSeconds / 1800)}
-              helper={`${aggregateStats.totalFightStats} tracked stat entries`}
+              helper={`${aggregateStats.totalFightStats} registros de estadísticas`}
             />
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                  Submission attempts
+                  Intentos de sumisión
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-white">
                   {aggregateStats.submissionAttempts}
                 </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Knockdowns</p>
+                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Derribos por golpe</p>
                 <p className="mt-2 text-2xl font-semibold text-white">
                   {aggregateStats.knockdowns}
                 </p>
@@ -187,9 +187,9 @@ export default async function FighterDetailPage({
 
       <section className="space-y-6">
         <SectionHeading
-          eyebrow="Fight history"
-          title="Every logged matchup"
-          description="Review opponents, events, and outcomes from the fights table."
+          eyebrow="Historial de peleas"
+          title="Cada enfrentamiento registrado"
+          description="Revisa oponentes, eventos y resultados desde la tabla de peleas."
         />
         <div className="grid gap-4">
           {history.length ? (
@@ -207,25 +207,31 @@ export default async function FighterDetailPage({
                               : "border-white/10 bg-white/10 text-zinc-200"
                         }
                       >
-                        {fight.result.toUpperCase()}
+                        {fight.result === "win"
+                          ? "VICTORIA"
+                          : fight.result === "loss"
+                            ? "DERROTA"
+                            : fight.result === "draw"
+                              ? "EMPATE"
+                              : "NC"}
                       </Badge>
                       <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                        {fight.weightClass ?? "Weight class unavailable"}
+                        {fight.weightClass ?? "Categoría de peso no disponible"}
                       </Badge>
                     </div>
                     <div className="space-y-2">
                       <p className="text-lg font-semibold text-white">
-                        vs {fight.opponentName ?? "Unknown opponent"}
+                        vs {fight.opponentName ?? "Oponente desconocido"}
                       </p>
                       <p className="text-sm text-zinc-400">
-                        {fight.eventName ?? "Unknown event"} · {formatDate(fight.eventDate)}
+                        {fight.eventName ?? "Evento desconocido"} · {formatDate(fight.eventDate)}
                       </p>
                       <p className="text-sm text-zinc-500">
-                        {fight.method ?? "Method unavailable"} · Round {fight.endRound ?? "—"} ·{" "}
+                        {fight.method ?? "Método no disponible"} · Asalto {fight.endRound ?? "—"} ·{" "}
                         {fight.endTime ?? "—"}
                       </p>
                     </div>
-                    <p className="text-sm font-medium text-red-200">Open fight details →</p>
+                    <p className="text-sm font-medium text-red-200">Abrir detalles de la pelea →</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -233,7 +239,7 @@ export default async function FighterDetailPage({
           ) : (
             <Card className="border-dashed border-white/10 bg-white/5">
               <CardContent className="px-6 py-16 text-center text-zinc-400">
-                No fight history is available for this fighter yet.
+                Aún no hay historial de peleas disponible para este luchador.
               </CardContent>
             </Card>
           )}
@@ -243,8 +249,8 @@ export default async function FighterDetailPage({
       <section className="space-y-6">
         <SectionHeading
           eyebrow="Noticias"
-          title={`Latest coverage on ${fighter.name}`}
-          description="Articles linked to this fighter from the news table, ordered by publication date."
+          title={`Cobertura más reciente sobre ${fighter.name}`}
+          description="Artículos vinculados a este luchador desde la tabla de noticias, ordenados por fecha de publicación."
         />
         <div className="grid gap-4">
           {news.length ? (
@@ -261,7 +267,7 @@ export default async function FighterDetailPage({
                           {article.category ?? "General"}
                         </Badge>
                         <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                          {article.source ?? "Unknown source"}
+                          {article.source ?? "Fuente desconocida"}
                         </Badge>
                       </div>
                       <a
@@ -280,7 +286,7 @@ export default async function FighterDetailPage({
                       ? article.summary.length > 180
                         ? `${article.summary.slice(0, 180).trimEnd()}…`
                         : article.summary
-                      : "No summary available for this article."}
+                      : "No hay resumen disponible para este artículo."}
                   </p>
                   <div className="border-t border-white/10 pt-4">
                     <a
@@ -289,7 +295,7 @@ export default async function FighterDetailPage({
                       rel="noreferrer"
                       className="text-sm font-medium text-red-200 transition hover:text-red-100"
                     >
-                      Read article →
+                      Leer artículo →
                     </a>
                   </div>
                 </CardContent>
@@ -298,7 +304,7 @@ export default async function FighterDetailPage({
           ) : (
             <Card className="border-dashed border-white/10 bg-white/5">
               <CardContent className="px-6 py-16 text-center text-zinc-400">
-                No related news articles are available for this fighter yet.
+                Aún no hay artículos de noticias relacionados con este luchador.
               </CardContent>
             </Card>
           )}

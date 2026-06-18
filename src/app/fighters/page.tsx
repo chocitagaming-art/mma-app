@@ -15,8 +15,8 @@ type FightersPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Fighters | MMA Stats",
-  description: "Search, filter, and sort fighter profiles from the live MMA database.",
+  title: "Luchadores | MMA Stats",
+  description: "Busca, filtra y ordena perfiles de peleadores desde la base de datos de MMA en vivo.",
 };
 
 function getSingleValue(value: string | string[] | undefined) {
@@ -57,9 +57,9 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
       <SectionHeading
-        eyebrow="Roster explorer"
-        title="Browse every fighter in the database"
-        description="Filter by weight class, stance, and nationality, then sort the roster to surface the profiles you want."
+        eyebrow="Explorador de plantilla"
+        title="Explora cada luchador de la base de datos"
+        description="Filtra por categoría de peso, guardia y nacionalidad, y luego ordena la plantilla para encontrar los perfiles que buscas."
       />
 
       <Card className="border-white/10 bg-white/5">
@@ -72,13 +72,13 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
           />
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
             <p>
-              Showing{" "}
+              Mostrando{" "}
               <span className="font-semibold text-white">{result.fighters.length}</span> of{" "}
-              <span className="font-semibold text-white">{result.total}</span> fighters
+              <span className="font-semibold text-white">{result.total}</span> luchadores
             </p>
             <Link href="/fighters">
               <Button variant="ghost" className="text-zinc-300 hover:bg-white/5 hover:text-white">
-                Reset filters
+                Restablecer filtros
               </Button>
             </Link>
           </div>
@@ -89,11 +89,11 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
         <>
           <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
             <div className="hidden grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] gap-4 border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500 md:grid">
-              <span>Fighter</span>
-              <span>Record</span>
-              <span>Weight class</span>
-              <span>Nationality</span>
-              <span>Stance</span>
+              <span>Luchador</span>
+              <span>Récord</span>
+              <span>Categoría de peso</span>
+              <span>Nacionalidad</span>
+              <span>Guardia</span>
             </div>
             {result.fighters.map((fighter) => (
               <Link
@@ -111,13 +111,13 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold text-white">{fighter.name}</p>
                     <p className="truncate text-sm text-zinc-400">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "No nickname listed"}
+                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
-                    Record
+                    Récord
                   </p>
                   <p className="mt-1 text-sm font-medium text-white md:mt-0">
                     {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
@@ -125,30 +125,30 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
-                    Weight class
+                    Categoría de peso
                   </p>
                   <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                    {fighter.latestWeightClass ?? "Open Weight"}
+                    {fighter.latestWeightClass ?? "Peso abierto"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
-                    Nationality
+                    Nacionalidad
                   </p>
                   <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                    {fighter.nationality ?? "Unknown"}
+                    {fighter.nationality ?? "Desconocida"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
-                      Stance
+                      Guardia
                     </p>
                     <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                      {fighter.stance ?? "Unknown"}
+                      {fighter.stance ?? "Desconocida"}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-red-200">View profile →</span>
+                  <span className="text-sm font-medium text-red-200">Ver perfil →</span>
                 </div>
               </Link>
             ))}
@@ -162,13 +162,13 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
       ) : (
         <Card className="border-dashed border-white/10 bg-white/5">
           <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-            <p className="text-2xl font-semibold text-white">No fighters found</p>
+            <p className="text-2xl font-semibold text-white">No se encontraron luchadores</p>
             <p className="max-w-md text-sm text-zinc-400">
-              Try broadening your search or clearing one of the active filters.
+              Intenta ampliar tu búsqueda o quitar uno de los filtros activos.
             </p>
             <Link href="/fighters">
               <Button className="bg-red-500 text-white hover:bg-red-400">
-                View full roster
+                Ver plantilla completa
               </Button>
             </Link>
           </CardContent>

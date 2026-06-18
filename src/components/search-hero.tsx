@@ -27,14 +27,14 @@ export function SearchHero() {
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search fighters by name"
+        placeholder="Buscar luchadores por nombre"
         className="h-12 border-white/10 bg-white/5 text-white placeholder:text-zinc-500"
       />
       <Button
         type="submit"
         className="h-12 bg-red-500 text-white hover:bg-red-400 sm:px-8"
       >
-        Explore roster
+        Explorar plantilla
       </Button>
     </form>
   );

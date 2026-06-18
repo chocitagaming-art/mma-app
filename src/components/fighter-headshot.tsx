@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -41,12 +41,9 @@ export function FighterHeadshot({
   const [imageFailed, setImageFailed] = useState(false);
   const initials = getInitials(name);
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [headshotUrl]);
-
   return (
     <div
+      key={headshotUrl ?? name}
       className={cn(
         "relative overflow-hidden rounded-full border border-white/10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black shadow-lg shadow-black/30",
         sizeClasses[size],
@@ -56,7 +53,7 @@ export function FighterHeadshot({
       {headshotUrl && !imageFailed ? (
         <Image
           src={headshotUrl}
-          alt={`${name} headshot`}
+          alt={`Foto de ${name}`}
           fill
           preload={priority}
           sizes={
