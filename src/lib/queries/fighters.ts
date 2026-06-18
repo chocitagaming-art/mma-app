@@ -243,7 +243,7 @@ export async function getFighters(
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(24, Math.max(1, filters.pageSize ?? 12));
   const query = filters.query?.trim() ?? "";
-  const sort = filters.sort ?? "name";
+  const sort = filters.sort ?? "relevance";
   const values: unknown[] = [];
   const conditions: string[] = [];
 
@@ -272,12 +272,18 @@ export async function getFighters(
   }
 
   const whereClause = conditions.length ? `where ${conditions.join(" and ")}` : "";
+  // Relevancia (default): rankeados primero (campeón=0, contendiente por posición),
+  // luego por nº de peleas (leyendas/veteranos), y nombre como desempate.
+  const relevanceOrder =
+    "rel.best_rank asc nulls last, coalesce(fc.n, 0) desc, f.name asc";
   const orderBy =
     sort === "wins"
       ? "f.wins desc, f.losses asc, f.name asc"
       : sort === "losses"
         ? "f.losses desc, f.wins desc, f.name asc"
-        : "f.name asc";
+        : sort === "name"
+          ? "f.name asc"
+          : relevanceOrder;
 
   const countRows = await sql<{ total: string }>(
     `select count(*)::text as total
@@ -294,13 +300,26 @@ export async function getFighters(
   values.push(pageSize, offset);
 
   const fighters = await sql<FighterRow>(
-    `select
+    `with latest as (select max(snapshot_date) as d from rankings),
+    rel as (
+      select fighter_id,
+             min(case when is_champion then 0 else rank_position end) as best_rank
+      from rankings
+      where snapshot_date = (select d from latest)
+      group by fighter_id
+    ),
+    fight_counts as (
+      select fighter_id, count(*) as n
+      from (
+        select fighter_red_id as fighter_id from fights where fighter_red_id is not null
+        union all
+        select fighter_blue_id as fighter_id from fights where fighter_blue_id is not null
+      ) s
+      group by fighter_id
+    )
+    select
       f.*,
-      (
-        select count(*)::text
-        from fights fi
-        where fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
-      ) as fight_count,
+      coalesce(fc.n, 0)::text as fight_count,
       (
         select fi2.weight_class
         from fights fi2
@@ -309,6 +328,8 @@ export async function getFighters(
         limit 1
       ) as latest_weight_class
     from fighters f
+    left join rel on rel.fighter_id = f.id
+    left join fight_counts fc on fc.fighter_id = f.id
     ${whereClause}
     order by ${orderBy}
     limit $${values.length - 1} offset $${values.length}`,

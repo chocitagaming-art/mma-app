@@ -34,7 +34,7 @@ export type FighterFilters = {
   weightClass?: string;
   stance?: string;
   nationality?: string;
-  sort?: "name" | "wins" | "losses";
+  sort?: "relevance" | "name" | "wins" | "losses";
 };
 
 export type FighterListResult = {

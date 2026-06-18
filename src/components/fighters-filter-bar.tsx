@@ -69,6 +69,7 @@ export function FightersFilterBar({
     ...Object.fromEntries(stances.map((stance) => [stance, stance])),
   };
   const sortItems = {
+    relevance: "Ordenar: Relevancia",
     name: "Ordenar: Nombre",
     wins: "Ordenar: Victorias",
     losses: "Ordenar: Derrotas",
@@ -160,12 +161,15 @@ export function FightersFilterBar({
         <Select
           items={sortItems}
           value={current.sort}
-          onValueChange={(value) => updateParam("sort", value ?? "name")}
+          onValueChange={(value) =>
+            updateParam("sort", value === "relevance" ? "" : value ?? "")
+          }
         >
           <SelectTrigger className="h-11 w-full border-border bg-card text-foreground">
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="relevance">Ordenar: Relevancia</SelectItem>
             <SelectItem value="name">Ordenar: Nombre</SelectItem>
             <SelectItem value="wins">Ordenar: Victorias</SelectItem>
             <SelectItem value="losses">Ordenar: Derrotas</SelectItem>

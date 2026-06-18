@@ -31,7 +31,11 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
   const weightClass = getSingleValue(params.weightClass);
   const stance = getSingleValue(params.stance);
   const nationality = getSingleValue(params.nationality);
-  const sort = getSingleValue(params.sort) || "name";
+  const rawSort = getSingleValue(params.sort) || "relevance";
+  const sort: "relevance" | "name" | "wins" | "losses" =
+    rawSort === "name" || rawSort === "wins" || rawSort === "losses"
+      ? rawSort
+      : "relevance";
 
   const result = await getFighters({
     page,
@@ -39,7 +43,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
     weightClass,
     stance,
     nationality,
-    sort: sort === "wins" || sort === "losses" ? sort : "name",
+    sort,
   });
 
   const createHref = (nextPage: number) => {
@@ -49,7 +53,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
     if (weightClass) next.set("weightClass", weightClass);
     if (stance) next.set("stance", stance);
     if (nationality) next.set("nationality", nationality);
-    if (sort && sort !== "name") next.set("sort", sort);
+    if (sort && sort !== "relevance") next.set("sort", sort);
     if (nextPage > 1) next.set("page", String(nextPage));
 
     return `/fighters${next.toString() ? `?${next.toString()}` : ""}`;
