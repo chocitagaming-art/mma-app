@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { FighterSearchResult } from "@/lib/types";
 
@@ -102,26 +101,25 @@ export function SearchHero() {
             }
           }}
           placeholder="Buscar luchador..."
-          className="h-12 border-white/10 bg-white/5 text-white placeholder:text-zinc-500"
+          className="h-12 border-border bg-card text-base text-foreground placeholder:text-muted-foreground"
         />
-        <Button
-          type="submit"
-          className="h-12 bg-red-500 text-white hover:bg-red-400 sm:px-8"
-        >
+        <Button type="submit" size="lg" className="h-12 px-6 sm:px-8">
           Explorar plantilla
         </Button>
       </form>
       {open && (results.length > 0 || loading || showEmpty) ? (
-        <Card className="absolute z-30 mt-2 w-full border-white/10 bg-zinc-950/95 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border border-border bg-popover py-2 shadow-xl">
           <div className="max-h-80 overflow-y-auto px-2">
             {loading ? (
-              <div className="px-3 py-4 text-sm text-zinc-400">Buscando luchadores…</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">
+                Buscando luchadores…
+              </div>
             ) : null}
             {results.map((fighter) => (
               <button
                 key={fighter.id}
                 type="button"
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/5"
+                className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-muted"
                 onClick={() => {
                   setOpen(false);
                   router.push(`/fighters/${fighter.id}`);
@@ -133,22 +131,24 @@ export function SearchHero() {
                   size="sm"
                   className="size-10 shrink-0"
                 />
-                <div className="space-y-1">
-                  <p className="font-medium text-white">{fighter.name}</p>
-                  <p className="text-sm text-zinc-400">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">
+                    {fighter.name}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground">
                     {fighter.nationality ?? "Nacionalidad no disponible"}
                   </p>
                 </div>
               </button>
             ))}
             {showEmpty ? (
-              <div className="flex items-center gap-2 px-3 py-4 text-sm text-zinc-400">
-                <Swords className="size-4 text-zinc-500" />
+              <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                <Swords className="size-4" />
                 No se encontraron luchadores
               </div>
             ) : null}
           </div>
-        </Card>
+        </div>
       ) : null}
     </div>
   );

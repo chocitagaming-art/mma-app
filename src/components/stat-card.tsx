@@ -1,5 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
-
 type StatCardProps = {
   label: string;
   value: string;
@@ -8,14 +6,14 @@ type StatCardProps = {
 
 export function StatCard({ label, value, helper }: StatCardProps) {
   return (
-    <Card className="border-white/10 bg-white/5 shadow-2xl shadow-black/20 backdrop-blur">
-      <CardContent className="space-y-3 p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
-          {label}
-        </p>
-        <p className="text-3xl font-semibold text-white">{value}</p>
-        <p className="text-sm text-zinc-400">{helper}</p>
-      </CardContent>
-    </Card>
+    <div className="rounded-lg border border-border bg-card p-5">
+      <p className="font-mono text-[0.7rem] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="tabular mt-2 font-display text-4xl font-extrabold leading-none text-foreground">
+        {value}
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">{helper}</p>
+    </div>
   );
 }
