@@ -35,7 +35,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
               </div>
             </div>
             <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-              {fighter.latestWeightClass ?? "Peso abierto"}
+              {fighter.latestWeightClass ?? "Open Weight"}
             </Badge>
           </div>
         </CardHeader>
@@ -65,13 +65,13 @@ export function FighterCard({ fighter }: FighterCardProps) {
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
                 Nacionalidad
               </p>
-              <p className="mt-2">{fighter.nationality ?? "Desconocida"}</p>
+              <p className="mt-2">{fighter.nationality ?? "Unknown"}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
                 Guardia
               </p>
-              <p className="mt-2">{fighter.stance ?? "Desconocida"}</p>
+              <p className="mt-2">{fighter.stance ?? "Unknown"}</p>
             </div>
           </div>
         </CardContent>

@@ -54,21 +54,21 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
             </div>
             <div className="space-y-4 text-center">
               <Badge className="border-white/10 bg-white/10 text-zinc-100">
-                {fight.weightClass ?? "Categoría de peso no disponible"}
+                {fight.weightClass ?? "Weight class unavailable"}
               </Badge>
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Resultado</p>
                 <p className="mt-2 text-2xl font-semibold text-white">
-                  {fight.method ?? "Método no disponible"}
+                  {fight.method ?? "Method unavailable"}
                 </p>
                 <p className="mt-2 text-sm text-zinc-400">
                   Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
                 </p>
               </div>
               <div className="text-sm text-zinc-400">
-                <p>{fight.eventName ?? "Evento desconocido"}</p>
+                <p>{fight.eventName ?? "Unknown event"}</p>
                 <p>{formatDate(fight.eventDate)}</p>
-                <p>{fight.location ?? "Ubicación no disponible"}</p>
+                <p>{fight.location ?? "Location unavailable"}</p>
               </div>
             </div>
             <div className="space-y-2 text-left md:text-right">

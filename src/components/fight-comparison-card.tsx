@@ -53,7 +53,7 @@ export function FightComparisonCard({
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Guardia</p>
-            <p className="mt-2 text-white">{fighter.stance ?? "Desconocida"}</p>
+            <p className="mt-2 text-white">{fighter.stance ?? "Unknown"}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Altura</p>

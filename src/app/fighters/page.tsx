@@ -128,7 +128,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                     Categoría de peso
                   </p>
                   <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                    {fighter.latestWeightClass ?? "Peso abierto"}
+                    {fighter.latestWeightClass ?? "Open Weight"}
                   </p>
                 </div>
                 <div>
@@ -136,7 +136,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                     Nacionalidad
                   </p>
                   <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                    {fighter.nationality ?? "Desconocida"}
+                    {fighter.nationality ?? "Unknown"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -145,7 +145,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                       Guardia
                     </p>
                     <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                      {fighter.stance ?? "Desconocida"}
+                      {fighter.stance ?? "Unknown"}
                     </p>
                   </div>
                   <span className="text-sm font-medium text-red-200">Ver perfil →</span>

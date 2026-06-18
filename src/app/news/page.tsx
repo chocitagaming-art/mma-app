@@ -105,7 +105,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         {article.category ?? "General"}
                       </Badge>
                       <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                        {article.source ?? "Fuente desconocida"}
+                        {article.source ?? "Unknown source"}
                       </Badge>
                     </div>
                     <a

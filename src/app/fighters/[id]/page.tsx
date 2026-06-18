@@ -84,13 +84,13 @@ export default async function FighterDetailPage({
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-                      {detail.latestWeightClass ?? "Categoría de peso no disponible"}
+                      {detail.latestWeightClass ?? "Weight class unavailable"}
                     </Badge>
                     <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                      {fighter.stance ?? "Guardia desconocida"}
+                      {fighter.stance ?? "Unknown stance"}
                     </Badge>
                     <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                      {fighter.nationality ?? "Nacionalidad no disponible"}
+                      {fighter.nationality ?? "Nationality unavailable"}
                     </Badge>
                     <Link href={`/compare?a=${fighter.id}`}>
                       <Button
@@ -135,7 +135,7 @@ export default async function FighterDetailPage({
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Nacionalidad</p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {fighter.nationality ?? "Desconocida"}
+                  {fighter.nationality ?? "Unknown"}
                 </p>
               </div>
             </div>
@@ -207,27 +207,21 @@ export default async function FighterDetailPage({
                               : "border-white/10 bg-white/10 text-zinc-200"
                         }
                       >
-                        {fight.result === "win"
-                          ? "VICTORIA"
-                          : fight.result === "loss"
-                            ? "DERROTA"
-                            : fight.result === "draw"
-                              ? "EMPATE"
-                              : "NC"}
+                        {fight.result.toUpperCase()}
                       </Badge>
                       <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                        {fight.weightClass ?? "Categoría de peso no disponible"}
+                        {fight.weightClass ?? "Weight class unavailable"}
                       </Badge>
                     </div>
                     <div className="space-y-2">
                       <p className="text-lg font-semibold text-white">
-                        vs {fight.opponentName ?? "Oponente desconocido"}
+                        vs {fight.opponentName ?? "Unknown opponent"}
                       </p>
                       <p className="text-sm text-zinc-400">
-                        {fight.eventName ?? "Evento desconocido"} · {formatDate(fight.eventDate)}
+                        {fight.eventName ?? "Unknown event"} · {formatDate(fight.eventDate)}
                       </p>
                       <p className="text-sm text-zinc-500">
-                        {fight.method ?? "Método no disponible"} · Asalto {fight.endRound ?? "—"} ·{" "}
+                        {fight.method ?? "Method unavailable"} · Asalto {fight.endRound ?? "—"} ·{" "}
                         {fight.endTime ?? "—"}
                       </p>
                     </div>
@@ -267,7 +261,7 @@ export default async function FighterDetailPage({
                           {article.category ?? "General"}
                         </Badge>
                         <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                          {article.source ?? "Fuente desconocida"}
+                          {article.source ?? "Unknown source"}
                         </Badge>
                       </div>
                       <a

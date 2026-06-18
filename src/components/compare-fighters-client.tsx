@@ -155,10 +155,10 @@ export function CompareFightersClient({
                     )}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterA.stance ?? "Guardia desconocida"}
+                    {detail.fighterA.stance ?? "Unknown stance"}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterA.latestWeightClass ?? "Peso abierto"}
+                    {detail.fighterA.latestWeightClass ?? "Open Weight"}
                   </Badge>
                 </div>
                 <Separator className="bg-white/10" />
@@ -184,7 +184,7 @@ export function CompareFightersClient({
                       Nacionalidad
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {detail.fighterA.nationality ?? "Desconocida"}
+                      {detail.fighterA.nationality ?? "Unknown"}
                     </p>
                   </div>
                   <div>
@@ -247,10 +247,10 @@ export function CompareFightersClient({
                     )}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterB.stance ?? "Guardia desconocida"}
+                    {detail.fighterB.stance ?? "Unknown stance"}
                   </Badge>
                   <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterB.latestWeightClass ?? "Peso abierto"}
+                    {detail.fighterB.latestWeightClass ?? "Open Weight"}
                   </Badge>
                 </div>
                 <Separator className="bg-white/10" />
@@ -276,7 +276,7 @@ export function CompareFightersClient({
                       Nacionalidad
                     </p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {detail.fighterB.nationality ?? "Desconocida"}
+                      {detail.fighterB.nationality ?? "Unknown"}
                     </p>
                   </div>
                   <div>
@@ -512,21 +512,21 @@ export function CompareFightersClient({
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                              {fight.weightClass ?? "Categoría de peso no disponible"}
+                              {fight.weightClass ?? "Weight class unavailable"}
                             </Badge>
                             <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
                               {fight.winnerId === detail.fighterA.id
-                                ? `${detail.fighterA.name} ganó`
+                                ? `${detail.fighterA.name} won`
                                 : fight.winnerId === detail.fighterB.id
-                                  ? `${detail.fighterB.name} ganó`
-                                  : "Empate / Sin resultado"}
+                                  ? `${detail.fighterB.name} won`
+                                  : "Draw / No contest"}
                             </Badge>
                           </div>
                           <p className="text-lg font-semibold text-white">
-                            {fight.eventName ?? "Evento desconocido"}
+                            {fight.eventName ?? "Unknown event"}
                           </p>
                           <p className="text-sm text-zinc-400">
-                            {formatDate(fight.eventDate)} · {fight.method ?? "Método no disponible"} ·
+                            {formatDate(fight.eventDate)} · {fight.method ?? "Method unavailable"} ·
                             {" "}Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
                           </p>
                         </div>
