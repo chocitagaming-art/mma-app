@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowRightLeft } from "lucide-react";
 
+import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { SectionHeading } from "@/components/section-heading";
 import { StatBar } from "@/components/stat-bar";
@@ -101,6 +102,7 @@ export default async function FighterDetailPage({
                       {fighter.stance ?? "Unknown stance"}
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                      <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
                       {fighter.nationality ?? "Nationality unavailable"}
                     </Badge>
                     <Link href={`/compare?a=${fighter.id}`}>
@@ -145,7 +147,8 @@ export default async function FighterDetailPage({
               </div>
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Nacionalidad</p>
-                <p className="mt-2 text-lg font-semibold text-foreground">
+                <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
                   {fighter.nationality ?? "Unknown"}
                 </p>
               </div>

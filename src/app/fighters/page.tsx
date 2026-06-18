@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { CountryFlag } from "@/components/country-flag";
 import { FightersFilterBar } from "@/components/fighters-filter-bar";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { PaginationControls } from "@/components/pagination-controls";
@@ -135,7 +136,8 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                   <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
                     Nacionalidad
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground md:mt-0">
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground md:mt-0">
+                    <CountryFlag nationality={fighter.nationality} />
                     {fighter.nationality ?? "Unknown"}
                   </p>
                 </div>

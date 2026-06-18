@@ -147,6 +147,32 @@ export type NewsListResult = {
   activeCategory: string;
 };
 
+export type RankingEntry = {
+  rankPosition: number; // 0 = champion
+  isChampion: boolean;
+  rankChange: number | null; // +N sube, -N baja, null = sin cambio, >=900 = nuevo
+  fighterId: number | null;
+  fighterName: string;
+  headshotUrl: string | null;
+  nationality: string | null;
+  nickname: string | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+};
+
+export type DivisionRanking = {
+  division: string; // slug (p.ej. "lightweight", "mens_pound_for_pound")
+  label: string; // etiqueta en español
+  champion: RankingEntry | null;
+  ranked: RankingEntry[];
+};
+
+export type RankingsResult = {
+  snapshotDate: string | null;
+  divisions: DivisionRanking[];
+};
+
 export type FightCompetitor = {
   id: number;
   name: string;

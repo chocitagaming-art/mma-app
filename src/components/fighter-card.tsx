@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRightLeft } from "lucide-react";
 
+import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { formatRecord, formatWeight, formatWeightClass } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
@@ -9,7 +11,7 @@ type FighterCardProps = {
   fighter: FighterCardData;
 };
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
@@ -56,7 +58,19 @@ export function FighterCard({ fighter }: FighterCardProps) {
             value={formatRecord(fighter.wins, fighter.losses, fighter.draws)}
           />
           <Stat label="Peso" value={formatWeight(fighter.weightGrams)} />
-          <Stat label="Nacionalidad" value={fighter.nationality ?? "—"} />
+          <Stat
+            label="Nacionalidad"
+            value={
+              fighter.nationality ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <CountryFlag nationality={fighter.nationality} />
+                  <span className="truncate">{fighter.nationality}</span>
+                </span>
+              ) : (
+                "—"
+              )
+            }
+          />
           <Stat label="Guardia" value={fighter.stance ?? "—"} />
         </div>
       </Link>
