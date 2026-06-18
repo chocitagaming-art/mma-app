@@ -121,7 +121,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 {event.location}
               </span>
             ) : null}
-            <span className="tabular">{event.bouts.length} peleas</span>
+            {event.bouts.length > 0 ? (
+              <span className="tabular">{event.bouts.length} peleas</span>
+            ) : null}
           </div>
 
           {isUpcoming && event.ticketUrl ? (
