@@ -32,11 +32,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
     ? {
         id: comparison.fighterA.id,
         name: comparison.fighterA.name,
-        nickname: comparison.fighterA.nickname,
         headshotUrl: comparison.fighterA.headshotUrl,
-        wins: comparison.fighterA.wins,
-        losses: comparison.fighterA.losses,
-        draws: comparison.fighterA.draws,
+        nationality: comparison.fighterA.nationality,
       }
     : null;
 
@@ -44,11 +41,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
     ? {
         id: comparison.fighterB.id,
         name: comparison.fighterB.name,
-        nickname: comparison.fighterB.nickname,
         headshotUrl: comparison.fighterB.headshotUrl,
-        wins: comparison.fighterB.wins,
-        losses: comparison.fighterB.losses,
-        draws: comparison.fighterB.draws,
+        nationality: comparison.fighterB.nationality,
       }
     : null;
 
