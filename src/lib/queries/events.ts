@@ -4,9 +4,16 @@ import type {
   EventDetail,
   EventListItem,
   EventListResult,
+  UpcomingEventItem,
 } from "@/lib/types";
 
 const PAGE_SIZE = 24;
+
+// Algunos pósters de ufc.com vienen como ruta relativa (/s3/files/...). Los absolutizamos
+// para que el <img> no los busque en localhost y den 404.
+function absolutePoster(url: string | null): string | null {
+  return url && url.startsWith("/") ? `https://www.ufc.com${url}` : url;
+}
 
 type EventListRow = {
   id: number;
@@ -53,11 +60,61 @@ export async function getPastEvents(page: number): Promise<EventListResult> {
   return { events, total, page: currentPage, totalPages };
 }
 
+type UpcomingEventRow = {
+  id: number;
+  name: string;
+  headliner: string | null;
+  event_date: string | null;
+  start_time: string | null;
+  location: string | null;
+  image_url: string | null;
+  broadcast: string | null;
+  ticket_url: string | null;
+  tagline: string | null;
+  fight_count: string;
+};
+
+export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
+  const rows = await sql<UpcomingEventRow>(
+    `SELECT e.id, e.name, e.headliner, e.event_date::text AS event_date,
+            e.start_time::text AS start_time, e.location, e.image_url,
+            e.broadcast, e.ticket_url, e.tagline,
+            count(f.id)::text AS fight_count
+     FROM events e
+     LEFT JOIN fights f ON f.event_id = e.id
+     WHERE e.status = 'upcoming'
+     GROUP BY e.id, e.name, e.headliner, e.event_date, e.start_time,
+              e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline
+     ORDER BY e.event_date ASC, e.id ASC`,
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    headliner: row.headliner,
+    eventDate: row.event_date,
+    startTime: row.start_time,
+    location: row.location,
+    imageUrl: absolutePoster(row.image_url),
+    broadcast: row.broadcast,
+    ticketUrl: row.ticket_url,
+    tagline: row.tagline,
+    fightCount: Number(row.fight_count),
+  }));
+}
+
 type EventRow = {
   id: number;
   name: string;
   event_date: string | null;
   location: string | null;
+  status: string | null;
+  start_time: string | null;
+  image_url: string | null;
+  broadcast: string | null;
+  ticket_url: string | null;
+  tagline: string | null;
+  headliner: string | null;
 };
 
 type BoutRow = {
@@ -68,27 +125,33 @@ type BoutRow = {
   end_time: string | null;
   scheduled_rounds: number | null;
   winner_id: number | null;
-  red_id: number;
-  red_name: string;
+  bout_order: number | null;
+  card_segment: string | null;
+  red_fighter_name: string;
+  blue_fighter_name: string;
+  red_id: number | null;
+  red_name: string | null;
   red_nickname: string | null;
   red_headshot: string | null;
   red_nationality: string | null;
-  red_wins: number;
-  red_losses: number;
-  red_draws: number;
-  blue_id: number;
-  blue_name: string;
+  red_wins: number | null;
+  red_losses: number | null;
+  red_draws: number | null;
+  blue_id: number | null;
+  blue_name: string | null;
   blue_nickname: string | null;
   blue_headshot: string | null;
   blue_nationality: string | null;
-  blue_wins: number;
-  blue_losses: number;
-  blue_draws: number;
+  blue_wins: number | null;
+  blue_losses: number | null;
+  blue_draws: number | null;
 };
 
 export async function getEventDetail(id: number): Promise<EventDetail | null> {
   const eventRows = await sql<EventRow>(
-    `SELECT id, name, event_date::text AS event_date, location
+    `SELECT id, name, event_date::text AS event_date, location,
+            status, start_time::text AS start_time, image_url,
+            broadcast, ticket_url, tagline, headliner
      FROM events WHERE id = $1`,
     [id],
   );
@@ -97,11 +160,14 @@ export async function getEventDetail(id: number): Promise<EventDetail | null> {
     return null;
   }
 
-  // Sin bout_order todavía (vendrá con la migración de eventos): el orden por id
-  // aproxima el orden del cartel (ufcstats lista la estelar primero).
+  // LEFT JOIN: los próximos pueden tener luchadores TBD (fighter_red_id/blue_id NULL).
+  // En esos casos usamos fighter_red_name/fighter_blue_name (siempre rellenos).
+  // bout_order ordena el cartel (1 = estelar); NULLS LAST para eventos lejanos sin orden.
   const boutRows = await sql<BoutRow>(
     `SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
-            fi.scheduled_rounds, fi.winner_id,
+            fi.scheduled_rounds, fi.winner_id, fi.bout_order, fi.card_segment,
+            fi.fighter_red_name AS red_fighter_name,
+            fi.fighter_blue_name AS blue_fighter_name,
             red.id AS red_id, red.name AS red_name, red.nickname AS red_nickname,
             red.headshot_url AS red_headshot, red.nationality AS red_nationality,
             red.wins AS red_wins, red.losses AS red_losses, red.draws AS red_draws,
@@ -109,10 +175,10 @@ export async function getEventDetail(id: number): Promise<EventDetail | null> {
             blue.headshot_url AS blue_headshot, blue.nationality AS blue_nationality,
             blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws
      FROM fights fi
-     INNER JOIN fighters red ON red.id = fi.fighter_red_id
-     INNER JOIN fighters blue ON blue.id = fi.fighter_blue_id
+     LEFT JOIN fighters red ON red.id = fi.fighter_red_id
+     LEFT JOIN fighters blue ON blue.id = fi.fighter_blue_id
      WHERE fi.event_id = $1
-     ORDER BY fi.id ASC`,
+     ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC`,
     [id],
   );
 
@@ -124,26 +190,52 @@ export async function getEventDetail(id: number): Promise<EventDetail | null> {
     endTime: row.end_time,
     scheduledRounds: row.scheduled_rounds,
     winnerId: row.winner_id,
-    red: {
-      id: row.red_id,
-      name: row.red_name,
-      nickname: row.red_nickname,
-      headshotUrl: row.red_headshot,
-      nationality: row.red_nationality,
-      wins: row.red_wins,
-      losses: row.red_losses,
-      draws: row.red_draws,
-    },
-    blue: {
-      id: row.blue_id,
-      name: row.blue_name,
-      nickname: row.blue_nickname,
-      headshotUrl: row.blue_headshot,
-      nationality: row.blue_nationality,
-      wins: row.blue_wins,
-      losses: row.blue_losses,
-      draws: row.blue_draws,
-    },
+    boutOrder: row.bout_order,
+    cardSegment: row.card_segment,
+    red:
+      row.red_id != null
+        ? {
+            id: row.red_id,
+            name: row.red_name ?? row.red_fighter_name,
+            nickname: row.red_nickname,
+            headshotUrl: row.red_headshot,
+            nationality: row.red_nationality,
+            wins: row.red_wins ?? 0,
+            losses: row.red_losses ?? 0,
+            draws: row.red_draws ?? 0,
+          }
+        : {
+            id: null,
+            name: row.red_fighter_name,
+            nickname: null,
+            headshotUrl: null,
+            nationality: null,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+          },
+    blue:
+      row.blue_id != null
+        ? {
+            id: row.blue_id,
+            name: row.blue_name ?? row.blue_fighter_name,
+            nickname: row.blue_nickname,
+            headshotUrl: row.blue_headshot,
+            nationality: row.blue_nationality,
+            wins: row.blue_wins ?? 0,
+            losses: row.blue_losses ?? 0,
+            draws: row.blue_draws ?? 0,
+          }
+        : {
+            id: null,
+            name: row.blue_fighter_name,
+            nickname: null,
+            headshotUrl: null,
+            nationality: null,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+          },
   }));
 
   return {
@@ -151,6 +243,13 @@ export async function getEventDetail(id: number): Promise<EventDetail | null> {
     name: event.name,
     eventDate: event.event_date,
     location: event.location,
+    status: event.status,
+    startTime: event.start_time,
+    imageUrl: absolutePoster(event.image_url),
+    broadcast: event.broadcast,
+    ticketUrl: event.ticket_url,
+    tagline: event.tagline,
+    headliner: event.headliner,
     bouts,
   };
 }

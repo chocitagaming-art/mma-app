@@ -189,7 +189,7 @@ export type EventListResult = {
 };
 
 export type EventBoutFighter = {
-  id: number;
+  id: number | null;
   name: string;
   nickname: string | null;
   headshotUrl: string | null;
@@ -207,6 +207,8 @@ export type EventBout = {
   endTime: string | null;
   scheduledRounds: number | null;
   winnerId: number | null;
+  boutOrder: number | null;
+  cardSegment: string | null;
   red: EventBoutFighter;
   blue: EventBoutFighter;
 };
@@ -216,7 +218,28 @@ export type EventDetail = {
   name: string;
   eventDate: string | null;
   location: string | null;
+  status: string | null;
+  startTime: string | null;
+  imageUrl: string | null;
+  broadcast: string | null;
+  ticketUrl: string | null;
+  tagline: string | null;
+  headliner: string | null;
   bouts: EventBout[];
+};
+
+export type UpcomingEventItem = {
+  id: number;
+  name: string;
+  headliner: string | null;
+  eventDate: string | null;
+  startTime: string | null;
+  location: string | null;
+  imageUrl: string | null;
+  broadcast: string | null;
+  ticketUrl: string | null;
+  tagline: string | null;
+  fightCount: number;
 };
 
 export type FightCompetitor = {
