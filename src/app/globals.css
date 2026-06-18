@@ -151,6 +151,30 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Faint octagon watermark — subtle brand personality behind the content. */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 11%;
+    left: 50%;
+    width: min(82vw, 880px);
+    aspect-ratio: 1 / 1;
+    transform: translateX(-50%);
+    z-index: -1;
+    pointer-events: none;
+    clip-path: polygon(
+      29% 0%,
+      71% 0%,
+      100% 29%,
+      100% 71%,
+      71% 100%,
+      29% 100%,
+      0% 71%,
+      0% 29%
+    );
+    background: var(--foreground);
+    opacity: 0.06;
+  }
   html {
     @apply font-sans;
   }

@@ -77,8 +77,8 @@ export default async function FighterDetailPage({
                   headshotUrl={fighter.headshotUrl}
                   size="xl"
                   priority
-                  className="border-border bg-muted"
-                  imageClassName="object-contain object-top"
+                  className="border-0 bg-transparent shadow-md ring-1 ring-border"
+                  imageClassName="object-cover object-top"
                 />
                 <div className="space-y-4">
                   <div className="space-y-2">

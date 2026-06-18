@@ -81,13 +81,13 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl space-y-7 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="flex items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="Plantilla destacada"
-            title="Peleadores activos"
-            description="Peleadores con actividad reciente registrada en el conjunto de datos."
+            eyebrow="Élite del momento"
+            title="Mejores libra por libra"
+            description="Los mejores peleadores del ranking oficial de UFC, sin distinción de categoría."
           />
-          <Link href="/fighters" className="hidden sm:inline-flex">
+          <Link href="/clasificacion" className="hidden sm:inline-flex">
             <Button variant="ghost" size="lg" className="h-10">
-              Ver plantilla completa →
+              Ver clasificación →
             </Button>
           </Link>
         </div>

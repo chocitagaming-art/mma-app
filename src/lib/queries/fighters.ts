@@ -192,24 +192,47 @@ export async function getHomeStats(): Promise<HomeStats> {
 export async function getFeaturedFighters(
   limit = 6,
 ): Promise<FighterCardData[]> {
-  const rows = await sql<FighterRow>(
-    `select
-      f.*,
-      count(fi.id)::text as fight_count,
-      (
+  const latestWeightClass = `(
         select fi2.weight_class
         from fights fi2
         where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
         order by fi2.updated_at desc nulls last, fi2.id desc
         limit 1
-      ) as latest_weight_class
-    from fighters f
+      ) as latest_weight_class`;
+
+  // Destacados = los mejores libra por libra (hombres) del último ranking oficial.
+  let rows = await sql<FighterRow>(
+    `with latest as (select max(snapshot_date) as d from rankings)
+    select
+      f.*,
+      count(fi.id)::text as fight_count,
+      ${latestWeightClass}
+    from rankings r
+    join fighters f on f.id = r.fighter_id
     left join fights fi on fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
-    group by f.id
-    order by count(fi.id) desc, f.updated_at desc nulls last, f.id desc
-    limit $1`,
+    where r.snapshot_date = (select d from latest)
+      and r.division = 'mens_pound_for_pound'
+      and r.rank_position between 1 and $1
+    group by f.id, r.rank_position
+    order by r.rank_position`,
     [limit],
   );
+
+  // Fallback si la tabla rankings aún no está poblada: por nº de peleas históricas.
+  if (rows.length === 0) {
+    rows = await sql<FighterRow>(
+      `select
+        f.*,
+        count(fi.id)::text as fight_count,
+        ${latestWeightClass}
+      from fighters f
+      left join fights fi on fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+      group by f.id
+      order by count(fi.id) desc, f.updated_at desc nulls last, f.id desc
+      limit $1`,
+      [limit],
+    );
+  }
 
   return rows.map(mapFighter);
 }

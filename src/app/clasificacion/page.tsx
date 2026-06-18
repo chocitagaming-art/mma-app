@@ -5,6 +5,41 @@ import { SectionHeading } from "@/components/section-heading";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { getRankings } from "@/lib/queries/rankings";
+import { cn } from "@/lib/utils";
+import type { DivisionRanking } from "@/lib/types";
+
+function DivisionGroup({
+  label,
+  divisions,
+  showPhotos = false,
+  threeCols = false,
+}: {
+  label: string;
+  divisions: DivisionRanking[];
+  showPhotos?: boolean;
+  threeCols?: boolean;
+}) {
+  if (divisions.length === 0) return null;
+  return (
+    <section className="space-y-5">
+      <div className="flex items-center gap-4">
+        <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+          {label}
+        </h2>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className={cn("grid items-start gap-5 md:grid-cols-2", threeCols && "xl:grid-cols-3")}>
+        {divisions.map((division) => (
+          <RankingDivisionCard
+            key={division.division}
+            division={division}
+            showPhotos={showPhotos}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Clasificación | MMA Stats",
@@ -13,6 +48,14 @@ export const metadata: Metadata = {
 
 export default async function ClasificacionPage() {
   const { snapshotDate, divisions } = await getRankings();
+
+  const p4p = divisions.filter((d) => d.division.endsWith("pound_for_pound"));
+  const women = divisions.filter(
+    (d) => d.division.startsWith("womens_") && !d.division.endsWith("pound_for_pound"),
+  );
+  const men = divisions.filter(
+    (d) => !d.division.startsWith("womens_") && !d.division.endsWith("pound_for_pound"),
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
@@ -39,10 +82,10 @@ export default async function ClasificacionPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="mt-8 grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {divisions.map((division) => (
-            <RankingDivisionCard key={division.division} division={division} />
-          ))}
+        <div className="mt-10 space-y-12">
+          <DivisionGroup label="Libra por libra" divisions={p4p} showPhotos />
+          <DivisionGroup label="Categorías masculinas" divisions={men} threeCols />
+          <DivisionGroup label="Categorías femeninas" divisions={women} threeCols />
         </div>
       )}
     </div>

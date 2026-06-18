@@ -60,7 +60,13 @@ function FighterName({ entry }: { entry: RankingEntry }) {
   );
 }
 
-export function RankingDivisionCard({ division }: { division: DivisionRanking }) {
+export function RankingDivisionCard({
+  division,
+  showPhotos = false,
+}: {
+  division: DivisionRanking;
+  showPhotos?: boolean;
+}) {
   const { label, champion, ranked } = division;
 
   return (
@@ -105,6 +111,14 @@ export function RankingDivisionCard({ division }: { division: DivisionRanking })
             <span className="w-5 shrink-0 text-right font-mono text-sm font-semibold tabular text-muted-foreground">
               {index + 1}
             </span>
+            {showPhotos ? (
+              <FighterHeadshot
+                name={entry.fighterName}
+                headshotUrl={entry.headshotUrl}
+                size="sm"
+                className="size-9 shrink-0"
+              />
+            ) : null}
             <div className="min-w-0 flex-1">
               <FighterName entry={entry} />
             </div>
