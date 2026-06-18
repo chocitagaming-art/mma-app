@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/", label: "Inicio" },
   { href: "/fighters", label: "Luchadores" },
-  { href: "/compare", label: "Comparar" },
-  { href: "/predict", label: "Predicción" },
+  { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/news", label: "Noticias" },
 ];
 

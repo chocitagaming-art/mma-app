@@ -21,6 +21,7 @@ import {
   formatReach,
   formatRecord,
   formatWeight,
+  formatWeightClass,
 } from "@/lib/format";
 import type {
   FighterComparisonDetail,
@@ -81,7 +82,7 @@ export function CompareFightersClient({
 
   return (
     <div className="space-y-10">
-      <Card className="overflow-visible border-white/10 bg-white/5">
+      <Card className="overflow-visible border-border bg-card">
         <CardContent className="space-y-8 p-6 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <SectionHeading
@@ -89,7 +90,7 @@ export function CompareFightersClient({
               title="Comparar dos luchadores de UFC"
               description="Busca en la plantilla, fija ambas esquinas y analiza golpeo, grappling e historial directo de enfrentamientos lado a lado."
             />
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
               La URL compartible se actualiza automáticamente mientras comparas.
             </div>
           </div>
@@ -101,7 +102,7 @@ export function CompareFightersClient({
               excludeId={fighterB?.id}
             />
             <div className="flex justify-center pb-2">
-              <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-red-200 shadow-lg shadow-red-950/20">
+              <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-lg">
                 <ArrowRightLeft className="size-5" />
               </div>
             </div>
@@ -118,7 +119,7 @@ export function CompareFightersClient({
       {canCompare && detail ? (
         <>
           <section className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-stretch">
-            <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+            <Card className="border-border bg-card">
               <CardContent className="space-y-6 p-6">
                 <div className="flex flex-col items-center gap-4 text-center xl:items-start xl:text-left">
                   <FighterHeadshot
@@ -126,20 +127,20 @@ export function CompareFightersClient({
                     headshotUrl={detail.fighterA.headshotUrl}
                     size="xl"
                     priority
-                    className="border-white/15 bg-black/30"
+                    className="border-corner-red bg-muted"
                     imageClassName="object-contain object-top"
                   />
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-corner-red">
                       Luchador A
                     </p>
                     <Link
                       href={`/fighters/${detail.fighterA.id}`}
-                      className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
+                      className="text-3xl font-semibold tracking-tight text-foreground transition hover:text-corner-red"
                     >
                       {detail.fighterA.name}
                     </Link>
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {detail.fighterA.nickname
                         ? `"${detail.fighterA.nickname}"`
                         : "Sin apodo registrado"}
@@ -147,51 +148,51 @@ export function CompareFightersClient({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                  <Badge className="border-primary/20 bg-primary/10 text-primary">
                     {formatRecord(
                       detail.fighterA.wins,
                       detail.fighterA.losses,
                       detail.fighterA.draws,
                     )}
                   </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
                     {detail.fighterA.stance ?? "Unknown stance"}
                   </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterA.latestWeightClass ?? "Open Weight"}
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                    {formatWeightClass(detail.fighterA.latestWeightClass ?? "Open Weight")}
                   </Badge>
                 </div>
-                <Separator className="bg-white/10" />
+                <Separator className="bg-border" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Altura
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {formatHeight(detail.fighterA.heightCm)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Alcance
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {formatReach(detail.fighterA.reachCm)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Nacionalidad
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {detail.fighterA.nationality ?? "Unknown"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Peleas registradas
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {detail.fighterA.fightCount}
                     </p>
                   </div>
@@ -200,17 +201,17 @@ export function CompareFightersClient({
             </Card>
 
             <div className="flex items-center justify-center">
-              <div className="flex min-h-24 min-w-24 items-center justify-center rounded-full border border-red-400/20 bg-red-500/10 px-6 text-center shadow-xl shadow-red-950/20">
+              <div className="flex min-h-24 min-w-24 items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-6 text-center shadow-xl">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
                     Comparativa física
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">VS</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">VS</p>
                 </div>
               </div>
             </div>
 
-            <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+            <Card className="border-border bg-card">
               <CardContent className="space-y-6 p-6">
                 <div className="flex flex-col items-center gap-4 text-center xl:items-end xl:text-right">
                   <FighterHeadshot
@@ -218,20 +219,20 @@ export function CompareFightersClient({
                     headshotUrl={detail.fighterB.headshotUrl}
                     size="xl"
                     priority
-                    className="border-white/15 bg-black/30"
+                    className="border-corner-blue bg-muted"
                     imageClassName="object-contain object-top"
                   />
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-corner-blue">
                       Luchador B
                     </p>
                     <Link
                       href={`/fighters/${detail.fighterB.id}`}
-                      className="text-3xl font-semibold tracking-tight text-white transition hover:text-red-200"
+                      className="text-3xl font-semibold tracking-tight text-foreground transition hover:text-corner-blue"
                     >
                       {detail.fighterB.name}
                     </Link>
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {detail.fighterB.nickname
                         ? `"${detail.fighterB.nickname}"`
                         : "Sin apodo registrado"}
@@ -239,51 +240,51 @@ export function CompareFightersClient({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3 xl:justify-end">
-                  <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                  <Badge className="border-primary/20 bg-primary/10 text-primary">
                     {formatRecord(
                       detail.fighterB.wins,
                       detail.fighterB.losses,
                       detail.fighterB.draws,
                     )}
                   </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
                     {detail.fighterB.stance ?? "Unknown stance"}
                   </Badge>
-                  <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                    {detail.fighterB.latestWeightClass ?? "Open Weight"}
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                    {formatWeightClass(detail.fighterB.latestWeightClass ?? "Open Weight")}
                   </Badge>
                 </div>
-                <Separator className="bg-white/10" />
+                <Separator className="bg-border" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Altura
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {formatHeight(detail.fighterB.heightCm)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Alcance
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {formatReach(detail.fighterB.reachCm)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Nacionalidad
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {detail.fighterB.nationality ?? "Unknown"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       Peleas registradas
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-white">
+                    <p className="mt-2 text-lg font-semibold text-foreground">
                       {detail.fighterB.fightCount}
                     </p>
                   </div>
@@ -293,9 +294,9 @@ export function CompareFightersClient({
           </section>
 
           <section className="grid gap-6">
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-white">Comparación de récord y físico</CardTitle>
+                <CardTitle className="text-foreground">Comparación de récord y físico</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ComparisonStatRow
@@ -357,9 +358,9 @@ export function CompareFightersClient({
             </Card>
 
             <div className="grid gap-6 xl:grid-cols-2">
-              <Card className="border-white/10 bg-white/5">
+              <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-white">Estadísticas de golpeo</CardTitle>
+                  <CardTitle className="text-foreground">Estadísticas de golpeo</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ComparisonStatRow
@@ -404,9 +405,9 @@ export function CompareFightersClient({
                 </CardContent>
               </Card>
 
-              <Card className="border-white/10 bg-white/5">
+              <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-white">Estadísticas de grappling</CardTitle>
+                  <CardTitle className="text-foreground">Estadísticas de grappling</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ComparisonStatRow
@@ -473,30 +474,30 @@ export function CompareFightersClient({
               description="Cada pelea registrada en la que estos dos luchadores compartieron la jaula."
             />
             {matchupSummary ? (
-              <Card className="border-white/10 bg-gradient-to-r from-red-950/30 via-black/30 to-red-950/30">
+              <Card className="border-border bg-primary/5">
                 <CardContent className="grid gap-4 p-6 md:grid-cols-3 md:items-center">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+                    <p className="text-sm uppercase tracking-[0.3em] text-corner-red">
                       {detail.fighterA.name}
                     </p>
-                    <p className="mt-2 text-3xl font-semibold text-white">
+                    <p className="mt-2 text-3xl font-semibold text-foreground">
                       {matchupSummary.fighterAWins}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
                       Cara a cara
                     </p>
-                    <p className="mt-2 text-lg text-zinc-300">
+                    <p className="mt-2 text-lg text-muted-foreground">
                       {matchupSummary.draws} empate
                       {matchupSummary.draws === 1 ? "" : "s"}
                     </p>
                   </div>
                   <div className="text-left md:text-right">
-                    <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+                    <p className="text-sm uppercase tracking-[0.3em] text-corner-blue">
                       {detail.fighterB.name}
                     </p>
-                    <p className="mt-2 text-3xl font-semibold text-white">
+                    <p className="mt-2 text-3xl font-semibold text-foreground">
                       {matchupSummary.fighterBWins}
                     </p>
                   </div>
@@ -507,14 +508,16 @@ export function CompareFightersClient({
               {detail.directMatchups.length ? (
                 detail.directMatchups.map((fight) => (
                   <Link key={fight.fightId} href={`/fights/${fight.fightId}`}>
-                    <Card className="border-white/10 bg-white/5 transition hover:border-red-400/30 hover:bg-white/[0.07]">
+                    <Card className="border-border bg-card transition hover:border-primary/30 hover:bg-accent">
                       <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
-                            <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                              {fight.weightClass ?? "Weight class unavailable"}
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                              {fight.weightClass
+                                ? formatWeightClass(fight.weightClass)
+                                : "Weight class unavailable"}
                             </Badge>
-                            <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                            <Badge className="border-primary/20 bg-primary/10 text-primary">
                               {fight.winnerId === detail.fighterA.id
                                 ? `${detail.fighterA.name} won`
                                 : fight.winnerId === detail.fighterB.id
@@ -522,15 +525,15 @@ export function CompareFightersClient({
                                   : "Draw / No contest"}
                             </Badge>
                           </div>
-                          <p className="text-lg font-semibold text-white">
+                          <p className="text-lg font-semibold text-foreground">
                             {fight.eventName ?? "Unknown event"}
                           </p>
-                          <p className="text-sm text-zinc-400">
+                          <p className="text-sm text-muted-foreground">
                             {formatDate(fight.eventDate)} · {fight.method ?? "Method unavailable"} ·
                             {" "}Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
                           </p>
                         </div>
-                        <p className="text-sm font-medium text-red-200">
+                        <p className="text-sm font-medium text-primary">
                           Abrir detalles de la pelea →
                         </p>
                       </CardContent>
@@ -538,12 +541,12 @@ export function CompareFightersClient({
                   </Link>
                 ))
               ) : (
-                <Card className="border-dashed border-white/10 bg-white/5">
+                <Card className="border-dashed border-border bg-card">
                   <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-                    <Swords className="size-8 text-zinc-500" />
+                    <Swords className="size-8 text-muted-foreground" />
                     <div className="space-y-2">
-                      <p className="text-2xl font-semibold text-white">No se encontraron peleas directas</p>
-                      <p className="max-w-xl text-sm text-zinc-400">
+                      <p className="text-2xl font-semibold text-foreground">No se encontraron peleas directas</p>
+                      <p className="max-w-xl text-sm text-muted-foreground">
                         Estos luchadores no tienen un enfrentamiento directo registrado en la base de datos actual.
                       </p>
                     </div>
@@ -554,20 +557,20 @@ export function CompareFightersClient({
           </section>
         </>
       ) : (
-        <Card className="border-dashed border-white/10 bg-white/5">
+        <Card className="border-dashed border-border bg-card">
           <CardContent className="flex flex-col items-center gap-5 px-6 py-20 text-center">
-            <div className="flex size-16 items-center justify-center rounded-3xl border border-red-400/20 bg-red-500/10 text-red-200">
+            <div className="flex size-16 items-center justify-center rounded-3xl border border-primary/20 bg-primary/10 text-primary">
               <Swords className="size-7" />
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-semibold text-white">Construye tu enfrentamiento</p>
-              <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+              <p className="text-3xl font-semibold text-foreground">Construye tu enfrentamiento</p>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                 Elige dos luchadores para desbloquear una comparación lado a lado de récords, herramientas físicas,
                 eficiencia de golpeo, producción de grappling y cualquier historial directo de enfrentamientos.
               </p>
             </div>
             <Link href="/fighters">
-              <Button className="bg-red-500 text-white hover:bg-red-400">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
                 Ver la plantilla
               </Button>
             </Link>

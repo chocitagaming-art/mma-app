@@ -5,7 +5,7 @@ import { FightersFilterBar } from "@/components/fighters-filter-bar";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
-import { formatRecord } from "@/lib/format";
+import { formatRecord, formatWeightClass } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFighters } from "@/lib/queries/fighters";
@@ -62,7 +62,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
         description="Filtra por categoría de peso, guardia y nacionalidad, y luego ordena la plantilla para encontrar los perfiles que buscas."
       />
 
-      <Card className="border-white/10 bg-white/5">
+      <Card className="border-border bg-card">
         <CardContent className="space-y-6 p-6">
           <FightersFilterBar
             weightClasses={result.filterOptions.weightClasses}
@@ -70,14 +70,14 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
             nationalities={result.filterOptions.nationalities}
             current={{ q: query, weightClass, stance, nationality, sort }}
           />
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>
               Mostrando{" "}
-              <span className="font-semibold text-white">{result.fighters.length}</span> of{" "}
-              <span className="font-semibold text-white">{result.total}</span> luchadores
+              <span className="font-semibold text-foreground">{result.fighters.length}</span> of{" "}
+              <span className="font-semibold text-foreground">{result.total}</span> luchadores
             </p>
             <Link href="/fighters">
-              <Button variant="ghost" className="text-zinc-300 hover:bg-white/5 hover:text-white">
+              <Button variant="ghost" className="text-muted-foreground hover:bg-accent hover:text-foreground">
                 Restablecer filtros
               </Button>
             </Link>
@@ -87,8 +87,8 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
 
       {result.fighters.length ? (
         <>
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            <div className="hidden grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] gap-4 border-b border-white/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500 md:grid">
+          <div className="overflow-hidden rounded-3xl border border-border bg-card">
+            <div className="hidden grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] gap-4 border-b border-border px-6 py-4 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground md:grid">
               <span>Luchador</span>
               <span>Récord</span>
               <span>Categoría de peso</span>
@@ -99,7 +99,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
               <Link
                 key={fighter.id}
                 href={`/fighters/${fighter.id}`}
-                className="grid gap-4 border-b border-white/5 px-6 py-5 transition hover:bg-white/[0.04] md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
+                className="grid gap-4 border-b border-border px-6 py-5 transition hover:bg-accent md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
               >
                 <div className="flex items-center gap-4">
                   <FighterHeadshot
@@ -109,46 +109,46 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                     className="shrink-0"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-semibold text-white">{fighter.name}</p>
-                    <p className="truncate text-sm text-zinc-400">
+                    <p className="truncate text-lg font-semibold text-foreground">{fighter.name}</p>
+                    <p className="truncate text-sm text-muted-foreground">
                       {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
                     Récord
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white md:mt-0">
+                  <p className="mt-1 text-sm font-medium text-foreground md:mt-0">
                     {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
                     Categoría de peso
                   </p>
-                  <p className="mt-1 text-sm text-zinc-300 md:mt-0">
-                    {fighter.latestWeightClass ?? "Open Weight"}
+                  <p className="mt-1 text-sm text-muted-foreground md:mt-0">
+                    {fighter.latestWeightClass ? formatWeightClass(fighter.latestWeightClass) : "Sin límite"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
                     Nacionalidad
                   </p>
-                  <p className="mt-1 text-sm text-zinc-300 md:mt-0">
+                  <p className="mt-1 text-sm text-muted-foreground md:mt-0">
                     {fighter.nationality ?? "Unknown"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 md:hidden">
+                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
                       Guardia
                     </p>
-                    <p className="mt-1 text-sm text-zinc-300 md:mt-0">
+                    <p className="mt-1 text-sm text-muted-foreground md:mt-0">
                       {fighter.stance ?? "Unknown"}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-red-200">Ver perfil →</span>
+                  <span className="text-sm font-medium text-primary">Ver perfil →</span>
                 </div>
               </Link>
             ))}
@@ -160,14 +160,14 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
           />
         </>
       ) : (
-        <Card className="border-dashed border-white/10 bg-white/5">
+        <Card className="border-dashed border-border bg-card">
           <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-            <p className="text-2xl font-semibold text-white">No se encontraron luchadores</p>
-            <p className="max-w-md text-sm text-zinc-400">
+            <p className="text-2xl font-semibold text-foreground">No se encontraron luchadores</p>
+            <p className="max-w-md text-sm text-muted-foreground">
               Intenta ampliar tu búsqueda o quitar uno de los filtros activos.
             </p>
             <Link href="/fighters">
-              <Button className="bg-red-500 text-white hover:bg-red-400">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
                 Ver plantilla completa
               </Button>
             </Link>

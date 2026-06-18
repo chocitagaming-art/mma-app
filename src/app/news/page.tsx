@@ -49,7 +49,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
         description="Sigue historias recientes desde la tabla de noticias, filtra por categoría y salta directamente a perfiles de luchadores vinculados."
       />
 
-      <Card className="border-white/10 bg-white/5">
+      <Card className="border-border bg-card">
         <CardContent className="space-y-4 p-6">
           <div className="flex flex-wrap gap-3">
             <Link href={createCategoryHref("")}>
@@ -57,8 +57,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                 variant={result.activeCategory ? "secondary" : "default"}
                 className={
                   result.activeCategory
-                    ? "bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
-                    : "bg-red-500 text-white hover:bg-red-400"
+                    ? "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }
               >
                 Todas
@@ -73,8 +73,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                     variant={isActive ? "default" : "secondary"}
                     className={
                       isActive
-                        ? "bg-red-500 text-white hover:bg-red-400"
-                        : "bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                     }
                   >
                     {item}
@@ -83,8 +83,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
               );
             })}
           </div>
-          <p className="text-sm text-zinc-400">
-            Mostrando <span className="font-semibold text-white">{result.articles.length}</span>{" "}
+          <p className="text-sm text-muted-foreground">
+            Mostrando <span className="font-semibold text-foreground">{result.articles.length}</span>{" "}
             artículos{result.activeCategory ? ` en ${result.activeCategory}` : ""}.
           </p>
         </CardContent>
@@ -95,16 +95,16 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
           result.articles.map((article) => (
             <Card
               key={article.id}
-              className="border-white/10 bg-white/5 transition hover:border-red-400/30 hover:bg-white/[0.07]"
+              className="border-border bg-card transition hover:border-primary/30 hover:bg-muted"
             >
               <CardContent className="space-y-4 p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
-                      <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                      <Badge className="border-primary/20 bg-primary/10 text-primary">
                         {article.category ?? "General"}
                       </Badge>
-                      <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground">
                         {article.source ?? "Unknown source"}
                       </Badge>
                     </div>
@@ -112,24 +112,24 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                       href={article.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block text-2xl font-semibold tracking-tight text-white transition hover:text-red-200"
+                      className="block text-2xl font-semibold tracking-tight text-foreground transition hover:text-primary"
                     >
                       {article.headline}
                     </a>
                   </div>
-                  <p className="text-sm text-zinc-400">{formatDate(article.publishedAt)}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(article.publishedAt)}</p>
                 </div>
-                <p className="max-w-4xl text-sm leading-7 text-zinc-300">
+                <p className="max-w-4xl text-sm leading-7 text-muted-foreground">
                   {truncateSummary(article.summary)}
                 </p>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                  <div className="text-sm text-zinc-400">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                  <div className="text-sm text-muted-foreground">
                     {article.fighterId && article.fighterName ? (
                       <>
                         Luchador vinculado:{" "}
                         <Link
                           href={`/fighters/${article.fighterId}`}
-                          className="font-medium text-red-200 transition hover:text-red-100"
+                          className="font-medium text-primary transition hover:text-primary/80"
                         >
                           {article.fighterName}
                         </Link>
@@ -142,7 +142,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                     href={article.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-sm font-medium text-red-200 transition hover:text-red-100"
+                    className="text-sm font-medium text-primary transition hover:text-primary/80"
                   >
                     Leer artículo →
                   </a>
@@ -151,10 +151,10 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             </Card>
           ))
         ) : (
-          <Card className="border-dashed border-white/10 bg-white/5">
+          <Card className="border-dashed border-border bg-card">
             <CardContent className="px-6 py-16 text-center">
-              <p className="text-2xl font-semibold text-white">No se encontraron artículos de noticias</p>
-              <p className="mt-3 text-sm text-zinc-400">
+              <p className="text-2xl font-semibold text-foreground">No se encontraron artículos de noticias</p>
+              <p className="mt-3 text-sm text-muted-foreground">
                 Prueba otra categoría o vuelve más tarde para ver cobertura nueva de MMA.
               </p>
             </CardContent>

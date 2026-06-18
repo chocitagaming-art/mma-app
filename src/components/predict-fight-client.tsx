@@ -10,7 +10,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPercentage, formatRecord } from "@/lib/format";
+import { formatPercentage, formatRecord, formatWeightClass } from "@/lib/format";
 import type { PredictionResponse } from "@/lib/prediction";
 import type { FighterSearchResult } from "@/lib/types";
 
@@ -45,10 +45,10 @@ function ProbabilityBar({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-300">{label}</p>
-        <p className="text-base font-semibold text-white">{formatPercentage(value)}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-base font-semibold text-foreground">{formatPercentage(value)}</p>
       </div>
-      <div className="h-3 overflow-hidden rounded-full bg-white/10">
+      <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
           className={`h-full rounded-full transition-all ${colorClass}`}
           style={{ width: `${Math.max(0, Math.min(100, value * 100))}%` }}
@@ -124,7 +124,7 @@ export function PredictFightClient({
 
   return (
     <div className="space-y-10">
-      <Card className="overflow-visible border-white/10 bg-white/5">
+      <Card className="overflow-visible border-border bg-card">
         <CardContent className="space-y-8 p-6 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <SectionHeading
@@ -132,7 +132,7 @@ export function PredictFightClient({
               title="Predicción UFC con explicación IA"
               description="Selecciona la esquina roja y azul para ejecutar el modelo entrenado, revisar los factores clave del matchup y leer una explicación en español."
             />
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
               La URL se actualiza automáticamente para compartir el enfrentamiento.
             </div>
           </div>
@@ -148,7 +148,7 @@ export function PredictFightClient({
                 type="button"
                 onClick={handlePredict}
                 disabled={!canPredict || loading}
-                className="h-12 rounded-2xl bg-red-500 px-6 text-white hover:bg-red-400 disabled:bg-zinc-800"
+                className="h-12 rounded-2xl bg-primary px-6 text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
               >
                 {loading ? <Loader2 className="animate-spin" /> : <Brain />}
                 {loading ? "Prediciendo..." : "Predecir"}
@@ -162,7 +162,7 @@ export function PredictFightClient({
             />
           </div>
           {error ? (
-            <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </div>
           ) : null}
@@ -171,8 +171,15 @@ export function PredictFightClient({
 
       {prediction && redFighter && blueFighter ? (
         <>
+          {prediction.context.weightClass ? (
+            <div className="flex justify-center">
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-4 py-1.5 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                {formatWeightClass(prediction.context.weightClass)}
+              </span>
+            </div>
+          ) : null}
           <section className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-stretch">
-            <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+            <Card className="border-border bg-card">
               <CardContent className="space-y-6 p-6">
                 <div className="flex flex-col items-center gap-4 text-center xl:items-start xl:text-left">
                   <FighterHeadshot
@@ -180,17 +187,17 @@ export function PredictFightClient({
                     headshotUrl={prediction.fighters.red.headshot_url}
                     size="xl"
                     priority
-                    className="border-red-400/20 bg-black/30"
+                    className="border-corner-red/20 bg-muted"
                     imageClassName="object-contain object-top"
                   />
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-corner-red">
                       Esquina roja
                     </p>
-                    <p className="text-3xl font-semibold tracking-tight text-white">
+                    <p className="text-3xl font-semibold tracking-tight text-foreground">
                       {prediction.fighters.red.name}
                     </p>
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {prediction.fighters.red.nickname
                         ? `"${prediction.fighters.red.nickname}"`
                         : "Sin apodo registrado"}
@@ -198,7 +205,7 @@ export function PredictFightClient({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                  <Badge className="border-corner-red/20 bg-corner-red/10 text-corner-red">
                     {formatRecord(
                       prediction.fighters.red.wins,
                       prediction.fighters.red.losses,
@@ -206,7 +213,7 @@ export function PredictFightClient({
                     )}
                   </Badge>
                   {favorite === "red" ? (
-                    <Badge className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200">
+                    <Badge className="border-win/20 bg-win/10 text-win">
                       Favorito del modelo
                     </Badge>
                   ) : null}
@@ -214,23 +221,23 @@ export function PredictFightClient({
                 <ProbabilityBar
                   label="Probabilidad de victoria"
                   value={prediction.redProbability}
-                  colorClass="bg-gradient-to-r from-red-500 to-orange-400"
+                  colorClass="bg-corner-red"
                 />
               </CardContent>
             </Card>
 
             <div className="flex items-center justify-center">
-              <div className="flex min-h-24 min-w-24 items-center justify-center rounded-full border border-red-400/20 bg-red-500/10 px-6 text-center shadow-xl shadow-red-950/20">
+              <div className="flex min-h-24 min-w-24 items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-6 text-center shadow-xl">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-red-300">
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
                     Modelo
                   </p>
-                  <p className="mt-2 text-2xl font-semibold text-white">VS</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">VS</p>
                 </div>
               </div>
             </div>
 
-            <Card className="border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+            <Card className="border-border bg-card">
               <CardContent className="space-y-6 p-6">
                 <div className="flex flex-col items-center gap-4 text-center xl:items-end xl:text-right">
                   <FighterHeadshot
@@ -238,17 +245,17 @@ export function PredictFightClient({
                     headshotUrl={prediction.fighters.blue.headshot_url}
                     size="xl"
                     priority
-                    className="border-blue-400/20 bg-black/30"
+                    className="border-corner-blue/20 bg-muted"
                     imageClassName="object-contain object-top"
                   />
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-300">
+                    <p className="text-xs font-semibold uppercase tracking-[0.35em] text-corner-blue">
                       Esquina azul
                     </p>
-                    <p className="text-3xl font-semibold tracking-tight text-white">
+                    <p className="text-3xl font-semibold tracking-tight text-foreground">
                       {prediction.fighters.blue.name}
                     </p>
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {prediction.fighters.blue.nickname
                         ? `"${prediction.fighters.blue.nickname}"`
                         : "Sin apodo registrado"}
@@ -256,7 +263,7 @@ export function PredictFightClient({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3 xl:justify-end">
-                  <Badge className="border-blue-400/20 bg-blue-500/10 text-blue-200">
+                  <Badge className="border-corner-blue/20 bg-corner-blue/10 text-corner-blue">
                     {formatRecord(
                       prediction.fighters.blue.wins,
                       prediction.fighters.blue.losses,
@@ -264,7 +271,7 @@ export function PredictFightClient({
                     )}
                   </Badge>
                   {favorite === "blue" ? (
-                    <Badge className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200">
+                    <Badge className="border-win/20 bg-win/10 text-win">
                       Favorito del modelo
                     </Badge>
                   ) : null}
@@ -272,17 +279,17 @@ export function PredictFightClient({
                 <ProbabilityBar
                   label="Probabilidad de victoria"
                   value={prediction.blueProbability}
-                  colorClass="bg-gradient-to-r from-blue-500 to-cyan-400"
+                  colorClass="bg-corner-blue"
                 />
               </CardContent>
             </Card>
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <TrendingUp className="size-5 text-red-300" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <TrendingUp className="size-5 text-primary" />
                   Factores clave del modelo
                 </CardTitle>
               </CardHeader>
@@ -290,16 +297,16 @@ export function PredictFightClient({
                 {prediction.topFeatures.map((feature) => (
                   <div
                     key={feature.name}
-                    className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                    className="rounded-2xl border border-border bg-muted p-4"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-medium text-white">{humanizeFeatureName(feature.name)}</p>
-                        <p className="text-sm text-zinc-400">
+                        <p className="font-medium text-foreground">{humanizeFeatureName(feature.name)}</p>
+                        <p className="text-sm text-muted-foreground">
                           Valor diferencial: {formatFeatureValue(feature.value)}
                         </p>
                       </div>
-                      <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground">
                         Impacto {feature.impact.toFixed(3)}
                       </Badge>
                     </div>
@@ -308,18 +315,18 @@ export function PredictFightClient({
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Sparkles className="size-5 text-amber-300" />
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Sparkles className="size-5 text-primary" />
                   Explicación IA
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-sm leading-7 text-zinc-300 whitespace-pre-line">
+                <div className="rounded-2xl border border-border bg-muted p-5 text-sm leading-7 text-muted-foreground whitespace-pre-line">
                   {prediction.explanation}
                 </div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                   Fuente: {prediction.explanationSource === "anthropic" ? "Claude" : "Resumen local"}
                 </p>
               </CardContent>
@@ -327,14 +334,14 @@ export function PredictFightClient({
           </section>
         </>
       ) : (
-        <Card className="border-dashed border-white/10 bg-white/5">
+        <Card className="border-dashed border-border bg-card">
           <CardContent className="flex flex-col items-center gap-5 px-6 py-20 text-center">
-            <div className="flex size-16 items-center justify-center rounded-3xl border border-red-400/20 bg-red-500/10 text-red-200">
+            <div className="flex size-16 items-center justify-center rounded-3xl border border-primary/20 bg-primary/10 text-primary">
               <Swords className="size-7" />
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-semibold text-white">Construye tu predicción</p>
-              <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+              <p className="text-3xl font-semibold text-foreground">Construye tu predicción</p>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                 Elige dos peleadores para calcular probabilidades de victoria, revisar los factores
                 más influyentes y obtener una explicación generada por IA.
               </p>

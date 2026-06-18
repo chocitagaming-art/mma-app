@@ -22,9 +22,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function FighterCard({ fighter }: FighterCardProps) {
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5">
       {/* Corner accent */}
-      <div className="h-1 w-full bg-corner-red transition-[height] duration-200 group-hover:h-1.5" />
+      <div className="absolute inset-x-0 top-0 z-10 h-1 bg-corner-red transition-[height] duration-200 group-hover:h-1.5" />
 
       <Link
         href={`/fighters/${fighter.id}`}

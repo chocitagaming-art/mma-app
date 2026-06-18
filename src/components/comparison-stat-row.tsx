@@ -41,58 +41,58 @@ export function ComparisonStatRow({
   const rightWins = higherIsBetter ? safeRight > safeLeft : safeRight < safeLeft;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+    <div className="space-y-3 rounded-2xl border border-border bg-muted/50 p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="text-left">
           <p
             className={cn(
-              "text-lg font-semibold tabular-nums text-zinc-200 transition",
-              leftWins && "text-red-200",
+              "text-lg font-semibold tabular-nums text-foreground transition",
+              leftWins && "text-primary",
             )}
           >
             {leftDisplay}
           </p>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+          <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             {leftLabel}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             {label}
           </p>
         </div>
         <div className="text-right">
           <p
             className={cn(
-              "text-lg font-semibold tabular-nums text-zinc-200 transition",
-              rightWins && "text-red-200",
+              "text-lg font-semibold tabular-nums text-foreground transition",
+              rightWins && "text-primary",
             )}
           >
             {rightDisplay}
           </p>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-zinc-500">
+          <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             {rightLabel}
           </p>
         </div>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <div className="h-2 overflow-hidden rounded-full bg-white/5">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
           <div
             className={cn(
-              "h-full rounded-full bg-zinc-600 transition-all",
-              leftWins && "bg-red-400",
+              "h-full rounded-full bg-muted-foreground/40 transition-all",
+              leftWins && "bg-primary",
             )}
             style={{ width: `${left}%`, marginLeft: `${100 - left}%` }}
           />
         </div>
-        <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-zinc-500">
+        <div className="rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
           VS
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/5">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
           <div
             className={cn(
-              "h-full rounded-full bg-zinc-600 transition-all",
-              rightWins && "bg-red-400",
+              "h-full rounded-full bg-muted-foreground/40 transition-all",
+              rightWins && "bg-primary",
             )}
             style={{ width: `${right}%` }}
           />

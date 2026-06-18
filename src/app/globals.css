@@ -15,6 +15,10 @@
   --color-corner-red-foreground: var(--corner-red-foreground);
   --color-corner-blue: var(--corner-blue);
   --color-corner-blue-foreground: var(--corner-blue-foreground);
+  --color-win: var(--win);
+  --color-win-foreground: var(--win-foreground);
+  --color-loss: var(--loss);
+  --color-loss-foreground: var(--loss-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -77,6 +81,10 @@
   --corner-red-foreground: #ffffff;
   --corner-blue: #0a5fc2;
   --corner-blue-foreground: #ffffff;
+  --win: #15803d;
+  --win-foreground: #ffffff;
+  --loss: #b91c1c;
+  --loss-foreground: #ffffff;
   --chart-1: #d20a0a;
   --chart-2: #0a5fc2;
   --chart-3: #ea7a0a;
@@ -117,6 +125,10 @@
   --corner-red-foreground: #ffffff;
   --corner-blue: #3b92f0;
   --corner-blue-foreground: #ffffff;
+  --win: #4ade80;
+  --win-foreground: #052e16;
+  --loss: #f87171;
+  --loss-foreground: #450a0a;
   --chart-1: #f5474c;
   --chart-2: #3b92f0;
   --chart-3: #f59e0b;

@@ -11,6 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   formatControlTime,
   formatDate,
   formatHeight,
@@ -18,6 +26,7 @@ import {
   formatReach,
   formatRecord,
   formatWeight,
+  formatWeightClass,
 } from "@/lib/format";
 import { getFighterDetail } from "@/lib/queries/fighters";
 
@@ -58,7 +67,7 @@ export default async function FighterDetailPage({
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+        <Card className="overflow-hidden border-border bg-card">
           <CardContent className="space-y-8 p-8">
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div className="flex flex-wrap items-center gap-6">
@@ -67,35 +76,37 @@ export default async function FighterDetailPage({
                   headshotUrl={fighter.headshotUrl}
                   size="xl"
                   priority
-                  className="border-white/15 bg-black/30"
+                  className="border-border bg-muted"
                   imageClassName="object-contain object-top"
                 />
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-red-300">
+                    <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                       Perfil del luchador
                     </p>
-                    <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                    <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl">
                       {fighter.name}
                     </h1>
-                    <p className="text-lg text-zinc-400">
+                    <p className="text-lg text-muted-foreground">
                       {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
-                      {detail.latestWeightClass ?? "Weight class unavailable"}
+                    <Badge className="border-primary/20 bg-primary/10 text-primary">
+                      {detail.latestWeightClass
+                        ? formatWeightClass(detail.latestWeightClass)
+                        : "Categoría no disponible"}
                     </Badge>
-                    <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       {fighter.stance ?? "Unknown stance"}
                     </Badge>
-                    <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       {fighter.nationality ?? "Nationality unavailable"}
                     </Badge>
                     <Link href={`/compare?a=${fighter.id}`}>
                       <Button
                         variant="secondary"
-                        className="bg-white/10 text-zinc-200 hover:bg-white/15 hover:text-white"
+                        className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <ArrowRightLeft />
                         Comparar luchador
@@ -104,37 +115,37 @@ export default async function FighterDetailPage({
                   </div>
                 </div>
               </div>
-              <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-5 text-right">
-                <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Récord</p>
-                <p className="mt-3 text-4xl font-semibold text-white">
+              <div className="rounded-3xl border border-border bg-muted px-6 py-5 text-right">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Récord</p>
+                <p className="tabular mt-3 font-display text-4xl font-bold text-foreground">
                   {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                 </p>
-                <p className="mt-2 text-sm text-zinc-400">{detail.fightCount} peleas registradas</p>
+                <p className="mt-2 text-sm text-muted-foreground">{detail.fightCount} peleas registradas</p>
               </div>
             </div>
-            <Separator className="bg-white/10" />
+            <Separator className="bg-border" />
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Altura</p>
-                <p className="mt-2 text-lg font-semibold text-white">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Altura</p>
+                <p className="tabular mt-2 text-lg font-semibold text-foreground">
                   {formatHeight(fighter.heightCm)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Alcance</p>
-                <p className="mt-2 text-lg font-semibold text-white">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Alcance</p>
+                <p className="tabular mt-2 text-lg font-semibold text-foreground">
                   {formatReach(fighter.reachCm)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Peso</p>
-                <p className="mt-2 text-lg font-semibold text-white">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Peso</p>
+                <p className="tabular mt-2 text-lg font-semibold text-foreground">
                   {formatWeight(fighter.weightGrams)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Nacionalidad</p>
-                <p className="mt-2 text-lg font-semibold text-white">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Nacionalidad</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
                   {fighter.nationality ?? "Unknown"}
                 </p>
               </div>
@@ -142,9 +153,9 @@ export default async function FighterDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/5">
+        <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="text-white">Resumen de rendimiento</CardTitle>
+            <CardTitle className="text-foreground">Resumen de rendimiento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <StatBar
@@ -166,17 +177,17 @@ export default async function FighterDetailPage({
               helper={`${aggregateStats.totalFightStats} registros de estadísticas`}
             />
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
+              <div className="rounded-2xl border border-border bg-muted p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
                   Intentos de sumisión
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-white">
+                <p className="tabular mt-2 text-2xl font-semibold text-foreground">
                   {aggregateStats.submissionAttempts}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Derribos por golpe</p>
-                <p className="mt-2 text-2xl font-semibold text-white">
+              <div className="rounded-2xl border border-border bg-muted p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Derribos por golpe</p>
+                <p className="tabular mt-2 text-2xl font-semibold text-foreground">
                   {aggregateStats.knockdowns}
                 </p>
               </div>
@@ -191,53 +202,107 @@ export default async function FighterDetailPage({
           title="Cada enfrentamiento registrado"
           description="Revisa oponentes, eventos y resultados desde la tabla de peleas."
         />
-        <div className="grid gap-4">
-          {history.length ? (
-            history.map((fight) => (
-              <Link key={fight.fightId} href={`/fights/${fight.fightId}`}>
-                <Card className="border-white/10 bg-white/5 transition hover:border-red-400/30 hover:bg-white/[0.07]">
-                  <CardContent className="grid gap-4 p-5 md:grid-cols-[auto_1fr_auto] md:items-center">
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        className={
-                          fight.result === "win"
-                            ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
-                            : fight.result === "loss"
-                              ? "border-red-400/20 bg-red-500/10 text-red-200"
-                              : "border-white/10 bg-white/10 text-zinc-200"
-                        }
-                      >
-                        {fight.result.toUpperCase()}
-                      </Badge>
-                      <Badge variant="secondary" className="bg-white/10 text-zinc-200">
-                        {fight.weightClass ?? "Weight class unavailable"}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-semibold text-white">
-                        vs {fight.opponentName ?? "Unknown opponent"}
-                      </p>
-                      <p className="text-sm text-zinc-400">
-                        {fight.eventName ?? "Unknown event"} · {formatDate(fight.eventDate)}
-                      </p>
-                      <p className="text-sm text-zinc-500">
-                        {fight.method ?? "Method unavailable"} · Asalto {fight.endRound ?? "—"} ·{" "}
-                        {fight.endTime ?? "—"}
-                      </p>
-                    </div>
-                    <p className="text-sm font-medium text-red-200">Abrir detalles de la pelea →</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))
-          ) : (
-            <Card className="border-dashed border-white/10 bg-white/5">
-              <CardContent className="px-6 py-16 text-center text-zinc-400">
-                Aún no hay historial de peleas disponible para este luchador.
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {history.length ? (
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Fecha
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Oponente
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Resultado
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Método
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Rnd
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Tiempo
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Evento
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((fight) => {
+                    const resultLabel =
+                      fight.result === "win"
+                        ? "Victoria"
+                        : fight.result === "loss"
+                          ? "Derrota"
+                          : fight.result === "draw"
+                            ? "Empate"
+                            : "NC";
+                    const resultClass =
+                      fight.result === "win"
+                        ? "bg-win/10 text-win"
+                        : fight.result === "loss"
+                          ? "bg-loss/10 text-loss"
+                          : "bg-muted text-muted-foreground";
+
+                    return (
+                      <TableRow key={fight.fightId} className="hover:bg-muted">
+                        <TableCell className="tabular text-muted-foreground">
+                          {formatDate(fight.eventDate)}
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {fight.opponentId ? (
+                            <Link
+                              href={`/fighters/${fight.opponentId}`}
+                              className="transition-colors hover:text-primary"
+                            >
+                              {fight.opponentName ?? "Oponente desconocido"}
+                            </Link>
+                          ) : (
+                            (fight.opponentName ?? "Oponente desconocido")
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide ${resultClass}`}
+                          >
+                            {resultLabel}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {fight.method ?? "—"}
+                        </TableCell>
+                        <TableCell className="tabular text-muted-foreground">
+                          {fight.endRound ?? "—"}
+                        </TableCell>
+                        <TableCell className="tabular text-muted-foreground">
+                          {fight.endTime ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <Link
+                            href={`/fights/${fight.fightId}`}
+                            className="transition-colors hover:text-primary"
+                          >
+                            {fight.eventName ?? "Evento desconocido"}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ) : (
+          <Card className="border-dashed border-border bg-card">
+            <CardContent className="px-6 py-16 text-center text-muted-foreground">
+              Sin peleas registradas.
+            </CardContent>
+          </Card>
+        )}
       </section>
 
       <section className="space-y-6">
@@ -251,16 +316,16 @@ export default async function FighterDetailPage({
             news.map((article) => (
               <Card
                 key={article.id}
-                className="border-white/10 bg-white/5 transition hover:border-red-400/30 hover:bg-white/[0.07]"
+                className="border-border bg-card transition hover:border-primary/30 hover:bg-accent"
               >
                 <CardContent className="space-y-4 p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
-                        <Badge className="border-red-400/20 bg-red-500/10 text-red-200">
+                        <Badge className="border-primary/20 bg-primary/10 text-primary">
                           {article.category ?? "General"}
                         </Badge>
-                        <Badge variant="secondary" className="bg-white/10 text-zinc-200">
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           {article.source ?? "Unknown source"}
                         </Badge>
                       </div>
@@ -268,26 +333,26 @@ export default async function FighterDetailPage({
                         href={article.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xl font-semibold text-white transition hover:text-red-200"
+                        className="text-xl font-semibold text-foreground transition hover:text-primary"
                       >
                         {article.headline}
                       </a>
                     </div>
-                    <p className="text-sm text-zinc-400">{formatDate(article.publishedAt)}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(article.publishedAt)}</p>
                   </div>
-                  <p className="text-sm leading-7 text-zinc-300">
+                  <p className="text-sm leading-7 text-muted-foreground">
                     {article.summary?.length
                       ? article.summary.length > 180
                         ? `${article.summary.slice(0, 180).trimEnd()}…`
                         : article.summary
                       : "No hay resumen disponible para este artículo."}
                   </p>
-                  <div className="border-t border-white/10 pt-4">
+                  <div className="border-t border-border pt-4">
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-sm font-medium text-red-200 transition hover:text-red-100"
+                      className="text-sm font-medium text-primary transition hover:text-primary/80"
                     >
                       Leer artículo →
                     </a>
@@ -296,8 +361,8 @@ export default async function FighterDetailPage({
               </Card>
             ))
           ) : (
-            <Card className="border-dashed border-white/10 bg-white/5">
-              <CardContent className="px-6 py-16 text-center text-zinc-400">
+            <Card className="border-dashed border-border bg-card">
+              <CardContent className="px-6 py-16 text-center text-muted-foreground">
                 Aún no hay artículos de noticias relacionados con este luchador.
               </CardContent>
             </Card>

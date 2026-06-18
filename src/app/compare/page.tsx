@@ -1,58 +1,29 @@
-import type { Metadata } from "next";
-
-import { CompareFightersClient } from "@/components/compare-fighters-client";
-import { getFighterComparisonDetail } from "@/lib/queries/fighters";
-import type { FighterSearchResult } from "@/lib/types";
+import { permanentRedirect } from "next/navigation";
 
 type ComparePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-export const metadata: Metadata = {
-  title: "Comparar luchadores | MMA Stats",
-  description:
-    "Compara dos peleadores de UFC lado a lado con récords, estadísticas físicas, golpeo, grappling e historial directo de enfrentamientos.",
 };
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
+// /compare has been merged into /enfrentamiento. Permanently redirect while
+// remapping the legacy ?a=&b= params to the new ?red=&blue= corner semantics.
 export default async function ComparePage({ searchParams }: ComparePageProps) {
   const params = await searchParams;
-  const fighterAId = Number(getSingleValue(params.a) || "0");
-  const fighterBId = Number(getSingleValue(params.b) || "0");
+  const redirectParams = new URLSearchParams();
 
-  const comparison =
-    fighterAId > 0 && fighterBId > 0 && fighterAId !== fighterBId
-      ? await getFighterComparisonDetail(fighterAId, fighterBId)
-      : null;
+  const a = getSingleValue(params.a);
+  const b = getSingleValue(params.b);
 
-  const initialFighterA: FighterSearchResult | null = comparison
-    ? {
-        id: comparison.fighterA.id,
-        name: comparison.fighterA.name,
-        headshotUrl: comparison.fighterA.headshotUrl,
-        nationality: comparison.fighterA.nationality,
-      }
-    : null;
+  if (a) {
+    redirectParams.set("red", a);
+  }
+  if (b) {
+    redirectParams.set("blue", b);
+  }
 
-  const initialFighterB: FighterSearchResult | null = comparison
-    ? {
-        id: comparison.fighterB.id,
-        name: comparison.fighterB.name,
-        headshotUrl: comparison.fighterB.headshotUrl,
-        nationality: comparison.fighterB.nationality,
-      }
-    : null;
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <CompareFightersClient
-        initialFighterA={initialFighterA}
-        initialFighterB={initialFighterB}
-        comparison={comparison}
-      />
-    </div>
-  );
+  const query = redirectParams.toString();
+  permanentRedirect(`/enfrentamiento${query ? `?${query}` : ""}`);
 }

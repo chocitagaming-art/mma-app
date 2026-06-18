@@ -96,7 +96,7 @@ export function FighterSearchCombobox({
   return (
     <div ref={rootRef} className="relative space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+        <label className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
           {label}
         </label>
         {value ? (
@@ -104,7 +104,7 @@ export function FighterSearchCombobox({
             type="button"
             variant="ghost"
             size="sm"
-            className="text-zinc-400 hover:bg-white/5 hover:text-white"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={() => {
               onSelect(null);
               setQuery("");
@@ -117,7 +117,7 @@ export function FighterSearchCombobox({
         ) : null}
       </div>
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500" />
+        <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={selectedName || query}
           onChange={(event) => {
@@ -132,20 +132,20 @@ export function FighterSearchCombobox({
             }
           }}
           placeholder="Buscar luchador..."
-          className="h-12 rounded-2xl border-white/10 bg-white/5 pl-11 text-white placeholder:text-zinc-500"
+          className="h-12 rounded-2xl border-border bg-background pl-11 text-foreground placeholder:text-muted-foreground"
         />
       </div>
       {open && (results.length > 0 || loading || showEmpty) ? (
-        <Card className="absolute z-30 mt-2 w-full border-white/10 bg-zinc-950/95 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
+        <Card className="absolute z-30 mt-2 w-full border-border bg-popover py-2 text-popover-foreground shadow-2xl backdrop-blur-xl">
           <div className="max-h-80 overflow-y-auto px-2">
             {loading ? (
-              <div className="px-3 py-4 text-sm text-zinc-400">Buscando luchadores…</div>
+              <div className="px-3 py-4 text-sm text-muted-foreground">Buscando luchadores…</div>
             ) : null}
             {results.map((fighter) => (
               <button
                 key={fighter.id}
                 type="button"
-                className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-white/5"
+                className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-accent"
                 onClick={() => {
                   onSelect(fighter);
                   setQuery(fighter.name);
@@ -160,8 +160,8 @@ export function FighterSearchCombobox({
                     className="size-10 shrink-0"
                   />
                   <div className="space-y-1">
-                    <p className="font-medium text-white">{fighter.name}</p>
-                    <p className="text-sm text-zinc-400">
+                    <p className="font-medium text-foreground">{fighter.name}</p>
+                    <p className="text-sm text-muted-foreground">
                       {fighter.nationality ?? "Nacionalidad no disponible"}
                     </p>
                   </div>
@@ -169,8 +169,8 @@ export function FighterSearchCombobox({
               </button>
             ))}
             {showEmpty ? (
-              <div className="flex items-center gap-2 px-3 py-4 text-sm text-zinc-400">
-                <Swords className="size-4 text-zinc-500" />
+              <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+                <Swords className="size-4 text-muted-foreground" />
                 No se encontraron luchadores
               </div>
             ) : null}
