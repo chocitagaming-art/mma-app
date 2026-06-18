@@ -89,7 +89,7 @@ export async function getRankings(): Promise<RankingsResult> {
        FROM rankings r
        LEFT JOIN fighters f ON f.id = r.fighter_id
        WHERE r.snapshot_date = (SELECT d FROM latest)
-       ORDER BY r.division, r.is_champion DESC, r.rank_position`,
+       ORDER BY r.division, r.is_champion DESC, r.rank_position, r.id`,
     );
   } catch (error) {
     // La tabla `rankings` puede no estar migrada/poblada todavía (backend en curso).

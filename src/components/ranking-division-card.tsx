@@ -97,13 +97,13 @@ export function RankingDivisionCard({ division }: { division: DivisionRanking })
       ) : null}
 
       <ol className="divide-y divide-border">
-        {ranked.map((entry) => (
+        {ranked.map((entry, index) => (
           <li
-            key={entry.rankPosition}
+            key={`${index}-${entry.fighterId ?? entry.fighterName}`}
             className="flex items-center gap-3 px-5 py-2 transition-colors hover:bg-muted/50"
           >
             <span className="w-5 shrink-0 text-right font-mono text-sm font-semibold tabular text-muted-foreground">
-              {entry.rankPosition}
+              {index + 1}
             </span>
             <div className="min-w-0 flex-1">
               <FighterName entry={entry} />
