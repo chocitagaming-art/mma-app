@@ -81,11 +81,8 @@ export type FighterAggregateStats = {
 export type FighterSearchResult = {
   id: number;
   name: string;
-  nickname: string | null;
   headshotUrl: string | null;
-  wins: number;
-  losses: number;
-  draws: number;
+  nationality: string | null;
 };
 
 export type FighterComparisonAverages = {

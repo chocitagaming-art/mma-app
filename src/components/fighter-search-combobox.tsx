@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { Input } from "@/components/ui/input";
-import { formatRecord } from "@/lib/format";
 import type { FighterSearchResult } from "@/lib/types";
 
 type FighterSearchComboboxProps = {
@@ -32,7 +31,7 @@ export function FighterSearchCombobox({
   const selectedName = value?.name ?? "";
   const trimmedQuery = query.trim();
   const results =
-    trimmedQuery.length < 2
+    trimmedQuery.length < 1
       ? []
       : fetchedResults.filter((fighter) => fighter.id !== excludeId);
 
@@ -48,7 +47,10 @@ export function FighterSearchCombobox({
   }, []);
 
   useEffect(() => {
-    if (trimmedQuery.length < 2) {
+    if (trimmedQuery.length < 1) {
+      setFetchedResults([]);
+      setOpen(false);
+      setLoading(false);
       return;
     }
 
@@ -78,15 +80,16 @@ export function FighterSearchCombobox({
       } finally {
         setLoading(false);
       }
-    }, 250);
+    }, 300);
 
     return () => {
+      abortRef.current?.abort();
       window.clearTimeout(timeoutId);
     };
   }, [trimmedQuery]);
 
   const showEmpty = useMemo(
-    () => query.trim().length >= 2 && !loading && results.length === 0,
+    () => query.trim().length >= 1 && !loading && results.length === 0,
     [loading, query, results.length],
   );
 
@@ -128,7 +131,7 @@ export function FighterSearchCombobox({
               setOpen(true);
             }
           }}
-          placeholder="Buscar luchadores UFC por nombre"
+          placeholder="Buscar luchador..."
           className="h-12 rounded-2xl border-white/10 bg-white/5 pl-11 text-white placeholder:text-zinc-500"
         />
       </div>
@@ -159,24 +162,16 @@ export function FighterSearchCombobox({
                   <div className="space-y-1">
                     <p className="font-medium text-white">{fighter.name}</p>
                     <p className="text-sm text-zinc-400">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
+                      {fighter.nationality ?? "Nacionalidad no disponible"}
                     </p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-red-200">
-                    {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
-                  </p>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">
-                    Récord
-                  </p>
                 </div>
               </button>
             ))}
             {showEmpty ? (
               <div className="flex items-center gap-2 px-3 py-4 text-sm text-zinc-400">
                 <Swords className="size-4 text-zinc-500" />
-                Ningún luchador coincide con esa búsqueda.
+                No se encontraron luchadores
               </div>
             ) : null}
           </div>

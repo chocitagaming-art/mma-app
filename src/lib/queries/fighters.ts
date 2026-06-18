@@ -70,11 +70,8 @@ type AggregateRow = {
 type SearchRow = {
   id: number;
   name: string;
-  nickname: string | null;
   headshot_url: string | null;
-  wins: number;
-  losses: number;
-  draws: number;
+  nationality: string | null;
 };
 
 type DirectMatchupRow = {
@@ -454,7 +451,7 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
 
 export async function searchFighters(
   query: string,
-  limit = 8,
+  limit = 10,
 ): Promise<FighterSearchResult[]> {
   const trimmedQuery = query.trim();
 
@@ -466,11 +463,8 @@ export async function searchFighters(
     `select distinct on (lower(name))
         id,
         name,
-        nickname,
         headshot_url,
-        wins,
-        losses,
-        draws
+        nationality
      from fighters
      where name ilike $1
      order by
@@ -478,8 +472,6 @@ export async function searchFighters(
        case when headshot_url is not null then 0 else 1 end,
        case when lower(name) = lower($2) then 0 else 1 end,
        case when lower(name) like lower($3) then 0 else 1 end,
-       wins desc,
-       losses asc,
        id asc
      limit $4`,
     [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
@@ -488,11 +480,8 @@ export async function searchFighters(
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
-    nickname: row.nickname,
     headshotUrl: row.headshot_url,
-    wins: row.wins,
-    losses: row.losses,
-    draws: row.draws,
+    nationality: row.nationality,
   }));
 }
 
@@ -503,11 +492,8 @@ export async function getFighterSearchResultById(
     `select
       id,
       name,
-      nickname,
       headshot_url,
-      wins,
-      losses,
-      draws
+      nationality
      from fighters
      where id = $1
      limit 1`,
@@ -523,11 +509,8 @@ export async function getFighterSearchResultById(
   return {
     id: row.id,
     name: row.name,
-    nickname: row.nickname,
     headshotUrl: row.headshot_url,
-    wins: row.wins,
-    losses: row.losses,
-    draws: row.draws,
+    nationality: row.nationality,
   };
 }
 
