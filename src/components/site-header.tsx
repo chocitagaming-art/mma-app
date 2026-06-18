@@ -10,6 +10,7 @@ const links = [
   { href: "/", label: "Inicio" },
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
+  { href: "/eventos", label: "Eventos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/news", label: "Noticias" },
 ];

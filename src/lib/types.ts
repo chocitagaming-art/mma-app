@@ -173,6 +173,52 @@ export type RankingsResult = {
   divisions: DivisionRanking[];
 };
 
+export type EventListItem = {
+  id: number;
+  name: string;
+  eventDate: string | null;
+  location: string | null;
+  fightCount: number;
+};
+
+export type EventListResult = {
+  events: EventListItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
+export type EventBoutFighter = {
+  id: number;
+  name: string;
+  nickname: string | null;
+  headshotUrl: string | null;
+  nationality: string | null;
+  wins: number;
+  losses: number;
+  draws: number;
+};
+
+export type EventBout = {
+  fightId: number;
+  weightClass: string | null;
+  method: string | null;
+  endRound: number | null;
+  endTime: string | null;
+  scheduledRounds: number | null;
+  winnerId: number | null;
+  red: EventBoutFighter;
+  blue: EventBoutFighter;
+};
+
+export type EventDetail = {
+  id: number;
+  name: string;
+  eventDate: string | null;
+  location: string | null;
+  bouts: EventBout[];
+};
+
 export type FightCompetitor = {
   id: number;
   name: string;
