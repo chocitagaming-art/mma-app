@@ -96,6 +96,7 @@ export async function generatePredictionExplanation(
   const prompt = [
     "Explica en español, en 2 párrafos, una predicción de pelea UFC.",
     "Sé claro, analítico y evita afirmar certezas absolutas.",
+    "Responde directamente con los 2 párrafos, sin preámbulo ni meta-comentarios.",
     `Peleador esquina roja: ${data.fighters.red.name}`,
     `Peleador esquina azul: ${data.fighters.blue.name}`,
     `Probabilidad roja: ${formatPercent(data.redProbability)}`,
@@ -109,8 +110,8 @@ export async function generatePredictionExplanation(
   ].join("\n");
 
   const response = await anthropic.messages.create({
-    model: "claude-3-5-sonnet-latest",
-    max_tokens: 400,
+    model: "claude-sonnet-4-6",
+    max_tokens: 1024,
     messages: [{ role: "user", content: prompt }],
   });
 
