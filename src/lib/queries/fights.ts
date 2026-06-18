@@ -16,6 +16,7 @@ type FightRow = {
   red_id: number;
   red_name: string;
   red_nickname: string | null;
+  red_headshot: string | null;
   red_nationality: string | null;
   red_stance: string | null;
   red_height_cm: string | null;
@@ -26,6 +27,7 @@ type FightRow = {
   blue_id: number;
   blue_name: string;
   blue_nickname: string | null;
+  blue_headshot: string | null;
   blue_nationality: string | null;
   blue_stance: string | null;
   blue_height_cm: string | null;
@@ -89,6 +91,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       red.id as red_id,
       red.name as red_name,
       red.nickname as red_nickname,
+      red.headshot_url as red_headshot,
       red.nationality as red_nationality,
       red.stance as red_stance,
       red.height_cm::text as red_height_cm,
@@ -99,6 +102,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       blue.id as blue_id,
       blue.name as blue_name,
       blue.nickname as blue_nickname,
+      blue.headshot_url as blue_headshot,
       blue.nationality as blue_nationality,
       blue.stance as blue_stance,
       blue.height_cm::text as blue_height_cm,
@@ -156,6 +160,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       id: fight.red_id,
       name: fight.red_name,
       nickname: fight.red_nickname,
+      headshotUrl: fight.red_headshot,
       nationality: fight.red_nationality,
       stance: fight.red_stance,
       heightCm: fight.red_height_cm ? Number(fight.red_height_cm) : null,
@@ -168,6 +173,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       id: fight.blue_id,
       name: fight.blue_name,
       nickname: fight.blue_nickname,
+      headshotUrl: fight.blue_headshot,
       nationality: fight.blue_nationality,
       stance: fight.blue_stance,
       heightCm: fight.blue_height_cm ? Number(fight.blue_height_cm) : null,

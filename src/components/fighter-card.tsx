@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRightLeft } from "lucide-react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
-import { formatRecord, formatWeight } from "@/lib/format";
+import { formatRecord, formatWeight, formatWeightClass } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
 
 type FighterCardProps = {
@@ -44,7 +44,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
             {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
           </p>
           <p className="mt-1 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-            {fighter.latestWeightClass ?? "Open Weight"}
+            {fighter.latestWeightClass ? formatWeightClass(fighter.latestWeightClass) : "Sin límite"}
           </p>
         </div>
       </Link>

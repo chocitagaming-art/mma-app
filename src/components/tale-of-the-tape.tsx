@@ -5,9 +5,11 @@ import {
   formatPercentage,
   formatRecord,
   formatReach,
+  formatWeightClass,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { FightDetail } from "@/lib/types";
+import { FighterHeadshot } from "@/components/fighter-headshot";
+import type { FightCompetitor, FightDetail } from "@/lib/types";
 
 type Row = {
   label: string;
@@ -49,45 +51,61 @@ function TaleRow({ row }: { row: Row }) {
 
 function CornerBlock({
   corner,
-  name,
-  record,
+  fighter,
   isWinner,
 }: {
   corner: "red" | "blue";
-  name: string;
-  record: string;
+  fighter: FightCompetitor;
   isWinner: boolean;
 }) {
   const isRed = corner === "red";
   return (
-    <div className={cn("flex flex-col gap-2", isRed ? "items-start" : "items-end")}>
-      <span
+    <div
+      className={cn(
+        "flex items-center gap-3 sm:gap-4",
+        isRed ? "flex-row" : "flex-row-reverse",
+      )}
+    >
+      <FighterHeadshot
+        name={fighter.name}
+        headshotUrl={fighter.headshotUrl}
+        size="lg"
         className={cn(
-          "font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
-          isRed ? "text-corner-red" : "text-corner-blue",
+          "shrink-0 border-2",
+          isRed ? "border-corner-red" : "border-corner-blue",
+        )}
+      />
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-1.5",
+          isRed ? "items-start text-left" : "items-end text-right",
         )}
       >
-        Esquina {isRed ? "roja" : "azul"}
-      </span>
-      <p
-        className={cn(
-          "font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-4xl",
-          isRed ? "text-left" : "text-right",
-        )}
-      >
-        {name}
-      </p>
-      <p className="tabular font-mono text-sm text-muted-foreground">{record}</p>
-      {isWinner ? (
         <span
           className={cn(
-            "mt-1 inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white",
-            isRed ? "bg-corner-red" : "bg-corner-blue",
+            "font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
+            isRed ? "text-corner-red" : "text-corner-blue",
           )}
         >
-          Ganador
+          Esquina {isRed ? "roja" : "azul"}
         </span>
-      ) : null}
+        <p className="font-display text-2xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-3xl">
+          {fighter.name}
+        </p>
+        <p className="tabular font-mono text-sm text-muted-foreground">
+          {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
+        </p>
+        {isWinner ? (
+          <span
+            className={cn(
+              "mt-1 inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white",
+              isRed ? "bg-corner-red" : "bg-corner-blue",
+            )}
+          >
+            Ganador
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -184,18 +202,8 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
         <span className="octagon absolute left-1/2 top-1/2 z-10 hidden size-12 -translate-x-1/2 -translate-y-1/2 place-items-center bg-foreground font-display text-sm font-extrabold uppercase tracking-tight text-background sm:grid">
           VS
         </span>
-        <CornerBlock
-          corner="red"
-          name={red.name}
-          record={formatRecord(red.wins, red.losses, red.draws)}
-          isWinner={redWins}
-        />
-        <CornerBlock
-          corner="blue"
-          name={blue.name}
-          record={formatRecord(blue.wins, blue.losses, blue.draws)}
-          isWinner={blueWins}
-        />
+        <CornerBlock corner="red" fighter={red} isWinner={redWins} />
+        <CornerBlock corner="blue" fighter={blue} isWinner={blueWins} />
       </div>
 
       {/* Result bar */}
@@ -208,7 +216,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
         </span>
         {fight.weightClass ? (
           <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-            {fight.weightClass}
+            {formatWeightClass(fight.weightClass)}
           </span>
         ) : null}
       </div>

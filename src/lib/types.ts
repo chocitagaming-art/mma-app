@@ -151,6 +151,7 @@ export type FightCompetitor = {
   id: number;
   name: string;
   nickname: string | null;
+  headshotUrl: string | null;
   nationality: string | null;
   stance: string | null;
   heightCm: number | null;
