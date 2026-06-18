@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
+import { localHeadshot } from "@/lib/local-headshots";
 import { cn } from "@/lib/utils";
 
 type FighterHeadshotProps = {
@@ -40,19 +41,20 @@ export function FighterHeadshot({
 }: FighterHeadshotProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const initials = getInitials(name);
+  const resolvedUrl = headshotUrl ?? localHeadshot(name);
 
   return (
     <div
-      key={headshotUrl ?? name}
+      key={resolvedUrl ?? name}
       className={cn(
         "relative overflow-hidden rounded-md border border-border bg-muted",
         sizeClasses[size],
         className,
       )}
     >
-      {headshotUrl && !imageFailed ? (
+      {resolvedUrl && !imageFailed ? (
         <Image
-          src={headshotUrl}
+          src={resolvedUrl}
           alt={`Foto de ${name}`}
           fill
           preload={priority}
