@@ -8,6 +8,9 @@ import { getRankings } from "@/lib/queries/rankings";
 import { cn } from "@/lib/utils";
 import type { DivisionRanking } from "@/lib/types";
 
+// Data comes live from the DB; render on each request (no build-time DB call).
+export const dynamic = "force-dynamic";
+
 function DivisionGroup({
   label,
   divisions,

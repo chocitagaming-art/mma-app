@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@anthropic-ai/sdk"],
@@ -7,12 +8,13 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "a.espncdn.com",
-        pathname: "/i/headshots/**",
       },
     ],
   },
   turbopack: {
-    root: "C:/Users/gpico/Projects/mma-app",
+    // Portable project root: resolves to this repo's directory both locally and
+    // on Vercel (Linux). Avoids hardcoding a machine-specific absolute path.
+    root: fileURLToPath(new URL(".", import.meta.url)),
   },
 };
 

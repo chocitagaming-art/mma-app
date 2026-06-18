@@ -14,16 +14,22 @@ function getDatabaseUrl() {
   return databaseUrl;
 }
 
-export const pool =
-  global.__mmaPool ??
-  new Pool({
+function createPool() {
+  return new Pool({
     connectionString: getDatabaseUrl(),
     ssl: { rejectUnauthorized: false },
+    // Serverless-friendly: keep one connection per instance and fail fast so we
+    // don't exhaust Neon's connection slots across concurrent lambdas.
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
   });
-
-if (process.env.NODE_ENV !== "production") {
-  global.__mmaPool = pool;
 }
+
+// Reuse the pool across warm serverless invocations of the same instance (and
+// across HMR reloads in dev) instead of opening a new pool every time.
+export const pool = global.__mmaPool ?? createPool();
+global.__mmaPool = pool;
 
 export async function sql<T extends QueryResultRow>(
   query: string,

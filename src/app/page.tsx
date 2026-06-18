@@ -7,6 +7,9 @@ import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 
+// Data comes live from the DB; render on each request (no build-time DB call).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "MMA Stats | Perfiles de peleadores UFC y análisis de peleas",
   description:
