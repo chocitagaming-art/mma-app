@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "a.espncdn.com",
       },
+      {
+        protocol: "https",
+        hostname: "ufc.com",
+      },
+      {
+        protocol: "https",
+        hostname: "www.ufc.com",
+      },
     ],
   },
   turbopack: {
