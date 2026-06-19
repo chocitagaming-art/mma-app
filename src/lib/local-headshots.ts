@@ -5,6 +5,14 @@
 // Clave: nombre normalizado (trim + minúsculas).
 const LOCAL_HEADSHOTS: Record<string, string> = {
   "josh hokit": "/fighters/josh-hokit.avif",
+  // Debutantes de eventos próximos sin foto oficial en UFC/ESPN (fuente: Tapology).
+  "farman hasanov": "/fighters/farman-hasanov.jpg",
+  "vlasto čepo": "/fighters/vlasto-cepo.jpg",
+  "michael aswell jr.": "/fighters/michael-aswell-jr.jpg",
+  "michael aswell jr": "/fighters/michael-aswell-jr.jpg",
+  "magomed tuchalov": "/fighters/magomed-tuchalov.png",
+  "jovan leka": "/fighters/jovan-leka.jpg",
+  "gable steveson": "/fighters/gable-steveson.webp",
 };
 
 export function localHeadshot(name: string): string | null {
