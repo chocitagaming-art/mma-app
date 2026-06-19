@@ -96,6 +96,7 @@ type NewsRow = {
   fighter_name: string | null;
   category: string | null;
   relevance: string | null;
+  image_url: string | null;
 };
 
 function mapFighter(row: FighterRow): FighterCardData {
@@ -169,6 +170,7 @@ function mapNewsArticle(row: NewsRow): NewsArticle {
     fighterName: row.fighter_name,
     category: row.category,
     relevance: row.relevance ? Number(row.relevance) : null,
+    imageUrl: row.image_url,
   };
 }
 
@@ -459,7 +461,8 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
         n.fighter_id,
         f.name as fighter_name,
         n.category,
-        n.relevance::text
+        n.relevance::text,
+        n.image_url
       from news n
       left join fighters f on f.id = n.fighter_id
       where n.fighter_id = $1

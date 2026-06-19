@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { NewsImage } from "@/components/news-image";
 import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,9 +96,12 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
           result.articles.map((article) => (
             <Card
               key={article.id}
-              className="border-border bg-card transition hover:border-primary/30 hover:bg-muted"
+              className="relative flex-col gap-0 p-0 ring-foreground/10 transition hover:ring-primary/30 sm:flex-row"
             >
-              <CardContent className="space-y-4 p-6">
+              <div className="block shrink-0 sm:w-64 sm:self-start lg:w-72">
+                <NewsImage src={article.imageUrl} alt="" className="aspect-[16/9] w-full" />
+              </div>
+              <div className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
@@ -105,31 +109,31 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         {article.category ?? "General"}
                       </Badge>
                       <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                        {article.source ?? "Unknown source"}
+                        {article.source ?? "Fuente desconocida"}
                       </Badge>
                     </div>
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block text-2xl font-semibold tracking-tight text-foreground transition hover:text-primary"
+                      className="block text-xl font-semibold tracking-tight text-foreground transition after:absolute after:inset-0 group-hover/card:text-primary sm:text-2xl"
                     >
                       {article.headline}
                     </a>
                   </div>
-                  <p className="text-sm text-muted-foreground">{formatDate(article.publishedAt)}</p>
+                  <p className="shrink-0 text-sm text-muted-foreground">{formatDate(article.publishedAt)}</p>
                 </div>
                 <p className="max-w-4xl text-sm leading-7 text-muted-foreground">
                   {truncateSummary(article.summary)}
                 </p>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                   <div className="text-sm text-muted-foreground">
                     {article.fighterId && article.fighterName ? (
                       <>
                         Luchador vinculado:{" "}
                         <Link
                           href={`/fighters/${article.fighterId}`}
-                          className="font-medium text-primary transition hover:text-primary/80"
+                          className="relative z-10 font-medium text-primary transition hover:text-primary/80"
                         >
                           {article.fighterName}
                         </Link>
@@ -138,16 +142,11 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                       "Sin luchador vinculado"
                     )}
                   </div>
-                  <a
-                    href={article.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm font-medium text-primary transition hover:text-primary/80"
-                  >
+                  <span className="text-sm font-medium text-primary transition group-hover/card:text-primary/80">
                     Leer artículo →
-                  </a>
+                  </span>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))
         ) : (

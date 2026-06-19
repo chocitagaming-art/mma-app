@@ -139,6 +139,7 @@ export type NewsArticle = {
   fighterName: string | null;
   category: string | null;
   relevance: number | null;
+  imageUrl: string | null;
 };
 
 export type NewsListResult = {
