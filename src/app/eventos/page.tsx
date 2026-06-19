@@ -23,13 +23,14 @@ type EventosPageProps = {
 };
 
 const TABS = [
-  { key: "proximos", label: "Próximos", href: "/eventos?view=proximos" },
-  { key: "pasados", label: "Pasados", href: "/eventos" },
+  { key: "proximos", label: "Próximos", href: "/eventos" },
+  { key: "pasados", label: "Pasados", href: "/eventos?view=pasados" },
 ] as const;
 
 export default async function EventosPage({ searchParams }: EventosPageProps) {
   const params = await searchParams;
-  const view = getSingleValue(params.view) === "proximos" ? "proximos" : "pasados";
+  // Default to upcoming events; past events require an explicit ?view=pasados.
+  const view = getSingleValue(params.view) === "pasados" ? "pasados" : "proximos";
   const page = Number(getSingleValue(params.page) || "1");
 
   const result = view === "pasados" ? await getPastEvents(page) : null;
@@ -197,7 +198,9 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
             <PaginationControls
               page={result.page}
               totalPages={result.totalPages}
-              createHref={(target) => (target > 1 ? `/eventos?page=${target}` : "/eventos")}
+              createHref={(target) =>
+                target > 1 ? `/eventos?view=pasados&page=${target}` : "/eventos?view=pasados"
+              }
             />
           </div>
         </>
