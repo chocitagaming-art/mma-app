@@ -55,7 +55,7 @@ export default async function HomePage() {
                 Ver todos los luchadores
               </Button>
             </Link>
-            <Link href="/predict">
+            <Link href="/enfrentamiento">
               <Button size="lg" className="h-10">
                 Predecir una pelea
               </Button>

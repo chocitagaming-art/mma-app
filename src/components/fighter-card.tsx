@@ -79,7 +79,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
         <span className="tabular">{fighter.fightCount} peleas</span>
         <div className="flex items-center gap-4">
           <Link
-            href={`/compare?a=${fighter.id}`}
+            href={`/enfrentamiento?red=${fighter.id}`}
             className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-primary"
           >
             <ArrowRightLeft className="size-3.5" />

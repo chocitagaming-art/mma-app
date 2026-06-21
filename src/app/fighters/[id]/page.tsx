@@ -105,7 +105,7 @@ export default async function FighterDetailPage({
                       <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
                       {fighter.nationality ?? "Nationality unavailable"}
                     </Badge>
-                    <Link href={`/compare?a=${fighter.id}`}>
+                    <Link href={`/enfrentamiento?red=${fighter.id}`}>
                       <Button
                         variant="secondary"
                         className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
