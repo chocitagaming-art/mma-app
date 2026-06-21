@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +13,7 @@ const links = [
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
+  { href: "/maestro", label: "Maestro" },
   { href: "/news", label: "Noticias" },
 ];
 
@@ -27,13 +29,22 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Brand */}
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 py-3">
-          <span className="octagon grid size-9 place-items-center bg-primary font-display text-lg font-extrabold leading-none text-primary-foreground">
-            M
-          </span>
+        <Link
+          href="/"
+          aria-label="MMA STATUS — inicio"
+          className="group flex shrink-0 items-center gap-2.5 py-2.5"
+        >
+          <Image
+            src="/brand/mark-hex.png"
+            alt=""
+            width={44}
+            height={43}
+            preload
+            className="h-9 w-auto drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:-rotate-3 group-hover:scale-105 motion-reduce:transition-none"
+          />
           <span className="font-display text-xl font-extrabold uppercase leading-none tracking-tight">
-            <span className="text-foreground">MMA</span>
-            <span className="text-primary"> Stats</span>
+            <span className="text-foreground">MMA</span>{" "}
+            <span className="text-primary">STATUS</span>
           </span>
         </Link>
 

@@ -78,6 +78,33 @@ export type FighterAggregateStats = {
   totalFightStats: number;
 };
 
+// --- Ficha de luchador estilo UFC.com: agregados adicionales (#39) ---
+
+// Defensa = porcentaje de intentos del rival que NO conectaron (0..1).
+export type FighterDefenseStats = {
+  strikingDefense: number;
+  takedownDefense: number;
+  oppSigStrikesLanded: number;
+  oppSigStrikesAttempted: number;
+  oppTakedownsLanded: number;
+  oppTakedownsAttempted: number;
+};
+
+export type FighterWinMethods = {
+  koTko: number;
+  submission: number;
+  decision: number;
+  other: number;
+  total: number;
+};
+
+// Promedios POR PELEA (no por minuto: la BD no guarda duración de combate).
+export type FighterRateStats = {
+  sigStrikesLandedPerFight: number;
+  sigStrikesAbsorbedPerFight: number;
+  fightStatsCount: number;
+};
+
 export type FighterSearchResult = {
   id: number;
   name: string;
@@ -126,6 +153,10 @@ export type FighterDetail = {
   history: FighterHistoryItem[];
   aggregateStats: FighterAggregateStats;
   news: NewsArticle[];
+  // Agregados extra para la ficha estilo UFC.com (#39):
+  defenseStats: FighterDefenseStats;
+  winMethods: FighterWinMethods;
+  rateStats: FighterRateStats;
 };
 
 export type NewsArticle = {

@@ -17,12 +17,12 @@ export async function generateMetadata({
 
   if (!fight) {
     return {
-      title: "Pelea no encontrada | MMA Stats",
+      title: "Pelea no encontrada",
     };
   }
 
   return {
-    title: `${fight.red.name} vs ${fight.blue.name} | MMA Stats`,
+    title: `${fight.red.name} vs ${fight.blue.name}`,
     description: `Resultado de la pelea y comparación de estadísticas para ${fight.red.name} vs ${fight.blue.name}.`,
   };
 }

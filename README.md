@@ -1,4 +1,4 @@
-# MMA Stats
+# MMA STATUS
 
 Polished Next.js web app for browsing real MMA fighter profiles, fight history, and matchup stats from a Neon PostgreSQL database.
 

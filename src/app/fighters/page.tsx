@@ -16,7 +16,7 @@ type FightersPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Luchadores | MMA Stats",
+  title: "Luchadores",
   description: "Busca, filtra y ordena perfiles de peleadores desde la base de datos de MMA en vivo.",
 };
 
@@ -100,11 +100,12 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
               <span>Nacionalidad</span>
               <span>Guardia</span>
             </div>
-            {result.fighters.map((fighter) => (
+            {result.fighters.map((fighter, i) => (
               <Link
                 key={fighter.id}
                 href={`/fighters/${fighter.id}`}
-                className="grid gap-4 border-b border-border px-6 py-5 transition hover:bg-accent md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
+                style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+                className="animate-rise grid gap-4 border-b border-border px-6 py-5 transition hover:bg-accent md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
               >
                 <div className="flex items-center gap-4">
                   <FighterHeadshot

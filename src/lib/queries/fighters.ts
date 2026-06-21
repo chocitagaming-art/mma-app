@@ -6,10 +6,13 @@ import type {
   FighterComparisonProfile,
   FighterComparisonAverages,
   FighterCardData,
+  FighterDefenseStats,
   FighterDetail,
   FighterFilters,
   FighterHistoryItem,
   FighterListResult,
+  FighterRateStats,
+  FighterWinMethods,
   NewsArticle,
   FighterSearchResult,
   HomeStats,
@@ -65,6 +68,20 @@ type AggregateRow = {
   control_time_seconds: string | null;
   knockdowns: string | null;
   total_fight_stats: string | null;
+};
+
+type DefenseRow = {
+  opp_sig_strikes_landed: string | null;
+  opp_sig_strikes_attempted: string | null;
+  opp_takedowns_landed: string | null;
+  opp_takedowns_attempted: string | null;
+};
+
+type WinMethodRow = {
+  ko_tko: string | null;
+  submission: string | null;
+  decision: string | null;
+  other: string | null;
 };
 
 type SearchRow = {
@@ -155,6 +172,37 @@ function mapComparisonAggregate(row?: AggregateRow): FighterComparisonAverages {
     submissionAttemptsPerFight: totals.submissionAttempts / fightCount,
     controlTimePerFightSeconds: totals.controlTimeSeconds / fightCount,
     totalFightStats: totals.totalFightStats,
+  };
+}
+
+function mapDefense(row?: DefenseRow): FighterDefenseStats {
+  const oppSigLanded = Number(row?.opp_sig_strikes_landed ?? 0);
+  const oppSigAtt = Number(row?.opp_sig_strikes_attempted ?? 0);
+  const oppTdLanded = Number(row?.opp_takedowns_landed ?? 0);
+  const oppTdAtt = Number(row?.opp_takedowns_attempted ?? 0);
+
+  return {
+    strikingDefense: oppSigAtt > 0 ? 1 - oppSigLanded / oppSigAtt : 0,
+    takedownDefense: oppTdAtt > 0 ? 1 - oppTdLanded / oppTdAtt : 0,
+    oppSigStrikesLanded: oppSigLanded,
+    oppSigStrikesAttempted: oppSigAtt,
+    oppTakedownsLanded: oppTdLanded,
+    oppTakedownsAttempted: oppTdAtt,
+  };
+}
+
+function mapWinMethods(row?: WinMethodRow): FighterWinMethods {
+  const koTko = Number(row?.ko_tko ?? 0);
+  const submission = Number(row?.submission ?? 0);
+  const decision = Number(row?.decision ?? 0);
+  const other = Number(row?.other ?? 0);
+
+  return {
+    koTko,
+    submission,
+    decision,
+    other,
+    total: koTko + submission + decision + other,
   };
 }
 
@@ -400,7 +448,8 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     return null;
   }
 
-  const [historyRows, aggregateRows, newsRows] = await Promise.all([
+  const [historyRows, aggregateRows, newsRows, defenseRows, winMethodRows] =
+    await Promise.all([
     sql<HistoryRow>(
       `select
         fi.id as fight_id,
@@ -469,6 +518,48 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
       order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc`,
       [id],
     ),
+    // Defensa: lo que el RIVAL intentó contra este luchador (su fila en el mismo combate).
+    sql<DefenseRow>(
+      `select
+        sum(opp.sig_strikes_landed)::text as opp_sig_strikes_landed,
+        sum(opp.sig_strikes_attempted)::text as opp_sig_strikes_attempted,
+        sum(opp.takedowns_landed)::text as opp_takedowns_landed,
+        sum(opp.takedowns_attempted)::text as opp_takedowns_attempted
+      from fight_stats me
+      join fight_stats opp
+        on opp.fight_id = me.fight_id
+       and opp.fighter_id <> me.fighter_id
+      where me.fighter_id = $1`,
+      [id],
+    ),
+    // Victorias por método. Buckets MUTUAMENTE EXCLUYENTES por prioridad
+    // (decisión -> ko/tko -> sumisión -> otro), con palabras ancladas (\y) para
+    // no doble-contar ni matchear subcadenas ('decked', 'subdued', 'crowbar'...).
+    // Así los buckets suman exactamente el total de victorias.
+    sql<WinMethodRow>(
+      `select
+        (count(*) filter (where m ~* '\\ydecision\\y'))::text as decision,
+        (count(*) filter (
+          where m !~* '\\ydecision\\y'
+            and m ~* '(\\y(ko|tko)\\y|knockout)'
+        ))::text as ko_tko,
+        (count(*) filter (
+          where m !~* '\\ydecision\\y'
+            and m !~* '(\\y(ko|tko)\\y|knockout)'
+            and m ~* '(submission|choke|armbar|kimura|guillotine|triangle|americana|rear|naked|crank|\\ylock\\y)'
+        ))::text as submission,
+        (count(*) filter (
+          where m !~* '\\ydecision\\y'
+            and m !~* '(\\y(ko|tko)\\y|knockout)'
+            and m !~* '(submission|choke|armbar|kimura|guillotine|triangle|americana|rear|naked|crank|\\ylock\\y)'
+        ))::text as other
+      from (
+        select lower(coalesce(fi.method, '')) as m
+        from fights fi
+        where fi.winner_id = $1
+      ) wins`,
+      [id],
+    ),
   ]);
 
   const history: FighterHistoryItem[] = historyRows.map((row) => ({
@@ -486,13 +577,25 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     weightClass: row.weight_class,
   }));
 
+  const aggregateStats = mapAggregate(aggregateRows[0]);
+  const defenseStats = mapDefense(defenseRows[0]);
+  const denom = Math.max(1, aggregateStats.totalFightStats);
+  const rateStats: FighterRateStats = {
+    sigStrikesLandedPerFight: aggregateStats.sigStrikesLanded / denom,
+    sigStrikesAbsorbedPerFight: defenseStats.oppSigStrikesLanded / denom,
+    fightStatsCount: aggregateStats.totalFightStats,
+  };
+
   return {
     fighter: mapFighter(fighterRow),
     latestWeightClass: fighterRow.latest_weight_class ?? null,
     fightCount: Number(fighterRow.fight_count ?? 0),
     history,
-    aggregateStats: mapAggregate(aggregateRows[0]),
+    aggregateStats,
     news: newsRows.map(mapNewsArticle),
+    defenseStats,
+    winMethods: mapWinMethods(winMethodRows[0]),
+    rateStats,
   };
 }
 

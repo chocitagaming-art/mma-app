@@ -12,7 +12,7 @@ type EnfrentamientoPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Enfrentamiento | MMA Stats",
+  title: "Enfrentamiento",
   description:
     "Arma cualquier enfrentamiento UFC: compara récords, físico, golpeo y grappling lado a lado, y dispara una predicción de IA con probabilidades por esquina.",
 };

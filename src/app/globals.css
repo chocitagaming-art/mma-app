@@ -7,6 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-foreground: var(--brand-ink-foreground);
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-plex-mono);
   --font-display: var(--font-saira);
@@ -99,6 +101,9 @@
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: #e4e4e7;
   --sidebar-ring: #d20a0a;
+  /* Superficie de marca fija (footer y similares) — igual en ambos temas. */
+  --brand-ink: #0b0b0d;
+  --brand-ink-foreground: #fafafa;
 }
 
 /* DARK — octagon-canvas black, brighter corner-red accent */
@@ -250,4 +255,49 @@
     animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Movimiento premium + atmósfera (rebranding #40) ---------- */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+
+/* Entrada escalonada del contenido (usar con style animation-delay). */
+.animate-rise {
+  animation: rise-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+/* Flotación lenta del arte del luchador en el hero. */
+.animate-float {
+  animation: float-soft 7s ease-in-out infinite;
+}
+/* Punto "en vivo" que late. */
+.live-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
 }

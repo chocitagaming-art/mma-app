@@ -32,12 +32,14 @@ function DivisionGroup({
         <div className="h-px flex-1 bg-border" />
       </div>
       <div className={cn("grid items-start gap-5 md:grid-cols-2", threeCols && "xl:grid-cols-3")}>
-        {divisions.map((division) => (
-          <RankingDivisionCard
+        {divisions.map((division, i) => (
+          <div
             key={division.division}
-            division={division}
-            showPhotos={showPhotos}
-          />
+            className="animate-rise"
+            style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
+          >
+            <RankingDivisionCard division={division} showPhotos={showPhotos} />
+          </div>
         ))}
       </div>
     </section>
@@ -45,7 +47,7 @@ function DivisionGroup({
 }
 
 export const metadata: Metadata = {
-  title: "Clasificación | MMA Stats",
+  title: "Clasificación",
   description: "Rankings oficiales de UFC: libra por libra y clasificación por cada división.",
 };
 

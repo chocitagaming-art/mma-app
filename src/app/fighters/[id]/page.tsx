@@ -4,9 +4,12 @@ import type { Metadata } from "next";
 import { ArrowRightLeft } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
+import { DefenseMeter } from "@/components/fighter/defense-meter";
+import { PerFightBars } from "@/components/fighter/per-fight-bars";
+import { StatDonut } from "@/components/fighter/stat-donut";
+import { WinMethodChart } from "@/components/fighter/win-method-chart";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { SectionHeading } from "@/components/section-heading";
-import { StatBar } from "@/components/stat-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +26,6 @@ import {
   formatControlTime,
   formatDate,
   formatHeight,
-  formatPercentage,
   formatReach,
   formatRecord,
   formatWeight,
@@ -43,12 +45,12 @@ export async function generateMetadata({
 
   if (!detail) {
     return {
-      title: "Luchador no encontrado | MMA Stats",
+      title: "Luchador no encontrado",
     };
   }
 
   return {
-    title: `${detail.fighter.name} | MMA Stats`,
+    title: `${detail.fighter.name}`,
     description: `Historial de peleas y estadísticas agregadas de rendimiento de ${detail.fighter.name}.`,
   };
 }
@@ -63,7 +65,8 @@ export default async function FighterDetailPage({
     notFound();
   }
 
-  const { fighter, aggregateStats, history, news } = detail;
+  const { fighter, aggregateStats, history, news, defenseStats, winMethods, rateStats } =
+    detail;
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
@@ -160,44 +163,79 @@ export default async function FighterDetailPage({
           <CardHeader>
             <CardTitle className="text-foreground">Resumen de rendimiento</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <StatBar
-              label="Precisión de golpes significativos"
-              value={formatPercentage(aggregateStats.sigStrikeAccuracy)}
-              progress={aggregateStats.sigStrikeAccuracy}
-              helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted} conectados`}
-            />
-            <StatBar
-              label="Precisión de derribos"
-              value={formatPercentage(aggregateStats.takedownAccuracy)}
-              progress={aggregateStats.takedownAccuracy}
-              helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted} conectados`}
-            />
-            <StatBar
-              label="Tiempo de control"
-              value={formatControlTime(aggregateStats.controlTimeSeconds)}
-              progress={Math.min(1, aggregateStats.controlTimeSeconds / 1800)}
-              helper={`${aggregateStats.totalFightStats} registros de estadísticas`}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-border bg-muted p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                  Intentos de sumisión
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <StatDonut
+                label="Precisión de golpeo"
+                value={aggregateStats.sigStrikeAccuracy}
+                helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted}`}
+                colorVar="var(--chart-1)"
+              />
+              <StatDonut
+                label="Precisión de derribo"
+                value={aggregateStats.takedownAccuracy}
+                helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted}`}
+                colorVar="var(--chart-2)"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Knockdowns
                 </p>
-                <p className="tabular mt-2 text-2xl font-semibold text-foreground">
+                <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                  {aggregateStats.knockdowns}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Int. sumisión
+                </p>
+                <p className="tabular mt-2 text-2xl font-bold text-foreground">
                   {aggregateStats.submissionAttempts}
                 </p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Derribos por golpe</p>
-                <p className="tabular mt-2 text-2xl font-semibold text-foreground">
-                  {aggregateStats.knockdowns}
+              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  T. control
+                </p>
+                <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                  {formatControlTime(aggregateStats.controlTimeSeconds)}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </section>
+
+      {aggregateStats.totalFightStats > 0 || winMethods.total > 0 ? (
+        <section className="space-y-6">
+          <SectionHeading
+            eyebrow="Estadísticas"
+            title="Perfil de rendimiento"
+            description="Precisión, defensa y desglose de victorias, calculado sobre las peleas registradas."
+          />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <PerFightBars
+              landedPerFight={rateStats.sigStrikesLandedPerFight}
+              absorbedPerFight={rateStats.sigStrikesAbsorbedPerFight}
+            />
+            {winMethods.total > 0 ? <WinMethodChart methods={winMethods} /> : null}
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <DefenseMeter
+              label="Defensa de golpeo"
+              value={defenseStats.strikingDefense}
+              helper={`${defenseStats.oppSigStrikesLanded} de ${defenseStats.oppSigStrikesAttempted} permitidos`}
+            />
+            <DefenseMeter
+              label="Defensa de derribo"
+              value={defenseStats.takedownDefense}
+              helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-6">
         <SectionHeading

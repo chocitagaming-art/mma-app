@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { id } = await params;
   const event = await getEventDetail(Number(id));
   return {
-    title: event ? `${event.name} | MMA Stats` : "Evento | MMA Stats",
+    title: event ? `${event.name}` : "Evento",
   };
 }
 

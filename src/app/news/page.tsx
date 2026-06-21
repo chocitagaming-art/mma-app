@@ -93,10 +93,11 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
 
       <div className="grid gap-5">
         {result.articles.length ? (
-          result.articles.map((article) => (
+          result.articles.map((article, i) => (
             <Card
               key={article.id}
-              className="relative flex-col gap-0 p-0 ring-foreground/10 transition hover:ring-primary/30 sm:flex-row"
+              style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+              className="animate-rise relative flex-col gap-0 p-0 ring-foreground/10 transition hover:ring-primary/30 sm:flex-row"
             >
               <div className="block shrink-0 sm:w-64 sm:self-start lg:w-72">
                 <NewsImage src={article.imageUrl} alt="" className="aspect-[16/9] w-full" />

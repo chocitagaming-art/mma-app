@@ -10,7 +10,7 @@ import { getPastEvents, getUpcomingEvents } from "@/lib/queries/events";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Eventos | MMA Stats",
+  title: "Eventos",
   description: "Cartelera de eventos UFC: próximos y resultados de eventos pasados.",
 };
 
@@ -68,10 +68,11 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
       {view === "proximos" ? (
         upcoming && upcoming.length > 0 ? (
           <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {upcoming.map((event) => (
+            {upcoming.map((event, i) => (
               <div
                 key={event.id}
-                className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
+                style={{ animationDelay: `${Math.min(i, 10) * 45}ms` }}
+                className="animate-rise group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
               >
                 {event.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -165,11 +166,12 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
 
           {result.events.length > 0 ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {result.events.map((event) => (
+              {result.events.map((event, i) => (
                 <Link
                   key={event.id}
                   href={`/eventos/${event.id}`}
-                  className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
+                  style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+                  className="animate-rise group flex flex-col gap-3 rounded-lg border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
                 >
                   <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
                     {event.name}

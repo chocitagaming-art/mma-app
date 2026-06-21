@@ -43,3 +43,6 @@ next-env.d.ts
 
 # playwright (visual QA snapshots/screenshots)
 .playwright-mcp/
+
+# dev server log temporal
+_devlog.txt

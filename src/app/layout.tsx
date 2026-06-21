@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
 
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -27,8 +28,8 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://mma-app-ruby.vercel.app"),
   title: {
-    default: "MMA Stats",
-    template: "%s | MMA Stats",
+    default: "MMA STATUS",
+    template: "%s | MMA STATUS",
   },
   description:
     "Perfiles profesionales de peleadores de MMA, historial de peleas y comparaciones de estadísticas impulsadas por una base de datos Neon PostgreSQL en vivo.",
@@ -55,6 +56,7 @@ export default function RootLayout({
           <div className="relative flex min-h-screen flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>
+            <SiteFooter />
           </div>
         </ThemeProvider>
       </body>
