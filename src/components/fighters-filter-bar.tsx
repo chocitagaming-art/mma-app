@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatWeightClass } from "@/lib/format";
+import type { FighterSearchResult } from "@/lib/types";
 
 type FightersFilterBarProps = {
   weightClasses: string[];
@@ -54,6 +56,65 @@ export function FightersFilterBar({
     router.push(`${pathname ?? "/fighters"}${next.toString() ? `?${next.toString()}` : ""}`);
   }
 
+  // Typeahead de luchadores (mismo patrón que SearchHero): mientras escribes sugiere
+  // perfiles; Enter filtra la lista por el texto, y un clic salta directo al perfil.
+  const [query, setQuery] = useState(current.q);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<FighterSearchResult[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const trimmedQuery = query.trim();
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (!trimmedQuery) {
+      setResults([]);
+      setOpen(false);
+      setLoading(false);
+      return;
+    }
+    const timeoutId = window.setTimeout(async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `/api/fighters/search?q=${encodeURIComponent(trimmedQuery)}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) {
+          throw new Error("La búsqueda falló");
+        }
+        const data = (await response.json()) as FighterSearchResult[];
+        setResults(data);
+        setOpen(true);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setResults([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => {
+      abortRef.current?.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [trimmedQuery]);
+
+  const showEmpty = trimmedQuery.length >= 1 && !loading && results.length === 0;
+
   const weightClassItems = {
     all: "Todas las categorías de peso",
     ...Object.fromEntries(
@@ -77,16 +138,67 @@ export function FightersFilterBar({
 
   return (
     <div className="space-y-5">
-      <Input
-        defaultValue={current.q}
-        placeholder="Buscar por nombre del luchador"
-        className="h-11 w-full border-border bg-card text-foreground"
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            updateParam("q", event.currentTarget.value);
-          }
-        }}
-      />
+      <div ref={searchRef} className="relative">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => {
+            if (results.length) {
+              setOpen(true);
+            }
+          }}
+          placeholder="Buscar por nombre del luchador"
+          className="h-11 w-full border-border bg-card text-foreground"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setOpen(false);
+              updateParam("q", event.currentTarget.value);
+            }
+          }}
+        />
+        {open && (results.length > 0 || loading || showEmpty) ? (
+          <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border border-border bg-popover py-2 shadow-xl">
+            <div className="max-h-80 overflow-y-auto px-2">
+              {loading ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">
+                  Buscando luchadores…
+                </div>
+              ) : null}
+              {results.map((fighter) => (
+                <button
+                  key={fighter.id}
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-muted"
+                  onClick={() => {
+                    setOpen(false);
+                    router.push(`/fighters/${fighter.id}`);
+                  }}
+                >
+                  <FighterHeadshot
+                    name={fighter.name}
+                    headshotUrl={fighter.headshotUrl}
+                    size="sm"
+                    className="size-10 shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">
+                      {fighter.name}
+                    </p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {fighter.nationality ?? "Nacionalidad no disponible"}
+                    </p>
+                  </div>
+                </button>
+              ))}
+              {showEmpty ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">
+                  No se encontraron luchadores
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <label className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block">

@@ -25,7 +25,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mma-stats.local"),
+  metadataBase: new URL("https://mma-app-ruby.vercel.app"),
   title: {
     default: "MMA Stats",
     template: "%s | MMA Stats",
