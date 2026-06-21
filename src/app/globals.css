@@ -151,13 +151,32 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* Faint octagon watermark — subtle brand personality behind the content. */
+  /* Atmósfera premium: glow rojo de marca, theme-aware (antes era un octágono plano soso). */
   body::before {
     content: "";
     position: fixed;
-    top: 11%;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        58% 42% at 50% -4%,
+        color-mix(in oklch, var(--primary) 20%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        38% 30% at 92% 3%,
+        color-mix(in oklch, var(--primary) 11%, transparent),
+        transparent 72%
+      );
+  }
+  /* Emblema de octágono con gradiente de marca + flotación lenta (premium y dinámico). */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 9%;
     left: 50%;
-    width: min(82vw, 880px);
+    width: min(78vw, 800px);
     aspect-ratio: 1 / 1;
     transform: translateX(-50%);
     z-index: -1;
@@ -172,8 +191,24 @@
       0% 71%,
       0% 29%
     );
-    background: var(--foreground);
-    opacity: 0.06;
+    background: conic-gradient(
+      from 210deg,
+      color-mix(in oklch, var(--primary) 65%, transparent),
+      transparent 35%,
+      color-mix(in oklch, var(--foreground) 28%, transparent) 70%,
+      transparent
+    );
+    opacity: 0.09;
+    animation: octagon-drift 22s ease-in-out infinite;
+  }
+  @keyframes octagon-drift {
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateX(-50%) translateY(-14px) rotate(3deg);
+    }
   }
   html {
     @apply font-sans;

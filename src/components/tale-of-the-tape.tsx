@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   formatControlTime,
   formatDate,
@@ -59,6 +61,19 @@ function CornerBlock({
   isWinner: boolean;
 }) {
   const isRed = corner === "red";
+  // Linkable only when the fighter has a real profile row (upcoming bouts can be TBD).
+  const href = fighter.id != null ? `/fighters/${fighter.id}` : null;
+  const headshot = (
+    <FighterHeadshot
+      name={fighter.name}
+      headshotUrl={fighter.headshotUrl}
+      size="lg"
+      className={cn(
+        "shrink-0 border-2",
+        isRed ? "border-corner-red" : "border-corner-blue",
+      )}
+    />
+  );
   return (
     <div
       className={cn(
@@ -66,15 +81,13 @@ function CornerBlock({
         isRed ? "flex-row" : "flex-row-reverse",
       )}
     >
-      <FighterHeadshot
-        name={fighter.name}
-        headshotUrl={fighter.headshotUrl}
-        size="lg"
-        className={cn(
-          "shrink-0 border-2",
-          isRed ? "border-corner-red" : "border-corner-blue",
-        )}
-      />
+      {href ? (
+        <Link href={href} className="shrink-0 transition-opacity hover:opacity-80">
+          {headshot}
+        </Link>
+      ) : (
+        headshot
+      )}
       <div
         className={cn(
           "flex min-w-0 flex-col gap-1.5",
@@ -89,9 +102,18 @@ function CornerBlock({
         >
           Esquina {isRed ? "roja" : "azul"}
         </span>
-        <p className="font-display text-2xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-3xl">
-          {fighter.name}
-        </p>
+        {href ? (
+          <Link
+            href={href}
+            className="font-display text-2xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-3xl"
+          >
+            {fighter.name}
+          </Link>
+        ) : (
+          <p className="font-display text-2xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-3xl">
+            {fighter.name}
+          </p>
+        )}
         <p className="tabular font-mono text-sm text-muted-foreground">
           {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
         </p>

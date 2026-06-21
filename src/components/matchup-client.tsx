@@ -192,17 +192,22 @@ function CornerBlock({
         isRed ? "flex-row" : "flex-row-reverse",
       )}
     >
-      <FighterHeadshot
-        name={fighter.name}
-        headshotUrl={fighter.headshotUrl}
-        size="lg"
-        priority
-        className={cn(
-          "shrink-0 border-2 bg-muted",
-          isRed ? "border-corner-red" : "border-corner-blue",
-        )}
-        imageClassName="object-contain object-top"
-      />
+      <Link
+        href={`/fighters/${fighter.id}`}
+        className="shrink-0 transition-opacity hover:opacity-80"
+      >
+        <FighterHeadshot
+          name={fighter.name}
+          headshotUrl={fighter.headshotUrl}
+          size="lg"
+          priority
+          className={cn(
+            "border-2 bg-muted",
+            isRed ? "border-corner-red" : "border-corner-blue",
+          )}
+          imageClassName="object-contain object-top"
+        />
+      </Link>
       <div
         className={cn(
           "flex min-w-0 flex-col gap-1.5",
