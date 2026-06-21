@@ -13,6 +13,9 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   "magomed tuchalov": "/fighters/magomed-tuchalov.png",
   "jovan leka": "/fighters/jovan-leka.jpg",
   "gable steveson": "/fighters/gable-steveson.webp",
+  "jefferson nascimento": "/fighters/jefferson-nascimento.jpg",
+  "tahir abdullayev": "/fighters/tahir-abdullayev.png",
+  "theodor berggren": "/fighters/theodor-berggren.jpg",
 };
 
 export function localHeadshot(name: string): string | null {
