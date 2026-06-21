@@ -82,7 +82,11 @@ export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
             count(f.id)::text AS fight_count
      FROM events e
      LEFT JOIN fights f ON f.event_id = e.id
+     -- status='upcoming' marca la intención, pero un evento puede quedarse en
+     -- 'upcoming' hasta que el scraper lo complete. El guard de fecha lo saca de
+     -- "Próximos" en cuanto pasa su día (la lista de "Pasados" lo recoge por fecha).
      WHERE e.status = 'upcoming'
+       AND (e.event_date >= CURRENT_DATE OR e.event_date IS NULL)
      GROUP BY e.id, e.name, e.headliner, e.event_date, e.start_time,
               e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline
      ORDER BY e.event_date ASC, e.id ASC`,
