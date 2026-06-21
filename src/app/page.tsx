@@ -67,9 +67,9 @@ export default async function HomePage() {
               className="animate-rise mt-4 flex flex-wrap gap-3"
               style={{ animationDelay: "320ms" }}
             >
-              <Link href="/fighters">
+              <Link href="/maestro">
                 <Button variant="outline" size="lg" className="h-10">
-                  Ver todos los luchadores
+                  Pregunta al Maestro de la UFC
                 </Button>
               </Link>
               <Link href="/enfrentamiento">
