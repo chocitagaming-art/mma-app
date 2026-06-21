@@ -76,7 +76,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
-  const isUpcoming = event.status === "upcoming";
+  // "Pasado" se decide por FECHA (igual que la lista de Pasados), no solo por status:
+  // un evento puede seguir en status 'upcoming' uno o dos días tras celebrarse, hasta
+  // que el scraper lo complete. Si su fecha ya pasó, mostramos la cartelera con resultados.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const isUpcoming =
+    event.status === "upcoming" &&
+    (event.eventDate == null || event.eventDate >= todayIso);
   const sections = groupBoutsBySegment(event.bouts);
 
   return (
