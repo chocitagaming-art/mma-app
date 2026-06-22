@@ -76,3 +76,32 @@ export async function getNews(category?: string): Promise<NewsListResult> {
     activeCategory: trimmedCategory,
   };
 }
+
+// Últimas noticias para el Inicio (rejilla estilo ufc.com) y el marquee.
+// `requireImage` filtra a las que tienen foto (la rejilla la necesita; el marquee no).
+export async function getRecentNews(
+  limit = 6,
+  opts: { requireImage?: boolean } = {},
+): Promise<NewsArticle[]> {
+  const rows = await sql<NewsRow>(
+    `select
+        n.id,
+        n.headline,
+        n.summary,
+        n.source,
+        n.url,
+        n.published_at,
+        n.fighter_id,
+        f.name as fighter_name,
+        n.category,
+        n.relevance::text,
+        n.image_url
+      from news n
+      left join fighters f on f.id = n.fighter_id
+      ${opts.requireImage ? "where n.image_url is not null" : ""}
+      order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc
+      limit $1`,
+    [limit],
+  );
+  return rows.map(mapNewsArticle);
+}

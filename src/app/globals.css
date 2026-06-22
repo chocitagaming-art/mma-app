@@ -71,13 +71,13 @@
   --primary-foreground: #ffffff;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
-  --muted: #f1f1f3;
-  --muted-foreground: #6b6b73;
-  --accent: #f1f1f3;
+  --muted: #ededf0;
+  --muted-foreground: #52525b;
+  --accent: #ededf0;
   --accent-foreground: #18181b;
   --destructive: #dc2626;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
+  --border: #d7d7dc;
+  --input: #d7d7dc;
   --ring: #d20a0a;
   --corner-red: #d20a0a;
   --corner-red-foreground: #ffffff;
@@ -175,36 +175,35 @@
         transparent 72%
       );
   }
-  /* Emblema de octágono con gradiente de marca + flotación lenta (premium y dinámico). */
+  /* Marca de agua del logo MMA STATUS (sustituye al octágono soso). Sutil,
+     theme-aware, con flotación lenta y bordes difuminados (máscara radial) para
+     que se funda con el fondo y no recorte en seco. */
   body::after {
     content: "";
     position: fixed;
-    top: 9%;
+    top: 5%;
     left: 50%;
-    width: min(78vw, 800px);
-    aspect-ratio: 1 / 1;
+    width: min(82vw, 760px);
+    aspect-ratio: 1024 / 696;
     transform: translateX(-50%);
     z-index: -1;
     pointer-events: none;
-    clip-path: polygon(
-      29% 0%,
-      71% 0%,
-      100% 29%,
-      100% 71%,
-      71% 100%,
-      29% 100%,
-      0% 71%,
-      0% 29%
+    background: url("/brand/badge-circular.png") center / contain no-repeat;
+    -webkit-mask-image: radial-gradient(
+      ellipse 72% 72% at 50% 44%,
+      #000 32%,
+      transparent 76%
     );
-    background: conic-gradient(
-      from 210deg,
-      color-mix(in oklch, var(--primary) 65%, transparent),
-      transparent 35%,
-      color-mix(in oklch, var(--foreground) 28%, transparent) 70%,
-      transparent
+    mask-image: radial-gradient(
+      ellipse 72% 72% at 50% 44%,
+      #000 32%,
+      transparent 76%
     );
-    opacity: 0.09;
+    opacity: 0.05;
     animation: octagon-drift 22s ease-in-out infinite;
+  }
+  .dark body::after {
+    opacity: 0.08;
   }
   @keyframes octagon-drift {
     0%,
@@ -300,4 +299,38 @@
 /* Punto "en vivo" que late. */
 .live-dot {
   animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+/* ---------- Marquee de noticias (Inicio) ---------- */
+/* El contenido se duplica en el DOM; animar 0 → -50% da un bucle sin costuras. */
+@keyframes marquee-rtl {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee-rtl var(--marquee-duration, 48s) linear infinite;
+  will-change: transform;
+}
+/* Pausa al pasar el ratón (el contenedor lleva .marquee-host). */
+.marquee-host:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* ---------- Bordes difuminados (feather) del reel de vídeo del hero ---------- */
+/* Funciona igual en dark y light: la máscara recorta el alpha, no pinta color. */
+.mask-feather {
+  -webkit-mask-image: radial-gradient(
+    ellipse 86% 92% at 50% 50%,
+    #000 60%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 86% 92% at 50% 50%,
+    #000 60%,
+    transparent 100%
+  );
 }

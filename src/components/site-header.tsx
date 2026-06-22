@@ -15,6 +15,7 @@ const links = [
   { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/maestro", label: "Maestro" },
   { href: "/news", label: "Noticias" },
+  { href: "/videos", label: "Vídeos" },
 ];
 
 function isActive(pathname: string, href: string) {

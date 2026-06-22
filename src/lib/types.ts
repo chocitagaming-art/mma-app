@@ -318,3 +318,45 @@ export type FightDetail = {
   redStats: FightCompetitorStats | null;
   blueStats: FightCompetitorStats | null;
 };
+
+// --- Silueta de golpes por zona/posición estilo ufc.com (#45) ---
+
+// Golpes (landed/attempted) de una zona o posición concreta.
+export type StrikeZoneStat = {
+  landed: number;
+  attempted: number;
+};
+
+// Desglose de golpes significativos por objetivo (cabeza/cuerpo/pierna) y por
+// posición (a distancia/clinch/suelo). Invariante de los datos:
+// head+body+leg == distance+clinch+ground == golpes significativos.
+export type FighterStrikeBreakdown = {
+  head: StrikeZoneStat;
+  body: StrikeZoneStat;
+  leg: StrikeZoneStat;
+  distance: StrikeZoneStat;
+  clinch: StrikeZoneStat;
+  ground: StrikeZoneStat;
+  totalLanded: number; // head+body+leg conectados (= golpes significativos)
+};
+
+// Dos caras del muñeco: lo que el luchador CONECTA y lo que RECIBE.
+export type FighterStrikeProfile = {
+  offense: FighterStrikeBreakdown;
+  defense: FighterStrikeBreakdown;
+};
+
+// --- Próximos combates del luchador (#48) ---
+export type FighterUpcomingBout = {
+  fightId: number;
+  eventId: number | null;
+  eventName: string | null;
+  eventDate: string | null;
+  opponentId: number | null;
+  opponentName: string | null;
+  opponentHeadshotUrl: string | null;
+  opponentWins: number | null;
+  opponentLosses: number | null;
+  opponentDraws: number | null;
+  corner: "red" | "blue"; // esquina de ESTE luchador en ese combate
+};

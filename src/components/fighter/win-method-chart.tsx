@@ -2,6 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
+import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import type { FighterWinMethods } from "@/lib/types";
 
 const SLICES = [
@@ -18,7 +19,7 @@ export function WinMethodChart({ methods }: { methods: FighterWinMethods }) {
   })).filter((slice) => slice.value > 0);
 
   return (
-    <div className="rounded-2xl border border-border bg-muted p-5">
+    <div className={`p-5 ${PREMIUM_TILE}`}>
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         Victorias por método
       </p>

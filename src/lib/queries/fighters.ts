@@ -12,7 +12,11 @@ import type {
   FighterHistoryItem,
   FighterListResult,
   FighterRateStats,
+  FighterStrikeBreakdown,
+  FighterStrikeProfile,
+  FighterUpcomingBout,
   FighterWinMethods,
+  StrikeZoneStat,
   NewsArticle,
   FighterSearchResult,
   HomeStats,
@@ -766,4 +770,158 @@ export async function getFighterComparisonDetail(
     fighterB,
     directMatchups,
   };
+}
+
+type StrikeBreakdownRow = {
+  head_landed: string | null;
+  head_attempted: string | null;
+  body_landed: string | null;
+  body_attempted: string | null;
+  leg_landed: string | null;
+  leg_attempted: string | null;
+  distance_landed: string | null;
+  distance_attempted: string | null;
+  clinch_landed: string | null;
+  clinch_attempted: string | null;
+  ground_landed: string | null;
+  ground_attempted: string | null;
+};
+
+type UpcomingBoutRow = {
+  fight_id: number;
+  event_id: number | null;
+  event_name: string | null;
+  event_date: string | null;
+  opponent_id: number | null;
+  opponent_name: string | null;
+  opponent_headshot: string | null;
+  opponent_wins: number | null;
+  opponent_losses: number | null;
+  opponent_draws: number | null;
+  corner: "red" | "blue";
+};
+
+function zoneStat(
+  landed: string | null | undefined,
+  attempted: string | null | undefined,
+): StrikeZoneStat {
+  return { landed: Number(landed ?? 0), attempted: Number(attempted ?? 0) };
+}
+
+function mapStrikeBreakdown(row?: StrikeBreakdownRow): FighterStrikeBreakdown {
+  const head = zoneStat(row?.head_landed, row?.head_attempted);
+  const body = zoneStat(row?.body_landed, row?.body_attempted);
+  const leg = zoneStat(row?.leg_landed, row?.leg_attempted);
+
+  return {
+    head,
+    body,
+    leg,
+    distance: zoneStat(row?.distance_landed, row?.distance_attempted),
+    clinch: zoneStat(row?.clinch_landed, row?.clinch_attempted),
+    ground: zoneStat(row?.ground_landed, row?.ground_attempted),
+    // head+body+leg == golpes significativos conectados (invariante de la BD).
+    totalLanded: head.landed + body.landed + leg.landed,
+  };
+}
+
+// Columnas de golpes por zona/posición con COALESCE(SUM(...),0): peleas antiguas
+// pueden tener NULL. `prefix` permite reutilizar el bloque para el rival (opp.).
+function strikeBreakdownSelect(prefix: string): string {
+  const col = (name: string) => `coalesce(sum(${prefix}${name}), 0)::text`;
+  return `
+    ${col("sig_str_head_landed")} as head_landed,
+    ${col("sig_str_head_attempted")} as head_attempted,
+    ${col("sig_str_body_landed")} as body_landed,
+    ${col("sig_str_body_attempted")} as body_attempted,
+    ${col("sig_str_leg_landed")} as leg_landed,
+    ${col("sig_str_leg_attempted")} as leg_attempted,
+    ${col("sig_str_distance_landed")} as distance_landed,
+    ${col("sig_str_distance_attempted")} as distance_attempted,
+    ${col("sig_str_clinch_landed")} as clinch_landed,
+    ${col("sig_str_clinch_attempted")} as clinch_attempted,
+    ${col("sig_str_ground_landed")} as ground_landed,
+    ${col("sig_str_ground_attempted")} as ground_attempted`;
+}
+
+// #45 — Desglose de golpes significativos por zona (cabeza/cuerpo/pierna) y
+// posición (a distancia/clinch/suelo), tanto OFENSIVO (lo que conecta) como
+// DEFENSIVO (lo que recibe = columnas del rival en cada combate).
+export async function getFighterStrikeProfile(
+  id: number,
+): Promise<FighterStrikeProfile> {
+  const [offenseRows, defenseRows] = await Promise.all([
+    sql<StrikeBreakdownRow>(
+      `select ${strikeBreakdownSelect("")}
+       from fight_stats
+       where fighter_id = $1`,
+      [id],
+    ),
+    sql<StrikeBreakdownRow>(
+      `select ${strikeBreakdownSelect("opp.")}
+       from fight_stats me
+       join fight_stats opp
+         on opp.fight_id = me.fight_id
+        and opp.fighter_id <> me.fighter_id
+       where me.fighter_id = $1`,
+      [id],
+    ),
+  ]);
+
+  return {
+    offense: mapStrikeBreakdown(offenseRows[0]),
+    defense: mapStrikeBreakdown(defenseRows[0]),
+  };
+}
+
+// #48 — Próximos combates del luchador (eventos 'upcoming' aún no celebrados).
+export async function getFighterUpcomingBouts(
+  id: number,
+): Promise<FighterUpcomingBout[]> {
+  const rows = await sql<UpcomingBoutRow>(
+    `select
+      fi.id as fight_id,
+      fi.event_id,
+      e.name as event_name,
+      e.event_date::text as event_date,
+      case
+        when fi.fighter_red_id = $1 then fi.fighter_blue_id
+        else fi.fighter_red_id
+      end as opponent_id,
+      case
+        when fi.fighter_red_id = $1 then coalesce(blue.name, fi.fighter_blue_name)
+        else coalesce(red.name, fi.fighter_red_name)
+      end as opponent_name,
+      case
+        when fi.fighter_red_id = $1 then blue.headshot_url
+        else red.headshot_url
+      end as opponent_headshot,
+      case when fi.fighter_red_id = $1 then blue.wins else red.wins end as opponent_wins,
+      case when fi.fighter_red_id = $1 then blue.losses else red.losses end as opponent_losses,
+      case when fi.fighter_red_id = $1 then blue.draws else red.draws end as opponent_draws,
+      case when fi.fighter_red_id = $1 then 'red' else 'blue' end as corner
+    from fights fi
+    left join events e on e.id = fi.event_id
+    left join fighters red on red.id = fi.fighter_red_id
+    left join fighters blue on blue.id = fi.fighter_blue_id
+    where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)
+      and e.status = 'upcoming'
+      and (e.event_date >= current_date or e.event_date is null)
+    order by e.event_date asc nulls last, fi.id asc`,
+    [id],
+  );
+
+  return rows.map((row) => ({
+    fightId: row.fight_id,
+    eventId: row.event_id,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    opponentId: row.opponent_id,
+    opponentName: row.opponent_name,
+    opponentHeadshotUrl: row.opponent_headshot,
+    opponentWins: row.opponent_wins,
+    opponentLosses: row.opponent_losses,
+    opponentDraws: row.opponent_draws,
+    corner: row.corner,
+  }));
 }

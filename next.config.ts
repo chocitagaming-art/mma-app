@@ -17,6 +17,15 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "www.ufc.com",
       },
+      // Miniaturas de YouTube (Data API + RSS) para la columna/página de vídeos.
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.ytimg.com",
+      },
     ],
   },
   turbopack: {

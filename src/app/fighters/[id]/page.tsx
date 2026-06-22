@@ -6,7 +6,10 @@ import { ArrowRightLeft } from "lucide-react";
 import { CountryFlag } from "@/components/country-flag";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
 import { PerFightBars } from "@/components/fighter/per-fight-bars";
+import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { StatDonut } from "@/components/fighter/stat-donut";
+import { StrikeSilhouette } from "@/components/fighter/strike-silhouette";
+import { UpcomingBouts } from "@/components/fighter/upcoming-bouts";
 import { WinMethodChart } from "@/components/fighter/win-method-chart";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { SectionHeading } from "@/components/section-heading";
@@ -31,7 +34,11 @@ import {
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
-import { getFighterDetail } from "@/lib/queries/fighters";
+import {
+  getFighterDetail,
+  getFighterStrikeProfile,
+  getFighterUpcomingBouts,
+} from "@/lib/queries/fighters";
 
 type FighterDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -59,7 +66,12 @@ export default async function FighterDetailPage({
   params,
 }: FighterDetailPageProps) {
   const { id } = await params;
-  const detail = await getFighterDetail(Number(id));
+  const fighterId = Number(id);
+  const [detail, strikeProfile, upcomingBouts] = await Promise.all([
+    getFighterDetail(fighterId),
+    getFighterStrikeProfile(fighterId),
+    getFighterUpcomingBouts(fighterId),
+  ]);
 
   if (!detail) {
     notFound();
@@ -67,6 +79,9 @@ export default async function FighterDetailPage({
 
   const { fighter, aggregateStats, history, news, defenseStats, winMethods, rateStats } =
     detail;
+
+  // Cuando no hay noticias, el hueco se rellena con los próximos combates (#48).
+  const showUpcoming = news.length === 0 && upcomingBouts.length > 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
@@ -178,8 +193,9 @@ export default async function FighterDetailPage({
                 colorVar="var(--chart-2)"
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+            <StrikeSilhouette profile={strikeProfile} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`${PREMIUM_TILE} p-4 text-center`}>
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   Knockdowns
                 </p>
@@ -187,7 +203,7 @@ export default async function FighterDetailPage({
                   {aggregateStats.knockdowns}
                 </p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+              <div className={`${PREMIUM_TILE} p-4 text-center`}>
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   Int. sumisión
                 </p>
@@ -195,7 +211,15 @@ export default async function FighterDetailPage({
                   {aggregateStats.submissionAttempts}
                 </p>
               </div>
-              <div className="rounded-2xl border border-border bg-muted p-4 text-center">
+              <div className={`${PREMIUM_TILE} p-4 text-center`}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Derribos
+                </p>
+                <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                  {aggregateStats.takedownsLanded}
+                </p>
+              </div>
+              <div className={`${PREMIUM_TILE} p-4 text-center`}>
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   T. control
                 </p>
@@ -348,9 +372,17 @@ export default async function FighterDetailPage({
 
       <section className="space-y-6">
         <SectionHeading
-          eyebrow="Noticias"
-          title={`Cobertura más reciente sobre ${fighter.name}`}
-          description="Artículos vinculados a este luchador desde la tabla de noticias, ordenados por fecha de publicación."
+          eyebrow={showUpcoming ? "Calendario" : "Noticias"}
+          title={
+            showUpcoming
+              ? `Próximos combates de ${fighter.name}`
+              : `Cobertura más reciente sobre ${fighter.name}`
+          }
+          description={
+            showUpcoming
+              ? "Peleas programadas en eventos próximos según el calendario actual."
+              : "Artículos vinculados a este luchador desde la tabla de noticias, ordenados por fecha de publicación."
+          }
         />
         <div className="grid gap-4">
           {news.length ? (
@@ -401,6 +433,8 @@ export default async function FighterDetailPage({
                 </CardContent>
               </Card>
             ))
+          ) : showUpcoming ? (
+            <UpcomingBouts bouts={upcomingBouts} />
           ) : (
             <Card className="border-dashed border-border bg-card">
               <CardContent className="px-6 py-16 text-center text-muted-foreground">

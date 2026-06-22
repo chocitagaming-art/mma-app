@@ -202,10 +202,10 @@ function CornerBlock({
           size="lg"
           priority
           className={cn(
-            "border-2 bg-muted",
+            "aspect-square border-2 bg-muted",
             isRed ? "border-corner-red" : "border-corner-blue",
           )}
-          imageClassName="object-contain object-top"
+          imageClassName="object-cover object-top"
         />
       </Link>
       <div

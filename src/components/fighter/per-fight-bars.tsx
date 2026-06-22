@@ -1,3 +1,5 @@
+import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+
 type PerFightBarsProps = {
   landedPerFight: number;
   absorbedPerFight: number;
@@ -22,7 +24,7 @@ export function PerFightBars({
   ];
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-muted p-5">
+    <div className={`space-y-4 p-5 ${PREMIUM_TILE}`}>
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
         Volumen de golpeo
       </p>

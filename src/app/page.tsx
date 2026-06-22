@@ -1,12 +1,16 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 
 import { FighterCard } from "@/components/fighter-card";
+import { NewsMarquee } from "@/components/news-marquee";
+import { RecentNewsGrid } from "@/components/recent-news-grid";
 import { SearchHero } from "@/components/search-hero";
 import { SectionHeading } from "@/components/section-heading";
+import { UfcVideosColumn } from "@/components/ufc-videos-column";
+import { VideoHero } from "@/components/video-hero";
 import { Button } from "@/components/ui/button";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
+import { getRecentNews } from "@/lib/queries/news";
 
 // Data comes live from the DB; render on each request (no build-time DB call).
 export const dynamic = "force-dynamic";
@@ -18,9 +22,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [stats, featuredFighters] = await Promise.all([
+  const [stats, featuredFighters, marqueeNews] = await Promise.all([
     getHomeStats(),
     getFeaturedFighters(),
+    getRecentNews(12),
   ]);
 
   const statItems = [
@@ -80,20 +85,9 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Fighter art — the signature element */}
-          <div className="relative order-1 flex items-center justify-center lg:order-2">
-            <div
-              aria-hidden
-              className="absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/25 blur-[80px] sm:size-[420px] lg:size-[480px]"
-            />
-            <Image
-              src="/brand/badge-circular.png"
-              alt="MMA STATUS"
-              width={1024}
-              height={696}
-              preload
-              className="animate-float relative z-10 w-full max-w-[300px] drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] sm:max-w-[440px] lg:max-w-[540px]"
-            />
+          {/* Hero reel — vídeos de momentos icónicos (sustituye al arte estático) */}
+          <div className="order-1 flex items-center justify-center lg:order-2">
+            <VideoHero className="animate-rise" />
           </div>
         </div>
       </section>
@@ -119,15 +113,40 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured fighters */}
-      <section className="mx-auto max-w-7xl space-y-7 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+      {/* Marquee de noticias (se desplaza derecha→izquierda, clicable) */}
+      <NewsMarquee articles={marqueeNews} />
+
+      {/* Noticias recientes + columna de vídeos UFC (estilo ufc.com) */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-7">
+            <div className="flex items-end justify-between gap-6">
+              <SectionHeading
+                eyebrow="Lo último"
+                title="Noticias recientes"
+                description="Lo más reciente del mundo UFC, con foto y titular."
+              />
+              <Link href="/news" className="hidden shrink-0 sm:inline-flex">
+                <Button variant="ghost" size="lg" className="h-10">
+                  Ver todas →
+                </Button>
+              </Link>
+            </div>
+            <RecentNewsGrid limit={6} />
+          </div>
+          <UfcVideosColumn limit={5} />
+        </div>
+      </section>
+
+      {/* Mejores libra por libra (reubicado más abajo) */}
+      <section className="mx-auto max-w-7xl space-y-7 border-t border-border px-4 pt-12 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="Élite del momento"
+            eyebrow="Libra por libra"
             title="Mejores libra por libra"
             description="Los mejores peleadores del ranking oficial de UFC, sin distinción de categoría."
           />
-          <Link href="/clasificacion" className="hidden sm:inline-flex">
+          <Link href="/clasificacion" className="hidden shrink-0 sm:inline-flex">
             <Button variant="ghost" size="lg" className="h-10">
               Ver clasificación →
             </Button>

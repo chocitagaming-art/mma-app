@@ -2,6 +2,8 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
+import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+
 type StatDonutProps = {
   label: string;
   value: number; // 0..1
@@ -22,7 +24,7 @@ export function StatDonut({
   ];
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-muted p-4">
+    <div className={`flex flex-col items-center gap-3 p-4 ${PREMIUM_TILE}`}>
       <div className="relative h-28 w-28">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

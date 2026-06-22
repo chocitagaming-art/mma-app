@@ -1,3 +1,5 @@
+import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+
 type DefenseMeterProps = {
   label: string;
   value: number; // 0..1
@@ -8,7 +10,7 @@ export function DefenseMeter({ label, value, helper }: DefenseMeterProps) {
   const pct = Math.max(0, Math.min(100, value * 100));
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
+    <div className={`space-y-3 p-4 ${PREMIUM_TILE}`}>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
         <p className="tabular text-sm font-semibold text-foreground">
