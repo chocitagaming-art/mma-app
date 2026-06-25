@@ -1,5 +1,9 @@
 import { sql } from "@/lib/db";
-import type { NewsArticle, NewsListResult } from "@/lib/types";
+import type {
+  NewsArticle,
+  NewsListResult,
+  NewsSearchResult,
+} from "@/lib/types";
 
 type NewsRow = {
   id: number;
@@ -98,6 +102,55 @@ export async function getNews(
     pageSize: PAGE_SIZE,
     totalPages,
   };
+}
+
+type NewsSearchRow = {
+  id: number;
+  headline: string;
+  source: string | null;
+  url: string;
+  published_at: string | null;
+  image_url: string | null;
+};
+
+// Búsqueda de noticias por titular/resumen para el buscador global.
+export async function searchNews(
+  query: string,
+  limit = 5,
+): Promise<NewsSearchResult[]> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const rows = await sql<NewsSearchRow>(
+    `select
+        n.id,
+        n.headline,
+        n.source,
+        n.url,
+        n.published_at,
+        n.image_url
+      from news n
+      where n.headline ilike $1 or n.summary ilike $1
+      order by
+        case when n.headline ilike $2 then 0 else 1 end,
+        n.published_at desc nulls last,
+        n.relevance desc nulls last,
+        n.id desc
+      limit $3`,
+    [`%${trimmedQuery}%`, `${trimmedQuery}%`, limit],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    headline: row.headline,
+    source: row.source,
+    publishedAt: row.published_at,
+    imageUrl: row.image_url,
+    url: row.url,
+  }));
 }
 
 // Últimas noticias para el Inicio (rejilla estilo ufc.com) y el marquee.

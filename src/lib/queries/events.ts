@@ -4,6 +4,7 @@ import type {
   EventDetail,
   EventListItem,
   EventListResult,
+  EventSearchResult,
   UpcomingEventItem,
 } from "@/lib/types";
 
@@ -58,6 +59,48 @@ export async function getPastEvents(page: number): Promise<EventListResult> {
   }));
 
   return { events, total, page: currentPage, totalPages };
+}
+
+type EventSearchRow = {
+  id: number;
+  name: string;
+  event_date: string | null;
+  location: string | null;
+  image_url: string | null;
+};
+
+// Búsqueda de eventos por nombre/ubicación para el buscador global.
+// Prioriza los más próximos (futuros) y luego los más recientes.
+export async function searchEvents(
+  query: string,
+  limit = 5,
+): Promise<EventSearchResult[]> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const rows = await sql<EventSearchRow>(
+    `SELECT e.id, e.name, e.event_date::text AS event_date, e.location, e.image_url
+     FROM events e
+     WHERE e.name ILIKE $1 OR e.location ILIKE $1
+     ORDER BY
+       CASE WHEN lower(e.name) = lower($2) THEN 0 ELSE 1 END,
+       CASE WHEN lower(e.name) LIKE lower($3) THEN 0 ELSE 1 END,
+       e.event_date DESC NULLS LAST,
+       e.id DESC
+     LIMIT $4`,
+    [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    eventDate: row.event_date,
+    location: row.location,
+    imageUrl: absolutePoster(row.image_url),
+  }));
 }
 
 type UpcomingEventRow = {

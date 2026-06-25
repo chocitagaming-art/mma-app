@@ -112,6 +112,38 @@ export type FighterSearchResult = {
   nationality: string | null;
 };
 
+// Resultado de evento para la búsqueda global (combobox del Inicio).
+export type EventSearchResult = {
+  id: number;
+  name: string;
+  eventDate: string | null;
+  location: string | null;
+  imageUrl: string | null;
+};
+
+// Resultado de noticia para la búsqueda global. `url` apunta al artículo externo
+// (las noticias no tienen ficha propia; el listado vive en /news).
+export type NewsSearchResult = {
+  id: number;
+  headline: string;
+  source: string | null;
+  publishedAt: string | null;
+  imageUrl: string | null;
+  url: string;
+};
+
+// Búsqueda GLOBAL: cada resultado lleva un campo `type` discriminante para que
+// el cliente sepa a qué ruta enlazar (/fighters/[id], /eventos/[id], /news).
+export type GlobalSearchFighter = FighterSearchResult & { type: "fighter" };
+export type GlobalSearchEvent = EventSearchResult & { type: "event" };
+export type GlobalSearchNews = NewsSearchResult & { type: "news" };
+
+export type GlobalSearchResults = {
+  fighters: GlobalSearchFighter[];
+  events: GlobalSearchEvent[];
+  news: GlobalSearchNews[];
+};
+
 export type FighterComparisonAverages = {
   sigStrikesLandedPerFight: number;
   sigStrikeAccuracy: number;
