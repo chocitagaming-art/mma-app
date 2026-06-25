@@ -79,7 +79,7 @@ function CornerBlock({
     <div
       className={cn(
         "flex items-center gap-3 sm:gap-4",
-        isRed ? "flex-row" : "flex-row-reverse",
+        isRed ? "flex-row" : "flex-row sm:flex-row-reverse",
       )}
     >
       {href ? (
@@ -92,7 +92,7 @@ function CornerBlock({
       <div
         className={cn(
           "flex min-w-0 flex-col gap-1.5",
-          isRed ? "items-start text-left" : "items-end text-right",
+          isRed ? "items-start text-left" : "items-start text-left sm:items-end sm:text-right",
         )}
       >
         <span
@@ -217,10 +217,10 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       {/* Matchup header */}
-      <div className="relative grid grid-cols-2 gap-6 border-b border-border p-6 sm:gap-10 sm:p-8">
-        {/* corner accent bars */}
-        <span className="absolute inset-y-0 left-0 w-1 bg-corner-red" />
-        <span className="absolute inset-y-0 right-0 w-1 bg-corner-blue" />
+      <div className="relative flex flex-col gap-5 border-b border-border p-6 sm:grid sm:grid-cols-2 sm:gap-10 sm:p-8">
+        {/* corner accent bars (desktop only — on mobile the stacked layout + photo borders carry the corner identity) */}
+        <span className="absolute inset-y-0 left-0 hidden w-1 bg-corner-red sm:block" />
+        <span className="absolute inset-y-0 right-0 hidden w-1 bg-corner-blue sm:block" />
         {/* center VS octagon — the signature mark */}
         <span className="octagon absolute left-1/2 top-1/2 z-10 hidden size-12 -translate-x-1/2 -translate-y-1/2 place-items-center bg-foreground font-display text-sm font-extrabold uppercase tracking-tight text-background sm:grid">
           VS
