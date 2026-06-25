@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { NewsImage } from "@/components/news-image";
+import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,10 +38,25 @@ function truncateSummary(summary: string | null, maxLength = 180) {
 export default async function NewsPage({ searchParams }: NewsPageProps) {
   const params = await searchParams;
   const category = getSingleValue(params.category);
-  const result = await getNews(category);
+  const page = Number(getSingleValue(params.page) || "1");
+  const result = await getNews(category, page);
 
+  // Cambiar de categoría reinicia a la primera página.
   const createCategoryHref = (nextCategory: string) =>
     nextCategory ? `/news?category=${encodeURIComponent(nextCategory)}` : "/news";
+
+  // Mantiene la categoría activa y sólo cambia el número de página.
+  const createPageHref = (targetPage: number) => {
+    const search = new URLSearchParams();
+    if (category) {
+      search.set("category", category);
+    }
+    if (targetPage > 1) {
+      search.set("page", String(targetPage));
+    }
+    const query = search.toString();
+    return query ? `/news?${query}` : "/news";
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
@@ -85,7 +101,8 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             })}
           </div>
           <p className="text-sm text-muted-foreground">
-            Mostrando <span className="font-semibold text-foreground">{result.articles.length}</span>{" "}
+            Mostrando <span className="font-semibold text-foreground">{result.articles.length}</span> de{" "}
+            <span className="tabular font-semibold text-foreground">{result.total.toLocaleString("es")}</span>{" "}
             artículos{result.activeCategory ? ` en ${result.activeCategory}` : ""}.
           </p>
         </CardContent>
@@ -160,6 +177,14 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      <div className="mt-8">
+        <PaginationControls
+          page={result.page}
+          totalPages={result.totalPages}
+          createHref={createPageHref}
+        />
       </div>
     </div>
   );

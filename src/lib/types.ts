@@ -187,6 +187,10 @@ export type NewsListResult = {
   articles: NewsArticle[];
   categories: string[];
   activeCategory: string;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 };
 
 export type RankingEntry = {

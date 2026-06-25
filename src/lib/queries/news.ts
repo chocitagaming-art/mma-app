@@ -31,18 +31,27 @@ function mapNewsArticle(row: NewsRow): NewsArticle {
   };
 }
 
-export async function getNews(category?: string): Promise<NewsListResult> {
+const PAGE_SIZE = 12;
+
+// `page` es opcional para no romper consumidores antiguos (por defecto, primera página).
+export async function getNews(
+  category?: string,
+  page = 1,
+): Promise<NewsListResult> {
   const trimmedCategory = category?.trim() ?? "";
-  const values: unknown[] = [];
-  const whereClause = trimmedCategory
-    ? `where n.category = $1`
-    : "";
+  const currentPage = Math.max(1, page);
+  const offset = (currentPage - 1) * PAGE_SIZE;
 
-  if (trimmedCategory) {
-    values.push(trimmedCategory);
-  }
+  const whereClause = trimmedCategory ? `where n.category = $1` : "";
+  // El filtro por categoría ocupa $1 cuando existe; LIMIT/OFFSET van detrás.
+  const countValues: unknown[] = trimmedCategory ? [trimmedCategory] : [];
+  const limitParam = trimmedCategory ? "$2" : "$1";
+  const offsetParam = trimmedCategory ? "$3" : "$2";
+  const articleValues: unknown[] = trimmedCategory
+    ? [trimmedCategory, PAGE_SIZE, offset]
+    : [PAGE_SIZE, offset];
 
-  const [articleRows, categoryRows] = await Promise.all([
+  const [articleRows, categoryRows, countRows] = await Promise.all([
     sql<NewsRow>(
       `select
         n.id,
@@ -59,8 +68,9 @@ export async function getNews(category?: string): Promise<NewsListResult> {
       from news n
       left join fighters f on f.id = n.fighter_id
       ${whereClause}
-      order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc`,
-      values,
+      order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc
+      limit ${limitParam} offset ${offsetParam}`,
+      articleValues,
     ),
     sql<{ category: string }>(
       `select distinct category
@@ -68,12 +78,25 @@ export async function getNews(category?: string): Promise<NewsListResult> {
        where category is not null
        order by category asc`,
     ),
+    sql<{ total: string }>(
+      `select count(*)::text as total
+       from news n
+       ${whereClause}`,
+      countValues,
+    ),
   ]);
+
+  const total = Number(countRows[0]?.total ?? "0");
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return {
     articles: articleRows.map(mapNewsArticle),
     categories: categoryRows.map((row) => row.category),
     activeCategory: trimmedCategory,
+    total,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    totalPages,
   };
 }
 
