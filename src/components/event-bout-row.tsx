@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
-import { formatRecord, formatWeightClass } from "@/lib/format";
+import { formatMethod, formatRecord, formatWeightClass } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
 
@@ -11,7 +11,7 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
   const blueWon = bout.winnerId != null && bout.winnerId === bout.blue.id;
 
   const resultLine = bout.method
-    ? [bout.method, bout.endRound ? `R${bout.endRound}` : null, bout.endTime]
+    ? [formatMethod(bout.method), bout.endRound ? `R${bout.endRound}` : null, bout.endTime]
         .filter(Boolean)
         .join(" · ")
     : null;

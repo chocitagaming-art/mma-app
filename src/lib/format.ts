@@ -112,6 +112,84 @@ export function formatDivision(division: string | null): string {
   return DIVISION_ES[division] ?? division;
 }
 
+// Clean, common method strings mapped directly to their Spanish label.
+const METHOD_ES: Record<string, string> = {
+  "ko/tko": "KO/TKO",
+  ko: "KO/TKO",
+  tko: "KO/TKO",
+  knockout: "KO/TKO",
+  submission: "Sumisión",
+  sub: "Sumisión",
+  decision: "Decisión",
+  "decision - unanimous": "Decisión unánime",
+  "decision - split": "Decisión dividida",
+  "decision - majority": "Decisión mayoritaria",
+  "unanimous decision": "Decisión unánime",
+  "split decision": "Decisión dividida",
+  "majority decision": "Decisión mayoritaria",
+  dq: "Descalificación",
+  disqualification: "Descalificación",
+  "could not continue": "No pudo continuar",
+  overturned: "Resultado anulado",
+  "no contest": "Sin resultado",
+  draw: "Empate",
+  other: "Otro",
+};
+
+// Translate a UFC victory-method string to Spanish. The raw `method` column is
+// free-form (e.g. "Decision - Unanimous", "Submission (Rear-Naked Choke)",
+// "KO/TKO", "DQ"), so after an exact-match lookup we match on keywords the same
+// way the win-method aggregation does, and finally fall back to the raw value.
+export function formatMethod(method: string | null): string {
+  if (!method) {
+    return "—";
+  }
+
+  const key = method.trim().toLowerCase();
+  if (METHOD_ES[key]) {
+    return METHOD_ES[key];
+  }
+
+  if (/\bdecision\b/u.test(key)) {
+    if (/unanim/u.test(key)) {
+      return "Decisión unánime";
+    }
+    if (/split/u.test(key)) {
+      return "Decisión dividida";
+    }
+    if (/major/u.test(key)) {
+      return "Decisión mayoritaria";
+    }
+    return "Decisión";
+  }
+
+  if (/\b(?:ko|tko)\b|knockout/u.test(key)) {
+    return "KO/TKO";
+  }
+
+  if (
+    /submission|choke|armbar|kimura|guillotine|triangle|americana|rear|naked|crank|\block\b/u.test(
+      key,
+    )
+  ) {
+    return "Sumisión";
+  }
+
+  if (/\bdq\b|disqualif/u.test(key)) {
+    return "Descalificación";
+  }
+
+  if (/could not continue/u.test(key)) {
+    return "No pudo continuar";
+  }
+
+  if (/overturn/u.test(key)) {
+    return "Resultado anulado";
+  }
+
+  return method;
+}
+
 export function formatDate(date: string | null) {
   if (!date) {
     return "Por definir";

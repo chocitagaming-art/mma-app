@@ -15,6 +15,7 @@ import {
   formatControlTime,
   formatDate,
   formatHeight,
+  formatMethod,
   formatPercentage,
   formatReach,
   formatRecord,
@@ -515,7 +516,7 @@ export function MatchupClient({
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {formatDate(fight.eventDate)} ·{" "}
-                            {fight.method ?? "Método no disponible"} · Asalto{" "}
+                            {fight.method ? formatMethod(fight.method) : "Método no disponible"} · Asalto{" "}
                             {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
                           </p>
                         </div>

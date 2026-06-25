@@ -4,6 +4,7 @@ import {
   formatControlTime,
   formatDate,
   formatHeight,
+  formatMethod,
   formatPercentage,
   formatRecord,
   formatReach,
@@ -231,7 +232,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
       {/* Result bar */}
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-b border-border bg-muted/40 px-6 py-4 text-center">
         <span className="font-display text-lg font-bold uppercase tracking-tight text-foreground">
-          {fight.method ?? "Resultado no disponible"}
+          {fight.method ? formatMethod(fight.method) : "Resultado no disponible"}
         </span>
         <span className="font-mono text-sm text-muted-foreground">
           Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}

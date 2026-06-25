@@ -143,7 +143,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                   </p>
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground md:mt-0">
                     <CountryFlag nationality={fighter.nationality} />
-                    {fighter.nationality ?? "Unknown"}
+                    {fighter.nationality ?? "Desconocida"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -152,7 +152,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                       Guardia
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground md:mt-0">
-                      {fighter.stance ?? "Unknown"}
+                      {fighter.stance ?? "Desconocida"}
                     </p>
                   </div>
                   <span className="text-sm font-medium text-primary">Ver perfil →</span>

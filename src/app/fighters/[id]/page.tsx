@@ -30,6 +30,7 @@ import {
   formatDate,
   formatDivision,
   formatHeight,
+  formatMethod,
   formatReach,
   formatRecord,
   formatWeight,
@@ -131,11 +132,11 @@ export default async function FighterDetailPage({
                         : "Categoría no disponible"}
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                      {fighter.stance ?? "Unknown stance"}
+                      {fighter.stance ?? "Guardia desconocida"}
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
-                      {fighter.nationality ?? "Nationality unavailable"}
+                      {fighter.nationality ?? "Nacionalidad no disponible"}
                     </Badge>
                     <Link href={`/enfrentamiento?red=${fighter.id}`}>
                       <Button
@@ -181,7 +182,7 @@ export default async function FighterDetailPage({
                 <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Nacionalidad</p>
                 <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
                   <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
-                  {fighter.nationality ?? "Unknown"}
+                  {fighter.nationality ?? "Desconocida"}
                 </p>
               </div>
             </div>
@@ -352,7 +353,7 @@ export default async function FighterDetailPage({
                           </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {fight.method ?? "—"}
+                          {formatMethod(fight.method)}
                         </TableCell>
                         <TableCell className="tabular text-muted-foreground">
                           {fight.endRound ?? "—"}
@@ -417,7 +418,7 @@ export default async function FighterDetailPage({
                           {article.category ?? "General"}
                         </Badge>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                          {article.source ?? "Unknown source"}
+                          {article.source ?? "Fuente desconocida"}
                         </Badge>
                       </div>
                       <a

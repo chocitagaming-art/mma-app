@@ -16,6 +16,12 @@ type RawPrediction = Omit<PredictionResponse, "explanation" | "explanationSource
 // the UI can degrade gracefully (503) instead of showing a hard error.
 class PredictionUnavailableError extends Error {}
 
+// One of the fighters lacks enough recorded bouts for the model (422).
+class InsufficientHistoryError extends Error {}
+
+// The request to the microservice was rejected as invalid (400).
+class InvalidPredictionRequestError extends Error {}
+
 async function fetchPrediction(
   redFighterId: number,
   blueFighterId: number,
@@ -49,22 +55,18 @@ async function fetchPrediction(
   }
 
   if (!response.ok) {
-    let detail = "";
-    try {
-      const data = (await response.json()) as { error?: string };
-      detail = data?.error ?? "";
-    } catch {
-      // Non-JSON error body — ignore.
-    }
-
     if (response.status === 422) {
-      throw new Error(detail || "Insufficient fighter history");
+      throw new InsufficientHistoryError(
+        "Uno de los peleadores no tiene suficiente historial de combates para generar una predicción.",
+      );
     }
     if (response.status === 400) {
-      throw new Error(detail || "Invalid fighter IDs.");
+      throw new InvalidPredictionRequestError(
+        "Identificadores de peleador no válidos.",
+      );
     }
     throw new PredictionUnavailableError(
-      detail || `El servicio de predicción falló (${response.status}).`,
+      `El servicio de predicción falló (${response.status}).`,
     );
   }
 
@@ -78,14 +80,17 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid fighter IDs.", details: parsed.error.flatten() },
+        {
+          error: "Identificadores de peleador no válidos.",
+          details: parsed.error.flatten(),
+        },
         { status: 400 },
       );
     }
 
     if (parsed.data.redFighterId === parsed.data.blueFighterId) {
       return NextResponse.json(
-        { error: "Choose two different fighters." },
+        { error: "Elige dos peleadores diferentes." },
         { status: 400 },
       );
     }
@@ -106,9 +111,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
 
-    const message =
-      error instanceof Error ? error.message : "Prediction service failed unexpectedly.";
-    const status = message.includes("Insufficient fighter history") ? 422 : 500;
-    return NextResponse.json({ error: message }, { status });
+    // Not enough recorded bouts to predict → 422.
+    if (error instanceof InsufficientHistoryError) {
+      return NextResponse.json({ error: error.message }, { status: 422 });
+    }
+
+    // Bad request reaching the microservice → 400.
+    if (error instanceof InvalidPredictionRequestError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { error: "El servicio de predicción falló de forma inesperada." },
+      { status: 500 },
+    );
   }
 }
