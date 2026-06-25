@@ -217,8 +217,13 @@
   html {
     @apply font-sans;
   }
-  a {
-    @apply outline-none;
+  /* Foco accesible con tokens: anillo visible solo para teclado (:focus-visible),
+     sin penalizar el ratón. Reemplaza el antiguo `a { outline: none }` que mataba
+     el foco y rompía la navegación con teclado. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
   /* Condensed display face + tabular figures for stats */
   .font-display {
