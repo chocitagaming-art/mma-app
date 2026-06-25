@@ -97,12 +97,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6 sm:flex-row sm:items-start">
         {isUpcoming && event.imageUrl ? (
+          // aspect-[16/9] reserva el alto antes de que cargue el póster remoto y
+          // evita el layout shift (CLS). Mismo tratamiento que las tarjetas de
+          // /eventos (que usan la misma imagen) para mantener la consistencia.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.imageUrl}
             alt={`Póster de ${event.name}`}
             loading="lazy"
-            className="w-full shrink-0 rounded-lg border border-border object-cover sm:w-56"
+            className="aspect-[16/9] w-full shrink-0 rounded-lg border border-border object-cover sm:w-56"
           />
         ) : null}
 

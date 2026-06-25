@@ -361,12 +361,16 @@ export default async function FighterDetailPage({
                           {fight.endTime ?? "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          <Link
-                            href={`/fights/${fight.fightId}`}
-                            className="transition-colors hover:text-primary"
-                          >
-                            {fight.eventName ?? "Evento desconocido"}
-                          </Link>
+                          {fight.eventId ? (
+                            <Link
+                              href={`/eventos/${fight.eventId}`}
+                              className="transition-colors hover:text-primary"
+                            >
+                              {fight.eventName ?? "Evento desconocido"}
+                            </Link>
+                          ) : (
+                            (fight.eventName ?? "Evento desconocido")
+                          )}
                         </TableCell>
                       </TableRow>
                     );
