@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "commit:deploy": "git commit --author=\"chocitagaming-art <285652576+chocitagaming-art@users.noreply.github.com>\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",

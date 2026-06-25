@@ -38,3 +38,10 @@ Polished Next.js web app for browsing real MMA fighter profiles, fight history, 
 - `/fighters` searchable fighter roster
 - `/fighters/[id]` fighter profile and aggregate stats
 - `/fights/[id]` fight result and side-by-side stat comparison
+
+## Commits y deploy (Vercel Hobby)
+
+Vercel Hobby rechaza el deploy si el autor del commit no es el dueño del repo, así que
+todos los commits deben usar `--author="chocitagaming-art <...>"`. Hay un helper opcional
+(`scripts/commit.sh` y `npm run commit:deploy`). Ver [CONTRIBUTING.md](./CONTRIBUTING.md)
+para el comando exacto y los detalles.
