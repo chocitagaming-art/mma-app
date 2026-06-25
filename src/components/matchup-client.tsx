@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Brain, Loader2, Sparkles, Swords, TrendingUp } from "lucide-react";
+import { Brain, Info, Loader2, Sparkles, Swords, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
@@ -563,6 +563,10 @@ export function MatchupClient({
                     español.
                   </p>
                 </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                  <Info className="size-3.5 text-primary" />
+                  Precisión del modelo ~62% · estimación con incertidumbre
+                </div>
                 <Button
                   type="button"
                   onClick={handlePredict}
@@ -593,6 +597,16 @@ export function MatchupClient({
                     </span>
                   </div>
                 ) : null}
+                <div className="mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm leading-6 text-muted-foreground">
+                  <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>
+                    <span className="font-semibold text-foreground">
+                      Precisión del modelo ~62%.
+                    </span>{" "}
+                    Estas probabilidades son una estimación con incertidumbre, no
+                    una certeza: en MMA hasta un favorito claro puede caer.
+                  </span>
+                </div>
                 <div className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-stretch">
                   <Card className="border-border bg-card">
                     <CardContent className="space-y-6 p-6">
