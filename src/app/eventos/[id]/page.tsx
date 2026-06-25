@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin, Ticket } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { formatDate } from "@/lib/format";
@@ -132,6 +132,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             ) : null}
             {event.bouts.length > 0 ? (
               <span className="tabular">{event.bouts.length} peleas</span>
+            ) : null}
+            {/* El broadcast NO viene de ufc.com: lo deduce el scraper de mma-ingesta
+                por heurística (numerado → PPV, resto → ESPN+ / Fight Pass). Lo
+                etiquetamos como ESTIMACIÓN para no presentarlo como dato oficial. */}
+            {event.broadcast ? (
+              <span className="flex items-center gap-1.5">
+                <Tv className="size-3.5" />
+                <span>Emisión: {event.broadcast}</span>
+                <span className="rounded-sm border border-border bg-muted px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                  estimada
+                </span>
+              </span>
             ) : null}
           </div>
 
