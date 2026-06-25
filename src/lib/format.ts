@@ -84,6 +84,34 @@ export function formatWeightClass(weightClass: string | null): string {
   return weightClass;
 }
 
+// Ranking division slugs (snake_case, written by the backend) → Spanish labels.
+// Mirrors DIVISION_ORDER in queries/rankings.ts; kept here for display reuse.
+const DIVISION_ES: Record<string, string> = {
+  mens_pound_for_pound: "Libra por libra",
+  flyweight: "Peso Mosca",
+  bantamweight: "Peso Gallo",
+  featherweight: "Peso Pluma",
+  lightweight: "Peso Ligero",
+  welterweight: "Peso Wélter",
+  middleweight: "Peso Medio",
+  light_heavyweight: "Peso Semipesado",
+  heavyweight: "Peso Pesado",
+  womens_pound_for_pound: "Libra por libra (F)",
+  womens_strawweight: "Peso Paja (F)",
+  womens_flyweight: "Peso Mosca (F)",
+  womens_bantamweight: "Peso Gallo (F)",
+  womens_featherweight: "Peso Pluma (F)",
+};
+
+// Translate a ranking division slug to its Spanish label, falling back to the raw slug.
+export function formatDivision(division: string | null): string {
+  if (!division) {
+    return "—";
+  }
+
+  return DIVISION_ES[division] ?? division;
+}
+
 export function formatDate(date: string | null) {
   if (!date) {
     return "Por definir";

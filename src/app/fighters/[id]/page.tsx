@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Trophy } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
@@ -28,6 +28,7 @@ import {
 import {
   formatControlTime,
   formatDate,
+  formatDivision,
   formatHeight,
   formatReach,
   formatRecord,
@@ -111,6 +112,19 @@ export default async function FighterDetailPage({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
+                    {detail.ranking ? (
+                      detail.ranking.isChampion ? (
+                        <Badge className="bg-primary text-primary-foreground">
+                          <Trophy />
+                          Campeón
+                        </Badge>
+                      ) : (
+                        <Badge className="border-primary/30 bg-primary/10 text-primary">
+                          <Trophy />
+                          {`#${detail.ranking.position} ${formatDivision(detail.ranking.division)}`}
+                        </Badge>
+                      )
+                    ) : null}
                     <Badge className="border-primary/20 bg-primary/10 text-primary">
                       {detail.latestWeightClass
                         ? formatWeightClass(detail.latestWeightClass)

@@ -146,6 +146,14 @@ export type FighterComparisonDetail = {
   directMatchups: DirectMatchupFight[];
 };
 
+// Posición del luchador en el último snapshot de rankings (#14).
+// `position` es rank_position de la BD (0 = campeón). `division` es el slug crudo.
+export type FighterRanking = {
+  division: string; // slug (p.ej. "lightweight")
+  position: number; // rank_position (0 = campeón)
+  isChampion: boolean;
+};
+
 export type FighterDetail = {
   fighter: Fighter;
   latestWeightClass: string | null;
@@ -157,6 +165,8 @@ export type FighterDetail = {
   defenseStats: FighterDefenseStats;
   winMethods: FighterWinMethods;
   rateStats: FighterRateStats;
+  // Ranking en el último snapshot (#14): null si el luchador no está rankeado.
+  ranking: FighterRanking | null;
 };
 
 export type NewsArticle = {

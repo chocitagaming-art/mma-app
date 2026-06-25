@@ -11,6 +11,7 @@ import type {
   FighterFilters,
   FighterHistoryItem,
   FighterListResult,
+  FighterRanking,
   FighterRateStats,
   FighterStrikeBreakdown,
   FighterStrikeProfile,
@@ -86,6 +87,12 @@ type WinMethodRow = {
   submission: string | null;
   decision: string | null;
   other: string | null;
+};
+
+type FighterRankingRow = {
+  division: string;
+  rank_position: number;
+  is_champion: boolean;
 };
 
 type SearchRow = {
@@ -452,8 +459,14 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     return null;
   }
 
-  const [historyRows, aggregateRows, newsRows, defenseRows, winMethodRows] =
-    await Promise.all([
+  const [
+    historyRows,
+    aggregateRows,
+    newsRows,
+    defenseRows,
+    winMethodRows,
+    rankingRows,
+  ] = await Promise.all([
     sql<HistoryRow>(
       `select
         fi.id as fight_id,
@@ -564,6 +577,25 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
       ) wins`,
       [id],
     ),
+    // Ranking en el ÚLTIMO snapshot (#14). Un luchador puede aparecer en su
+    // división real Y en libra por libra (P4P): priorizamos la división real
+    // (P4P al final), luego el flag de campeón, luego la mejor posición.
+    sql<FighterRankingRow>(
+      `with latest as (select max(snapshot_date) as d from rankings)
+      select
+        r.division,
+        r.rank_position,
+        r.is_champion
+      from rankings r
+      where r.fighter_id = $1
+        and r.snapshot_date = (select d from latest)
+      order by
+        (r.division in ('mens_pound_for_pound', 'womens_pound_for_pound')) asc,
+        r.is_champion desc,
+        r.rank_position asc
+      limit 1`,
+      [id],
+    ),
   ]);
 
   const history: FighterHistoryItem[] = historyRows.map((row) => ({
@@ -583,6 +615,14 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
 
   const aggregateStats = mapAggregate(aggregateRows[0]);
   const defenseStats = mapDefense(defenseRows[0]);
+  const rankingRow = rankingRows[0];
+  const ranking: FighterRanking | null = rankingRow
+    ? {
+        division: rankingRow.division,
+        position: rankingRow.rank_position,
+        isChampion: rankingRow.is_champion,
+      }
+    : null;
   const denom = Math.max(1, aggregateStats.totalFightStats);
   const rateStats: FighterRateStats = {
     sigStrikesLandedPerFight: aggregateStats.sigStrikesLanded / denom,
@@ -600,6 +640,7 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     defenseStats,
     winMethods: mapWinMethods(winMethodRows[0]),
     rateStats,
+    ranking,
   };
 }
 
