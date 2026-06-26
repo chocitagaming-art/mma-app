@@ -14,6 +14,8 @@ type FightRow = {
   end_time: string | null;
   winner_id: number | null;
   video_url: string | null;
+  odds_red: string | null;
+  odds_blue: string | null;
   red_id: number;
   red_name: string;
   red_nickname: string | null;
@@ -90,6 +92,8 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       fi.end_time,
       fi.winner_id,
       fi.video_url,
+      fi.odds_red,
+      fi.odds_blue,
       red.id as red_id,
       red.name as red_name,
       red.nickname as red_nickname,
@@ -159,6 +163,8 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
     endTime: fight.end_time,
     winnerId: fight.winner_id,
     videoUrl: fight.video_url,
+    oddsRed: fight.odds_red != null ? Number(fight.odds_red) : null,
+    oddsBlue: fight.odds_blue != null ? Number(fight.odds_blue) : null,
     red: {
       id: fight.red_id,
       name: fight.red_name,

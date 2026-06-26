@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Play, Sparkles } from "lucide-react";
+import { Play, Sparkles, TrendingUp } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
+import { formatPercentage } from "@/lib/format";
+import { marketFavorite } from "@/lib/odds";
 import { getFightDetail } from "@/lib/queries/fights";
 import { resolveFightVideoUrl } from "@/lib/video";
 
@@ -42,6 +44,9 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
   // Combate sin resultado registrado = pendiente -> ofrecer predicción IA (#36).
   const isUpcoming = !fight.winnerId && !fight.method;
 
+  // Favorito del mercado según las cuotas de las casas de apuestas (#41).
+  const favorite = marketFavorite(fight.oddsRed, fight.oddsBlue);
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <SectionHeading
@@ -75,6 +80,50 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
               Predecir esta pelea con IA
             </Button>
           </Link>
+        </div>
+      ) : null}
+
+      {favorite ? (
+        <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="flex items-center justify-center gap-2">
+            <TrendingUp className="size-4 text-primary" />
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Favorito del mercado
+            </p>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div
+              className={`rounded-xl border p-4 text-center ${favorite.favorite === "red" ? "border-primary/40 bg-primary/5" : "border-border"}`}
+            >
+              <p className="truncate font-display text-lg font-bold uppercase text-foreground">
+                {fight.red.name}
+              </p>
+              <p className="tabular mt-1 text-2xl font-bold text-foreground">
+                {formatPercentage(favorite.redImplied)}
+              </p>
+              <p className="font-mono text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                Cuota {fight.oddsRed?.toFixed(2)}
+                {favorite.favorite === "red" ? " · favorito" : ""}
+              </p>
+            </div>
+            <div
+              className={`rounded-xl border p-4 text-center ${favorite.favorite === "blue" ? "border-primary/40 bg-primary/5" : "border-border"}`}
+            >
+              <p className="truncate font-display text-lg font-bold uppercase text-foreground">
+                {fight.blue.name}
+              </p>
+              <p className="tabular mt-1 text-2xl font-bold text-foreground">
+                {formatPercentage(favorite.blueImplied)}
+              </p>
+              <p className="font-mono text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+                Cuota {fight.oddsBlue?.toFixed(2)}
+                {favorite.favorite === "blue" ? " · favorito" : ""}
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Probabilidad implícita de las casas de apuestas (sin margen).
+          </p>
         </div>
       ) : null}
 

@@ -360,6 +360,8 @@ export type FightDetail = {
   endTime: string | null;
   winnerId: number | null;
   videoUrl: string | null;
+  oddsRed: number | null;
+  oddsBlue: number | null;
   red: FightCompetitor;
   blue: FightCompetitor;
   redStats: FightCompetitorStats | null;
