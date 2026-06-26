@@ -18,6 +18,7 @@ import {
   formatMethod,
   formatPercentage,
   formatReach,
+  formatModelDate,
   formatRecord,
   formatWeightClass,
 } from "@/lib/format";
@@ -607,6 +608,11 @@ export function MatchupClient({
                     una certeza: en MMA hasta un favorito claro puede caer.
                   </span>
                 </div>
+                {prediction.modelTrainedAt ? (
+                  <p className="text-center font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+                    Modelo entrenado el {formatModelDate(prediction.modelTrainedAt)}
+                  </p>
+                ) : null}
                 <div className="grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-stretch">
                   <Card className="border-border bg-card">
                     <CardContent className="space-y-6 p-6">

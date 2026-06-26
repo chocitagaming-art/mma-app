@@ -248,3 +248,20 @@ export function cleanNationality(
 
   return trimmed;
 }
+
+// Format an ISO date ("2026-06-25" or a full ISO datetime) as a long Spanish
+// date like "25 de junio de 2026". Parsed as UTC to avoid timezone drift;
+// returns the raw value if it cannot be parsed.
+export function formatModelDate(value: string): string {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("es", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}

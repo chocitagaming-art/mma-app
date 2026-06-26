@@ -43,6 +43,9 @@ export type PredictionResponse = {
     red: PredictionFighterProfile;
     blue: PredictionFighterProfile;
   };
+  // ISO date (e.g. "2026-06-25") stamped into the model bundle; optional/null
+  // for older bundles. Comes straight from the microservice /predict response.
+  modelTrainedAt?: string | null;
   explanation: string;
   explanationSource: "anthropic" | "fallback";
 };
