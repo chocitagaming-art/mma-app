@@ -201,3 +201,50 @@ export function formatDate(date: string | null) {
     year: "numeric",
   }).format(new Date(date));
 }
+
+// News category slugs (written by the backend classifier, see news.py CATEGORIES)
+// → Spanish labels. 'other' maps to "General" to match the null fallback below.
+const NEWS_CATEGORY_ES: Record<string, string> = {
+  fight_announcement: "Anuncio de pelea",
+  fight_result: "Resultado de pelea",
+  injury: "Lesión",
+  ranking_change: "Cambio de ranking",
+  transfer: "Fichaje",
+  interview: "Entrevista",
+  other: "General",
+};
+
+// Translate a news category slug to its Spanish label. Falls back to "General"
+// for missing values and title-cases any unexpected slug instead of leaking
+// raw snake_case to the UI.
+export function formatNewsCategory(category: string | null): string {
+  if (!category) {
+    return "General";
+  }
+
+  const key = category.trim().toLowerCase();
+  if (NEWS_CATEGORY_ES[key]) {
+    return NEWS_CATEGORY_ES[key];
+  }
+
+  const spaced = category.trim().replace(/_/g, " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// The nationality column from ESPN is messy and sometimes holds the literal
+// string "Unknown" (or blanks) instead of NULL. Normalize those sentinels to
+// null so callers can apply their own Spanish fallback (e.g. "Desconocida").
+export function cleanNationality(
+  value: string | null | undefined,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === "unknown") {
+    return null;
+  }
+
+  return trimmed;
+}

@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  cleanNationality,
   formatControlTime,
   formatDate,
   formatDivision,
@@ -137,7 +138,7 @@ export default async function FighterDetailPage({
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
-                      {fighter.nationality ?? "Nacionalidad no disponible"}
+                      {cleanNationality(fighter.nationality) ?? "Nacionalidad no disponible"}
                     </Badge>
                     <Link href={`/enfrentamiento?red=${fighter.id}`}>
                       <Button
@@ -183,7 +184,7 @@ export default async function FighterDetailPage({
                 <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Nacionalidad</p>
                 <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
                   <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
-                  {fighter.nationality ?? "Desconocida"}
+                  {cleanNationality(fighter.nationality) ?? "Desconocida"}
                 </p>
               </div>
             </div>

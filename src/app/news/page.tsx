@@ -7,7 +7,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNewsCategory } from "@/lib/format";
 import { getNews } from "@/lib/queries/news";
 
 type NewsPageProps = {
@@ -94,7 +94,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                     }
                   >
-                    {item}
+                    {formatNewsCategory(item)}
                   </Button>
                 </Link>
               );
@@ -103,7 +103,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
           <p className="text-sm text-muted-foreground">
             Mostrando <span className="font-semibold text-foreground">{result.articles.length}</span> de{" "}
             <span className="tabular font-semibold text-foreground">{result.total.toLocaleString("es")}</span>{" "}
-            artículos{result.activeCategory ? ` en ${result.activeCategory}` : ""}.
+            artículos{result.activeCategory ? ` en ${formatNewsCategory(result.activeCategory)}` : ""}.
           </p>
         </CardContent>
       </Card>
@@ -124,7 +124,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
                       <Badge className="border-primary/20 bg-primary/10 text-primary">
-                        {article.category ?? "General"}
+                        {formatNewsCategory(article.category)}
                       </Badge>
                       <Badge variant="secondary" className="bg-muted text-muted-foreground">
                         {article.source ?? "Fuente desconocida"}
