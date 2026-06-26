@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRightLeft, Trophy } from "lucide-react";
+import { ArrowRightLeft, Play, Trophy } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
@@ -36,6 +36,7 @@ import {
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
+import { buildFightVideoSearchUrl } from "@/lib/video";
 import {
   getFighterDetail,
   getFighterStrikeProfile,
@@ -309,6 +310,9 @@ export default async function FighterDetailPage({
                     <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
                       Evento
                     </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Vídeo
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -372,6 +376,22 @@ export default async function FighterDetailPage({
                           ) : (
                             (fight.eventName ?? "Evento desconocido")
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            href={buildFightVideoSearchUrl(
+                              fighter.name,
+                              fight.opponentName ?? "",
+                              fight.eventName ?? undefined,
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`Ver el combate ${fighter.name} vs ${fight.opponentName ?? "oponente"} en YouTube`}
+                            className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80"
+                          >
+                            <Play className="size-3.5" />
+                            Ver
+                          </a>
                         </TableCell>
                       </TableRow>
                     );

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
+import { Play, Sparkles } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
 import { getFightDetail } from "@/lib/queries/fights";
+import { buildFightVideoSearchUrl } from "@/lib/video";
 
 type FightDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -74,6 +75,26 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
               Predecir esta pelea con IA
             </Button>
           </Link>
+        </div>
+      ) : null}
+
+      {!isUpcoming ? (
+        <div className="flex justify-center">
+          <a
+            href={buildFightVideoSearchUrl(
+              fight.red.name,
+              fight.blue.name,
+              fight.eventName ?? undefined,
+            )}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Ver el combate ${fight.red.name} vs ${fight.blue.name} en YouTube`}
+          >
+            <Button variant="secondary" size="lg" className="h-11">
+              <Play className="size-4" />
+              Ver combate en YouTube
+            </Button>
+          </a>
         </div>
       ) : null}
 
