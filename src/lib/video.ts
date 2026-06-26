@@ -13,3 +13,16 @@ export function buildFightVideoSearchUrl(
     .join(" ");
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
+
+// Resolve the link for a fight's "watch" button: a curated video URL
+// (fights.video_url, #43) when one exists, otherwise the YouTube search
+// fallback (#42). Empty/whitespace-only curated values are treated as absent.
+export function resolveFightVideoUrl(
+  curatedUrl: string | null | undefined,
+  red: string,
+  blue: string,
+  event?: string,
+): string {
+  const trimmed = curatedUrl?.trim();
+  return trimmed ? trimmed : buildFightVideoSearchUrl(red, blue, event);
+}

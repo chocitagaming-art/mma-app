@@ -359,6 +359,7 @@ export type FightDetail = {
   endRound: number | null;
   endTime: string | null;
   winnerId: number | null;
+  videoUrl: string | null;
   red: FightCompetitor;
   blue: FightCompetitor;
   redStats: FightCompetitorStats | null;

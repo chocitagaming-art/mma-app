@@ -13,6 +13,7 @@ type FightRow = {
   end_round: number | null;
   end_time: string | null;
   winner_id: number | null;
+  video_url: string | null;
   red_id: number;
   red_name: string;
   red_nickname: string | null;
@@ -88,6 +89,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       fi.end_round,
       fi.end_time,
       fi.winner_id,
+      fi.video_url,
       red.id as red_id,
       red.name as red_name,
       red.nickname as red_nickname,
@@ -156,6 +158,7 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
     endRound: fight.end_round,
     endTime: fight.end_time,
     winnerId: fight.winner_id,
+    videoUrl: fight.video_url,
     red: {
       id: fight.red_id,
       name: fight.red_name,

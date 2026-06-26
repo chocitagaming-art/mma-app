@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFightVideoSearchUrl } from "@/lib/video";
+import { buildFightVideoSearchUrl, resolveFightVideoUrl } from "@/lib/video";
 
 describe("buildFightVideoSearchUrl", () => {
   it("builds a YouTube search URL for the two fighters with 'full fight'", () => {
@@ -32,5 +32,24 @@ describe("buildFightVideoSearchUrl", () => {
     const url = buildFightVideoSearchUrl("José Aldo", "Petr Yan");
     expect(url).not.toContain(" ");
     expect(url).toContain("Jos%C3%A9%20Aldo%20vs%20Petr%20Yan");
+  });
+});
+
+describe("resolveFightVideoUrl", () => {
+  it("returns the curated url verbatim when present (trimmed)", () => {
+    expect(resolveFightVideoUrl("https://youtu.be/abc", "A", "B", "UFC 1")).toBe(
+      "https://youtu.be/abc",
+    );
+    expect(resolveFightVideoUrl("  https://youtu.be/abc  ", "A", "B")).toBe(
+      "https://youtu.be/abc",
+    );
+  });
+
+  it("falls back to the YouTube search url when curated is null/empty", () => {
+    const search = buildFightVideoSearchUrl("A", "B", "UFC 1");
+    expect(resolveFightVideoUrl(null, "A", "B", "UFC 1")).toBe(search);
+    expect(resolveFightVideoUrl(undefined, "A", "B", "UFC 1")).toBe(search);
+    expect(resolveFightVideoUrl("", "A", "B", "UFC 1")).toBe(search);
+    expect(resolveFightVideoUrl("   ", "A", "B", "UFC 1")).toBe(search);
   });
 });
