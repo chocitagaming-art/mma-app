@@ -38,6 +38,7 @@ import {
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
+import { computeRecentForm } from "@/lib/fighter-form";
 import { resolveFightVideoUrl } from "@/lib/video";
 import {
   getFighterDetail,
@@ -94,6 +95,25 @@ export default async function FighterDetailPage({
 
   const { fighter, aggregateStats, history, news, defenseStats, winMethods, rateStats } =
     detail;
+
+  const recentForm = computeRecentForm(history);
+  const streakLabel =
+    recentForm.streakType === "win"
+      ? `${recentForm.streakCount}V`
+      : recentForm.streakType === "loss"
+        ? `${recentForm.streakCount}D`
+        : "—";
+  const streakHelper =
+    recentForm.streakType === "win"
+      ? `${recentForm.streakCount} ${recentForm.streakCount === 1 ? "victoria seguida" : "victorias seguidas"}`
+      : recentForm.streakType === "loss"
+        ? `${recentForm.streakCount} ${recentForm.streakCount === 1 ? "derrota seguida" : "derrotas seguidas"}`
+        : "Sin racha activa";
+  // Incluye empates/NC en la etiqueta solo si los hay (p.ej. "3-1-1").
+  const formOther = recentForm.lastFive.draws + recentForm.lastFive.nc;
+  const formLabel =
+    `${recentForm.lastFive.wins}-${recentForm.lastFive.losses}` +
+    (formOther > 0 ? `-${formOther}` : "");
 
   // Cuando no hay noticias, el hueco se rellena con los próximos combates (#48).
   const showUpcoming = news.length === 0 && upcomingBouts.length > 0;
@@ -207,6 +227,37 @@ export default async function FighterDetailPage({
             <CardTitle className="text-foreground">Resumen de rendimiento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`${PREMIUM_TILE} p-4`}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Racha actual
+                </p>
+                <p
+                  className={`tabular mt-2 text-2xl font-bold ${
+                    recentForm.streakType === "win"
+                      ? "text-win"
+                      : recentForm.streakType === "loss"
+                        ? "text-loss"
+                        : "text-foreground"
+                  }`}
+                >
+                  {streakLabel}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{streakHelper}</p>
+              </div>
+              <div className={`${PREMIUM_TILE} p-4`}>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Forma (últ. 5)
+                </p>
+                <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                  {formLabel}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {recentForm.lastFive.total} combate
+                  {recentForm.lastFive.total === 1 ? "" : "s"} · V-D
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <StatDonut
                 label="Precisión de golpeo"
