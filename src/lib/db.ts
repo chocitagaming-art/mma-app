@@ -17,7 +17,11 @@ function getDatabaseUrl() {
 function createPool() {
   return new Pool({
     connectionString: getDatabaseUrl(),
-    ssl: { rejectUnauthorized: false },
+    // Verify Neon's TLS certificate against the system's trusted CAs. Neon
+    // serves publicly-trusted certificates, so validation succeeds without extra
+    // config. If a locked-down environment lacked the right root CAs, pin Neon's
+    // CA here, e.g. ssl: { rejectUnauthorized: true, ca: process.env.NEON_CA }.
+    ssl: { rejectUnauthorized: true },
     // Serverless-friendly: keep one connection per instance and fail fast so we
     // don't exhaust Neon's connection slots across concurrent lambdas.
     max: 1,
