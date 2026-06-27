@@ -22,9 +22,13 @@ function createPool() {
     // config. If a locked-down environment lacked the right root CAs, pin Neon's
     // CA here, e.g. ssl: { rejectUnauthorized: true, ca: process.env.NEON_CA }.
     ssl: { rejectUnauthorized: true },
-    // Serverless-friendly: keep one connection per instance and fail fast so we
-    // don't exhaust Neon's connection slots across concurrent lambdas.
-    max: 1,
+    // Trade-off: a small per-instance pool lets the parallel queries in a single
+    // request (Promise.all) actually run concurrently instead of serializing on
+    // one socket, while staying low enough not to exhaust Neon's connection
+    // slots across many concurrent lambdas. With a direct Neon endpoint this
+    // ceiling has to stay conservative (see the production followup about the
+    // Neon -pooler / PgBouncer endpoint, which would let us raise it further).
+    max: 3,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
   });
