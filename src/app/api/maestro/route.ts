@@ -1,27 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { MAESTRO_SYSTEM_PROMPT, MAESTRO_TOOLS } from "@/lib/maestro/prompt";
+import {
+  chatRequestSchema,
+  clientIpFromHeaders,
+  isAllowedOrigin,
+  normalizeConversation,
+  rateLimit,
+} from "@/lib/maestro/security";
 import { runMaestroTool } from "@/lib/maestro/tools";
 
 // pg necesita Node, no Edge.
 export const runtime = "nodejs";
 
 const MODEL = "claude-sonnet-4-6";
+// 6 vueltas de tools cubren los flujos multi-paso (buscar -> ficha -> historial)
+// sin permitir que el modelo dispare llamadas a Anthropic en bucle (coste/abuso).
 const MAX_TOOL_ITERATIONS = 6;
-
-const requestSchema = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().min(1).max(4000),
-      }),
-    )
-    .min(1)
-    .max(20),
-});
 
 function extractText(content: Anthropic.ContentBlock[]): string {
   return content
@@ -32,6 +28,24 @@ function extractText(content: Anthropic.ContentBlock[]): string {
 }
 
 export async function POST(request: Request) {
+  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking).
+  const origin = request.headers.get("origin") ?? request.headers.get("referer");
+  const allowLoopback = process.env.NODE_ENV !== "production";
+  if (!isAllowedOrigin(origin, request.headers.get("host"), allowLoopback)) {
+    return NextResponse.json({ error: "Origen no permitido." }, { status: 403 });
+  }
+
+  // 2) Rate-limit por IP (best-effort en memoria). Antes de parsear el body
+  // para que un flood de peticiones inválidas también quede limitado.
+  const ip = clientIpFromHeaders(request.headers);
+  const limit = rateLimit(`maestro:${ip}`);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Vas demasiado rápido. Espera unos segundos e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -39,7 +53,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
 
-  const parsed = requestSchema.safeParse(body);
+  // 3) Límites de entrada y saneado del historial (roles, tamaño). El system
+  // prompt NUNCA viene del cliente: se inyecta abajo desde el servidor.
+  const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Petición inválida." }, { status: 400 });
   }
@@ -53,7 +69,10 @@ export async function POST(request: Request) {
   }
 
   const client = new Anthropic({ apiKey });
-  const messages: Anthropic.MessageParam[] = parsed.data.messages.map((m) => ({
+  // Anthropic exige que el primer turno sea "user"; normalizamos por si la
+  // ventana del historial quedó empezando por un turno "assistant".
+  const conversation = normalizeConversation(parsed.data.messages);
+  const messages: Anthropic.MessageParam[] = conversation.map((m) => ({
     role: m.role,
     content: m.content,
   }));

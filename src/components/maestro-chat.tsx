@@ -57,7 +57,8 @@ export function MaestroChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: next.slice(-20).map((m) => ({ role: m.role, content: m.content })),
+          // El servidor acota el historial a 16 turnos; recortamos aquí para no chocar.
+          messages: next.slice(-16).map((m) => ({ role: m.role, content: m.content })),
         }),
       });
       const data = await res.json();
@@ -162,6 +163,7 @@ export function MaestroChat() {
               }
             }}
             rows={1}
+            maxLength={2000}
             placeholder="Pregunta lo que quieras de UFC/MMA…"
             className="max-h-40 min-h-11 flex-1 resize-none rounded-xl border border-input bg-card px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/40"
             disabled={loading}
