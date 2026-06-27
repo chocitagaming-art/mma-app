@@ -16,11 +16,30 @@ Léelo en: [English](./README.md) · **Español**
 
 ![Página de inicio de MMA STATUS](docs/screenshots/home.png)
 
+### Contenido
+
+- [Qué es](#qué-es)
+- [Míralo en acción](#míralo-en-acción)
+- [Un paseo por la web](#un-paseo-por-la-web)
+- [Funciones](#funciones)
+- [Cómo funciona la predicción](#cómo-funciona-la-predicción)
+- [Stack](#stack)
+- [Arquitectura](#arquitectura)
+- [Ejecutar en local](#ejecutar-en-local)
+- [Roadmap](#roadmap)
+- [Licencia](#licencia)
+
 ## Qué es
 
 MMA STATUS es la mitad web de un proyecto de dos repos. Este repo es el sitio que ves: una app de Next.js que lee datos de UFC y los sirve como fichas de luchador, clasificación, un comparador cara a cara y un predictor de peleas. El otro repo, [mma-ingesta](https://github.com/chocitagaming-art/mma-ingesta), hace el scraping, el machine learning y levanta el servicio de predicción. Los dos comparten una base de datos PostgreSQL en Neon, y la web solo lee de ella.
 
 Los datos son reales. Luchadores, peleas, estadísticas, rankings y eventos salen de scrapear UFC y ESPN. Las cuotas vienen de The Odds API (solo eventos próximos). Los vídeos, de YouTube. La predicción la da un modelo XGBoost entrenado con estadísticas de los peleadores, y las explicaciones las escribe Claude.
+
+## Míralo en acción
+
+Eliges esquina roja y azul, las comparas de arriba abajo y dejas que el modelo decida la pelea.
+
+![Recorrido del cara a cara](docs/screenshots/cara-a-cara.gif)
 
 ## Un paseo por la web
 
@@ -31,6 +50,14 @@ Los datos son reales. Luchadores, peleas, estadísticas, rankings y eventos sale
 **Predicción** para cualquier enfrentamiento. Eliges esquina roja y azul, pulsas predecir, y el modelo devuelve una probabilidad para cada uno, las señales por esquina que hay detrás (racha, victorias recientes, calidad del rival, defensa), los factores que más inclinan la decisión y una explicación corta en español.
 
 ![Predicción de pelea](docs/screenshots/prediction.png)
+
+**Mercado vs modelo** en peleas próximas. La probabilidad implícita de las cuotas, ya sin el margen de la casa, al lado de lo que cree el modelo, con la ventaja marcada en puntos. Esta es nuestra y de nadie más: ninguno de los proyectos parecidos compara las dos cosas.
+
+![Mercado vs modelo](docs/screenshots/market-vs-model.png)
+
+**El Maestro**, un asistente de chat que responde con datos de la base de datos real. Le pides un récord o unas estadísticas y consulta los datos y enseña de dónde los saca, en lugar de inventar de memoria.
+
+![Asistente El Maestro](docs/screenshots/maestro.png)
 
 **Clasificación oficial** por división y libra por libra, masculina y femenina, con el movimiento desde el último snapshot.
 
@@ -133,6 +160,27 @@ El acceso a datos vive en `src/lib/queries`, partido en módulos pequeños por d
 
 138 tests de Vitest cubren la lógica pura: comparación mercado vs modelo, cálculo de forma, formato, parseo de YouTube. La comprobación de tipos y el build de producción salen limpios. El repo de datos y ML lleva otros 113 tests de pytest, incluidos los golden y de paridad que fijan las features del modelo.
 
+## Roadmap
+
+Hecho hasta ahora:
+
+- [x] Scrapers de luchadores, peleas, estadísticas, eventos y rankings
+- [x] Modelo XGBoost calibrado con manejo honesto de la baja confianza
+- [x] Web en vivo: fichas, clasificación, cara a cara, predicciones
+- [x] Trayectoria de ranking y siluetas de golpes
+- [x] Mercado vs modelo en peleas próximas
+- [x] Explicaciones con IA y el asistente Maestro
+- [x] Vídeos de combates curados y noticias
+- [x] CI y refresco programado de datos en GitHub Actions
+
+Pendiente:
+
+- [ ] Desplegar el servicio de predicción para que las predicciones en producción salgan en vivo en lugar del modo degradado
+- [ ] Dominio propio en mma-status.app
+- [ ] Backfill de rankings históricos para una trayectoria y una calidad del rival más fuertes en las fichas
+- [ ] Más vídeos de combates curados
+- [ ] Monitorización de errores con Sentry
+
 ## El otro repo
 
 [**mma-ingesta**](https://github.com/chocitagaming-art/mma-ingesta) tiene los scrapers, el pipeline de features, el entrenamiento del modelo y el servicio FastAPI de predicción. Si quieres saber de dónde salen los datos y las predicciones, empieza por ahí.
@@ -141,4 +189,4 @@ Hay también un manual de producto más completo: [MANUAL.md](./MANUAL.md).
 
 ## Licencia
 
-MIT.
+MIT. Ver [LICENSE](./LICENSE). Es un proyecto personal, pero los issues y pull requests son bienvenidos.

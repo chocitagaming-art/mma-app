@@ -16,11 +16,30 @@ Read this in: **English** · [Español](./README.es.md)
 
 ![MMA STATUS home page](docs/screenshots/home.png)
 
+### Contents
+
+- [What it is](#what-it-is)
+- [See it in action](#see-it-in-action)
+- [A look around](#a-look-around)
+- [Features](#features)
+- [How the prediction works](#how-the-prediction-works)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Run it locally](#run-it-locally)
+- [Roadmap](#roadmap)
+- [License](#license)
+
 ## What it is
 
 MMA STATUS is the web half of a two repo project. This repo is the site you see: a Next.js app that reads UFC data and serves it as fighter pages, rankings, a head to head builder, and a fight predictor. The other repo, [mma-ingesta](https://github.com/chocitagaming-art/mma-ingesta), does the scraping, the machine learning, and runs the prediction service. Both share one PostgreSQL database on Neon, and the web app only ever reads from it.
 
 The data is real. Fighters, fights, stats, rankings, and events come from scraping UFC and ESPN. Odds come from The Odds API (upcoming fights only). Videos come from YouTube. The fight prediction comes from an XGBoost model trained on fighter stats, and the explanations are written by Claude.
+
+## See it in action
+
+Pick a red and a blue corner, compare them top to bottom, and let the model call the fight.
+
+![Head to head walkthrough](docs/screenshots/cara-a-cara.gif)
 
 ## A look around
 
@@ -31,6 +50,14 @@ The data is real. Fighters, fights, stats, rankings, and events come from scrapi
 **Prediction** for any matchup. Pick a red and blue corner, hit predict, and the model returns a probability for each fighter, the per corner signals behind it (streak, recent wins, quality of opposition, defense), the factors that moved the call, and a short explanation in plain Spanish.
 
 ![Fight prediction](docs/screenshots/prediction.png)
+
+**Market vs model** on upcoming fights. The implied probability from the odds, with the bookmaker margin stripped out, sits next to what the model thinks, with the edge called out in points. This one is ours alone: none of the similar projects compare the two.
+
+![Market vs model](docs/screenshots/market-vs-model.png)
+
+**El Maestro**, a chat assistant that answers from the real database. Ask for a record or a stat line and it queries the data and shows its work, instead of guessing from memory.
+
+![El Maestro assistant](docs/screenshots/maestro.png)
 
 **Official rankings** by division and pound for pound, men and women, with the movement since the last snapshot.
 
@@ -133,6 +160,27 @@ The data access lives in `src/lib/queries`, split into small modules by domain (
 
 138 Vitest tests cover the pure logic: market vs model comparison, form computation, formatting, YouTube parsing. Type checking and a production build run clean. The data and ML repo carries another 113 pytest tests, including golden and parity tests that pin the model features.
 
+## Roadmap
+
+Done so far:
+
+- [x] Scrapers for fighters, fights, stats, events, and rankings
+- [x] Calibrated XGBoost prediction model with honest low confidence handling
+- [x] Live web app: profiles, rankings, head to head, predictions
+- [x] Ranking trajectory and strike maps
+- [x] Market vs model on upcoming fights
+- [x] AI explanations and the Maestro assistant
+- [x] Curated fight videos and MMA news
+- [x] CI and scheduled data refresh on GitHub Actions
+
+Planned:
+
+- [ ] Deploy the prediction service so production predictions go live instead of the fallback
+- [ ] Custom domain at mma-status.app
+- [ ] Backfill historical rankings for a stronger trajectory and strength of schedule on profiles
+- [ ] More curated fight videos
+- [ ] Error monitoring with Sentry
+
 ## The other repo
 
 [**mma-ingesta**](https://github.com/chocitagaming-art/mma-ingesta) holds the scrapers, the feature pipeline, the model training, and the FastAPI prediction service. If you want to know where the data and the predictions come from, start there.
@@ -141,4 +189,4 @@ There is also a fuller product manual in Spanish: [MANUAL.md](./MANUAL.md).
 
 ## License
 
-MIT.
+MIT. See [LICENSE](./LICENSE). This is a personal project, but issues and pull requests are welcome.
