@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +28,24 @@ function isActive(pathname: string, href: string) {
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+
+  // Cerrar el menú móvil con Escape mientras está abierto (el setState ocurre en
+  // el handler del evento, no de forma síncrona en el efecto). Al cerrar, devuelve
+  // el foco al botón hamburguesa para no dejarlo en un enlace ya oculto.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        hamburgerRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md">
@@ -79,6 +97,7 @@ export function SiteHeader() {
           <ThemeToggle />
           {/* Hamburger — solo en móvil */}
           <button
+            ref={hamburgerRef}
             type="button"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={open}

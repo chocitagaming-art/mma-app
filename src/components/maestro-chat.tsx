@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Loader2, SendHorizonal } from "lucide-react";
+import { Info, Loader2, SendHorizonal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,9 @@ export function MaestroChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Un 503 (servicio sin configurar / fuera de línea) se trata como estado
+  // "no disponible" calmado, separado del error duro, espejando matchup-client.
+  const [unavailable, setUnavailable] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function MaestroChat() {
     if (!trimmed || loading) return;
 
     setError(null);
+    setUnavailable(false);
     const next: ChatMsg[] = [...messages, { role: "user", content: trimmed }];
     setMessages(next);
     setInput("");
@@ -61,6 +65,12 @@ export function MaestroChat() {
           messages: next.slice(-16).map((m) => ({ role: m.role, content: m.content })),
         }),
       });
+      // 503 = el Maestro no está configurado / disponible. Estado calmado, no un
+      // error duro: el usuario no puede hacer nada salvo reintentar más tarde.
+      if (res.status === 503) {
+        setUnavailable(true);
+        return;
+      }
       const data = await res.json();
       if (!res.ok || (data && typeof data === "object" && "error" in data)) {
         throw new Error(data?.error ?? "No pude obtener respuesta del Maestro.");
@@ -95,8 +105,15 @@ export function MaestroChat() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 space-y-5 overflow-y-auto py-6">
+      {/* Messages — role=log + polite so a screen reader announces each new
+          message (the Maestro's reply) as it arrives, not just the loading state.
+          aria-relevant=additions avoids re-reading the whole transcript. */}
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        className="flex-1 space-y-5 overflow-y-auto py-6"
+      >
         {empty ? (
           <div className="mx-auto flex max-w-xl flex-col items-center px-2 py-10 text-center">
             <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight text-foreground">
@@ -124,7 +141,11 @@ export function MaestroChat() {
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2.5 text-muted-foreground">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-2.5 text-muted-foreground"
+          >
             <span className="octagon grid size-7 shrink-0 place-items-center bg-primary font-display text-sm font-extrabold text-primary-foreground">
               M
             </span>
@@ -135,8 +156,28 @@ export function MaestroChat() {
           </div>
         ) : null}
 
+        {unavailable ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-start gap-3 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground"
+          >
+            <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="font-semibold text-foreground">
+                Maestro no disponible por ahora.
+              </span>{" "}
+              El servicio está fuera de línea temporalmente. Vuelve a intentarlo
+              más tarde.
+            </span>
+          </div>
+        ) : null}
+
         {error ? (
-          <p className="rounded-lg border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
+          <p
+            role="alert"
+            className="rounded-lg border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss"
+          >
             {error}
           </p>
         ) : null}

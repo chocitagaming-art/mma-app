@@ -21,7 +21,7 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink-foreground/45">
+      <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-brand-ink-foreground/70">
         {title}
       </h2>
       <ul className="mt-4 space-y-2.5">
@@ -54,7 +54,7 @@ export function SiteFooter() {
             height={250}
             className="h-11 w-auto"
           />
-          <p className="mt-5 max-w-sm text-sm leading-6 text-brand-ink-foreground/55">
+          <p className="mt-5 max-w-sm text-sm leading-6 text-brand-ink-foreground/75">
             Estadísticas de MMA en vivo: perfiles de peleadores, historial,
             clasificación y predicción por machine learning, sobre datos reales
             de UFC.
@@ -67,10 +67,10 @@ export function SiteFooter() {
 
       <div className="border-t border-brand-ink-foreground/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/45">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70">
             © {year} MMA STATUS
           </span>
-          <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/45">
+          <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70">
             Datos en vivo · Neon PostgreSQL
           </span>
         </div>

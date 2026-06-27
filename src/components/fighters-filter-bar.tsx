@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatWeightClass } from "@/lib/format";
+import { formatStance, formatWeightClass } from "@/lib/format";
 import type { FighterSearchResult } from "@/lib/types";
 
 type FightersFilterBarProps = {
@@ -127,7 +127,7 @@ export function FightersFilterBar({
   };
   const stanceItems = {
     all: "Todas las guardias",
-    ...Object.fromEntries(stances.map((stance) => [stance, stance])),
+    ...Object.fromEntries(stances.map((stance) => [stance, formatStance(stance)])),
   };
   const sortItems = {
     relevance: "Ordenar: Relevancia",
@@ -148,6 +148,7 @@ export function FightersFilterBar({
             }
           }}
           placeholder="Buscar por nombre del luchador"
+          aria-label="Buscar por nombre del luchador"
           className="h-11 w-full border-border bg-card text-foreground"
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -201,7 +202,10 @@ export function FightersFilterBar({
       </div>
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
       <div>
-        <label className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block">
+        <label
+          htmlFor="filter-weight-class"
+          className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block"
+        >
           Categoría de peso
         </label>
         <Select
@@ -209,7 +213,7 @@ export function FightersFilterBar({
           value={current.weightClass || "all"}
           onValueChange={(value) => updateParam("weightClass", value ?? "all")}
         >
-          <SelectTrigger className="h-11 w-full border-border bg-card text-foreground">
+          <SelectTrigger id="filter-weight-class" className="h-11 w-full border-border bg-card text-foreground">
             <SelectValue placeholder="Categoría de peso" />
           </SelectTrigger>
           <SelectContent>
@@ -223,7 +227,10 @@ export function FightersFilterBar({
         </Select>
       </div>
       <div>
-        <label className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block">
+        <label
+          htmlFor="filter-nationality"
+          className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block"
+        >
           Nacionalidad
         </label>
         <Select
@@ -231,7 +238,7 @@ export function FightersFilterBar({
           value={current.nationality || "all"}
           onValueChange={(value) => updateParam("nationality", value ?? "all")}
         >
-          <SelectTrigger className="h-11 w-full border-border bg-card text-foreground">
+          <SelectTrigger id="filter-nationality" className="h-11 w-full border-border bg-card text-foreground">
             <SelectValue placeholder="Nacionalidad" />
           </SelectTrigger>
           <SelectContent>
@@ -245,7 +252,10 @@ export function FightersFilterBar({
         </Select>
       </div>
       <div>
-        <label className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block">
+        <label
+          htmlFor="filter-stance"
+          className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block"
+        >
           Guardia
         </label>
         <Select
@@ -253,21 +263,24 @@ export function FightersFilterBar({
           value={current.stance || "all"}
           onValueChange={(value) => updateParam("stance", value ?? "all")}
         >
-          <SelectTrigger className="h-11 w-full border-border bg-card text-foreground">
+          <SelectTrigger id="filter-stance" className="h-11 w-full border-border bg-card text-foreground">
             <SelectValue placeholder="Guardia" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las guardias</SelectItem>
             {stances.map((stance) => (
               <SelectItem key={stance} value={stance ?? "unknown-stance"}>
-                {stance}
+                {formatStance(stance)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       <div>
-        <label className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block">
+        <label
+          htmlFor="filter-sort"
+          className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-2 block"
+        >
           Ordenar por
         </label>
         <Select
@@ -277,7 +290,7 @@ export function FightersFilterBar({
             updateParam("sort", value === "relevance" ? "" : value ?? "")
           }
         >
-          <SelectTrigger className="h-11 w-full border-border bg-card text-foreground">
+          <SelectTrigger id="filter-sort" className="h-11 w-full border-border bg-card text-foreground">
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
           <SelectContent>

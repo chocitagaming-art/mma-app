@@ -146,7 +146,7 @@ function Panel({
           <Icon className="size-3.5 text-primary" />
           {title}
         </p>
-        <p className="tabular text-[10px] uppercase tracking-wide text-muted-foreground/70">
+        <p className="tabular text-[10px] uppercase tracking-wide text-muted-foreground/85">
           {data.totalLanded} golpes
         </p>
       </div>
@@ -183,7 +183,7 @@ export function StrikeSilhouette({
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Silueta de golpes
           </p>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/85">
             Intensidad = volumen
           </p>
         </div>

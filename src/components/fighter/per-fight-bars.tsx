@@ -44,7 +44,7 @@ export function PerFightBars({
           </div>
         </div>
       ))}
-      <p className="text-xs text-muted-foreground/70">
+      <p className="text-xs text-muted-foreground/85">
         Promedio por pelea registrada (la BD no almacena la duración exacta del
         combate).
       </p>

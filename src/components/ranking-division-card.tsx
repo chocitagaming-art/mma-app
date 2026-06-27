@@ -10,28 +10,42 @@ import type { DivisionRanking, RankingEntry } from "@/lib/types";
 function Movement({ change }: { change: number | null }) {
   if (change == null || change === 0) {
     return (
-      <span className="w-9 shrink-0 text-center font-mono text-xs text-muted-foreground">—</span>
+      <span
+        role="img"
+        aria-label="sin cambios"
+        className="w-9 shrink-0 text-center font-mono text-xs text-muted-foreground"
+      >
+        —
+      </span>
     );
   }
 
   if (change >= 900) {
     return (
-      <span className="w-9 shrink-0 text-center font-mono text-[0.6rem] font-bold uppercase tracking-wide text-primary">
+      <span
+        role="img"
+        aria-label="nuevo en el ranking"
+        className="w-9 shrink-0 text-center font-mono text-[0.6rem] font-bold uppercase tracking-wide text-primary"
+      >
         Nuevo
       </span>
     );
   }
 
   const up = change > 0;
+  const count = Math.abs(change);
+  const positionWord = count === 1 ? "posición" : "posiciones";
   return (
     <span
+      role="img"
+      aria-label={`${up ? "sube" : "baja"} ${count} ${positionWord}`}
       className={cn(
         "inline-flex w-9 shrink-0 items-center justify-center gap-0.5 font-mono text-xs font-semibold tabular",
         up ? "text-win" : "text-loss",
       )}
     >
-      {up ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-      {Math.abs(change)}
+      {up ? <ChevronUp className="size-3" aria-hidden /> : <ChevronDown className="size-3" aria-hidden />}
+      {count}
     </span>
   );
 }

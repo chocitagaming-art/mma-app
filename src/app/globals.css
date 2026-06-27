@@ -320,8 +320,10 @@
   animation: marquee-rtl var(--marquee-duration, 48s) linear infinite;
   will-change: transform;
 }
-/* Pausa al pasar el ratón (el contenedor lleva .marquee-host). */
-.marquee-host:hover .animate-marquee {
+/* Pausa al pasar el ratón o al enfocar con teclado un titular del reel
+   (el contenedor lleva .marquee-host) — WCAG 2.2.2 (pausar contenido en movimiento). */
+.marquee-host:hover .animate-marquee,
+.marquee-host:focus-within .animate-marquee {
   animation-play-state: paused;
 }
 
