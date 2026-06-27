@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildFightVideoSearchUrl, resolveFightVideoUrl } from "@/lib/video";
+import {
+  buildFightVideoSearchUrl,
+  parseYouTubeId,
+  resolveFightVideoUrl,
+} from "@/lib/video";
 
 describe("buildFightVideoSearchUrl", () => {
   it("builds a YouTube search URL for the two fighters with 'full fight'", () => {
@@ -51,5 +55,56 @@ describe("resolveFightVideoUrl", () => {
     expect(resolveFightVideoUrl(undefined, "A", "B", "UFC 1")).toBe(search);
     expect(resolveFightVideoUrl("", "A", "B", "UFC 1")).toBe(search);
     expect(resolveFightVideoUrl("   ", "A", "B", "UFC 1")).toBe(search);
+  });
+});
+
+describe("parseYouTubeId", () => {
+  const ID = "dQw4w9WgXcQ";
+
+  it("extracts the id from a standard watch URL", () => {
+    expect(parseYouTubeId(`https://www.youtube.com/watch?v=${ID}`)).toBe(ID);
+  });
+
+  it("extracts the id from a watch URL with extra params (any order)", () => {
+    expect(parseYouTubeId(`https://www.youtube.com/watch?v=${ID}&t=42s`)).toBe(
+      ID,
+    );
+    expect(
+      parseYouTubeId(`https://www.youtube.com/watch?app=desktop&v=${ID}&t=5`),
+    ).toBe(ID);
+  });
+
+  it("extracts the id from a youtu.be short link with a timestamp", () => {
+    expect(parseYouTubeId(`https://youtu.be/${ID}`)).toBe(ID);
+    expect(parseYouTubeId(`https://youtu.be/${ID}?t=30`)).toBe(ID);
+  });
+
+  it("extracts the id from /embed/ and youtube-nocookie embed URLs", () => {
+    expect(parseYouTubeId(`https://www.youtube.com/embed/${ID}`)).toBe(ID);
+    expect(
+      parseYouTubeId(`https://www.youtube-nocookie.com/embed/${ID}?autoplay=1`),
+    ).toBe(ID);
+  });
+
+  it("extracts the id from a /shorts/ URL", () => {
+    expect(parseYouTubeId(`https://www.youtube.com/shorts/${ID}`)).toBe(ID);
+  });
+
+  it("tolerates leading/trailing whitespace", () => {
+    expect(parseYouTubeId(`  https://youtu.be/${ID}  `)).toBe(ID);
+  });
+
+  it("returns null for null, undefined, empty and non-YouTube URLs", () => {
+    expect(parseYouTubeId(null)).toBeNull();
+    expect(parseYouTubeId(undefined)).toBeNull();
+    expect(parseYouTubeId("")).toBeNull();
+    expect(parseYouTubeId("   ")).toBeNull();
+    expect(parseYouTubeId("https://vimeo.com/123456789")).toBeNull();
+    expect(parseYouTubeId("not a url")).toBeNull();
+  });
+
+  it("returns null when the id is not a valid 11-char token", () => {
+    expect(parseYouTubeId("https://youtu.be/abc")).toBeNull();
+    expect(parseYouTubeId("https://www.youtube.com/watch?v=short")).toBeNull();
   });
 });

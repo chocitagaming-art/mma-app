@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Play, Sparkles } from "lucide-react";
 
+import { FightVideoPlayer } from "@/components/fight-video-player";
 import { MarketOnlyCard } from "@/components/market-corner-tile";
 import { MarketModelComparison } from "@/components/market-model-comparison";
 import { SectionHeading } from "@/components/section-heading";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { marketFavorite } from "@/lib/odds";
 import { getFightDetail } from "@/lib/queries/fights";
 import { parseId } from "@/lib/route-params";
-import { resolveFightVideoUrl } from "@/lib/video";
+import { parseYouTubeId, resolveFightVideoUrl } from "@/lib/video";
 
 type FightDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -52,6 +53,8 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
 
   // Combate sin resultado registrado = pendiente -> ofrecer predicción IA (#36).
   const isUpcoming = !fight.winnerId && !fight.method;
+  // Vídeo curado de YouTube -> reproductor embebido; si no, botón (#43, Fase 10).
+  const youTubeId = isUpcoming ? null : parseYouTubeId(fight.videoUrl);
   // La predicción necesita ambas fichas; un rival TBD (id null) no es comparable.
   const canPredict = fight.red.id != null && fight.blue.id != null;
 
@@ -148,24 +151,33 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
       ) : null}
 
       {!isUpcoming ? (
-        <div className="flex justify-center">
-          <a
-            href={resolveFightVideoUrl(
-              fight.videoUrl,
-              fight.red.name,
-              fight.blue.name,
-              fight.eventName ?? undefined,
-            )}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Ver el combate ${fight.red.name} vs ${fight.blue.name}`}
-          >
-            <Button variant="secondary" size="lg" className="h-11">
-              <Play className="size-4" />
-              {fight.videoUrl ? "Ver combate" : "Buscar combate en YouTube"}
-            </Button>
-          </a>
-        </div>
+        youTubeId ? (
+          <div className="mx-auto w-full max-w-3xl">
+            <FightVideoPlayer
+              videoId={youTubeId}
+              title={`${fight.red.name} vs ${fight.blue.name}`}
+            />
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <a
+              href={resolveFightVideoUrl(
+                fight.videoUrl,
+                fight.red.name,
+                fight.blue.name,
+                fight.eventName ?? undefined,
+              )}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Ver el combate ${fight.red.name} vs ${fight.blue.name}`}
+            >
+              <Button variant="secondary" size="lg" className="h-11">
+                <Play className="size-4" />
+                {fight.videoUrl ? "Ver combate" : "Buscar combate en YouTube"}
+              </Button>
+            </a>
+          </div>
+        )
       ) : null}
 
       <TaleOfTheTape fight={fight} />
