@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { FighterSearchCombobox } from "@/components/fighter-search-combobox";
+import { StrikeSilhouette } from "@/components/fighter/strike-silhouette";
 import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ import {
   formatRecord,
   formatWeightClass,
 } from "@/lib/format";
-import type { PredictionResponse } from "@/lib/prediction";
+import type { FighterHistorySummary, PredictionResponse } from "@/lib/prediction";
 import type {
   FighterComparisonDetail,
   FighterComparisonProfile,
@@ -57,6 +58,36 @@ function humanizeFeatureName(name: string) {
     .replace(/_diff$/u, "")
     .replace(/_/gu, " ")
     .replace(/\b\w/gu, (char) => char.toUpperCase());
+}
+
+// Spanish labels for the model's feature names (the model uses red-blue diffs;
+// feature.name carries the _diff suffix). Falls back to humanize for new keys.
+const FEATURE_LABELS_ES: Record<string, string> = {
+  height_cm: "Altura",
+  reach_cm: "Alcance",
+  age: "Edad",
+  sig_strikes_landed_per_fight: "Golpes significativos por pelea",
+  sig_strike_accuracy: "Precisión de golpeo",
+  knockdowns_per_fight: "Knockdowns por pelea",
+  takedowns_landed_per_fight: "Derribos por pelea",
+  takedown_accuracy: "Precisión de derribo",
+  control_time_seconds_per_fight: "Tiempo de control por pelea",
+  wins_last_5: "Victorias en las últimas 5",
+  total_prior_fights: "Experiencia (peleas previas)",
+  total_rounds_fought: "Asaltos disputados",
+  pct_wins_by_ko: "Victorias por KO (%)",
+  days_since_last_fight: "Días desde la última pelea",
+  ranking_position: "Posición en el ranking",
+  sig_strikes_absorbed_per_fight: "Golpes recibidos por pelea",
+  sig_strike_defense: "Defensa de golpeo",
+  takedowns_absorbed_per_fight: "Derribos recibidos por pelea",
+  takedown_defense: "Defensa de derribo",
+  avg_opponent_prior_win_rate: "Calidad del rival",
+};
+
+function featureLabel(name: string) {
+  const key = name.replace(/_diff$/u, "");
+  return FEATURE_LABELS_ES[key] ?? humanizeFeatureName(name);
 }
 
 function formatFeatureValue(value: number | null) {
@@ -272,6 +303,78 @@ function ProbabilityBar({
   );
 }
 
+function formatSignalPercent(value: number | null) {
+  return value === null ? "N/D" : formatPercentage(value);
+}
+
+// Señales que YA calcula el modelo por esquina (context.redHistory/blueHistory),
+// no diffs. Se diferencian visualmente de "Factores clave" (que son red-blue).
+function CornerSignals({
+  corner,
+  name,
+  history,
+}: {
+  corner: "red" | "blue";
+  name: string;
+  history: FighterHistorySummary;
+}) {
+  const isRed = corner === "red";
+  const rows: { label: string; value: string }[] = [
+    { label: "Racha de victorias", value: `${history.win_streak}` },
+    { label: "Victorias (últ. 5)", value: `${history.wins_last_5} / 5` },
+    {
+      label: "Calidad del rival",
+      value: formatSignalPercent(history.avg_opponent_prior_win_rate),
+    },
+  ];
+  if (history.sig_strike_defense != null) {
+    rows.push({
+      label: "Defensa de golpeo",
+      value: formatPercentage(history.sig_strike_defense),
+    });
+  }
+  if (history.takedown_defense != null) {
+    rows.push({
+      label: "Defensa de derribo",
+      value: formatPercentage(history.takedown_defense),
+    });
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border bg-muted/40 p-5",
+        isRed ? "border-corner-red/30" : "border-corner-blue/30",
+      )}
+    >
+      <p
+        className={cn(
+          "font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
+          isRed ? "text-corner-red" : "text-corner-blue",
+        )}
+      >
+        Esquina {isRed ? "roja" : "azul"}
+      </p>
+      <p className="mt-1 font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">
+        {name}
+      </p>
+      <dl className="mt-4 space-y-2.5">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 border-b border-border/60 pb-2.5 last:border-b-0 last:pb-0"
+          >
+            <dt className="text-sm text-muted-foreground">{row.label}</dt>
+            <dd className="tabular text-sm font-semibold text-foreground">
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 export function MatchupClient({
   initialRedFighter,
   initialBlueFighter,
@@ -483,6 +586,35 @@ export function MatchupClient({
                 {taleRows.map((row) => (
                   <TaleStatRow key={row.label} row={row} />
                 ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Strike silhouettes — instant, no prediction needed */}
+          <section className="space-y-6">
+            <SectionHeading
+              eyebrow="Golpeo"
+              title="Silueta de golpes"
+              description="Dónde conecta y dónde recibe cada peleador, por zona y posición, según su historial registrado."
+            />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-3">
+                <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-corner-red">
+                  {detail.fighterA.name}
+                </p>
+                <StrikeSilhouette
+                  profile={detail.fighterA.strikeProfile}
+                  showHeader={false}
+                />
+              </div>
+              <div className="space-y-3">
+                <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-corner-blue">
+                  {detail.fighterB.name}
+                </p>
+                <StrikeSilhouette
+                  profile={detail.fighterB.strikeProfile}
+                  showHeader={false}
+                />
               </div>
             </div>
           </section>
@@ -766,6 +898,41 @@ export function MatchupClient({
                   </Card>
                 </div>
 
+                {prediction.context.redHistory &&
+                prediction.context.blueHistory ? (
+                  <Card className="border-border bg-card">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-foreground">
+                        <TrendingUp className="size-5 text-primary" />
+                        Señales por esquina
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Indicadores propios de cada peleador (no son diferencias
+                        entre esquinas). &quot;Calidad del rival&quot; es el % medio de
+                        victorias de los oponentes que ha enfrentado.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 sm:grid-cols-2">
+                      <CornerSignals
+                        corner="red"
+                        name={prediction.fighters.red.name}
+                        history={prediction.context.redHistory}
+                      />
+                      <CornerSignals
+                        corner="blue"
+                        name={prediction.fighters.blue.name}
+                        history={prediction.context.blueHistory}
+                      />
+                    </CardContent>
+                    {prediction.context.matchupDate ? (
+                      <p className="px-6 pb-5 text-center font-mono text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">
+                        Señales calculadas a fecha de{" "}
+                        {formatModelDate(prediction.context.matchupDate)}
+                      </p>
+                    ) : null}
+                  </Card>
+                ) : null}
+
                 <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                   <Card className="border-border bg-card">
                     <CardHeader>
@@ -788,7 +955,7 @@ export function MatchupClient({
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <p className="font-medium text-foreground">
-                                  {humanizeFeatureName(feature.name)}
+                                  {featureLabel(feature.name)}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                   Favorece a{" "}

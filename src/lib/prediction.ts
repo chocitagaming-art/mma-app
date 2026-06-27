@@ -32,6 +32,35 @@ export type PredictionFighterProfile = {
   };
 };
 
+// Per-corner history summary the microservice already computes and returns under
+// context.redHistory / context.blueHistory (asdict of FighterHistorySummary in
+// features.py). Snake_case keys mirror the dataclass field names verbatim;
+// latest_prior_fight_date arrives as an ISO date string (json.dumps default=str).
+export type FighterHistorySummary = {
+  total_prior_fights: number;
+  total_rounds_fought: number;
+  sig_strikes_landed_per_fight: number | null;
+  sig_strike_accuracy: number | null;
+  knockdowns_per_fight: number | null;
+  takedowns_landed_per_fight: number | null;
+  takedown_accuracy: number | null;
+  submission_attempts_per_fight: number | null;
+  control_time_seconds_per_fight: number | null;
+  win_streak: number;
+  wins_last_5: number;
+  pct_wins_by_ko: number | null;
+  pct_wins_by_submission: number | null;
+  pct_wins_by_decision: number | null;
+  days_since_last_fight: number | null;
+  ranking_position: number | null;
+  sig_strikes_absorbed_per_fight: number | null;
+  sig_strike_defense: number | null;
+  takedowns_absorbed_per_fight: number | null;
+  takedown_defense: number | null;
+  avg_opponent_prior_win_rate: number | null;
+  latest_prior_fight_date: string | null;
+};
+
 export type PredictionResponse = {
   redProbability: number;
   blueProbability: number;
@@ -44,6 +73,9 @@ export type PredictionResponse = {
     matchupDate: string;
     weightClass: string | null;
     lowConfidence?: boolean;
+    // null when a fighter has no usable history (debutant / missing stats).
+    redHistory?: FighterHistorySummary | null;
+    blueHistory?: FighterHistorySummary | null;
   };
   fighters: {
     red: PredictionFighterProfile;

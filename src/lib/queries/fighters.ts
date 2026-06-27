@@ -763,45 +763,74 @@ export async function getFighterComparisonDetail(
     return null;
   }
 
-  const aggregateRows = await sql<AggregateRow & { fighter_id: number }>(
-    `select
-      fighter_id,
-      sum(sig_strikes_landed)::text as sig_strikes_landed,
-      sum(sig_strikes_attempted)::text as sig_strikes_attempted,
-      sum(takedowns_landed)::text as takedowns_landed,
-      sum(takedowns_attempted)::text as takedowns_attempted,
-      sum(submission_attempts)::text as submission_attempts,
-      sum(control_time_seconds)::text as control_time_seconds,
-      sum(knockdowns)::text as knockdowns,
-      count(*)::text as total_fight_stats
-    from fight_stats
-    where fighter_id in ($1, $2)
-    group by fighter_id`,
-    [fighterAId, fighterBId],
-  );
-
-  const directMatchupRows = await sql<DirectMatchupRow>(
-    `select
-      fi.id as fight_id,
-      e.name as event_name,
-      e.event_date,
-      fi.winner_id,
-      fi.method,
-      fi.end_round,
-      fi.end_time,
-      fi.weight_class
-    from fights fi
-    left join events e on e.id = fi.event_id
-    where
-      (fi.fighter_red_id = $1 and fi.fighter_blue_id = $2)
-      or
-      (fi.fighter_red_id = $2 and fi.fighter_blue_id = $1)
-    order by e.event_date desc nulls last, fi.id desc`,
-    [fighterAId, fighterBId],
-  );
+  // Aggregates, direct matchups y el strike breakdown (ofensa = lo que conecta,
+  // defensa = lo que recibe del rival) son independientes: una sola pasada en
+  // paralelo en vez de round-trips en serie (espeja getFighterDetail). Reutiliza
+  // strikeBreakdownSelect y el patrón de getFighterStrikeProfile (#45).
+  const [aggregateRows, directMatchupRows, strikeOffenseRows, strikeDefenseRows] =
+    await Promise.all([
+      sql<AggregateRow & { fighter_id: number }>(
+        `select
+          fighter_id,
+          sum(sig_strikes_landed)::text as sig_strikes_landed,
+          sum(sig_strikes_attempted)::text as sig_strikes_attempted,
+          sum(takedowns_landed)::text as takedowns_landed,
+          sum(takedowns_attempted)::text as takedowns_attempted,
+          sum(submission_attempts)::text as submission_attempts,
+          sum(control_time_seconds)::text as control_time_seconds,
+          sum(knockdowns)::text as knockdowns,
+          count(*)::text as total_fight_stats
+        from fight_stats
+        where fighter_id in ($1, $2)
+        group by fighter_id`,
+        [fighterAId, fighterBId],
+      ),
+      sql<DirectMatchupRow>(
+        `select
+          fi.id as fight_id,
+          e.name as event_name,
+          e.event_date,
+          fi.winner_id,
+          fi.method,
+          fi.end_round,
+          fi.end_time,
+          fi.weight_class
+        from fights fi
+        left join events e on e.id = fi.event_id
+        where
+          (fi.fighter_red_id = $1 and fi.fighter_blue_id = $2)
+          or
+          (fi.fighter_red_id = $2 and fi.fighter_blue_id = $1)
+        order by e.event_date desc nulls last, fi.id desc`,
+        [fighterAId, fighterBId],
+      ),
+      sql<StrikeBreakdownRow & { fighter_id: number }>(
+        `select fighter_id, ${strikeBreakdownSelect("")}
+         from fight_stats
+         where fighter_id in ($1, $2)
+         group by fighter_id`,
+        [fighterAId, fighterBId],
+      ),
+      sql<StrikeBreakdownRow & { fighter_id: number }>(
+        `select me.fighter_id, ${strikeBreakdownSelect("opp.")}
+         from fight_stats me
+         join fight_stats opp
+           on opp.fight_id = me.fight_id
+          and opp.fighter_id <> me.fighter_id
+         where me.fighter_id in ($1, $2)
+         group by me.fighter_id`,
+        [fighterAId, fighterBId],
+      ),
+    ]);
 
   const aggregateMap = new Map(
     aggregateRows.map((row) => [row.fighter_id, mapComparisonAggregate(row)]),
+  );
+  const offenseMap = new Map(
+    strikeOffenseRows.map((row) => [row.fighter_id, mapStrikeBreakdown(row)]),
+  );
+  const defenseMap = new Map(
+    strikeDefenseRows.map((row) => [row.fighter_id, mapStrikeBreakdown(row)]),
   );
 
   const profileMap = new Map<number, FighterComparisonProfile>(
@@ -810,6 +839,10 @@ export async function getFighterComparisonDetail(
       {
         ...mapFighter(row),
         aggregateStats: aggregateMap.get(row.id) ?? mapComparisonAggregate(),
+        strikeProfile: {
+          offense: offenseMap.get(row.id) ?? mapStrikeBreakdown(),
+          defense: defenseMap.get(row.id) ?? mapStrikeBreakdown(),
+        },
       },
     ]),
   );

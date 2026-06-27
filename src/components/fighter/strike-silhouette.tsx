@@ -167,17 +167,27 @@ function Panel({
   );
 }
 
-export function StrikeSilhouette({ profile }: { profile: FighterStrikeProfile }) {
+export function StrikeSilhouette({
+  profile,
+  // The head-to-head reuses this side by side under a shared section heading, so
+  // it hides the internal title to avoid repeating "Silueta de golpes" 3 times.
+  showHeader = true,
+}: {
+  profile: FighterStrikeProfile;
+  showHeader?: boolean;
+}) {
   return (
     <section className={cn(PREMIUM_TILE, "space-y-4 p-5")}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Silueta de golpes
-        </p>
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
-          Intensidad = volumen
-        </p>
-      </div>
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Silueta de golpes
+          </p>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+            Intensidad = volumen
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-4">
         <Panel title="Ofensiva" icon={Crosshair} data={profile.offense} />
         <Panel title="Defensiva" icon={Shield} data={profile.defense} />

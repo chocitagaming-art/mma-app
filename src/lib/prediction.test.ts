@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PredictionFighterProfile, PredictionResponse } from "./prediction";
+import type {
+  FighterHistorySummary,
+  PredictionFighterProfile,
+  PredictionResponse,
+} from "./prediction";
 
 // Controlamos la respuesta de Anthropic por test sin tocar la red real.
 const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
@@ -40,6 +44,33 @@ function profile(id: number, name: string): PredictionFighterProfile {
   };
 }
 
+function historySummary(): FighterHistorySummary {
+  return {
+    total_prior_fights: 12,
+    total_rounds_fought: 30,
+    sig_strikes_landed_per_fight: 50,
+    sig_strike_accuracy: 0.5,
+    knockdowns_per_fight: 0.2,
+    takedowns_landed_per_fight: 1.5,
+    takedown_accuracy: 0.4,
+    submission_attempts_per_fight: 0.5,
+    control_time_seconds_per_fight: 120,
+    win_streak: 3,
+    wins_last_5: 4,
+    pct_wins_by_ko: 0.4,
+    pct_wins_by_submission: 0.2,
+    pct_wins_by_decision: 0.4,
+    days_since_last_fight: 90,
+    ranking_position: 5,
+    sig_strikes_absorbed_per_fight: 40,
+    sig_strike_defense: 0.55,
+    takedowns_absorbed_per_fight: 0.8,
+    takedown_defense: 0.7,
+    avg_opponent_prior_win_rate: 0.52,
+    latest_prior_fight_date: "2026-03-20",
+  };
+}
+
 function buildRawPrediction(): RawPrediction {
   return {
     redProbability: 0.62,
@@ -55,6 +86,8 @@ function buildRawPrediction(): RawPrediction {
       matchupDate: "2026-06-25",
       weightClass: "Lightweight",
       lowConfidence: false,
+      redHistory: historySummary(),
+      blueHistory: historySummary(),
     },
     fighters: { red: profile(1, "Red Fighter"), blue: profile(2, "Blue Fighter") },
     modelTrainedAt: "2026-06-25",

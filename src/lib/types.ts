@@ -160,6 +160,8 @@ export type FighterComparisonProfile = Fighter & {
   fightCount: number;
   latestWeightClass: string | null;
   aggregateStats: FighterComparisonAverages;
+  // Silueta de golpes (ofensa + defensa) para el cara a cara (#45).
+  strikeProfile: FighterStrikeProfile;
 };
 
 export type DirectMatchupFight = {
