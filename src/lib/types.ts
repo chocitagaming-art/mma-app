@@ -321,7 +321,8 @@ export type UpcomingEventItem = {
 };
 
 export type FightCompetitor = {
-  id: number;
+  // null cuando el rival está por anunciar (combate próximo TBD): no hay ficha.
+  id: number | null;
   name: string;
   nickname: string | null;
   headshotUrl: string | null;

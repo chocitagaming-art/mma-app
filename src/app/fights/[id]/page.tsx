@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatPercentage } from "@/lib/format";
 import { marketFavorite } from "@/lib/odds";
 import { getFightDetail } from "@/lib/queries/fights";
+import { parseId } from "@/lib/route-params";
 import { resolveFightVideoUrl } from "@/lib/video";
 
 type FightDetailPageProps = {
@@ -19,7 +20,8 @@ export async function generateMetadata({
   params,
 }: FightDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const fight = await getFightDetail(Number(id));
+  const fightId = parseId(id);
+  const fight = fightId != null ? await getFightDetail(fightId) : null;
 
   if (!fight) {
     return {
@@ -35,7 +37,13 @@ export async function generateMetadata({
 
 export default async function FightDetailPage({ params }: FightDetailPageProps) {
   const { id } = await params;
-  const fight = await getFightDetail(Number(id));
+  const fightId = parseId(id);
+
+  if (fightId == null) {
+    notFound();
+  }
+
+  const fight = await getFightDetail(fightId);
 
   if (!fight) {
     notFound();
@@ -43,6 +51,8 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
 
   // Combate sin resultado registrado = pendiente -> ofrecer predicción IA (#36).
   const isUpcoming = !fight.winnerId && !fight.method;
+  // La predicción necesita ambas fichas; un rival TBD (id null) no es comparable.
+  const canPredict = fight.red.id != null && fight.blue.id != null;
 
   // Favorito del mercado según las cuotas de las casas de apuestas (#41).
   const favorite = marketFavorite(fight.oddsRed, fight.oddsBlue);
@@ -64,22 +74,31 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
           <p className="relative font-mono text-xs font-semibold uppercase tracking-[0.22em] text-primary">
             Combate por disputarse
           </p>
-          <h2 className="relative mt-2 font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
-            ¿Quién se lleva la victoria?
-          </h2>
-          <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Deja que nuestro modelo de machine learning analice a ambos peleadores
-            y prediga el resultado.
-          </p>
-          <Link
-            href={`/enfrentamiento?red=${fight.red.id}&blue=${fight.blue.id}`}
-            className="relative mt-5 inline-flex"
-          >
-            <Button size="lg" className="h-11">
-              <Sparkles className="size-4" />
-              Predecir esta pelea con IA
-            </Button>
-          </Link>
+          {canPredict ? (
+            <>
+              <h2 className="relative mt-2 font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+                ¿Quién se lleva la victoria?
+              </h2>
+              <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                Deja que nuestro modelo de machine learning analice a ambos peleadores
+                y prediga el resultado.
+              </p>
+              <Link
+                href={`/enfrentamiento?red=${fight.red.id}&blue=${fight.blue.id}`}
+                className="relative mt-5 inline-flex"
+              >
+                <Button size="lg" className="h-11">
+                  <Sparkles className="size-4" />
+                  Predecir esta pelea con IA
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              El rival aún está por confirmar. Vuelve cuando se anuncie el
+              emparejamiento completo.
+            </p>
+          )}
         </div>
       ) : null}
 

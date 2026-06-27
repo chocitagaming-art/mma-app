@@ -10,6 +10,7 @@ import { formatRecord, formatWeightClass } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFighters } from "@/lib/queries/fighters";
+import { parsePageParam } from "@/lib/route-params";
 
 type FightersPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -26,7 +27,7 @@ function getSingleValue(value: string | string[] | undefined) {
 
 export default async function FightersPage({ searchParams }: FightersPageProps) {
   const params = await searchParams;
-  const page = Number(getSingleValue(params.page) || "1");
+  const page = parsePageParam(params.page);
   const query = getSingleValue(params.q);
   const weightClass = getSingleValue(params.weightClass);
   const stance = getSingleValue(params.stance);

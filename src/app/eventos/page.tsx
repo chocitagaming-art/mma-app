@@ -7,6 +7,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { getPastEvents, getUpcomingEvents } from "@/lib/queries/events";
+import { parsePageParam } from "@/lib/route-params";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -31,7 +32,7 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
   const params = await searchParams;
   // Default to upcoming events; past events require an explicit ?view=pasados.
   const view = getSingleValue(params.view) === "pasados" ? "pasados" : "proximos";
-  const page = Number(getSingleValue(params.page) || "1");
+  const page = parsePageParam(params.page);
 
   const result = view === "pasados" ? await getPastEvents(page) : null;
   const upcoming = view === "proximos" ? await getUpcomingEvents() : null;

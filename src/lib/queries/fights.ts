@@ -16,28 +16,30 @@ type FightRow = {
   video_url: string | null;
   odds_red: string | null;
   odds_blue: string | null;
-  red_id: number;
-  red_name: string;
+  red_fighter_name: string;
+  red_id: number | null;
+  red_name: string | null;
   red_nickname: string | null;
   red_headshot: string | null;
   red_nationality: string | null;
   red_stance: string | null;
   red_height_cm: string | null;
   red_reach_cm: string | null;
-  red_wins: number;
-  red_losses: number;
-  red_draws: number;
-  blue_id: number;
-  blue_name: string;
+  red_wins: number | null;
+  red_losses: number | null;
+  red_draws: number | null;
+  blue_fighter_name: string;
+  blue_id: number | null;
+  blue_name: string | null;
   blue_nickname: string | null;
   blue_headshot: string | null;
   blue_nationality: string | null;
   blue_stance: string | null;
   blue_height_cm: string | null;
   blue_reach_cm: string | null;
-  blue_wins: number;
-  blue_losses: number;
-  blue_draws: number;
+  blue_wins: number | null;
+  blue_losses: number | null;
+  blue_draws: number | null;
 };
 
 type FightStatsRow = {
@@ -94,6 +96,8 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       fi.video_url,
       fi.odds_red,
       fi.odds_blue,
+      fi.fighter_red_name as red_fighter_name,
+      fi.fighter_blue_name as blue_fighter_name,
       red.id as red_id,
       red.name as red_name,
       red.nickname as red_nickname,
@@ -118,8 +122,8 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
       blue.draws as blue_draws
     from fights fi
     left join events e on e.id = fi.event_id
-    inner join fighters red on red.id = fi.fighter_red_id
-    inner join fighters blue on blue.id = fi.fighter_blue_id
+    left join fighters red on red.id = fi.fighter_red_id
+    left join fighters blue on blue.id = fi.fighter_blue_id
     where fi.id = $1`,
     [id],
   );
@@ -167,29 +171,30 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
     oddsBlue: fight.odds_blue != null ? Number(fight.odds_blue) : null,
     red: {
       id: fight.red_id,
-      name: fight.red_name,
+      // fighter_red_name siempre viene relleno; cubre el caso TBD (red.id NULL).
+      name: fight.red_name ?? fight.red_fighter_name,
       nickname: fight.red_nickname,
       headshotUrl: fight.red_headshot,
       nationality: fight.red_nationality,
       stance: fight.red_stance,
       heightCm: fight.red_height_cm ? Number(fight.red_height_cm) : null,
       reachCm: fight.red_reach_cm ? Number(fight.red_reach_cm) : null,
-      wins: fight.red_wins,
-      losses: fight.red_losses,
-      draws: fight.red_draws,
+      wins: fight.red_wins ?? 0,
+      losses: fight.red_losses ?? 0,
+      draws: fight.red_draws ?? 0,
     },
     blue: {
       id: fight.blue_id,
-      name: fight.blue_name,
+      name: fight.blue_name ?? fight.blue_fighter_name,
       nickname: fight.blue_nickname,
       headshotUrl: fight.blue_headshot,
       nationality: fight.blue_nationality,
       stance: fight.blue_stance,
       heightCm: fight.blue_height_cm ? Number(fight.blue_height_cm) : null,
       reachCm: fight.blue_reach_cm ? Number(fight.blue_reach_cm) : null,
-      wins: fight.blue_wins,
-      losses: fight.blue_losses,
-      draws: fight.blue_draws,
+      wins: fight.blue_wins ?? 0,
+      losses: fight.blue_losses ?? 0,
+      draws: fight.blue_draws ?? 0,
     },
     redStats,
     blueStats,

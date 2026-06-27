@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatNewsCategory } from "@/lib/format";
 import { getNews } from "@/lib/queries/news";
+import { parsePageParam } from "@/lib/route-params";
 
 type NewsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -38,7 +39,7 @@ function truncateSummary(summary: string | null, maxLength = 180) {
 export default async function NewsPage({ searchParams }: NewsPageProps) {
   const params = await searchParams;
   const category = getSingleValue(params.category);
-  const page = Number(getSingleValue(params.page) || "1");
+  const page = parsePageParam(params.page);
   const result = await getNews(category, page);
 
   // Cambiar de categoría reinicia a la primera página.

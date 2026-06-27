@@ -43,6 +43,7 @@ import {
   getFighterStrikeProfile,
   getFighterUpcomingBouts,
 } from "@/lib/queries/fighters";
+import { parseId } from "@/lib/route-params";
 
 type FighterDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -52,7 +53,8 @@ export async function generateMetadata({
   params,
 }: FighterDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const detail = await getFighterDetail(Number(id));
+  const fighterId = parseId(id);
+  const detail = fighterId != null ? await getFighterDetail(fighterId) : null;
 
   if (!detail) {
     return {
@@ -70,7 +72,12 @@ export default async function FighterDetailPage({
   params,
 }: FighterDetailPageProps) {
   const { id } = await params;
-  const fighterId = Number(id);
+  const fighterId = parseId(id);
+
+  if (fighterId == null) {
+    notFound();
+  }
+
   const [detail, strikeProfile, upcomingBouts] = await Promise.all([
     getFighterDetail(fighterId),
     getFighterStrikeProfile(fighterId),

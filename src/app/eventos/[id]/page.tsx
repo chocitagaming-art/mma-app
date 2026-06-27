@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
 import { EventBoutRow } from "@/components/event-bout-row";
 import { formatDate } from "@/lib/format";
 import { getEventDetail } from "@/lib/queries/events";
+import { parseId } from "@/lib/route-params";
 import type { EventBout } from "@/lib/types";
 
 type EventDetailPageProps = {
@@ -62,7 +63,8 @@ function groupBoutsBySegment(bouts: EventBout[]): BoutSection[] {
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const event = await getEventDetail(Number(id));
+  const eventId = parseId(id);
+  const event = eventId != null ? await getEventDetail(eventId) : null;
   return {
     title: event ? `${event.name}` : "Evento",
   };
@@ -70,7 +72,13 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
-  const event = await getEventDetail(Number(id));
+  const eventId = parseId(id);
+
+  if (eventId == null) {
+    notFound();
+  }
+
+  const event = await getEventDetail(eventId);
 
   if (!event) {
     notFound();
