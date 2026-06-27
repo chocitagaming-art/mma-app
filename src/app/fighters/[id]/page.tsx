@@ -7,6 +7,7 @@ import { CountryFlag } from "@/components/country-flag";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
 import { PerFightBars } from "@/components/fighter/per-fight-bars";
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+import { RankingTrajectory } from "@/components/fighter/ranking-trajectory";
 import { StatDonut } from "@/components/fighter/stat-donut";
 import { StrikeSilhouette } from "@/components/fighter/strike-silhouette";
 import { UpcomingBouts } from "@/components/fighter/upcoming-bouts";
@@ -43,6 +44,7 @@ import {
   getFighterStrikeProfile,
   getFighterUpcomingBouts,
 } from "@/lib/queries/fighters";
+import { getFighterRankingHistory } from "@/lib/queries/rankings";
 import { parseId } from "@/lib/route-params";
 
 type FighterDetailPageProps = {
@@ -78,11 +80,13 @@ export default async function FighterDetailPage({
     notFound();
   }
 
-  const [detail, strikeProfile, upcomingBouts] = await Promise.all([
-    getFighterDetail(fighterId),
-    getFighterStrikeProfile(fighterId),
-    getFighterUpcomingBouts(fighterId),
-  ]);
+  const [detail, strikeProfile, upcomingBouts, rankingHistory] =
+    await Promise.all([
+      getFighterDetail(fighterId),
+      getFighterStrikeProfile(fighterId),
+      getFighterUpcomingBouts(fighterId),
+      getFighterRankingHistory(fighterId),
+    ]);
 
   if (!detail) {
     notFound();
@@ -255,6 +259,17 @@ export default async function FighterDetailPage({
           </CardContent>
         </Card>
       </section>
+
+      {rankingHistory.length > 0 ? (
+        <section className="space-y-6">
+          <SectionHeading
+            eyebrow="Ranking"
+            title="Trayectoria de ranking"
+            description={`Evolución de la posición de ${fighter.name} en el ranking oficial a lo largo del tiempo. El #1 (y el campeón) aparecen arriba.`}
+          />
+          <RankingTrajectory history={rankingHistory} />
+        </section>
+      ) : null}
 
       {aggregateStats.totalFightStats > 0 || winMethods.total > 0 ? (
         <section className="space-y-6">

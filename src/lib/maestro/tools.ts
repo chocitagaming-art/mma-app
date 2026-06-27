@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { sql } from "@/lib/db";
 import { getFighterComparisonDetail } from "@/lib/queries/fighters";
+import { getFighterRankingHistory } from "@/lib/queries/rankings";
+import { buildRankingTrajectory } from "@/lib/ranking-trajectory";
 import { DIVISION_SLUGS } from "@/lib/maestro/prompt";
 
 // El modelo pasa argumentos libres; validamos y acotamos SIEMPRE antes de tocar SQL.
@@ -297,6 +299,34 @@ async function noticias(input: unknown): Promise<ToolResult> {
   };
 }
 
+async function trayectoriaRanking(input: unknown): Promise<ToolResult> {
+  // safeParse para devolver {error} legible (mismo shape que el resto) en vez de
+  // lanzar ante un id ausente o inválido.
+  const parsed = idSchema.safeParse((input as { id?: unknown })?.id);
+  if (!parsed.success) {
+    return { error: "Necesito un id de luchador válido (usa buscar_luchador primero)." };
+  }
+
+  const rows = await getFighterRankingHistory(parsed.data);
+  if (rows.length === 0) {
+    return {
+      trayectoria: [],
+      nota: "Este luchador no tiene historial de ranking registrado.",
+    };
+  }
+
+  const { series } = buildRankingTrajectory(rows);
+  return {
+    trayectoria: series.map((s) => ({
+      division: s.label,
+      puntos: s.points.map((p) => ({
+        fecha: p.date,
+        posicion: p.isChampion ? "Campeón" : `#${p.position}`,
+      })),
+    })),
+  };
+}
+
 const HANDLERS: Record<string, (input: unknown) => Promise<ToolResult>> = {
   buscar_luchador: buscarLuchador,
   ficha_y_stats: fichaYStats,
@@ -305,6 +335,7 @@ const HANDLERS: Record<string, (input: unknown) => Promise<ToolResult>> = {
   ranking,
   comparar,
   noticias,
+  trayectoria_ranking: trayectoriaRanking,
 };
 
 export async function runMaestroTool(name: string, input: unknown): Promise<ToolResult> {

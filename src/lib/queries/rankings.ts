@@ -1,5 +1,12 @@
+import { cache } from "react";
+
 import { sql } from "@/lib/db";
-import type { DivisionRanking, RankingEntry, RankingsResult } from "@/lib/types";
+import type {
+  DivisionRanking,
+  FighterRankingHistoryEntry,
+  RankingEntry,
+  RankingsResult,
+} from "@/lib/types";
 
 type RankingRow = {
   division: string;
@@ -128,3 +135,47 @@ export async function getRankings(): Promise<RankingsResult> {
 
   return { snapshotDate, divisions };
 }
+
+type RankingHistoryRow = {
+  division: string;
+  rank_position: number;
+  is_champion: boolean;
+  snapshot_date: string;
+};
+
+// Historial completo de ranking de un luchador (todas las divisiones y fechas),
+// ordenado cronológicamente. cache(): el detalle del luchador puede pedirlo más
+// de una vez por request (render + tool del Maestro) — dedupe intra-request.
+export const getFighterRankingHistory = cache(async (
+  fighterId: number,
+): Promise<FighterRankingHistoryEntry[]> => {
+  let rows: RankingHistoryRow[];
+
+  try {
+    rows = await sql<RankingHistoryRow>(
+      `select r.division,
+              r.rank_position,
+              r.is_champion,
+              r.snapshot_date::text as snapshot_date
+       from rankings r
+       where r.fighter_id = $1
+       order by r.snapshot_date asc, r.division asc`,
+      [fighterId],
+    );
+  } catch (error) {
+    // La tabla `rankings` puede no estar migrada/poblada todavía: degradamos a
+    // vacío en vez de romper la ficha del luchador.
+    console.error(
+      "getFighterRankingHistory: la tabla rankings aún no está lista:",
+      error,
+    );
+    return [];
+  }
+
+  return rows.map((row) => ({
+    division: row.division,
+    rankPosition: row.rank_position,
+    snapshotDate: row.snapshot_date,
+    isChampion: row.is_champion,
+  }));
+});

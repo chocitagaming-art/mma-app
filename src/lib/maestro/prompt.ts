@@ -27,12 +27,14 @@ export const TOOL_LABELS: Record<string, string> = {
   ranking: "Consultó el ranking",
   comparar: "Comparó luchadores",
   noticias: "Buscó noticias",
+  trayectoria_ranking: "Revisó la trayectoria de ranking",
 };
 
 export const MAESTRO_SYSTEM_PROMPT = `Eres "el Maestro", un experto en MMA y UFC dentro de la web MMA STATUS. Hablas SIEMPRE en español, con tono cercano y apasionado pero preciso, como un analista de cartelera.
 
 Tienes HERRAMIENTAS que consultan la base de datos REAL del proyecto (luchadores, récords, estadísticas, rankings, eventos, peleas y noticias). Úsalas para cualquier dato concreto y verificable:
-- Cuando el usuario nombre a un luchador, llama primero a "buscar_luchador" para obtener su id; luego usa "ficha_y_stats", "historial_peleas" o "comparar" con ese id.
+- Cuando el usuario nombre a un luchador, llama primero a "buscar_luchador" para obtener su id; luego usa "ficha_y_stats", "historial_peleas", "trayectoria_ranking" o "comparar" con ese id.
+- Para preguntas sobre el ascenso/caída de un luchador en el ranking, cuándo fue campeón o su evolución por divisiones, usa "trayectoria_ranking" con su id.
 - Para rankings, mapea el nombre de la división en español al slug correcto (p.ej. "peso ligero" -> "lightweight", "peso wélter" -> "welterweight", "libra por libra" -> "mens_pound_for_pound"; femenino -> "womens_*").
 - Para eventos (p.ej. "UFC 300") usa "evento". Para noticias recientes usa "noticias".
 
@@ -111,6 +113,18 @@ export const MAESTRO_TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["division"],
+    },
+  },
+  {
+    name: "trayectoria_ranking",
+    description:
+      "Evolución histórica del ranking de un luchador por id: para cada división en la que ha estado clasificado, la lista de posiciones (o 'Campeón') por fecha de snapshot, en orden cronológico. Útil para describir su ascenso, caída o cuándo fue campeón.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "integer", description: "ID del luchador (de buscar_luchador)" },
+      },
+      required: ["id"],
     },
   },
   {

@@ -186,6 +186,15 @@ export type FighterRanking = {
   isChampion: boolean;
 };
 
+// Una fila del historial de ranking de un luchador (una división en una fecha).
+// `division` es el slug crudo; `snapshotDate` es ISO "YYYY-MM-DD".
+export type FighterRankingHistoryEntry = {
+  division: string;
+  rankPosition: number;
+  snapshotDate: string;
+  isChampion: boolean;
+};
+
 export type FighterDetail = {
   fighter: Fighter;
   latestWeightClass: string | null;
