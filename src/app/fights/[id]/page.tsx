@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Play, Sparkles, TrendingUp } from "lucide-react";
+import { Play, Sparkles } from "lucide-react";
 
+import { MarketOnlyCard } from "@/components/market-corner-tile";
+import { MarketModelComparison } from "@/components/market-model-comparison";
 import { SectionHeading } from "@/components/section-heading";
 import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
-import { formatPercentage } from "@/lib/format";
 import { marketFavorite } from "@/lib/odds";
 import { getFightDetail } from "@/lib/queries/fights";
 import { parseId } from "@/lib/route-params";
@@ -57,6 +58,19 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
   // Favorito del mercado según las cuotas de las casas de apuestas (#41).
   const favorite = marketFavorite(fight.oddsRed, fight.oddsBlue);
 
+  // La comparación inline Mercado vs Modelo es una feature de combates POR
+  // DISPUTARSE: necesita cuotas válidas (favorite), ambas fichas (canPredict) y
+  // que la pelea siga pendiente (isUpcoming). Cuando se muestra, ella es el CTA
+  // de predicción primario, así que el hero no duplica su botón "Predecir con IA".
+  // Una pelea ya finalizada con cuotas registradas cae al MarketOnlyCard estático.
+  const showComparison =
+    isUpcoming &&
+    favorite != null &&
+    fight.red.id != null &&
+    fight.blue.id != null &&
+    fight.oddsRed != null &&
+    fight.oddsBlue != null;
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <SectionHeading
@@ -79,19 +93,28 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
               <h2 className="relative mt-2 font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
                 ¿Quién se lleva la victoria?
               </h2>
-              <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                Deja que nuestro modelo de machine learning analice a ambos peleadores
-                y prediga el resultado.
-              </p>
-              <Link
-                href={`/enfrentamiento?red=${fight.red.id}&blue=${fight.blue.id}`}
-                className="relative mt-5 inline-flex"
-              >
-                <Button size="lg" className="h-11">
-                  <Sparkles className="size-4" />
-                  Predecir esta pelea con IA
-                </Button>
-              </Link>
+              {showComparison ? (
+                <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                  Compara la probabilidad implícita del mercado con la del modelo
+                  justo aquí abajo.
+                </p>
+              ) : (
+                <>
+                  <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                    Deja que nuestro modelo de machine learning analice a ambos
+                    peleadores y prediga el resultado.
+                  </p>
+                  <Link
+                    href={`/enfrentamiento?red=${fight.red.id}&blue=${fight.blue.id}`}
+                    className="relative mt-5 inline-flex"
+                  >
+                    <Button size="lg" className="h-11">
+                      <Sparkles className="size-4" />
+                      Predecir esta pelea con IA
+                    </Button>
+                  </Link>
+                </>
+              )}
             </>
           ) : (
             <p className="relative mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -102,48 +125,26 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         </div>
       ) : null}
 
-      {favorite ? (
-        <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <div className="flex items-center justify-center gap-2">
-            <TrendingUp className="size-4 text-primary" />
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Favorito del mercado
-            </p>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div
-              className={`rounded-xl border p-4 text-center ${favorite.favorite === "red" ? "border-primary/40 bg-primary/5" : "border-border"}`}
-            >
-              <p className="truncate font-display text-lg font-bold uppercase text-foreground">
-                {fight.red.name}
-              </p>
-              <p className="tabular mt-1 text-2xl font-bold text-foreground">
-                {formatPercentage(favorite.redImplied)}
-              </p>
-              <p className="font-mono text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-                Cuota {fight.oddsRed?.toFixed(2)}
-                {favorite.favorite === "red" ? " · favorito" : ""}
-              </p>
-            </div>
-            <div
-              className={`rounded-xl border p-4 text-center ${favorite.favorite === "blue" ? "border-primary/40 bg-primary/5" : "border-border"}`}
-            >
-              <p className="truncate font-display text-lg font-bold uppercase text-foreground">
-                {fight.blue.name}
-              </p>
-              <p className="tabular mt-1 text-2xl font-bold text-foreground">
-                {formatPercentage(favorite.blueImplied)}
-              </p>
-              <p className="font-mono text-[0.7rem] uppercase tracking-wide text-muted-foreground">
-                Cuota {fight.oddsBlue?.toFixed(2)}
-                {favorite.favorite === "blue" ? " · favorito" : ""}
-              </p>
-            </div>
-          </div>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Probabilidad implícita de las casas de apuestas (sin margen).
-          </p>
-        </div>
+      {favorite && fight.oddsRed != null && fight.oddsBlue != null ? (
+        showComparison && fight.red.id != null && fight.blue.id != null ? (
+          <MarketModelComparison
+            redFighterId={fight.red.id}
+            blueFighterId={fight.blue.id}
+            redName={fight.red.name}
+            blueName={fight.blue.name}
+            oddsRed={fight.oddsRed}
+            oddsBlue={fight.oddsBlue}
+            market={favorite}
+          />
+        ) : (
+          <MarketOnlyCard
+            redName={fight.red.name}
+            blueName={fight.blue.name}
+            oddsRed={fight.oddsRed}
+            oddsBlue={fight.oddsBlue}
+            market={favorite}
+          />
+        )
       ) : null}
 
       {!isUpcoming ? (
