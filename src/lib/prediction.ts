@@ -112,20 +112,30 @@ export async function generatePredictionExplanation(
     `Stats azul: ${JSON.stringify(data.fighters.blue.aggregate_stats)}`,
   ].join("\n");
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    messages: [{ role: "user", content: prompt }],
-  });
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
 
-  const text = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("\n")
-    .trim();
+    const text = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
 
-  return {
-    explanation: text || buildFallbackExplanation(data),
-    explanationSource: text ? ("anthropic" as const) : ("fallback" as const),
-  };
+    return {
+      explanation: text || buildFallbackExplanation(data),
+      explanationSource: text ? ("anthropic" as const) : ("fallback" as const),
+    };
+  } catch (error) {
+    // Anthropic puede fallar (timeout, 429, 529, red). La predicción ML ya está
+    // calculada, así que degradamos al resumen local en vez de tumbar /predict.
+    console.error("[prediction] Anthropic falló; se usa la explicación de respaldo", error);
+    return {
+      explanation: buildFallbackExplanation(data),
+      explanationSource: "fallback" as const,
+    };
+  }
 }

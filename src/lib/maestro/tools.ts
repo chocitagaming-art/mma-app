@@ -241,6 +241,9 @@ async function comparar(input: unknown): Promise<ToolResult> {
   const obj = (input ?? {}) as { a?: unknown; b?: unknown };
   const a = idSchema.parse(obj.a);
   const b = idSchema.parse(obj.b);
+  if (a === b) {
+    return { error: "Es el mismo luchador; elige dos luchadores distintos para comparar." };
+  }
   const detail = await getFighterComparisonDetail(a, b);
   if (!detail) return { error: "No encontré a uno de los dos luchadores." };
   const trim = (p: (typeof detail)["fighterA"]) => ({
