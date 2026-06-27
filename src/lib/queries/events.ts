@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { sql } from "@/lib/db";
 import type {
   EventBout,
@@ -194,7 +196,11 @@ type BoutRow = {
   blue_draws: number | null;
 };
 
-export async function getEventDetail(id: number): Promise<EventDetail | null> {
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getEventDetail = cache(async (
+  id: number,
+): Promise<EventDetail | null> => {
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url,
@@ -299,4 +305,4 @@ export async function getEventDetail(id: number): Promise<EventDetail | null> {
     headliner: event.headliner,
     bouts,
   };
-}
+});

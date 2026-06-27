@@ -8,8 +8,10 @@ import { getRankings } from "@/lib/queries/rankings";
 import { cn } from "@/lib/utils";
 import type { DivisionRanking } from "@/lib/types";
 
-// Data comes live from the DB; render on each request (no build-time DB call).
-export const dynamic = "force-dynamic";
+// Los rankings oficiales se actualizan por snapshots (cadencia diaria/semanal),
+// no en vivo. ISR: servir estático y revalidar cada hora en vez de consultar la BD
+// en cada request (#33).
+export const revalidate = 3600;
 
 function DivisionGroup({
   label,

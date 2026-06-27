@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 import { getRecentNews } from "@/lib/queries/news";
 
-// Data comes live from the DB; render on each request (no build-time DB call).
-export const dynamic = "force-dynamic";
+// Home data (stats, destacados, noticias) cambia como mucho a diario, no en vivo.
+// ISR: servir estático y revalidar cada hora en vez de consultar la BD en cada
+// request (#33). Las páginas que dependen de query params del usuario siguen dinámicas.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: { absolute: "MMA STATUS · Perfiles de peleadores UFC y análisis de peleas" },
@@ -22,7 +24,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [stats, featuredFighters, marqueeNews] = await Promise.all([
+  // Noticias para el marquee (12 recientes, con o sin foto). La rejilla pide
+  // aparte sus 6 con foto (paridad visual exacta); con ISR ambas consultas solo
+  // corren al revalidar, así que el coste extra es irrelevante (#68/#33).
+  const [stats, featuredFighters, recentNews] = await Promise.all([
     getHomeStats(),
     getFeaturedFighters(),
     getRecentNews(12),
@@ -114,7 +119,7 @@ export default async function HomePage() {
       </section>
 
       {/* Marquee de noticias (se desplaza derecha→izquierda, clicable) */}
-      <NewsMarquee articles={marqueeNews} />
+      <NewsMarquee articles={recentNews} />
 
       {/* Noticias recientes + columna de vídeos UFC (estilo ufc.com) */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
@@ -132,7 +137,7 @@ export default async function HomePage() {
                 </Button>
               </Link>
             </div>
-            <RecentNewsGrid limit={6} />
+            <RecentNewsGrid limit={6} articles={recentNews} />
           </div>
           <UfcVideosColumn limit={5} />
         </div>

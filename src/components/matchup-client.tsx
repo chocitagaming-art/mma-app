@@ -292,9 +292,15 @@ export function MatchupClient({
     if (blueFighter) {
       params.set("blue", String(blueFighter.id));
     }
-    router.replace(
-      `/enfrentamiento${params.toString() ? `?${params.toString()}` : ""}`,
-    );
+    const query = params.toString();
+    const nextUrl = `/enfrentamiento${query ? `?${query}` : ""}`;
+    // En el montaje la URL ya coincide con las esquinas iniciales; evitamos el
+    // router.replace redundante para no provocar una navegación de más (#66).
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl === currentUrl) {
+      return;
+    }
+    router.replace(nextUrl);
   }, [blueFighter, redFighter, router]);
 
   const canMatchup = Boolean(

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { sql } from "@/lib/db";
 import type { FightCompetitorStats, FightDetail } from "@/lib/types";
 
@@ -79,7 +81,11 @@ function mapStats(row?: FightStatsRow): FightCompetitorStats | null {
   };
 }
 
-export async function getFightDetail(id: number): Promise<FightDetail | null> {
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getFightDetail = cache(async (
+  id: number,
+): Promise<FightDetail | null> => {
   const rows = await sql<FightRow>(
     `select
       fi.id,
@@ -199,4 +205,4 @@ export async function getFightDetail(id: number): Promise<FightDetail | null> {
     redStats,
     blueStats,
   };
-}
+});

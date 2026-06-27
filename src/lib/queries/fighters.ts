@@ -1,3 +1,6 @@
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+
 import { sql } from "@/lib/db";
 import type {
   DirectMatchupFight,
@@ -298,6 +301,45 @@ export async function getFeaturedFighters(
   return rows.map(mapFighter);
 }
 
+type FighterFilterOptions = FighterListResult["filterOptions"];
+
+// Las opciones del filtro (categorías de peso, guardias, nacionalidades) sólo
+// cambian cuando la ingesta diaria añade luchadores/peleas nuevos. En vez de
+// recalcular tres SELECT DISTINCT sobre todo el dataset en cada request (#32),
+// las cacheamos una hora. No afecta a los resultados de la lista.
+const getFighterFilterOptions = unstable_cache(
+  async (): Promise<FighterFilterOptions> => {
+    const [weightClasses, stances, nationalities] = await Promise.all([
+      sql<{ weight_class: string }>(
+        `select distinct weight_class
+         from fights
+         where weight_class is not null
+         order by weight_class asc`,
+      ),
+      sql<{ stance: string }>(
+        `select distinct stance
+         from fighters
+         where stance is not null
+         order by stance asc`,
+      ),
+      sql<{ nationality: string }>(
+        `select distinct nationality
+         from fighters
+         where nationality is not null
+         order by nationality asc`,
+      ),
+    ]);
+
+    return {
+      weightClasses: weightClasses.map((row) => row.weight_class),
+      stances: stances.map((row) => row.stance),
+      nationalities: nationalities.map((row) => row.nationality),
+    };
+  },
+  ["fighter-filter-options"],
+  { revalidate: 3600, tags: ["fighter-filter-options"] },
+);
+
 export async function getFighters(
   filters: FighterFilters = {},
 ): Promise<FighterListResult> {
@@ -397,26 +439,7 @@ export async function getFighters(
     values,
   );
 
-  const [weightClasses, stances, nationalities] = await Promise.all([
-    sql<{ weight_class: string }>(
-      `select distinct weight_class
-       from fights
-       where weight_class is not null
-       order by weight_class asc`,
-    ),
-    sql<{ stance: string }>(
-      `select distinct stance
-       from fighters
-       where stance is not null
-       order by stance asc`,
-    ),
-    sql<{ nationality: string }>(
-      `select distinct nationality
-       from fighters
-       where nationality is not null
-       order by nationality asc`,
-    ),
-  ]);
+  const filterOptions = await getFighterFilterOptions();
 
   return {
     fighters: fighters.map(mapFighter),
@@ -424,15 +447,15 @@ export async function getFighters(
     page: safePage,
     pageSize,
     totalPages,
-    filterOptions: {
-      weightClasses: weightClasses.map((row) => row.weight_class),
-      stances: stances.map((row) => row.stance),
-      nationalities: nationalities.map((row) => row.nationality),
-    },
+    filterOptions,
   };
 }
 
-export async function getFighterDetail(id: number): Promise<FighterDetail | null> {
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getFighterDetail = cache(async (
+  id: number,
+): Promise<FighterDetail | null> => {
   const fighterRows = await sql<FighterRow>(
     `select
       f.*,
@@ -642,7 +665,7 @@ export async function getFighterDetail(id: number): Promise<FighterDetail | null
     rateStats,
     ranking,
   };
-}
+});
 
 export async function searchFighters(
   query: string,

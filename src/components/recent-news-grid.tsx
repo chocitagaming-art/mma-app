@@ -1,9 +1,20 @@
 import { NewsImage } from "@/components/news-image";
 import { getRecentNews } from "@/lib/queries/news";
+import type { NewsArticle } from "@/lib/types";
 import { safeExternalUrl } from "@/lib/utils";
 
-export async function RecentNewsGrid({ limit = 6 }: { limit?: number }) {
-  const articles = await getRecentNews(limit, { requireImage: true });
+export async function RecentNewsGrid({
+  limit = 6,
+  articles: providedArticles,
+}: {
+  limit?: number;
+  articles?: NewsArticle[];
+}) {
+  // Si la página ya trae las noticias recientes (#68), reutilizamos ese conjunto
+  // (las que tienen imagen, recortadas a `limit`) en vez de volver a consultar.
+  const articles = providedArticles
+    ? providedArticles.filter((article) => article.imageUrl).slice(0, limit)
+    : await getRecentNews(limit, { requireImage: true });
 
   if (!articles.length) {
     return null;
