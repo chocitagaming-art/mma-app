@@ -14,6 +14,10 @@ Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuot
 ![Tests](https://img.shields.io/badge/tests-138%20passing-22c55e?style=flat-square)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-blue?style=flat-square)
 
+[![Estrellas](https://img.shields.io/github/stars/chocitagaming-art/mma-app?style=flat-square&color=ef4444)](https://github.com/chocitagaming-art/mma-app/stargazers)
+![Forks](https://img.shields.io/github/forks/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
+![Último commit](https://img.shields.io/github/last-commit/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
+
 **[Demo en vivo](https://mma-app-ruby.vercel.app)** · [English](./README.md) · Español
 
 </div>

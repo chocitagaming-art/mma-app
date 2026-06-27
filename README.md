@@ -14,6 +14,10 @@ Fighter profiles, official rankings, head to head comparisons, market odds again
 ![Tests](https://img.shields.io/badge/tests-138%20passing-22c55e?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
+[![Stars](https://img.shields.io/github/stars/chocitagaming-art/mma-app?style=flat-square&color=ef4444)](https://github.com/chocitagaming-art/mma-app/stargazers)
+![Forks](https://img.shields.io/github/forks/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
+![Last commit](https://img.shields.io/github/last-commit/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
+
 **[Live demo](https://mma-app-ruby.vercel.app)** · English · [Español](./README.es.md)
 
 </div>
