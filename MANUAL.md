@@ -168,7 +168,7 @@ Ver `.env.example` en cada repo. Resumen:
 - **Microservicio de predicción no desplegado** → en producción la predicción IA y "Mercado vs Modelo (modelo)" degradan a 503 (manejado). Para activarlo: desplegar en Render/Railway y apuntar `PREDICTION_SERVICE_URL`.
 - **Cuotas solo para eventos próximos** (The Odds API es *upcoming-only*); las peleas históricas no tienen "Mercado vs Modelo".
 - **Dominio `mma-status.app`** referenciado pero sin DNS resuelto; la web vive en la URL `*.vercel.app`.
-- **Pendientes de infra/calidad (Fase 13)**: habilitar GitHub Actions; crear un **rol read-only en Neon** para la web (es 100% lectura) y poner su credencial en Vercel; partir los *god files* (`fighters.ts`, `matchup-client.tsx`, `features.py`) — refactor de mantenibilidad.
+- **Pendientes de infra/calidad (Fase 13)**: habilitar GitHub Actions; crear un **rol read-only en Neon** para la web (es 100% lectura) y poner su credencial en Vercel. (Los *god files* `fighters.ts`, `matchup-client.tsx` y `features.py` ya se **partieron en módulos** — refactor de mantenibilidad completado, sin cambio funcional.)
 - **Señales del cara a cara en revanchas**: se calculan a la fecha del combate compartido (indicado en la UI); mejora futura: anclarlas a "hoy" en el microservicio.
 
 ---
