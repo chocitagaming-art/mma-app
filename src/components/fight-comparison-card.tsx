@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { formatControlTime, formatHeight, formatPercentage, formatReach, formatRecord } from "@/lib/format";
+import { formatControlTime, formatHeight, formatPercentage, formatReach, formatRecord, formatStance } from "@/lib/format";
 import type { FightCompetitor, FightCompetitorStats } from "@/lib/types";
 
 type FightComparisonCardProps = {
@@ -53,7 +53,7 @@ export function FightComparisonCard({
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Guardia</p>
-            <p className="mt-2 text-foreground">{fighter.stance ?? "Desconocida"}</p>
+            <p className="mt-2 text-foreground">{fighter.stance ? formatStance(fighter.stance) : "Desconocida"}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Altura</p>

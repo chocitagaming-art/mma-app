@@ -1,4 +1,5 @@
 import { NewsImage } from "@/components/news-image";
+import { formatNewsCategory } from "@/lib/format";
 import { getRecentNews } from "@/lib/queries/news";
 import type { NewsArticle } from "@/lib/types";
 import { safeExternalUrl } from "@/lib/utils";
@@ -38,7 +39,7 @@ export async function RecentNewsGrid({
             />
             {article.category && (
               <span className="absolute left-3 top-3 z-10 rounded bg-primary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
-                {article.category}
+                {formatNewsCategory(article.category)}
               </span>
             )}
           </div>

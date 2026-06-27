@@ -4,7 +4,7 @@ import { ArrowRightLeft } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
-import { formatRecord, formatWeight, formatWeightClass } from "@/lib/format";
+import { formatRecord, formatStance, formatWeight, formatWeightClass } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
 
 type FighterCardProps = {
@@ -71,7 +71,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
               )
             }
           />
-          <Stat label="Guardia" value={fighter.stance ?? "—"} />
+          <Stat label="Guardia" value={formatStance(fighter.stance)} />
         </div>
       </Link>
 

@@ -6,7 +6,7 @@ import { FightersFilterBar } from "@/components/fighters-filter-bar";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
-import { formatRecord, formatWeightClass } from "@/lib/format";
+import { formatRecord, formatStance, formatWeightClass } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFighters } from "@/lib/queries/fighters";
@@ -153,7 +153,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                       Guardia
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground md:mt-0">
-                      {fighter.stance ?? "Desconocida"}
+                      {fighter.stance ? formatStance(fighter.stance) : "Desconocida"}
                     </p>
                   </div>
                   <span className="text-sm font-medium text-primary">Ver perfil →</span>

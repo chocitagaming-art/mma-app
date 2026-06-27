@@ -7,11 +7,7 @@ export function formatHeight(heightCm: number | null) {
     return "—";
   }
 
-  const totalInches = heightCm / 2.54;
-  const feet = Math.floor(totalInches / 12);
-  const inches = Math.round(totalInches % 12);
-
-  return `${feet}'${inches}"`;
+  return `${Math.round(heightCm)} cm`;
 }
 
 export function formatReach(reachCm: number | null) {
@@ -19,7 +15,7 @@ export function formatReach(reachCm: number | null) {
     return "—";
   }
 
-  return `${Math.round(reachCm / 2.54)} in`;
+  return `${Math.round(reachCm)} cm`;
 }
 
 export function formatWeight(weightGrams: number | null) {
@@ -82,6 +78,24 @@ export function formatWeightClass(weightClass: string | null): string {
   }
 
   return weightClass;
+}
+
+// Fighter stance (guardia) → Spanish label. Falls back to the raw value.
+const STANCE_ES: Record<string, string> = {
+  orthodox: "Ortodoxa",
+  southpaw: "Zurda",
+  switch: "Cambiante",
+  "open stance": "Abierta",
+  sideways: "Lateral",
+};
+
+export function formatStance(stance: string | null | undefined): string {
+  if (!stance) {
+    return "—";
+  }
+
+  const key = stance.trim().toLowerCase();
+  return STANCE_ES[key] ?? stance;
 }
 
 // Ranking division slugs (snake_case, written by the backend) → Spanish labels.

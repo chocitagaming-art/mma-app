@@ -21,6 +21,7 @@ import {
   formatReach,
   formatModelDate,
   formatRecord,
+  formatStance,
   formatWeightClass,
 } from "@/lib/format";
 import type { FighterHistorySummary, PredictionResponse } from "@/lib/prediction";
@@ -125,8 +126,8 @@ function buildTaleRows(
     },
     {
       label: "Guardia",
-      red: red.stance ?? "—",
-      blue: blue.stance ?? "—",
+      red: formatStance(red.stance),
+      blue: formatStance(blue.stance),
     },
     {
       label: "Golpes sig. / pelea",
@@ -269,7 +270,7 @@ function CornerBlock({
           {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
         </p>
         <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-muted-foreground">
-          {formatWeightClass(fighter.latestWeightClass ?? "Open Weight")}
+          {formatWeightClass(fighter.latestWeightClass || "Open Weight")}
         </span>
       </div>
     </div>
@@ -580,7 +581,7 @@ export function MatchupClient({
 
             <div className="p-6 sm:p-8">
               <p className="mb-4 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Tale of the tape · promedios por pelea
+                Comparativa · promedios por pelea
               </p>
               <div className="mx-auto max-w-xl">
                 {taleRows.map((row) => (

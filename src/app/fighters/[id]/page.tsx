@@ -33,8 +33,10 @@ import {
   formatDivision,
   formatHeight,
   formatMethod,
+  formatNewsCategory,
   formatReach,
   formatRecord,
+  formatStance,
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
@@ -165,7 +167,7 @@ export default async function FighterDetailPage({
                         : "Categoría no disponible"}
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                      {fighter.stance ?? "Guardia desconocida"}
+                      {fighter.stance ? formatStance(fighter.stance) : "Guardia desconocida"}
                     </Badge>
                     <Badge variant="secondary" className="bg-muted text-muted-foreground">
                       <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
@@ -516,7 +518,7 @@ export default async function FighterDetailPage({
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
                         <Badge className="border-primary/20 bg-primary/10 text-primary">
-                          {article.category ?? "General"}
+                          {formatNewsCategory(article.category)}
                         </Badge>
                         <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           {article.source ?? "Fuente desconocida"}

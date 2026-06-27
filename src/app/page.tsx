@@ -64,7 +64,7 @@ export default async function HomePage() {
               style={{ animationDelay: "160ms" }}
             >
               Perfiles de peleadores UFC, historial de peleas, comparativas
-              head-to-head y predicción por modelo de machine learning, sobre
+              cara a cara y predicción por modelo de machine learning, sobre
               datos reales de eventos.
             </p>
             <div

@@ -8,6 +8,7 @@ import {
   formatPercentage,
   formatRecord,
   formatReach,
+  formatStance,
   formatWeightClass,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -162,8 +163,8 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
     },
     {
       label: "Guardia",
-      red: red.stance ?? "—",
-      blue: blue.stance ?? "—",
+      red: formatStance(red.stance),
+      blue: formatStance(blue.stance),
     },
   ];
 
@@ -247,7 +248,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
       {/* Tale of the tape ledger */}
       <div className="p-6 sm:p-8">
         <p className="mb-4 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          Tale of the tape
+          Comparativa
         </p>
         <div className="mx-auto max-w-xl">
           {rows.map((row) => (

@@ -2,9 +2,64 @@ import { describe, expect, it } from "vitest";
 
 import {
   cleanNationality,
+  formatHeight,
   formatModelDate,
   formatNewsCategory,
+  formatReach,
+  formatStance,
+  formatWeight,
 } from "@/lib/format";
+
+describe("formatHeight", () => {
+  it("formats centimetres as an integer with the cm suffix", () => {
+    expect(formatHeight(196)).toBe("196 cm");
+    expect(formatHeight(180.4)).toBe("180 cm");
+    expect(formatHeight(180.6)).toBe("181 cm");
+  });
+
+  it("returns the placeholder for null/zero (missing data)", () => {
+    expect(formatHeight(null)).toBe("—");
+    expect(formatHeight(0)).toBe("—");
+  });
+});
+
+describe("formatReach", () => {
+  it("formats centimetres as an integer with the cm suffix", () => {
+    expect(formatReach(193)).toBe("193 cm");
+    expect(formatReach(190.5)).toBe("191 cm");
+  });
+
+  it("returns the placeholder for null/zero (missing data)", () => {
+    expect(formatReach(null)).toBe("—");
+    expect(formatReach(0)).toBe("—");
+  });
+});
+
+describe("formatWeight", () => {
+  it("formats grams as kilograms with one decimal", () => {
+    expect(formatWeight(70300)).toBe("70.3 kg");
+    expect(formatWeight(120000)).toBe("120.0 kg");
+  });
+
+  it("returns the placeholder for null/zero (missing data)", () => {
+    expect(formatWeight(null)).toBe("—");
+    expect(formatWeight(0)).toBe("—");
+  });
+});
+
+describe("formatStance", () => {
+  it("translates known stances to Spanish (case-insensitive)", () => {
+    expect(formatStance("Orthodox")).toBe("Ortodoxa");
+    expect(formatStance("southpaw")).toBe("Zurda");
+    expect(formatStance("Switch")).toBe("Cambiante");
+  });
+
+  it("returns a placeholder for null/empty and echoes unknown values", () => {
+    expect(formatStance(null)).toBe("—");
+    expect(formatStance(undefined)).toBe("—");
+    expect(formatStance("Karate")).toBe("Karate");
+  });
+});
 
 describe("formatNewsCategory", () => {
   it("translates the known backend category slugs to Spanish", () => {

@@ -1,3 +1,4 @@
+import { formatNewsCategory } from "@/lib/format";
 import type { NewsArticle } from "@/lib/types";
 import { safeExternalUrl } from "@/lib/utils";
 
@@ -18,17 +19,23 @@ export function NewsMarquee({ articles }: { articles: NewsArticle[] }) {
       </div>
 
       <div className="animate-marquee flex w-max items-center gap-8 py-2.5">
-        {items.map((article, index) => (
+        {items.map((article, index) => {
+          // La segunda mitad es la copia que da el bucle sin costura: se oculta a
+          // lectores de pantalla y se saca del tabulado para no duplicar titulares.
+          const isDuplicate = index >= articles.length;
+          return (
           <a
             key={`${article.id}-${index}`}
             href={safeExternalUrl(article.url)}
             target="_blank"
             rel="noreferrer"
+            aria-hidden={isDuplicate || undefined}
+            tabIndex={isDuplicate ? -1 : undefined}
             className="inline-flex items-center gap-2.5 whitespace-nowrap px-1 transition-colors hover:text-primary"
           >
             {article.category ? (
               <span className="font-mono text-[10px] uppercase tracking-widest text-primary">
-                {article.category}
+                {formatNewsCategory(article.category)}
               </span>
             ) : null}
             <span className="text-sm font-medium text-foreground">
@@ -36,7 +43,8 @@ export function NewsMarquee({ articles }: { articles: NewsArticle[] }) {
             </span>
             <span className="text-primary">&rarr;</span>
           </a>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
