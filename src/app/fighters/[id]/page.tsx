@@ -38,7 +38,7 @@ import {
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
-import { buildFightVideoSearchUrl } from "@/lib/video";
+import { resolveFightVideoUrl } from "@/lib/video";
 import {
   getFighterDetail,
   getFighterStrikeProfile,
@@ -401,20 +401,27 @@ export default async function FighterDetailPage({
                           )}
                         </TableCell>
                         <TableCell>
-                          <a
-                            href={buildFightVideoSearchUrl(
-                              fighter.name,
-                              fight.opponentName ?? "",
-                              fight.eventName ?? undefined,
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={`Ver el combate ${fighter.name} vs ${fight.opponentName ?? "oponente"} en YouTube`}
-                            className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80"
-                          >
-                            <Play className="size-3.5" />
-                            Ver
-                          </a>
+                          {/* Sin resultado ni método = combate aún no disputado:
+                              no ofrecemos "ver" un vídeo de algo que no ocurrió. */}
+                          {fight.result === "draw" && fight.method == null ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <a
+                              href={resolveFightVideoUrl(
+                                fight.videoUrl,
+                                fighter.name,
+                                fight.opponentName ?? "",
+                                fight.eventName ?? undefined,
+                              )}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Ver el combate ${fighter.name} vs ${fight.opponentName ?? "oponente"}`}
+                              className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80"
+                            >
+                              <Play className="size-3.5" />
+                              Ver
+                            </a>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

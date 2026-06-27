@@ -65,6 +65,7 @@ type HistoryRow = {
   end_round: number | null;
   end_time: string | null;
   weight_class: string | null;
+  video_url: string | null;
 };
 
 type AggregateRow = {
@@ -516,7 +517,8 @@ export const getFighterDetail = cache(async (
         fi.method,
         fi.end_round,
         fi.end_time,
-        fi.weight_class
+        fi.weight_class,
+        fi.video_url
       from fights fi
       left join events e on e.id = fi.event_id
       left join fighters red on red.id = fi.fighter_red_id
@@ -634,6 +636,7 @@ export const getFighterDetail = cache(async (
     endRound: row.end_round,
     endTime: row.end_time,
     weightClass: row.weight_class,
+    videoUrl: row.video_url,
   }));
 
   const aggregateStats = mapAggregate(aggregateRows[0]);

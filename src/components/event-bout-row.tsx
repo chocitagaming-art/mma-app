@@ -2,7 +2,13 @@ import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
-import { formatMethod, formatRecord, formatWeightClass } from "@/lib/format";
+import {
+  formatMethod,
+  formatPercentage,
+  formatRecord,
+  formatWeightClass,
+} from "@/lib/format";
+import { marketFavorite } from "@/lib/odds";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
 
@@ -14,6 +20,24 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
     ? [formatMethod(bout.method), bout.endRound ? `R${bout.endRound}` : null, bout.endTime]
         .filter(Boolean)
         .join(" · ")
+    : null;
+
+  // Favorito del mercado (#41): solo si hay cuotas válidas en ambas esquinas.
+  const fav = marketFavorite(bout.oddsRed, bout.oddsBlue);
+  const favName = fav
+    ? fav.favorite === "red"
+      ? bout.red.name
+      : bout.blue.name
+    : null;
+  const favImplied = fav
+    ? fav.favorite === "red"
+      ? fav.redImplied
+      : fav.blueImplied
+    : 0;
+  const favOdds = fav
+    ? fav.favorite === "red"
+      ? bout.oddsRed
+      : bout.oddsBlue
     : null;
 
   return (
@@ -59,6 +83,17 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
         {resultLine ? (
           <span className="mt-0.5 hidden max-w-[10rem] truncate font-mono text-[0.6rem] text-muted-foreground sm:block">
             {resultLine}
+          </span>
+        ) : null}
+        {fav ? (
+          <span
+            className="mt-1 inline-flex max-w-[7rem] items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-primary sm:max-w-[9rem]"
+            title={`Favorito del mercado: ${favName}${favOdds != null ? ` · cuota ${favOdds.toFixed(2)}` : ""}`}
+          >
+            <span className="truncate">{favName}</span>
+            <span className="tabular text-primary/80">
+              {formatPercentage(favImplied)}
+            </span>
           </span>
         ) : null}
       </div>

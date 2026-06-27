@@ -63,6 +63,7 @@ export type FighterHistoryItem = {
   endRound: number | null;
   endTime: string | null;
   weightClass: string | null;
+  videoUrl: string | null;
 };
 
 export type FighterAggregateStats = {
@@ -296,6 +297,8 @@ export type EventBout = {
   winnerId: number | null;
   boutOrder: number | null;
   cardSegment: string | null;
+  oddsRed: number | null;
+  oddsBlue: number | null;
   red: EventBoutFighter;
   blue: EventBoutFighter;
 };

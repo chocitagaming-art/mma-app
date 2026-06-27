@@ -176,6 +176,8 @@ type BoutRow = {
   winner_id: number | null;
   bout_order: number | null;
   card_segment: string | null;
+  odds_red: string | null;
+  odds_blue: string | null;
   red_fighter_name: string;
   blue_fighter_name: string;
   red_id: number | null;
@@ -219,6 +221,7 @@ export const getEventDetail = cache(async (
   const boutRows = await sql<BoutRow>(
     `SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
             fi.scheduled_rounds, fi.winner_id, fi.bout_order, fi.card_segment,
+            fi.odds_red, fi.odds_blue,
             fi.fighter_red_name AS red_fighter_name,
             fi.fighter_blue_name AS blue_fighter_name,
             red.id AS red_id, red.name AS red_name, red.nickname AS red_nickname,
@@ -245,6 +248,8 @@ export const getEventDetail = cache(async (
     winnerId: row.winner_id,
     boutOrder: row.bout_order,
     cardSegment: row.card_segment,
+    oddsRed: row.odds_red != null ? Number(row.odds_red) : null,
+    oddsBlue: row.odds_blue != null ? Number(row.odds_blue) : null,
     red:
       row.red_id != null
         ? {
