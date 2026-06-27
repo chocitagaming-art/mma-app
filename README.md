@@ -1,6 +1,10 @@
-# MMA STATUS
+<div align="center">
 
-A live UFC stats site with a machine learning model that predicts fights. Fighter profiles, official rankings, head to head comparisons, market odds against the model, an AI assistant, and fight videos, all built on real scraped data.
+<img src="docs/banner.png" alt="MMA STATUS" width="720">
+
+### A live UFC stats site with an ML model that predicts fights
+
+Fighter profiles, official rankings, head to head comparisons, market odds against the model, an AI assistant, and fight videos, all on real scraped data.
 
 [![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mma-app-ruby.vercel.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
@@ -10,9 +14,9 @@ A live UFC stats site with a machine learning model that predicts fights. Fighte
 ![Tests](https://img.shields.io/badge/tests-138%20passing-22c55e?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
-**Live site: [mma-app-ruby.vercel.app](https://mma-app-ruby.vercel.app)**
+**[Live demo](https://mma-app-ruby.vercel.app)** · English · [Español](./README.es.md)
 
-Read this in: **English** · [Español](./README.es.md)
+</div>
 
 ![MMA STATUS home page](docs/screenshots/home.png)
 

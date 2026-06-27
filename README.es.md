@@ -1,6 +1,10 @@
-# MMA STATUS
+<div align="center">
 
-Una web de estadísticas de UFC, en vivo, con un modelo de machine learning que predice peleas. Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuotas del mercado frente al modelo, un asistente con IA y vídeos de combates, todo sobre datos reales scrapeados.
+<img src="docs/banner.png" alt="MMA STATUS" width="720">
+
+### Una web de estadísticas de UFC con un modelo de ML que predice peleas
+
+Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuotas del mercado frente al modelo, un asistente con IA y vídeos de combates, todo sobre datos reales.
 
 [![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-22c55e?style=flat-square)](https://mma-app-ruby.vercel.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
@@ -10,9 +14,9 @@ Una web de estadísticas de UFC, en vivo, con un modelo de machine learning que 
 ![Tests](https://img.shields.io/badge/tests-138%20passing-22c55e?style=flat-square)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-blue?style=flat-square)
 
-**Web en vivo: [mma-app-ruby.vercel.app](https://mma-app-ruby.vercel.app)**
+**[Demo en vivo](https://mma-app-ruby.vercel.app)** · [English](./README.md) · Español
 
-Léelo en: [English](./README.md) · **Español**
+</div>
 
 ![Página de inicio de MMA STATUS](docs/screenshots/home.png)
 
