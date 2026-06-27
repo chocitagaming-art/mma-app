@@ -16,9 +16,6 @@ type RawPrediction = Omit<PredictionResponse, "explanation" | "explanationSource
 // the UI can degrade gracefully (503) instead of showing a hard error.
 class PredictionUnavailableError extends Error {}
 
-// One of the fighters lacks enough recorded bouts for the model (422).
-class InsufficientHistoryError extends Error {}
-
 // The request to the microservice was rejected as invalid (400).
 class InvalidPredictionRequestError extends Error {}
 
@@ -55,11 +52,6 @@ async function fetchPrediction(
   }
 
   if (!response.ok) {
-    if (response.status === 422) {
-      throw new InsufficientHistoryError(
-        "Uno de los peleadores no tiene suficiente historial de combates para generar una predicción.",
-      );
-    }
     if (response.status === 400) {
       throw new InvalidPredictionRequestError(
         "Identificadores de peleador no válidos.",
@@ -106,11 +98,6 @@ export async function POST(request: Request) {
     // Service not configured / unreachable → 503 so the UI degrades gracefully.
     if (error instanceof PredictionUnavailableError) {
       return NextResponse.json({ error: error.message }, { status: 503 });
-    }
-
-    // Not enough recorded bouts to predict → 422.
-    if (error instanceof InsufficientHistoryError) {
-      return NextResponse.json({ error: error.message }, { status: 422 });
     }
 
     // Bad request reaching the microservice → 400.

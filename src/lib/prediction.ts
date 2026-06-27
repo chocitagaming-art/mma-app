@@ -2,9 +2,11 @@ import { Anthropic } from "@anthropic-ai/sdk";
 
 export type PredictionFeature = {
   name: string;
-  value: number | null;
-  importance: number;
-  impact: number;
+  value: number;
+  // Signed log-odds contribution of this feature for the matchup.
+  contribution: number;
+  // Which corner the feature favours.
+  direction: "red" | "blue";
 };
 
 export type PredictionFighterProfile = {
@@ -33,11 +35,15 @@ export type PredictionFighterProfile = {
 export type PredictionResponse = {
   redProbability: number;
   blueProbability: number;
+  // True when either fighter has < 3 prior fights or no usable history, so the
+  // probabilities are a ~50/50 baseline rather than a confident pick.
+  lowConfidence: boolean;
   topFeatures: PredictionFeature[];
   featureValues: Record<string, number | null>;
   context: {
     matchupDate: string;
     weightClass: string | null;
+    lowConfidence?: boolean;
   };
   fighters: {
     red: PredictionFighterProfile;
@@ -70,13 +76,19 @@ function humanizeFeatureName(name: string) {
 }
 
 function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" | "explanationSource">) {
+  if (data.lowConfidence) {
+    // No confident favorite: one fighter lacks enough history, so the model falls
+    // back to a ~50/50 baseline. Do NOT frame either corner as a real favorite.
+    return `Este enfrentamiento es de baja confianza: uno de los peleadores no tiene suficiente historial registrado, así que el modelo no puede establecer un favorito claro y la probabilidad se mantiene cerca del 50/50. Trátalo como una estimación de referencia, no como una predicción fiable.\n\nCon más peleas registradas para ambos perfiles, el modelo podría detectar diferencias reales. Por ahora, las señales disponibles son insuficientes para inclinar el resultado hacia ${data.fighters.red.name} o ${data.fighters.blue.name}.`;
+  }
+
   const favorite =
     data.redProbability >= data.blueProbability ? data.fighters.red.name : data.fighters.blue.name;
   const underdog =
     data.redProbability >= data.blueProbability ? data.fighters.blue.name : data.fighters.red.name;
   const topFactors = data.topFeatures
     .slice(0, 3)
-    .map((feature) => `${humanizeFeatureName(feature.name)} (${feature.value ?? "N/D"})`)
+    .map((feature) => `${humanizeFeatureName(feature.name)} (${feature.value})`)
     .join(", ");
 
   return `${favorite} parte como favorito con una probabilidad estimada de ${formatPercent(
@@ -100,13 +112,16 @@ export async function generatePredictionExplanation(
     "Explica en español, en 2 párrafos, una predicción de pelea UFC.",
     "Sé claro, analítico y evita afirmar certezas absolutas.",
     "Responde directamente con los 2 párrafos, sin preámbulo ni meta-comentarios.",
+    data.lowConfidence
+      ? "IMPORTANTE: este enfrentamiento es de BAJA CONFIANZA porque uno de los peleadores no tiene suficiente historial. NO declares un favorito claro; explica que la probabilidad es una base cercana al 50/50 por datos insuficientes y debe tomarse como referencia, no como predicción fiable."
+      : "",
     `Peleador esquina roja: ${data.fighters.red.name}`,
     `Peleador esquina azul: ${data.fighters.blue.name}`,
     `Probabilidad roja: ${formatPercent(data.redProbability)}`,
     `Probabilidad azul: ${formatPercent(data.blueProbability)}`,
     `Categoría: ${data.context.weightClass ?? "No disponible"}`,
     `Factores clave: ${data.topFeatures
-      .map((feature) => `${humanizeFeatureName(feature.name)}=${feature.value ?? "N/D"}`)
+      .map((feature) => `${humanizeFeatureName(feature.name)}=${feature.value}`)
       .join(", ")}`,
     `Stats roja: ${JSON.stringify(data.fighters.red.aggregate_stats)}`,
     `Stats azul: ${JSON.stringify(data.fighters.blue.aggregate_stats)}`,

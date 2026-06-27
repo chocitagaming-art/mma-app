@@ -44,13 +44,18 @@ function buildRawPrediction(): RawPrediction {
   return {
     redProbability: 0.62,
     blueProbability: 0.38,
+    lowConfidence: false,
     topFeatures: [
-      { name: "sig_strikes_diff", value: 12, importance: 0.3, impact: 0.2 },
-      { name: "takedowns_diff", value: 2, importance: 0.2, impact: 0.1 },
-      { name: "reach_diff", value: 5, importance: 0.1, impact: 0.05 },
+      { name: "sig_strikes_diff", value: 12, contribution: 0.2, direction: "red" },
+      { name: "takedowns_diff", value: 2, contribution: 0.1, direction: "red" },
+      { name: "reach_diff", value: 5, contribution: -0.05, direction: "blue" },
     ],
     featureValues: { sig_strikes_diff: 12 },
-    context: { matchupDate: "2026-06-25", weightClass: "Lightweight" },
+    context: {
+      matchupDate: "2026-06-25",
+      weightClass: "Lightweight",
+      lowConfidence: false,
+    },
     fighters: { red: profile(1, "Red Fighter"), blue: profile(2, "Blue Fighter") },
     modelTrainedAt: "2026-06-25",
   };

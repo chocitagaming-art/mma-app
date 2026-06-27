@@ -30,6 +30,10 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+// Production-equivalent accuracy of the retrained model (0.629). Single source
+// of truth so the pre/post-prediction copy never drifts.
+const MODEL_ACCURACY_LABEL = "~63%";
+
 type MatchupClientProps = {
   initialRedFighter: FighterSearchResult | null;
   initialBlueFighter: FighterSearchResult | null;
@@ -283,6 +287,9 @@ export function MatchupClient({
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Separate, non-destructive state for a 503 (service down) so we can show a
+  // calm "unavailable" message and stop users hammering a dead service.
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -302,6 +309,21 @@ export function MatchupClient({
     }
     router.replace(nextUrl);
   }, [blueFighter, redFighter, router]);
+
+  // Changing a corner invalidates the previous outcome: re-enable the Predecir
+  // button and clear any stale error / unavailable banner. Done in the select
+  // handlers (not an effect) to avoid a cascading setState-in-effect.
+  function handleSelectRed(next: FighterSearchResult | null) {
+    setRedFighter(next);
+    setError(null);
+    setUnavailable(false);
+  }
+
+  function handleSelectBlue(next: FighterSearchResult | null) {
+    setBlueFighter(next);
+    setError(null);
+    setUnavailable(false);
+  }
 
   const canMatchup = Boolean(
     redFighter && blueFighter && redFighter.id !== blueFighter.id,
@@ -354,6 +376,7 @@ export function MatchupClient({
 
     setLoading(true);
     setError(null);
+    setUnavailable(false);
 
     try {
       const response = await fetch("/api/predict", {
@@ -364,6 +387,14 @@ export function MatchupClient({
           blueFighterId: blueFighter.id,
         }),
       });
+
+      // 503 = service not deployed / unreachable. Treat it as a neutral
+      // "not available" state, not a hard error.
+      if (response.status === 503) {
+        setPrediction(null);
+        setUnavailable(true);
+        return;
+      }
 
       const data = (await response.json()) as
         | PredictionResponse
@@ -412,7 +443,7 @@ export function MatchupClient({
             <FighterSearchCombobox
               label="Esquina roja"
               value={redFighter}
-              onSelect={setRedFighter}
+              onSelect={handleSelectRed}
               excludeId={blueFighter?.id}
             />
             <div className="flex justify-center pb-2">
@@ -423,7 +454,7 @@ export function MatchupClient({
             <FighterSearchCombobox
               label="Esquina azul"
               value={blueFighter}
-              onSelect={setBlueFighter}
+              onSelect={handleSelectBlue}
               excludeId={redFighter?.id}
             />
           </div>
@@ -572,7 +603,7 @@ export function MatchupClient({
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                   <Info className="size-3.5 text-primary" />
-                  Precisión del modelo ~62% · estimación con incertidumbre
+                  Precisión del modelo {MODEL_ACCURACY_LABEL} · estimación con incertidumbre
                 </div>
                 <Button
                   type="button"
@@ -582,11 +613,29 @@ export function MatchupClient({
                 >
                   {loading ? (
                     <Loader2 className="animate-spin" />
+                  ) : unavailable ? (
+                    <Info />
                   ) : (
                     <Brain />
                   )}
-                  {loading ? "Prediciendo..." : "Predecir resultado"}
+                  {loading
+                    ? "Prediciendo..."
+                    : unavailable
+                      ? "Reintentar"
+                      : "Predecir resultado"}
                 </Button>
+                {unavailable ? (
+                  <div className="flex w-full items-start gap-3 rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm text-muted-foreground">
+                    <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <span>
+                      <span className="font-semibold text-foreground">
+                        Predicción no disponible por ahora.
+                      </span>{" "}
+                      El servicio de predicción está fuera de línea
+                      temporalmente. Vuelve a intentarlo más tarde.
+                    </span>
+                  </div>
+                ) : null}
                 {error ? (
                   <div className="w-full rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {error}
@@ -604,15 +653,49 @@ export function MatchupClient({
                     </span>
                   </div>
                 ) : null}
-                <div className="mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm leading-6 text-muted-foreground">
-                  <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      Precisión del modelo ~62%.
-                    </span>{" "}
-                    Estas probabilidades son una estimación con incertidumbre, no
-                    una certeza: en MMA hasta un favorito claro puede caer.
-                  </span>
+                {prediction.lowConfidence ? (
+                  <div className="flex justify-center">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
+                      <Info className="size-3.5" />
+                      Baja confianza · datos insuficientes
+                    </span>
+                  </div>
+                ) : null}
+                <div
+                  className={cn(
+                    "mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border px-4 py-3 text-left text-sm leading-6 text-muted-foreground",
+                    prediction.lowConfidence
+                      ? "border-amber-500/30 bg-amber-500/5"
+                      : "border-border bg-muted",
+                  )}
+                >
+                  <Info
+                    className={cn(
+                      "mt-0.5 size-4 shrink-0",
+                      prediction.lowConfidence
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-primary",
+                    )}
+                  />
+                  {prediction.lowConfidence ? (
+                    <span>
+                      <span className="font-semibold text-foreground">
+                        Estimación de referencia.
+                      </span>{" "}
+                      Uno de los peleadores no tiene suficiente historial de
+                      combates, así que el modelo no puede inclinar la balanza:
+                      trata este resultado como una base cercana al 50/50, no
+                      como un favorito real.
+                    </span>
+                  ) : (
+                    <span>
+                      <span className="font-semibold text-foreground">
+                        Precisión del modelo {MODEL_ACCURACY_LABEL}.
+                      </span>{" "}
+                      Estas probabilidades son una estimación con incertidumbre,
+                      no una certeza: en MMA hasta un favorito claro puede caer.
+                    </span>
+                  )}
                 </div>
                 {prediction.modelTrainedAt ? (
                   <p className="text-center font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
@@ -626,7 +709,7 @@ export function MatchupClient({
                         <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-corner-red">
                           Esquina roja
                         </p>
-                        {favorite === "red" ? (
+                        {!prediction.lowConfidence && favorite === "red" ? (
                           <Badge className="border-win/20 bg-win/10 text-win">
                             Favorito del modelo
                           </Badge>
@@ -638,7 +721,11 @@ export function MatchupClient({
                       <ProbabilityBar
                         label="Probabilidad de victoria"
                         value={prediction.redProbability}
-                        colorClass="bg-corner-red"
+                        colorClass={
+                          prediction.lowConfidence
+                            ? "bg-corner-red/40"
+                            : "bg-corner-red"
+                        }
                       />
                     </CardContent>
                   </Card>
@@ -652,7 +739,7 @@ export function MatchupClient({
                   <Card className="border-border bg-card">
                     <CardContent className="space-y-6 p-6">
                       <div className="flex items-center justify-between gap-3">
-                        {favorite === "blue" ? (
+                        {!prediction.lowConfidence && favorite === "blue" ? (
                           <Badge className="border-win/20 bg-win/10 text-win">
                             Favorito del modelo
                           </Badge>
@@ -669,7 +756,11 @@ export function MatchupClient({
                       <ProbabilityBar
                         label="Probabilidad de victoria"
                         value={prediction.blueProbability}
-                        colorClass="bg-corner-blue"
+                        colorClass={
+                          prediction.lowConfidence
+                            ? "bg-corner-blue/40"
+                            : "bg-corner-blue"
+                        }
                       />
                     </CardContent>
                   </Card>
@@ -684,30 +775,51 @@ export function MatchupClient({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {prediction.topFeatures.map((feature) => (
-                        <div
-                          key={feature.name}
-                          className="rounded-2xl border border-border bg-muted p-4"
-                        >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {humanizeFeatureName(feature.name)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Valor diferencial:{" "}
-                                {formatFeatureValue(feature.value)}
-                              </p>
+                      {prediction.topFeatures.map((feature) => {
+                        const favoursRed = feature.direction === "red";
+                        const favouredName = favoursRed
+                          ? prediction.fighters.red.name
+                          : prediction.fighters.blue.name;
+                        return (
+                          <div
+                            key={feature.name}
+                            className="rounded-2xl border border-border bg-muted p-4"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {humanizeFeatureName(feature.name)}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Favorece a{" "}
+                                  <span
+                                    className={cn(
+                                      "font-semibold",
+                                      favoursRed
+                                        ? "text-corner-red"
+                                        : "text-corner-blue",
+                                    )}
+                                  >
+                                    {favouredName}
+                                  </span>{" "}
+                                  · valor {formatFeatureValue(feature.value)}
+                                </p>
+                              </div>
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  favoursRed
+                                    ? "bg-corner-red/10 text-corner-red"
+                                    : "bg-corner-blue/10 text-corner-blue",
+                                )}
+                              >
+                                {favoursRed ? "Roja" : "Azul"} +
+                                {Math.abs(feature.contribution).toFixed(2)}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant="secondary"
-                              className="bg-muted text-muted-foreground"
-                            >
-                              Impacto {feature.impact.toFixed(3)}
-                            </Badge>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </CardContent>
                   </Card>
 
