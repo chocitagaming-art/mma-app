@@ -80,10 +80,7 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        {
-          error: "Identificadores de peleador no válidos.",
-          details: parsed.error.flatten(),
-        },
+        { error: "Identificadores de peleador no válidos." },
         { status: 400 },
       );
     }
@@ -121,6 +118,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // Error inesperado (JSON malformado, fallo del microservicio, etc.):
+    // se loggea server-side y al cliente solo le llega un mensaje genérico,
+    // nunca el stack ni el mensaje crudo.
+    console.error("[api/predict] error inesperado", error);
     return NextResponse.json(
       { error: "El servicio de predicción falló de forma inesperada." },
       { status: 500 },
