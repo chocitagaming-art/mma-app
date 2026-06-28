@@ -11,14 +11,14 @@ Fighter profiles, official rankings, head to head comparisons, market odds again
 ![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-38bdf8?style=flat-square&logo=tailwindcss)
-![Tests](https://img.shields.io/badge/tests-138%20passing-22c55e?style=flat-square)
+[![CI](https://github.com/chocitagaming-art/mma-app/actions/workflows/ci.yml/badge.svg)](https://github.com/chocitagaming-art/mma-app/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
 [![Stars](https://img.shields.io/github/stars/chocitagaming-art/mma-app?style=flat-square&color=ef4444)](https://github.com/chocitagaming-art/mma-app/stargazers)
 ![Forks](https://img.shields.io/github/forks/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
 ![Last commit](https://img.shields.io/github/last-commit/chocitagaming-art/mma-app?style=flat-square&color=ef4444)
 
-**[Live demo](https://mma-app-ruby.vercel.app)** · English · [Español](./README.es.md)
+English · [Español](./README.es.md)
 
 </div>
 
@@ -28,13 +28,11 @@ Fighter profiles, official rankings, head to head comparisons, market odds again
 
 - [What it is](#what-it-is)
 - [See it in action](#see-it-in-action)
-- [A look around](#a-look-around)
 - [Features](#features)
 - [How the prediction works](#how-the-prediction-works)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
-- [Roadmap](#roadmap)
 - [License](#license)
 
 ## What it is
@@ -49,51 +47,41 @@ Pick a red and a blue corner, compare them top to bottom, and let the model call
 
 ![Head to head walkthrough](docs/screenshots/cara-a-cara.gif)
 
-## A look around
+## Features
 
-**Fighter profile** with record, current streak, last five form, striking and takedown accuracy, and a strike map showing where a fighter lands and where they get hit, broken down by zone and range.
+Fighter profiles with career record, current streak, last five form, striking and takedown accuracy, win methods, and a strike map showing where a fighter lands and where they get hit, broken down by zone (head, body, leg) and range (distance, clinch, ground).
 
 ![Fighter profile](docs/screenshots/fighter-profile.png)
 
-**Prediction** for any matchup. Pick a red and blue corner, hit predict, and the model returns a probability for each fighter, the per corner signals behind it (streak, recent wins, quality of opposition, defense), the factors that moved the call, and a short explanation in plain Spanish.
+Fight prediction for any matchup. Pick a red and blue corner, hit predict, and the model returns a probability for each fighter, the per corner signals behind it (streak, recent wins, quality of opposition, defense), the factors that moved the call, and a short written explanation.
 
 ![Fight prediction](docs/screenshots/prediction.png)
 
-**Market vs model** on upcoming fights. The implied probability from the odds, with the bookmaker margin stripped out, sits next to what the model thinks, with the edge called out in points. This one is ours alone: none of the similar projects compare the two.
+Market vs model on upcoming fights. The implied probability from the odds, with the bookmaker margin stripped out, sits next to what the model thinks, with the edge called out in points. Putting the two side by side is uncommon in similar projects.
 
 ![Market vs model](docs/screenshots/market-vs-model.png)
 
-**El Maestro**, a chat assistant that answers from the real database. Ask for a record or a stat line and it queries the data and shows its work, instead of guessing from memory.
+El Maestro, a chat assistant that answers from the real database. Ask for a record or a stat line and it queries the data and shows its work, instead of guessing from memory.
 
 ![El Maestro assistant](docs/screenshots/maestro.png)
 
-**Official rankings** by division and pound for pound, men and women, with the movement since the last snapshot.
+Official rankings by division and pound for pound, men and women, with the movement since the last snapshot.
 
 ![UFC rankings](docs/screenshots/rankings.png)
 
-## Features
-
-- Fighter profiles: career record, current streak and last five form, striking and takedown accuracy, win methods, and a strike map by zone (head, body, leg) and range (distance, clinch, ground).
-- A head to head builder. Choose two fighters and compare the tale of the tape, both strike maps, and any shared history. The URL is shareable, so a matchup is a link.
-- Fight prediction from a model trained only on stats. It never sees odds. Each prediction comes with per corner signals and a written explanation.
-- Market vs model on upcoming fights: the implied probability from the odds, with the bookmaker margin removed, next to what the model thinks, and where it sees value.
-- Ranking trajectory on each profile, so you can watch a fighter climb or slide over time.
-- "El Maestro", a chat assistant that answers from the real database (records, stats, rankings, events) instead of guessing.
-- Curated fight videos and MMA news.
+A head to head builder lets you choose two fighters and compare the tale of the tape, both strike maps, and any shared history. The URL is shareable, so a matchup is a link. Each profile also tracks ranking trajectory over time, and the site carries a feed of curated fight videos and MMA news.
 
 ## How the prediction works
 
-A few things worth being honest about, because most fight predictors are not:
-
-- The model is trained **only on fighter stats**: records, physical attributes, striking, grappling, form, quality of opposition. Odds are never an input. When you see odds next to the model, that is a comparison, not a feature.
-- Accuracy sits around **63%** (0.6289, calibrated and symmetrized). That is an estimate with real uncertainty, not a lock. In MMA a clear favorite still gets knocked out.
+- The model trains only on fighter stats: 20 features covering records, physical attributes, striking, grappling, form, and quality of opposition. Odds are never an input. When you see odds next to the model, that is a comparison, not a feature.
+- Accuracy sits around 63% (0.6289, calibrated and symmetrized), with a Brier score of 0.2266, trained on roughly 2,838 fighters and 8,750 fights. These are estimates with real uncertainty, not locks: in MMA a clear favorite still gets knocked out.
 - If either fighter is thin on history, like a debutant, the model says so and sits near 50/50 instead of inventing confidence.
-- The model is served by a small FastAPI service that lives in the other repo. It runs locally during development. In production the app degrades quietly when the service is offline, showing the market side and a retry button instead of a red error.
+- A FastAPI microservice in the data repo serves the model, and predictions run live on the site.
 
 ## Tech stack
 
 - **Web (this repo):** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, `pg`. Deployed on Vercel.
-- **Data and ML ([mma-ingesta](https://github.com/chocitagaming-art/mma-ingesta)):** Python, PostgreSQL on Neon, XGBoost, FastAPI. Scrapers for UFC and ESPN, odds from The Odds API, videos from the YouTube Data API.
+- **Data and ML:** Python, PostgreSQL on Neon, XGBoost, FastAPI. Scrapers for UFC and ESPN, odds from The Odds API, videos from the YouTube Data API.
 - **AI:** Anthropic Claude for the matchup explanations and the Maestro assistant.
 
 ## Architecture
@@ -116,7 +104,7 @@ A few things worth being honest about, because most fight predictors are not:
             └──────────────────────────┘
 ```
 
-The web app reads. The Python repo writes. They meet at the database.
+The web app only reads from the database, while the Python repo writes to it.
 
 ## Run it locally
 
@@ -131,24 +119,24 @@ Put your secrets in `.env.local`. The variable names are in [`.env.example`](./.
 
 - `DATABASE_URL` (required)
 - `ANTHROPIC_API_KEY` (for the Maestro and matchup explanations)
-- `PREDICTION_SERVICE_URL` (the FastAPI service, for live predictions)
+- `PREDICTION_SERVICE_URL` (the FastAPI service)
 - `YOUTUBE_API_KEY` (for videos)
 
-To get live predictions you also need the service from the other repo running:
+To run predictions while developing locally, start the service from the data repo:
 
 ```bash
 # in the mma-ingesta repo
 python -m uvicorn src.prediction.service:app --port 8000
 ```
 
-Then point `PREDICTION_SERVICE_URL` at `http://localhost:8000`. Without it, the app still runs and shows the graceful fallback.
+Then point `PREDICTION_SERVICE_URL` at `http://localhost:8000`.
 
 ## Commands
 
 ```bash
 npm run dev       # dev server
 npm run build     # production build
-npm test          # vitest (138 tests)
+npm test          # vitest
 npm run lint      # eslint
 npx tsc --noEmit  # type check
 ```
@@ -166,28 +154,7 @@ The data access lives in `src/lib/queries`, split into small modules by domain (
 
 ## Tests
 
-138 Vitest tests cover the pure logic: market vs model comparison, form computation, formatting, YouTube parsing. Type checking and a production build run clean. The data and ML repo carries another 113 pytest tests, including golden and parity tests that pin the model features.
-
-## Roadmap
-
-Done so far:
-
-- [x] Scrapers for fighters, fights, stats, events, and rankings
-- [x] Calibrated XGBoost prediction model with honest low confidence handling
-- [x] Live web app: profiles, rankings, head to head, predictions
-- [x] Ranking trajectory and strike maps
-- [x] Market vs model on upcoming fights
-- [x] AI explanations and the Maestro assistant
-- [x] Curated fight videos and MMA news
-- [x] CI and scheduled data refresh on GitHub Actions
-
-Planned:
-
-- [ ] Deploy the prediction service so production predictions go live instead of the fallback
-- [ ] Custom domain at mma-status.app
-- [ ] Backfill historical rankings for a stronger trajectory and strength of schedule on profiles
-- [ ] More curated fight videos
-- [ ] Error monitoring with Sentry
+The Vitest suite covers the pure logic: market vs model comparison, form computation, formatting, YouTube parsing. Type checking and a production build run clean. The data and ML repo carries its own pytest suite, including golden and parity tests that pin the model features.
 
 ## The other repo
 
@@ -197,4 +164,4 @@ There is also a fuller product manual in Spanish: [MANUAL.md](./MANUAL.md).
 
 ## License
 
-MIT. See [LICENSE](./LICENSE). This is a personal project, but issues and pull requests are welcome.
+MIT © 2026 MMA STATUS. See [LICENSE](./LICENSE). A personal project by MMA STATUS; issues and pull requests are welcome.
