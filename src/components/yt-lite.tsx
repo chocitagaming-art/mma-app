@@ -19,6 +19,7 @@ export function YtLite({
       thumbnail={video.thumbnail}
       sizes="(max-width:768px) 100vw, 360px"
       priority={priority}
+      lightbox
     />
   );
 }
