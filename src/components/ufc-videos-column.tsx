@@ -8,8 +8,8 @@ import { SectionHeading } from "@/components/section-heading";
 export async function UfcVideosColumn({
   limit = 5,
   category,
-  title = "Publicaciones UFC",
-  eyebrow = "Oficial · YouTube",
+  title = "Lo último en vídeo",
+  eyebrow = "Vídeo · Canales en español",
   description,
 }: {
   limit?: number;

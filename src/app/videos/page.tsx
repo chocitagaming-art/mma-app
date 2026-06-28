@@ -4,13 +4,14 @@ import { SectionHeading } from "@/components/section-heading";
 import { YtLite } from "@/components/yt-lite";
 import { getUfcVideos, YOUTUBE_CATEGORIES } from "@/lib/youtube";
 
-// Los vídeos se leen en vivo de YouTube (con caché de revalidación en el módulo).
-export const dynamic = "force-dynamic";
+// Los vídeos se cachean por la revalidación del módulo (30 min). NO force-dynamic:
+// anularía esa caché y dispararía la cuota de la API de YouTube en cada visita.
+export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: "Vídeos",
   description:
-    "Highlights, resúmenes de eventos y entrevistas oficiales de UFC en vídeo, desde los canales oficiales de YouTube.",
+    "Historias de luchadores, resúmenes de eventos, análisis y entrevistas de UFC/MMA desde canales en español de YouTube.",
 };
 
 export default async function VideosPage() {
@@ -25,9 +26,9 @@ export default async function VideosPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <SectionHeading
-        eyebrow="Vídeos · Canales oficiales"
+        eyebrow="Vídeos · Canales en español"
         title="Vídeos UFC"
-        description="Highlights, resúmenes de eventos y entrevistas, directos desde los canales oficiales de YouTube. Se reproducen aquí mismo."
+        description="Historias, resúmenes de eventos, análisis y entrevistas, desde canales en español de YouTube. Se reproducen aquí mismo."
       />
 
       {withVideos.length ? (
