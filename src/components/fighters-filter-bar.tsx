@@ -77,10 +77,9 @@ export function FightersFilterBar({
   }, []);
 
   useEffect(() => {
+    // Con el campo vacío no hay nada que buscar; la limpieza del estado la hace
+    // el onChange del input (evita setState síncrono dentro del efecto).
     if (!trimmedQuery) {
-      setResults([]);
-      setOpen(false);
-      setLoading(false);
       return;
     }
     const timeoutId = window.setTimeout(async () => {
@@ -141,7 +140,17 @@ export function FightersFilterBar({
       <div ref={searchRef} className="relative">
         <Input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setQuery(nextValue);
+            // Campo vacío: se limpia el estado del listbox aquí, en el handler,
+            // en lugar de reaccionar con un efecto.
+            if (!nextValue.trim()) {
+              setResults([]);
+              setOpen(false);
+              setLoading(false);
+            }
+          }}
           onFocus={() => {
             if (results.length) {
               setOpen(true);
@@ -157,7 +166,9 @@ export function FightersFilterBar({
             }
           }}
         />
-        {open && (results.length > 0 || loading || showEmpty) ? (
+        {/* La guarda por trimmedQuery hace invisible cualquier estado residual
+            (p.ej. una respuesta en vuelo que aterriza tras vaciar el campo). */}
+        {open && trimmedQuery.length > 0 && (results.length > 0 || loading || showEmpty) ? (
           <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border border-border bg-popover py-2 shadow-xl">
             <div className="max-h-80 overflow-y-auto px-2">
               {loading ? (

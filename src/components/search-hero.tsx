@@ -55,10 +55,9 @@ export function SearchHero() {
   }, []);
 
   useEffect(() => {
+    // Con el campo vacío no hay nada que buscar; la limpieza del estado la hace
+    // el onChange del input (evita setState síncrono dentro del efecto).
     if (!trimmedQuery) {
-      setResults(EMPTY_RESULTS);
-      setOpen(false);
-      setLoading(false);
       return;
     }
 
@@ -81,9 +80,13 @@ export function SearchHero() {
         const data = (await response.json()) as GlobalSearchResults;
         setResults(data);
         setOpen(true);
+        // Resultados nuevos: ninguna opción queda activa (evita punteros a
+        // opciones que ya no existen).
+        setActiveIndex(-1);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setResults(EMPTY_RESULTS);
+          setActiveIndex(-1);
         }
       } finally {
         setLoading(false);
@@ -144,13 +147,10 @@ export function SearchHero() {
   const eventBase = results.fighters.length;
   const newsBase = results.fighters.length + results.events.length;
 
-  const listboxVisible = open && (totalResults > 0 || loading || showEmpty);
-
-  // Al cambiar los resultados, ninguna opción queda activa (evita punteros a
-  // opciones que ya no existen).
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [results]);
+  // La guarda por trimmedQuery hace invisible cualquier estado residual (p.ej.
+  // una respuesta en vuelo que aterriza justo después de vaciar el campo).
+  const listboxVisible =
+    open && trimmedQuery.length > 0 && (totalResults > 0 || loading || showEmpty);
 
   // Mantener visible la opción activa dentro del scroll del listbox.
   useEffect(() => {
@@ -230,7 +230,18 @@ export function SearchHero() {
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setQuery(nextValue);
+              // Campo vacío: se limpia el estado del listbox aquí, en el
+              // handler, en lugar de reaccionar con un efecto.
+              if (!nextValue.trim()) {
+                setResults(EMPTY_RESULTS);
+                setOpen(false);
+                setLoading(false);
+                setActiveIndex(-1);
+              }
+            }}
             onFocus={() => {
               if (totalResults) {
                 setOpen(true);

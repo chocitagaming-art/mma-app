@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,24 +16,27 @@ const CLIPS: Clip[] = [
   { src: "/videos/mvp-cannonier.mp4", poster: "/videos/mvp-cannonier.jpg" },
 ];
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
 export function VideoHero({ className }: { className?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const advanceTimer = useRef<number | null>(null);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
-  // Default to motion allowed; flip to true if the user opts out so we never
-  // autoplay against their preference.
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  // Respect prefers-reduced-motion: if set, show only the first poster (no playback).
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(query.matches);
-
-    const onChange = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
+  // Respect prefers-reduced-motion: if set, show only the first poster (no
+  // playback). Server snapshot defaults to motion allowed; the client reads the
+  // real preference before the first paint, so we never autoplay against it.
+  const reducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
 
   // When the active clip changes, swap the source and start playing. We keep a
   // single <video> element and drive it imperatively for a seamless sequence.
