@@ -1,5 +1,6 @@
 import { Crosshair, Shield } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { formatPercentage } from "@/lib/format";
@@ -48,128 +49,72 @@ function hasStrikeData(data: FighterStrikeBreakdown): boolean {
   });
 }
 
-// --- Silueta humana v2 (frontal, atlética, estilo ufc.com) ---
-// La mitad IZQUIERDA de cada región se define con curvas Bézier y la derecha se
-// genera espejada respecto a x=CX, garantizando simetría perfecta con un único
-// path cerrado por región (sin costuras). Tres regiones tintables por separado:
-// cabeza+cuello, torso+brazos y piernas. Proporciones ~7.5 cabezas de alto y
-// hombros ~2 cabezas de ancho, afinadas con iteración visual (Ronda B).
+// --- Silueta humana v3 (máscara CSS sobre PNG profesional) ---
+// La anatomía la pone public/brand/strike-silhouette-mask.png (silueta CC0,
+// svgsilh.com/image/154300, dominio público) en lugar de un path dibujado a
+// mano. El div enmascarado se rellena con bandas horizontales — cabeza, torso
+// y piernas — teñidas según el % de golpes de cada zona. El PNG y los cortes
+// anatómicos salen de scripts/prepare-silhouette-mask.mjs.
 
-const CX = 110;
+const MASK_URL = "/brand/strike-silhouette-mask.png";
+// Dimensiones del PNG; el contenedor replica su proporción para que
+// mask-size 100% 100% no deforme la figura.
+const MASK_RATIO = "334 / 1000";
+// Cortes medidos sobre el PNG: cuello al 12.5%; piernas al 60% para que los
+// puños (llegan hasta el 60% de altura) queden en la banda del torso y no
+// reciban el tinte de pierna (la separación visual de los muslos empieza ~62%).
+const BANDS: { key: ZoneKey; from: number; to: number }[] = [
+  { key: "head", from: 0, to: 12.5 },
+  { key: "body", from: 12.5, to: 60 },
+  { key: "leg", from: 60, to: 100 },
+];
 
-type Pt = readonly [number, number];
-type Seg = { c1: Pt; c2: Pt; p: Pt };
+const MASK_STYLE: CSSProperties = {
+  maskImage: `url(${MASK_URL})`,
+  maskSize: "100% 100%",
+  maskRepeat: "no-repeat",
+  WebkitMaskImage: `url(${MASK_URL})`,
+  WebkitMaskSize: "100% 100%",
+  WebkitMaskRepeat: "no-repeat",
+  // En Windows Alto Contraste los background se fuerzan a Canvas y los
+  // gradientes se eliminan, borrando la figura; se preserva como gráfica.
+  forcedColorAdjust: "none",
+};
 
-const seg = (c1: Pt, c2: Pt, p: Pt): Seg => ({ c1, c2, p });
-const mirror = ([x, y]: Pt): Pt => [2 * CX - x, y];
-
-// Baja por la mitad izquierda (start y el punto final del último segmento deben
-// estar en x=CX) y vuelve por la derecha espejando los segmentos en orden
-// inverso (controles intercambiados), cerrando la silueta.
-function symmetricPath(start: Pt, segs: Seg[]): string {
-  let d = `M ${start[0]} ${start[1]}`;
-  for (const s of segs) {
-    d += ` C ${s.c1[0]} ${s.c1[1]}, ${s.c2[0]} ${s.c2[1]}, ${s.p[0]} ${s.p[1]}`;
-  }
-  for (let i = segs.length - 1; i >= 0; i -= 1) {
-    const end = i === 0 ? start : segs[i - 1].p;
-    const [c1x, c1y] = mirror(segs[i].c2);
-    const [c2x, c2y] = mirror(segs[i].c1);
-    const [ex, ey] = mirror(end);
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`;
-  }
-  return `${d} Z`;
-}
-
-// Cabeza + cuello (y=12..87): cráneo redondeado, mejilla fundida en un cuello
-// recto y grueso; el ensanche hacia los hombros lo pone el trapecio del torso.
-const HEAD_PATH = symmetricPath(
-  [110, 12],
-  [
-    seg([99, 12], [89, 19], [88, 34]),
-    seg([88, 45], [92, 56], [97, 62]),
-    seg([97, 70], [98, 78], [99, 86]),
-    seg([103, 86.5], [106, 87], [110, 87]),
-  ],
-);
-
-// Torso + brazos (y=87..264): trapecio alto, deltoides anchos, brazos separados
-// del torso con codo y antebrazo marcados, puño compacto, torso en V con
-// cintura y cadera.
-const BODY_PATH = symmetricPath(
-  [110, 87],
-  [
-    seg([107, 87], [103, 87], [99, 87]), // base del cuello
-    seg([90, 89], [77, 93], [64, 102]), // trapecio
-    seg([49, 107], [40, 114], [38, 127]), // deltoides
-    seg([38, 140], [40, 155], [43, 172]), // brazo exterior hasta el codo
-    seg([45, 182], [40, 190], [39, 202]), // codo y bulto del antebrazo
-    seg([38, 216], [41, 228], [45, 240]), // antebrazo a la muñeca
-    seg([43, 246], [43, 258], [49, 266]), // puño exterior/inferior
-    seg([55, 270], [59, 264], [58, 252]), // puño interior
-    seg([57, 240], [56, 226], [58, 208]), // antebrazo interior
-    seg([59, 196], [60, 186], [62, 176]), // codo interior
-    seg([64, 162], [66, 148], [72, 138]), // bíceps interior hasta la axila
-    seg([74, 132], [78, 134], [79, 142]), // axila
-    seg([82, 166], [84, 190], [83, 214]), // dorsal/costado a la cintura
-    seg([82, 234], [79, 250], [77, 264]), // cintura a la cadera
-    seg([88, 264], [99, 264], [110, 264]), // bajo del torso al centro
-  ],
-);
-
-// Piernas (y=264..492): muslos con masa, rodilla, gemelo más ancho que la
-// rodilla, tobillo fino y pie con planta apuntando ligeramente hacia fuera.
-const LEGS_PATH = symmetricPath(
-  [110, 264],
-  [
-    seg([99, 264], [88, 264], [77, 264]), // línea de cadera
-    seg([72, 288], [73, 318], [78, 346]), // muslo exterior a la rodilla
-    seg([79, 356], [74, 366], [74, 380]), // rodilla y salida del gemelo
-    seg([75, 404], [81, 430], [84, 452]), // gemelo exterior al tobillo
-    seg([84, 462], [79, 468], [73, 474]), // tobillo al empeine
-    seg([66, 480], [68, 490], [80, 491]), // punta y planta del pie
-    seg([94, 492], [98, 486], [97, 470]), // talón e interior del tobillo
-    seg([97, 452], [99, 430], [99, 404]), // gemelo interior
-    seg([99, 382], [99, 362], [101, 346]), // rodilla interior
-    seg([102, 322], [104, 300], [108, 288]), // muslo interior a la entrepierna
-    seg([109, 286], [110, 286], [110, 286]), // entrepierna (centro)
-  ],
-);
-
-// Silueta: capa base clara (tema-aware vía tokens) + tinte rojo por región con
-// opacidad proporcional al % de golpes de esa zona.
+// Silueta: capa base clara (tema-aware vía tokens) + bandas de tinte rojo con
+// opacidad proporcional al % de golpes de cada zona. Bordes de zona duros,
+// como el mapa de golpes de ufc.com.
 function Figure({ data }: { data: FighterStrikeBreakdown }) {
-  const regions: { key: ZoneKey; path: string }[] = [
-    { key: "head", path: HEAD_PATH },
-    { key: "body", path: BODY_PATH },
-    { key: "leg", path: LEGS_PATH },
-  ];
+  const gradient = `linear-gradient(to bottom, ${BANDS.map(
+    ({ key, from, to }) => {
+      const tint = Math.round(
+        zoneOpacity(zoneShare(data[key], data.totalLanded)) * 100,
+      );
+      const color = `color-mix(in srgb, var(--primary) ${tint}%, transparent)`;
+      return `${color} ${from}%, ${color} ${to}%`;
+    },
+  ).join(", ")})`;
 
   return (
-    <svg
-      viewBox="0 0 220 500"
-      className="h-44 w-auto shrink-0"
+    <div
+      className="relative h-44 shrink-0"
+      style={{ aspectRatio: MASK_RATIO }}
       role="img"
       aria-label="Silueta de golpes por zona: cabeza, cuerpo y pierna"
     >
-      {/* Base de la silueta completa: un único path con las tres regiones
-          (winding nonzero) para que las uniones no generen costuras. */}
-      <path
-        d={`${HEAD_PATH} ${BODY_PATH} ${LEGS_PATH}`}
-        fill="var(--muted-foreground)"
-        fillOpacity={0.16}
+      <div
+        className="absolute inset-0"
+        style={{
+          ...MASK_STYLE,
+          backgroundColor: "var(--muted-foreground)",
+          opacity: 0.16,
+        }}
       />
-      {/* Tinte rojo por región (mín. 0.12 para que siempre se aprecie) */}
-      <g fill="var(--primary)">
-        {regions.map(({ key, path }) => (
-          <path
-            key={`tint-${key}`}
-            d={path}
-            fillOpacity={zoneOpacity(zoneShare(data[key], data.totalLanded))}
-          />
-        ))}
-      </g>
-    </svg>
+      <div
+        className="absolute inset-0"
+        style={{ ...MASK_STYLE, backgroundImage: gradient }}
+      />
+    </div>
   );
 }
 
@@ -185,7 +130,7 @@ function ZoneLegend({ data }: { data: FighterStrikeBreakdown }) {
           <li key={key} className="flex items-center gap-2.5 text-sm">
             <span
               className="size-3 shrink-0 rounded-sm bg-primary"
-              style={{ opacity: zoneOpacity(share) }}
+              style={{ opacity: zoneOpacity(share), forcedColorAdjust: "none" }}
             />
             <span className="text-muted-foreground">{label}</span>
             <span className="tabular ml-auto text-xs text-muted-foreground">
