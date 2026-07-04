@@ -9,20 +9,57 @@ import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/", label: "Inicio" },
+// Navegación estilo ufc.com: logo centrado, nav de contenido a la izquierda y
+// nav de herramientas a la derecha. "Inicio" no aparece en escritorio (el logo
+// ya enlaza a la home), pero sí como primer item del menú móvil (accesibilidad).
+const contentLinks = [
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
+  { href: "/news", label: "Noticias" },
+];
+
+const toolLinks = [
+  { href: "/videos", label: "Vídeos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/maestro", label: "Maestro" },
-  { href: "/news", label: "Noticias" },
-  { href: "/videos", label: "Vídeos" },
+];
+
+const mobileLinks = [
+  { href: "/", label: "Inicio" },
+  ...contentLinks,
+  ...toolLinks,
 ];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function DesktopNavLink({
+  href,
+  label,
+  pathname,
+}: {
+  href: string;
+  label: string;
+  pathname: string;
+}) {
+  const active = isActive(pathname, href);
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative whitespace-nowrap border-b-2 px-2.5 py-4 font-display text-sm font-semibold uppercase tracking-wide transition-colors xl:px-3",
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </Link>
+  );
 }
 
 export function SiteHeader() {
@@ -49,12 +86,37 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Brand */}
+      {/* Rejilla de 3 zonas con laterales de anchura idéntica (minmax(0,1fr)):
+          el logo queda perfectamente centrado sin importar qué item esté activo. */}
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 lg:px-8">
+        {/* Zona izquierda: hamburguesa (móvil/tablet) o nav de contenido (escritorio) */}
+        <div className="flex items-center justify-start">
+          <button
+            ref={hamburgerRef}
+            type="button"
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            onClick={() => setOpen((value) => !value)}
+            className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          >
+            {open ? <X className="size-4" /> : <Menu className="size-4" />}
+          </button>
+          <nav
+            aria-label="Navegación principal"
+            className="hidden items-center gap-1 lg:flex"
+          >
+            {contentLinks.map((link) => (
+              <DesktopNavLink key={link.href} pathname={pathname} {...link} />
+            ))}
+          </nav>
+        </div>
+
+        {/* Zona central: el logo hace de "Inicio" */}
         <Link
           href="/"
           aria-label="MMA STATUS — inicio"
-          className="group flex shrink-0 items-center gap-2.5 py-2.5"
+          className="group flex shrink-0 items-center justify-center gap-2.5 py-2.5"
         >
           <Image
             src="/brand/mark-hex.png"
@@ -70,43 +132,17 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        {/* Desktop tabs */}
-        <nav className="hidden flex-1 items-center gap-1 overflow-x-auto md:flex">
-          {links.map((link) => {
-            const active = isActive(pathname, link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative whitespace-nowrap border-b-2 px-3 py-4 font-display text-sm font-semibold uppercase tracking-wide transition-colors",
-                  active
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Right controls */}
-        <div className="flex shrink-0 items-center gap-2">
-          <ThemeToggle />
-          {/* Hamburger — solo en móvil */}
-          <button
-            ref={hamburgerRef}
-            type="button"
-            aria-label={open ? "Cerrar menú" : "Abrir menú"}
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            onClick={() => setOpen((value) => !value)}
-            className="inline-flex size-9 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        {/* Zona derecha: nav de herramientas (escritorio) + ThemeToggle */}
+        <div className="flex items-center justify-end gap-2">
+          <nav
+            aria-label="Herramientas"
+            className="hidden items-center gap-1 lg:flex"
           >
-            {open ? <X className="size-4" /> : <Menu className="size-4" />}
-          </button>
+            {toolLinks.map((link) => (
+              <DesktopNavLink key={link.href} pathname={pathname} {...link} />
+            ))}
+          </nav>
+          <ThemeToggle />
         </div>
       </div>
 
@@ -115,10 +151,10 @@ export function SiteHeader() {
         id="mobile-nav"
         hidden={!open}
         aria-label="Navegación principal"
-        className="border-t border-border bg-background/95 backdrop-blur-md md:hidden"
+        className="border-t border-border bg-background/95 backdrop-blur-md lg:hidden"
       >
         <div className="mx-auto flex w-full max-w-7xl flex-col px-4 py-2 sm:px-6">
-          {links.map((link) => {
+          {mobileLinks.map((link) => {
             const active = isActive(pathname, link.href);
             return (
               <Link
