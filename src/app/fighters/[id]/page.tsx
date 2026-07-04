@@ -1,10 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRightLeft, Play, Trophy } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  ArrowRightLeft,
+  CalendarDays,
+  History,
+  Play,
+  Trophy,
+} from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
+import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { PerFightBars } from "@/components/fighter/per-fight-bars";
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { RankingTrajectory } from "@/components/fighter/ranking-trajectory";
@@ -17,7 +25,6 @@ import { SectionHeading } from "@/components/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -41,6 +48,11 @@ import {
   formatWeightClass,
 } from "@/lib/format";
 import { computeRecentForm } from "@/lib/fighter-form";
+import {
+  computeAge,
+  countFirstRoundFinishes,
+  lastCompletedFight,
+} from "@/lib/fighter-highlights";
 import { resolveFightVideoUrl } from "@/lib/video";
 import {
   getFighterDetail,
@@ -117,200 +129,425 @@ export default async function FighterDetailPage({
     `${recentForm.lastFive.wins}-${recentForm.lastFive.losses}` +
     (formOther > 0 ? `-${formOther}` : "");
 
+  // Destacados del hero estilo ufc.com (fase 3).
+  const age = computeAge(fighter.birthDate);
+  const firstRoundFinishes = countFirstRoundFinishes(history);
+  const lastFight = lastCompletedFight(history);
+  const nextBout = upcomingBouts[0] ?? null;
+  const division = detail.latestWeightClass
+    ? formatWeightClass(detail.latestWeightClass)
+    : null;
+
+  const heroHighlights = [
+    { value: winMethods.koTko, label: "Victorias por KO" },
+    { value: winMethods.submission, label: "Victorias por sumisión" },
+    { value: firstRoundFinishes, label: "Finalizaciones en 1er asalto" },
+  ];
+
+  const lastFightResultLabel =
+    lastFight?.result === "win"
+      ? "Victoria"
+      : lastFight?.result === "loss"
+        ? "Derrota"
+        : lastFight?.result === "draw"
+          ? "Empate"
+          : "NC";
+  const lastFightResultClass =
+    lastFight?.result === "win"
+      ? "bg-win/10 text-win"
+      : lastFight?.result === "loss"
+        ? "bg-loss/10 text-loss"
+        : "bg-muted text-muted-foreground";
+
+  // Fila bio "sin huecos": los campos opcionales (alcance de pierna, edad,
+  // gimnasio) se ocultan cuando faltan en vez de mostrar un guion.
+  const bioItems: { label: string; content: ReactNode }[] = [
+    { label: "Altura", content: formatHeight(fighter.heightCm) },
+    { label: "Alcance", content: formatReach(fighter.reachCm) },
+    ...(fighter.legReachCm != null
+      ? [
+          {
+            label: "Alcance de pierna",
+            content: formatReach(fighter.legReachCm),
+          },
+        ]
+      : []),
+    { label: "Peso", content: formatWeight(fighter.weightGrams) },
+    ...(age != null ? [{ label: "Edad", content: `${age} años` }] : []),
+    ...(fighter.trainsAt
+      ? [{ label: "Gimnasio", content: fighter.trainsAt }]
+      : []),
+    {
+      label: "Nacionalidad",
+      content: (
+        <span className="flex items-center gap-2">
+          <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
+          {cleanNationality(fighter.nationality) ?? "Desconocida"}
+        </span>
+      ),
+    },
+  ];
+
   // Cuando no hay noticias, el hueco se rellena con los próximos combates (#48).
   const showUpcoming = news.length === 0 && upcomingBouts.length > 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="overflow-hidden border-border bg-card">
-          <CardContent className="space-y-8 p-8">
-            <div className="flex flex-wrap items-start justify-between gap-6">
-              <div className="flex flex-wrap items-center gap-6">
-                <FighterHeadshot
-                  name={fighter.name}
-                  headshotUrl={fighter.headshotUrl}
-                  size="xl"
-                  priority
-                  className="border-0 bg-transparent shadow-md ring-1 ring-border"
-                  imageClassName="object-cover object-top"
-                />
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                      Perfil del luchador
-                    </p>
-                    <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl">
-                      {fighter.name}
-                    </h1>
-                    <p className="text-lg text-muted-foreground">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {detail.ranking ? (
-                      detail.ranking.isChampion ? (
-                        <Badge className="bg-primary text-primary-foreground">
-                          <Trophy />
-                          Campeón
-                        </Badge>
-                      ) : (
-                        <Badge className="border-primary/30 bg-primary/10 text-primary">
-                          <Trophy />
-                          {`#${detail.ranking.position} ${formatDivision(detail.ranking.division)}`}
-                        </Badge>
-                      )
-                    ) : null}
-                    <Badge className="border-primary/20 bg-primary/10 text-primary">
-                      {detail.latestWeightClass
-                        ? formatWeightClass(detail.latestWeightClass)
-                        : "Categoría no disponible"}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                      {fighter.stance ? formatStance(fighter.stance) : "Guardia desconocida"}
-                    </Badge>
-                    <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                      <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
-                      {cleanNationality(fighter.nationality) ?? "Nacionalidad no disponible"}
-                    </Badge>
-                    <Link href={`/enfrentamiento?red=${fighter.id}`}>
-                      <Button
-                        variant="secondary"
-                        className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <ArrowRightLeft />
-                        Comparar luchador
-                      </Button>
+      {/* HERO estilo ufc.com/athlete: 3 zonas en escritorio (identidad+tiles /
+          atleta de cuerpo entero / última pelea y próximo combate); en móvil
+          apila badges+nombre → foto → tiles → tarjetas. */}
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card via-card to-muted/40 px-5 py-8 sm:px-8 lg:px-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[440px] w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl lg:block"
+        />
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,400px)_minmax(0,1fr)] lg:grid-rows-[auto_auto] lg:gap-x-10">
+          {/* IZQUIERDA: identidad */}
+          <div className="space-y-5 lg:col-start-1 lg:row-start-1">
+            <div className="flex flex-wrap gap-3">
+              {detail.ranking ? (
+                detail.ranking.isChampion ? (
+                  <Badge className="bg-primary text-primary-foreground">
+                    <Trophy />
+                    Campeón
+                  </Badge>
+                ) : (
+                  <Badge className="border-primary/30 bg-primary/10 text-primary">
+                    <Trophy />
+                    {`#${detail.ranking.position} ${formatDivision(detail.ranking.division)}`}
+                  </Badge>
+                )
+              ) : null}
+              <Badge className="border-primary/20 bg-primary/10 text-primary">
+                {division ?? "Categoría no disponible"}
+              </Badge>
+              <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                {fighter.stance ? formatStance(fighter.stance) : "Guardia desconocida"}
+              </Badge>
+              <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
+                {cleanNationality(fighter.nationality) ?? "Nacionalidad no disponible"}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                Perfil del luchador
+              </p>
+              <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl xl:text-6xl">
+                {fighter.name}
+              </h1>
+              {fighter.nickname ? (
+                <p className="text-lg text-muted-foreground">
+                  “{fighter.nickname}”
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-1">
+                <span className="tabular font-display text-3xl font-bold text-foreground">
+                  {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
+                </span>
+                <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  V-D-E · {detail.fightCount} peleas registradas
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* CENTRO: atleta de cuerpo entero (PNG transparente, sin marco) */}
+          <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-end">
+            <FighterFullBody
+              name={fighter.name}
+              fullBodyUrl={fighter.fullBodyUrl ?? null}
+              headshotUrl={fighter.headshotUrl}
+            />
+          </div>
+
+          {/* IZQUIERDA (abajo): tiles de destacados estilo ufc.com */}
+          <div className="grid grid-cols-3 gap-4 lg:col-start-1 lg:row-start-2 lg:self-end">
+            {heroHighlights.map((highlight) => (
+              <div key={highlight.label}>
+                <p className="tabular font-display text-4xl font-extrabold leading-none text-foreground sm:text-5xl">
+                  {highlight.value}
+                </p>
+                <div className="mt-2.5 h-1 w-10 rounded-full bg-primary" />
+                <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+                  {highlight.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* DERECHA: última pelea, próximo combate y accesos */}
+          <div className="flex flex-col gap-4 lg:col-start-3 lg:row-span-2 lg:row-start-1">
+            {lastFight ? (
+              <div className={`${PREMIUM_TILE} p-5`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Última pelea
+                  </p>
+                  <span
+                    className={`inline-flex items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide ${lastFightResultClass}`}
+                  >
+                    {lastFightResultLabel}
+                  </span>
+                </div>
+                <p className="mt-3 font-display text-xl font-bold uppercase leading-tight tracking-tight text-foreground">
+                  {lastFight.opponentId ? (
+                    <Link
+                      href={`/fighters/${lastFight.opponentId}`}
+                      className="transition-colors hover:text-primary"
+                    >
+                      {lastFight.opponentName ?? "Oponente desconocido"}
                     </Link>
-                  </div>
+                  ) : (
+                    (lastFight.opponentName ?? "Oponente desconocido")
+                  )}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {formatMethod(lastFight.method)}
+                  {lastFight.endRound != null ? ` · R${lastFight.endRound}` : ""}
+                  {lastFight.endTime ? ` (${lastFight.endTime})` : ""}
+                </p>
+                <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+                  <CalendarDays className="size-3.5 shrink-0" />
+                  {lastFight.eventId ? (
+                    <Link
+                      href={`/eventos/${lastFight.eventId}`}
+                      className="transition-colors hover:text-primary"
+                    >
+                      {lastFight.eventName ?? "Evento desconocido"}
+                    </Link>
+                  ) : (
+                    (lastFight.eventName ?? "Evento desconocido")
+                  )}
+                  <span aria-hidden>·</span>
+                  {formatDate(lastFight.eventDate)}
+                </p>
+                <div className="mt-4 border-t border-border pt-3">
+                  <Link
+                    href={`/fights/${lastFight.fightId}`}
+                    className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                  >
+                    Ver detalles de la pelea →
+                  </Link>
                 </div>
               </div>
-              <div className="rounded-3xl border border-border bg-muted px-6 py-5 text-right">
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Récord</p>
-                <p className="tabular mt-3 font-display text-4xl font-bold text-foreground">
-                  {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">{detail.fightCount} peleas registradas</p>
-              </div>
-            </div>
-            <Separator className="bg-border" />
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Altura</p>
-                <p className="tabular mt-2 text-lg font-semibold text-foreground">
-                  {formatHeight(fighter.heightCm)}
-                </p>
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Alcance</p>
-                <p className="tabular mt-2 text-lg font-semibold text-foreground">
-                  {formatReach(fighter.reachCm)}
-                </p>
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Peso</p>
-                <p className="tabular mt-2 text-lg font-semibold text-foreground">
-                  {formatWeight(fighter.weightGrams)}
-                </p>
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Nacionalidad</p>
-                <p className="mt-2 flex items-center gap-2 text-lg font-semibold text-foreground">
-                  <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
-                  {cleanNationality(fighter.nationality) ?? "Desconocida"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ) : null}
 
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-foreground">Resumen de rendimiento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              <div className={`${PREMIUM_TILE} p-4`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Racha actual
+            {nextBout ? (
+              <div className={`${PREMIUM_TILE} p-5`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Próximo combate
+                  </p>
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarDays className="size-3.5" />
+                    {formatDate(nextBout.eventDate)}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <FighterHeadshot
+                    name={nextBout.opponentName ?? "Oponente por confirmar"}
+                    headshotUrl={nextBout.opponentHeadshotUrl}
+                    size="sm"
+                  />
+                  <div className="min-w-0">
+                    {nextBout.opponentId ? (
+                      <Link
+                        href={`/fighters/${nextBout.opponentId}`}
+                        className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground transition-colors hover:text-primary"
+                      >
+                        {nextBout.opponentName ?? "Oponente por confirmar"}
+                      </Link>
+                    ) : (
+                      <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">
+                        {nextBout.opponentName ?? "Oponente por confirmar"}
+                      </p>
+                    )}
+                    {nextBout.opponentWins != null &&
+                    nextBout.opponentLosses != null &&
+                    nextBout.opponentDraws != null ? (
+                      <p className="tabular font-mono text-sm text-muted-foreground">
+                        {formatRecord(
+                          nextBout.opponentWins,
+                          nextBout.opponentLosses,
+                          nextBout.opponentDraws,
+                        )}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {nextBout.eventId ? (
+                    <Link
+                      href={`/eventos/${nextBout.eventId}`}
+                      className="font-medium text-foreground transition-colors hover:text-primary"
+                    >
+                      {nextBout.eventName ?? "Evento por confirmar"}
+                    </Link>
+                  ) : (
+                    (nextBout.eventName ?? "Evento por confirmar")
+                  )}
                 </p>
-                <p
-                  className={`tabular mt-2 text-2xl font-bold ${
-                    recentForm.streakType === "win"
-                      ? "text-win"
-                      : recentForm.streakType === "loss"
-                        ? "text-loss"
-                        : "text-foreground"
-                  }`}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+              <Link href="#historial" className="flex-1">
+                <Button
+                  variant="secondary"
+                  className="w-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
-                  {streakLabel}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">{streakHelper}</p>
-              </div>
-              <div className={`${PREMIUM_TILE} p-4`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Forma (últ. 5)
-                </p>
-                <p className="tabular mt-2 text-2xl font-bold text-foreground">
-                  {formLabel}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {recentForm.lastFive.total} combate
-                  {recentForm.lastFive.total === 1 ? "" : "s"} · V-D
-                </p>
-              </div>
+                  <History />
+                  Ver historial completo
+                </Button>
+              </Link>
+              <Link href={`/enfrentamiento?red=${fighter.id}`} className="flex-1">
+                <Button
+                  variant="secondary"
+                  className="w-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <ArrowRightLeft />
+                  Comparar luchador
+                </Button>
+              </Link>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <StatDonut
-                label="Precisión de golpeo"
-                value={aggregateStats.sigStrikeAccuracy}
-                helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted}`}
-                colorVar="var(--chart-1)"
-              />
-              <StatDonut
-                label="Precisión de derribo"
-                value={aggregateStats.takedownAccuracy}
-                helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted}`}
-                colorVar="var(--chart-2)"
-              />
+          </div>
+        </div>
+
+        {/* Fila bio completa (los campos sin dato se ocultan, sin huecos) */}
+        <div className="relative mt-8 flex flex-wrap gap-x-10 gap-y-6 border-t border-border pt-6 lg:gap-x-14">
+          {bioItems.map((item) => (
+            <div key={item.label} className="min-w-32">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                {item.label}
+              </p>
+              <p className="tabular mt-2 text-lg font-semibold text-foreground">
+                {item.content}
+              </p>
             </div>
-            <StrikeSilhouette profile={strikeProfile} />
-            <div className="grid grid-cols-2 gap-3">
-              <div className={`${PREMIUM_TILE} p-4 text-center`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Knockdowns
-                </p>
-                <p className="tabular mt-2 text-2xl font-bold text-foreground">
-                  {aggregateStats.knockdowns}
-                </p>
+          ))}
+        </div>
+      </section>
+
+      {/* Estadísticas inmediatamente tras el hero/bio: dos columnas equilibradas
+          (resumen + silueta arriba; volumen + métodos de victoria debajo) para
+          que el lateral derecho nunca quede vacío ni las stats enterradas. */}
+      <section className="space-y-6">
+        <SectionHeading
+          eyebrow="Estadísticas"
+          title="Perfil de rendimiento"
+          description="Racha, precisión, defensa y desglose de victorias, calculado sobre las peleas registradas."
+        />
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-foreground">Resumen de rendimiento</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className={`${PREMIUM_TILE} p-4`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Racha actual
+                  </p>
+                  <p
+                    className={`tabular mt-2 text-2xl font-bold ${
+                      recentForm.streakType === "win"
+                        ? "text-win"
+                        : recentForm.streakType === "loss"
+                          ? "text-loss"
+                          : "text-foreground"
+                    }`}
+                  >
+                    {streakLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{streakHelper}</p>
+                </div>
+                <div className={`${PREMIUM_TILE} p-4`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Forma (últ. 5)
+                  </p>
+                  <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                    {formLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {recentForm.lastFive.total} combate
+                    {recentForm.lastFive.total === 1 ? "" : "s"} · V-D
+                  </p>
+                </div>
               </div>
-              <div className={`${PREMIUM_TILE} p-4 text-center`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Int. sumisión
-                </p>
-                <p className="tabular mt-2 text-2xl font-bold text-foreground">
-                  {aggregateStats.submissionAttempts}
-                </p>
+              <div className="grid grid-cols-2 gap-3">
+                <StatDonut
+                  label="Precisión de golpeo"
+                  value={aggregateStats.sigStrikeAccuracy}
+                  helper={`${aggregateStats.sigStrikesLanded}/${aggregateStats.sigStrikesAttempted}`}
+                  colorVar="var(--chart-1)"
+                />
+                <StatDonut
+                  label="Precisión de derribo"
+                  value={aggregateStats.takedownAccuracy}
+                  helper={`${aggregateStats.takedownsLanded}/${aggregateStats.takedownsAttempted}`}
+                  colorVar="var(--chart-2)"
+                />
               </div>
-              <div className={`${PREMIUM_TILE} p-4 text-center`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Derribos
-                </p>
-                <p className="tabular mt-2 text-2xl font-bold text-foreground">
-                  {aggregateStats.takedownsLanded}
-                </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className={`${PREMIUM_TILE} p-4 text-center`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Knockdowns
+                  </p>
+                  <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                    {aggregateStats.knockdowns}
+                  </p>
+                </div>
+                <div className={`${PREMIUM_TILE} p-4 text-center`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Int. sumisión
+                  </p>
+                  <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                    {aggregateStats.submissionAttempts}
+                  </p>
+                </div>
+                <div className={`${PREMIUM_TILE} p-4 text-center`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Derribos
+                  </p>
+                  <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                    {aggregateStats.takedownsLanded}
+                  </p>
+                </div>
+                <div className={`${PREMIUM_TILE} p-4 text-center`}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    T. control
+                  </p>
+                  <p className="tabular mt-2 text-2xl font-bold text-foreground">
+                    {formatControlTime(aggregateStats.controlTimeSeconds)}
+                  </p>
+                </div>
               </div>
-              <div className={`${PREMIUM_TILE} p-4 text-center`}>
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  T. control
-                </p>
-                <p className="tabular mt-2 text-2xl font-bold text-foreground">
-                  {formatControlTime(aggregateStats.controlTimeSeconds)}
-                </p>
+              <div className="grid gap-3">
+                <DefenseMeter
+                  label="Defensa de golpeo"
+                  value={defenseStats.strikingDefense}
+                  helper={`${defenseStats.oppSigStrikesLanded} de ${defenseStats.oppSigStrikesAttempted} permitidos`}
+                />
+                <DefenseMeter
+                  label="Defensa de derribo"
+                  value={defenseStats.takedownDefense}
+                  helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
+                />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <StrikeSilhouette profile={strikeProfile} />
+
+          <div className={winMethods.total > 0 ? undefined : "lg:col-span-2"}>
+            <PerFightBars
+              landedPerFight={rateStats.sigStrikesLandedPerFight}
+              absorbedPerFight={rateStats.sigStrikesAbsorbedPerFight}
+            />
+          </div>
+          {winMethods.total > 0 ? <WinMethodChart methods={winMethods} /> : null}
+        </div>
       </section>
 
       {rankingHistory.length > 0 ? (
@@ -324,36 +561,7 @@ export default async function FighterDetailPage({
         </section>
       ) : null}
 
-      {aggregateStats.totalFightStats > 0 || winMethods.total > 0 ? (
-        <section className="space-y-6">
-          <SectionHeading
-            eyebrow="Estadísticas"
-            title="Perfil de rendimiento"
-            description="Precisión, defensa y desglose de victorias, calculado sobre las peleas registradas."
-          />
-          <div className="grid gap-6 lg:grid-cols-2">
-            <PerFightBars
-              landedPerFight={rateStats.sigStrikesLandedPerFight}
-              absorbedPerFight={rateStats.sigStrikesAbsorbedPerFight}
-            />
-            {winMethods.total > 0 ? <WinMethodChart methods={winMethods} /> : null}
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <DefenseMeter
-              label="Defensa de golpeo"
-              value={defenseStats.strikingDefense}
-              helper={`${defenseStats.oppSigStrikesLanded} de ${defenseStats.oppSigStrikesAttempted} permitidos`}
-            />
-            <DefenseMeter
-              label="Defensa de derribo"
-              value={defenseStats.takedownDefense}
-              helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      <section className="space-y-6">
+      <section id="historial" className="scroll-mt-24 space-y-6">
         <SectionHeading
           eyebrow="Historial de peleas"
           title="Cada enfrentamiento registrado"
@@ -503,7 +711,7 @@ export default async function FighterDetailPage({
           description={
             showUpcoming
               ? "Peleas programadas en eventos próximos según el calendario actual."
-              : "Artículos vinculados a este luchador desde la tabla de noticias, ordenados por fecha de publicación."
+              : "Artículos vinculados a este luchador o que lo mencionan por nombre, ordenados por fecha de publicación."
           }
         />
         <div className="grid gap-4">

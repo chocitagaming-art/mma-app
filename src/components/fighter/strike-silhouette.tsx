@@ -29,6 +29,18 @@ function accuracy(zone: StrikeZoneStat): number {
   return zone.attempted > 0 ? zone.landed / zone.attempted : 0;
 }
 
+// % del total de golpes conectados que fue a cada zona (como ufc.com:
+// "Sig. Str. by target"). No confundir con la precisión (landed/attempted).
+function zoneShare(zone: StrikeZoneStat, totalLanded: number): number {
+  return totalLanded > 0 ? zone.landed / totalLanded : 0;
+}
+
+// Opacidad del tinte rojo: proporcional al % de golpes de la zona, con un
+// mínimo de 0.12 para que toda región sea siempre visible.
+function zoneOpacity(share: number): number {
+  return 0.12 + 0.88 * share;
+}
+
 function hasStrikeData(data: FighterStrikeBreakdown): boolean {
   return [...ZONES, ...POSITIONS].some(({ key }) => {
     const zone = data[key];
@@ -36,65 +48,151 @@ function hasStrikeData(data: FighterStrikeBreakdown): boolean {
   });
 }
 
-// Muñeco SVG: cada región (cabeza/cuerpo/pierna) se tiñe con el rojo de marca a
-// una opacidad proporcional al VOLUMEN de golpes de esa zona (normalizado a la
-// zona más golpeada → rojo intenso = más golpes).
+// --- Silueta humana de cuerpo entero (frontal), estilo ufc.com ---
+// Tres regiones como paths independientes: cabeza+cuello, torso+brazos
+// (tres subtrazados en un mismo path: el winding nonzero evita costuras al
+// solaparse hombro y torso) y piernas. Coordenadas simétricas respecto a
+// x=110 en un viewBox de 220x520.
+
+const HEAD_PATH = `
+  M110 12
+  C 95 12 85 24 85 43
+  C 85 57 91 69 98 75
+  L 98 85
+  C 98 92 94 97 87 100
+  L 133 100
+  C 126 97 122 92 122 85
+  L 122 75
+  C 129 69 135 57 135 43
+  C 135 24 125 12 110 12
+  Z`;
+
+const BODY_PATH = `
+  M83 103
+  L 137 103
+  C 142 116 144 132 142 148
+  C 139 172 137 190 137 205
+  C 137 225 139 243 141 258
+  L 79 258
+  C 81 243 83 225 83 205
+  C 83 190 81 172 78 148
+  C 76 132 78 116 83 103
+  Z
+  M82 105
+  C 70 109 62 117 58 129
+  C 54 143 51 158 49 175
+  C 47 192 44 208 41 224
+  C 38 240 35 254 33 268
+  C 31 279 32 288 36 294
+  C 41 301 49 300 52 292
+  C 55 284 56 274 58 263
+  C 61 246 64 229 67 212
+  C 70 194 73 176 75 158
+  C 77 143 79 124 82 105
+  Z
+  M138 105
+  C 150 109 158 117 162 129
+  C 166 143 169 158 171 175
+  C 173 192 176 208 179 224
+  C 182 240 185 254 187 268
+  C 189 279 188 288 184 294
+  C 179 301 171 300 168 292
+  C 165 284 164 274 162 263
+  C 159 246 156 229 153 212
+  C 150 194 147 176 145 158
+  C 143 143 141 124 138 105
+  Z`;
+
+const LEGS_PATH = `
+  M79 260
+  L 141 260
+  C 144 288 142 312 138 336
+  C 135 358 133 375 133 392
+  C 133 418 131 444 129 468
+  L 129 484
+  C 130 495 128 503 122 505
+  L 116 505
+  C 113 503 112 497 113 489
+  L 114 470
+  C 116 448 117 424 117 400
+  C 117 375 116 358 116 336
+  C 115 315 113 296 110 284
+  C 107 296 105 315 104 336
+  C 104 358 103 375 103 400
+  C 103 424 104 448 106 470
+  L 107 489
+  C 108 497 107 503 104 505
+  L 98 505
+  C 92 503 90 495 91 484
+  L 91 468
+  C 89 444 87 418 87 392
+  C 87 375 85 358 82 336
+  C 78 312 76 288 79 260
+  Z`;
+
+// Silueta: capa base gris clara (tema-aware vía tokens) + tinte rojo por
+// región con opacidad proporcional al % de golpes de esa zona.
 function Figure({ data }: { data: FighterStrikeBreakdown }) {
-  const maxZone = Math.max(data.head.landed, data.body.landed, data.leg.landed, 1);
-  const intensity = (zone: StrikeZoneStat) => 0.14 + 0.86 * (zone.landed / maxZone);
-  const fill = "var(--primary)";
+  const regions: { key: ZoneKey; path: string }[] = [
+    { key: "head", path: HEAD_PATH },
+    { key: "body", path: BODY_PATH },
+    { key: "leg", path: LEGS_PATH },
+  ];
 
   return (
     <svg
-      viewBox="0 0 120 230"
-      className="h-28 w-auto shrink-0"
+      viewBox="0 0 220 520"
+      className="h-44 w-auto shrink-0"
       role="img"
-      aria-label="Silueta de golpes por zona"
+      aria-label="Silueta de golpes por zona: cabeza, cuerpo y pierna"
     >
-      <g stroke="var(--border)" strokeWidth={1.5} strokeLinejoin="round">
-        {/* Cabeza */}
-        <circle cx="60" cy="26" r="18" fill={fill} fillOpacity={intensity(data.head)} />
-        {/* Cuerpo (torso + brazos) */}
-        <g fill={fill} fillOpacity={intensity(data.body)}>
-          <path d="M 41 50 L 79 50 L 76 132 L 44 132 Z" />
-          <path d="M 41 52 L 30 56 L 22 120 L 31 122 L 42 72 Z" />
-          <path d="M 79 52 L 90 56 L 98 120 L 89 122 L 78 72 Z" />
-        </g>
-        {/* Piernas */}
-        <g fill={fill} fillOpacity={intensity(data.leg)}>
-          <path d="M 45 134 L 59 134 L 57 224 L 46 224 Z" />
-          <path d="M 61 134 L 75 134 L 74 224 L 63 224 Z" />
-        </g>
+      {/* Base gris de la silueta completa */}
+      <g fill="var(--muted-foreground)" fillOpacity={0.16}>
+        {regions.map(({ key, path }) => (
+          <path key={`base-${key}`} d={path} />
+        ))}
+      </g>
+      {/* Tinte rojo por región (mín. 0.12 para que siempre se aprecie) */}
+      <g fill="var(--primary)" stroke="var(--border)" strokeWidth={1}>
+        {regions.map(({ key, path }) => (
+          <path
+            key={`tint-${key}`}
+            d={path}
+            fillOpacity={zoneOpacity(zoneShare(data[key], data.totalLanded))}
+          />
+        ))}
       </g>
     </svg>
   );
 }
 
+// Lista estilo ufc.com: "Cabeza · golpes · %" con numerales tabulares.
 function ZoneLegend({ data }: { data: FighterStrikeBreakdown }) {
-  const maxZone = Math.max(data.head.landed, data.body.landed, data.leg.landed, 1);
-
   return (
-    <ul className="flex-1 space-y-2">
+    <ul className="flex-1 space-y-2.5">
       {ZONES.map(({ key, label }) => {
         const zone = data[key];
-        const opacity = 0.14 + 0.86 * (zone.landed / maxZone);
+        const share = zoneShare(zone, data.totalLanded);
 
         return (
           <li key={key} className="flex items-center gap-2.5 text-sm">
             <span
-              className="size-3 shrink-0 rounded-sm"
-              style={{ backgroundColor: "var(--primary)", opacity }}
+              className="size-3 shrink-0 rounded-sm bg-primary"
+              style={{ opacity: zoneOpacity(share) }}
             />
             <span className="text-muted-foreground">{label}</span>
             <span className="tabular ml-auto text-xs text-muted-foreground">
-              {zone.landed}/{zone.attempted}
+              {zone.landed}
             </span>
-            <span className="tabular w-9 text-right font-semibold text-foreground">
-              {formatPercentage(accuracy(zone))}
+            <span className="tabular w-11 text-right font-display text-base font-bold text-foreground">
+              {formatPercentage(share)}
             </span>
           </li>
         );
       })}
+      <li className="border-t border-border/60 pt-2 text-[10px] uppercase tracking-wide text-muted-foreground/85">
+        % del total de golpes conectados
+      </li>
     </ul>
   );
 }
@@ -152,7 +250,7 @@ function Panel({
       </div>
       {hasStrikeData(data) ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <Figure data={data} />
             <ZoneLegend data={data} />
           </div>
@@ -184,7 +282,7 @@ export function StrikeSilhouette({
             Silueta de golpes
           </p>
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground/85">
-            Intensidad = volumen
+            Intensidad = % de golpes
           </p>
         </div>
       ) : null}

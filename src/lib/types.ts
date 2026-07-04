@@ -13,6 +13,11 @@ export type Fighter = {
   losses: number;
   draws: number;
   updatedAt: string | null;
+  // Campos de la ficha estilo ufc.com (fase 3). Opcionales: el backfill puede
+  // dejarlos NULL y algunas queries antiguas no los seleccionan.
+  fullBodyUrl?: string | null; // PNG de cuerpo entero con fondo transparente
+  legReachCm?: number | null;
+  trainsAt?: string | null; // gimnasio/equipo
 };
 
 export type FighterCardData = Fighter & {
