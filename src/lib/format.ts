@@ -245,6 +245,38 @@ export function formatNewsCategory(category: string | null): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+// Edad en años cumplidos a partir de una fecha ISO ("1988-07-14" o un datetime
+// completo). Calculada en UTC para evitar derivas de zona horaria; `ref` es
+// inyectable para poder testearla. Devuelve null para valores ausentes,
+// no parseables o fuera de un rango humano plausible (0-120).
+export function ageFromBirthDate(
+  birthDate: string | null | undefined,
+  ref: Date = new Date(),
+): number | null {
+  if (!birthDate) {
+    return null;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(birthDate.trim());
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  let age = ref.getUTCFullYear() - year;
+  const beforeBirthday =
+    ref.getUTCMonth() + 1 < month ||
+    (ref.getUTCMonth() + 1 === month && ref.getUTCDate() < day);
+  if (beforeBirthday) {
+    age -= 1;
+  }
+
+  return age >= 0 && age <= 120 ? age : null;
+}
+
 // The nationality column from ESPN is messy and sometimes holds the literal
 // string "Unknown" (or blanks) instead of NULL. Normalize those sentinels to
 // null so callers can apply their own Spanish fallback (e.g. "Desconocida").

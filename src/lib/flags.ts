@@ -288,3 +288,29 @@ export function nationalityToCountryCode(nationality: string | null | undefined)
   if (!key || key === "unknown" || key === "n/a" || key === "-") return null;
   return NAME_TO_ISO2[key] ?? null;
 }
+
+// Nombre del país en español (vía Intl.DisplayNames) resuelto desde la
+// nacionalidad libre de la BD. Si no podemos mapear a un código ISO (o el
+// código no tiene traducción, p.ej. "xk" Kosovo), devolvemos el texto original
+// limpio; null solo cuando no hay nada presentable ("Unknown", vacío...).
+const REGION_NAMES_ES = new Intl.DisplayNames(["es"], {
+  type: "region",
+  fallback: "none",
+});
+
+export function countryNameEs(nationality: string | null | undefined): string | null {
+  const code = nationalityToCountryCode(nationality);
+  if (code) {
+    try {
+      const name = REGION_NAMES_ES.of(code.toUpperCase());
+      if (name) return name;
+    } catch {
+      // Código estructuralmente inválido: seguimos al fallback de texto libre.
+    }
+  }
+
+  if (!nationality) return null;
+  const trimmed = nationality.trim();
+  if (!trimmed || normalize(trimmed) === "unknown") return null;
+  return trimmed;
+}

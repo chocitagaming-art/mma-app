@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ageFromBirthDate,
   cleanNationality,
   formatHeight,
   formatModelDate,
@@ -9,6 +10,35 @@ import {
   formatStance,
   formatWeight,
 } from "@/lib/format";
+
+describe("ageFromBirthDate", () => {
+  const ref = new Date("2026-07-04T00:00:00Z");
+
+  it("computes completed years relative to the reference date", () => {
+    // Cumpleaños ya pasado este año.
+    expect(ageFromBirthDate("1988-07-01", ref)).toBe(38);
+    // Cumpleaños aún no cumplido este año.
+    expect(ageFromBirthDate("1988-07-05", ref)).toBe(37);
+    // Cumpleaños exactamente hoy: ya cuenta el año.
+    expect(ageFromBirthDate("1988-07-04", ref)).toBe(38);
+  });
+
+  it("accepts full ISO datetimes and ignores the time part", () => {
+    expect(ageFromBirthDate("1990-01-15T00:00:00.000Z", ref)).toBe(36);
+  });
+
+  it("returns null for missing or unparsable values", () => {
+    expect(ageFromBirthDate(null, ref)).toBeNull();
+    expect(ageFromBirthDate(undefined, ref)).toBeNull();
+    expect(ageFromBirthDate("", ref)).toBeNull();
+    expect(ageFromBirthDate("no-date", ref)).toBeNull();
+  });
+
+  it("returns null for implausible ages (future or >120 years)", () => {
+    expect(ageFromBirthDate("2030-01-01", ref)).toBeNull();
+    expect(ageFromBirthDate("1880-01-01", ref)).toBeNull();
+  });
+});
 
 describe("formatHeight", () => {
   it("formats centimetres as an integer with the cm suffix", () => {

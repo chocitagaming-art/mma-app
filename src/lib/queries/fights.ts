@@ -1,7 +1,11 @@
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
-import type { FightCompetitorStats, FightDetail } from "@/lib/types";
+import type {
+  FightCompetitorStats,
+  FightDetail,
+  FightLastResult,
+} from "@/lib/types";
 
 type FightRow = {
   id: number;
@@ -23,10 +27,14 @@ type FightRow = {
   red_name: string | null;
   red_nickname: string | null;
   red_headshot: string | null;
+  red_full_body: string | null;
   red_nationality: string | null;
   red_stance: string | null;
   red_height_cm: string | null;
   red_reach_cm: string | null;
+  red_leg_reach_cm: string | null;
+  red_weight_grams: number | null;
+  red_birth_date: string | null;
   red_wins: number | null;
   red_losses: number | null;
   red_draws: number | null;
@@ -35,13 +43,25 @@ type FightRow = {
   blue_name: string | null;
   blue_nickname: string | null;
   blue_headshot: string | null;
+  blue_full_body: string | null;
   blue_nationality: string | null;
   blue_stance: string | null;
   blue_height_cm: string | null;
   blue_reach_cm: string | null;
+  blue_leg_reach_cm: string | null;
+  blue_weight_grams: number | null;
+  blue_birth_date: string | null;
   blue_wins: number | null;
   blue_losses: number | null;
   blue_draws: number | null;
+};
+
+type LastFightRow = {
+  fight_id: number;
+  event_name: string | null;
+  event_date: string | null;
+  result: "win" | "loss" | "draw";
+  method: string | null;
 };
 
 type FightStatsRow = {
@@ -81,6 +101,43 @@ function mapStats(row?: FightStatsRow): FightCompetitorStats | null {
   };
 }
 
+// Última pelea COMPLETADA de un luchador (method IS NOT NULL descarta combates
+// futuros), excluyendo la pelea que se está viendo: en una pelea terminada la
+// fila "Última pelea" debe apuntar a la anterior, no a sí misma. Mismo patrón
+// (JOIN events + CASE winner_id + ORDER BY event_date DESC LIMIT 1) que el
+// historial de getFighterDetail.
+const LAST_FIGHT_SQL = `select
+    fi.id as fight_id,
+    e.name as event_name,
+    e.event_date,
+    case
+      when fi.winner_id is null then 'draw'
+      when fi.winner_id = $1 then 'win'
+      else 'loss'
+    end as result,
+    fi.method
+  from fights fi
+  left join events e on e.id = fi.event_id
+  where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)
+    and fi.method is not null
+    and fi.id <> $2
+  order by e.event_date desc nulls last, fi.id desc
+  limit 1`;
+
+function mapLastFight(row?: LastFightRow): FightLastResult | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    fightId: row.fight_id,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    result: row.result,
+    method: row.method,
+  };
+}
+
 // cache(): la página de detalle ejecuta esta misma query dos veces por request
 // (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
 export const getFightDetail = cache(async (
@@ -108,10 +165,14 @@ export const getFightDetail = cache(async (
       red.name as red_name,
       red.nickname as red_nickname,
       red.headshot_url as red_headshot,
+      red.full_body_url as red_full_body,
       red.nationality as red_nationality,
       red.stance as red_stance,
       red.height_cm::text as red_height_cm,
       red.reach_cm::text as red_reach_cm,
+      red.leg_reach_cm::text as red_leg_reach_cm,
+      red.weight_grams as red_weight_grams,
+      red.birth_date::text as red_birth_date,
       red.wins as red_wins,
       red.losses as red_losses,
       red.draws as red_draws,
@@ -119,10 +180,14 @@ export const getFightDetail = cache(async (
       blue.name as blue_name,
       blue.nickname as blue_nickname,
       blue.headshot_url as blue_headshot,
+      blue.full_body_url as blue_full_body,
       blue.nationality as blue_nationality,
       blue.stance as blue_stance,
       blue.height_cm::text as blue_height_cm,
       blue.reach_cm::text as blue_reach_cm,
+      blue.leg_reach_cm::text as blue_leg_reach_cm,
+      blue.weight_grams as blue_weight_grams,
+      blue.birth_date::text as blue_birth_date,
       blue.wins as blue_wins,
       blue.losses as blue_losses,
       blue.draws as blue_draws
@@ -140,20 +205,31 @@ export const getFightDetail = cache(async (
     return null;
   }
 
-  const statsRows = await sql<FightStatsRow>(
-    `select
-      fighter_id,
-      sig_strikes_landed,
-      sig_strikes_attempted,
-      takedowns_landed,
-      takedowns_attempted,
-      submission_attempts,
-      control_time_seconds,
-      knockdowns
-    from fight_stats
-    where fight_id = $1`,
-    [id],
-  );
+  // Stats del combate + última pelea de cada esquina: independientes entre sí,
+  // una sola pasada en paralelo (espeja getFighterDetail). Esquina TBD (id
+  // null) no tiene historial que consultar.
+  const [statsRows, redLastRows, blueLastRows] = await Promise.all([
+    sql<FightStatsRow>(
+      `select
+        fighter_id,
+        sig_strikes_landed,
+        sig_strikes_attempted,
+        takedowns_landed,
+        takedowns_attempted,
+        submission_attempts,
+        control_time_seconds,
+        knockdowns
+      from fight_stats
+      where fight_id = $1`,
+      [id],
+    ),
+    fight.red_id != null
+      ? sql<LastFightRow>(LAST_FIGHT_SQL, [fight.red_id, id])
+      : Promise.resolve<LastFightRow[]>([]),
+    fight.blue_id != null
+      ? sql<LastFightRow>(LAST_FIGHT_SQL, [fight.blue_id, id])
+      : Promise.resolve<LastFightRow[]>([]),
+  ]);
 
   const redStats = mapStats(statsRows.find((row) => row.fighter_id === fight.red_id));
   const blueStats = mapStats(
@@ -181,26 +257,38 @@ export const getFightDetail = cache(async (
       name: fight.red_name ?? fight.red_fighter_name,
       nickname: fight.red_nickname,
       headshotUrl: fight.red_headshot,
+      fullBodyUrl: fight.red_full_body,
       nationality: fight.red_nationality,
       stance: fight.red_stance,
       heightCm: fight.red_height_cm ? Number(fight.red_height_cm) : null,
       reachCm: fight.red_reach_cm ? Number(fight.red_reach_cm) : null,
+      legReachCm: fight.red_leg_reach_cm ? Number(fight.red_leg_reach_cm) : null,
+      weightGrams: fight.red_weight_grams,
+      birthDate: fight.red_birth_date,
       wins: fight.red_wins ?? 0,
       losses: fight.red_losses ?? 0,
       draws: fight.red_draws ?? 0,
+      lastFight: mapLastFight(redLastRows[0]),
     },
     blue: {
       id: fight.blue_id,
       name: fight.blue_name ?? fight.blue_fighter_name,
       nickname: fight.blue_nickname,
       headshotUrl: fight.blue_headshot,
+      fullBodyUrl: fight.blue_full_body,
       nationality: fight.blue_nationality,
       stance: fight.blue_stance,
       heightCm: fight.blue_height_cm ? Number(fight.blue_height_cm) : null,
       reachCm: fight.blue_reach_cm ? Number(fight.blue_reach_cm) : null,
+      legReachCm: fight.blue_leg_reach_cm
+        ? Number(fight.blue_leg_reach_cm)
+        : null,
+      weightGrams: fight.blue_weight_grams,
+      birthDate: fight.blue_birth_date,
       wins: fight.blue_wins ?? 0,
       losses: fight.blue_losses ?? 0,
       draws: fight.blue_draws ?? 0,
+      lastFight: mapLastFight(blueLastRows[0]),
     },
     redStats,
     blueStats,
