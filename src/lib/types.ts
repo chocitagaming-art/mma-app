@@ -16,6 +16,9 @@ export type Fighter = {
   // Campos de la ficha estilo ufc.com (fase 3). Opcionales: el backfill puede
   // dejarlos NULL y algunas queries antiguas no los seleccionan.
   fullBodyUrl?: string | null; // PNG de cuerpo entero con fondo transparente
+  // Foto "standing" (cuerpo entero de pie, Ronda B). Cadena de fallback en
+  // combates/enfrentamiento: standing → full body → headshot.
+  standingBodyUrl?: string | null;
   legReachCm?: number | null;
   trainsAt?: string | null; // gimnasio/equipo
 };
@@ -366,6 +369,7 @@ export type FightCompetitor = {
   // Campos opcionales añadidos en Fase 4 (ficha de combate estilo ufc.com).
   // Opcionales para no romper a otros constructores de FightCompetitor.
   fullBodyUrl?: string | null;
+  standingBodyUrl?: string | null; // foto de pie (Ronda B), prioritaria en combates
   weightGrams?: number | null;
   birthDate?: string | null;
   legReachCm?: number | null;

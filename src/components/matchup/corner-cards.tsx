@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { FighterHeadshot } from "@/components/fighter-headshot";
+import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { formatPercentage, formatRecord, formatWeightClass } from "@/lib/format";
 import type { FighterHistorySummary } from "@/lib/prediction";
 import type { FighterComparisonProfile } from "@/lib/types";
@@ -19,24 +19,23 @@ export function CornerBlock({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 sm:gap-4",
+        "flex items-end gap-3 sm:gap-4",
         isRed ? "flex-row" : "flex-row sm:flex-row-reverse",
       )}
     >
+      {/* Foto de cuerpo entero (Ronda B): standing → full body → headshot.
+          Roja a la izquierda, azul a la derecha (flex-row-reverse). */}
       <Link
         href={`/fighters/${fighter.id}`}
         className="shrink-0 transition-opacity hover:opacity-80"
       >
-        <FighterHeadshot
+        <FighterFullBody
           name={fighter.name}
+          fullBodyUrl={fighter.fullBodyUrl ?? null}
+          standingBodyUrl={fighter.standingBodyUrl ?? null}
           headshotUrl={fighter.headshotUrl}
-          size="lg"
-          priority
-          className={cn(
-            "aspect-square border-2 bg-muted",
-            isRed ? "border-corner-red" : "border-corner-blue",
-          )}
-          imageClassName="object-cover object-top"
+          preference="standing-first"
+          className="h-[300px] w-32 sm:h-[340px] sm:w-44"
         />
       </Link>
       <div

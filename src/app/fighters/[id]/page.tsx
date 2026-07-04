@@ -177,15 +177,6 @@ export default async function FighterDetailPage({
     ...(fighter.trainsAt
       ? [{ label: "Gimnasio", content: fighter.trainsAt }]
       : []),
-    {
-      label: "Nacionalidad",
-      content: (
-        <span className="flex items-center gap-2">
-          <CountryFlag nationality={fighter.nationality} className="h-4 w-6" />
-          {cleanNationality(fighter.nationality) ?? "Desconocida"}
-        </span>
-      ),
-    },
   ];
 
   // Cuando no hay noticias, el hueco se rellena con los próximos combates (#48).
@@ -224,8 +215,13 @@ export default async function FighterDetailPage({
               <Badge variant="secondary" className="bg-muted text-muted-foreground">
                 {fighter.stance ? formatStance(fighter.stance) : "Guardia desconocida"}
               </Badge>
-              <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                <CountryFlag nationality={fighter.nationality} className="mr-1.5" />
+              {/* Nacionalidad con presencia: sustituye a la antigua celda de la
+                  fila bio (bandera grande + país en texto destacado). */}
+              <Badge
+                variant="secondary"
+                className="h-auto gap-2 bg-muted px-3 py-1.5 text-sm font-semibold text-foreground"
+              >
+                <CountryFlag nationality={fighter.nationality} className="h-5 w-7" />
                 {cleanNationality(fighter.nationality) ?? "Nacionalidad no disponible"}
               </Badge>
             </div>
@@ -257,7 +253,9 @@ export default async function FighterDetailPage({
             <FighterFullBody
               name={fighter.name}
               fullBodyUrl={fighter.fullBodyUrl ?? null}
+              standingBodyUrl={fighter.standingBodyUrl ?? null}
               headshotUrl={fighter.headshotUrl}
+              variant="hero"
             />
           </div>
 
@@ -662,27 +660,24 @@ export default async function FighterDetailPage({
                           )}
                         </TableCell>
                         <TableCell>
-                          {/* Sin resultado ni método = combate aún no disputado:
-                              no ofrecemos "ver" un vídeo de algo que no ocurrió. */}
-                          {fight.result === "draw" && fight.method == null ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <a
-                              href={resolveFightVideoUrl(
-                                fight.videoUrl,
-                                fighter.name,
-                                fight.opponentName ?? "",
-                                fight.eventName ?? undefined,
-                              )}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`Ver el combate ${fighter.name} vs ${fight.opponentName ?? "oponente"}`}
-                              className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80"
-                            >
-                              <Play className="size-3.5" />
-                              Ver
-                            </a>
-                          )}
+                          {/* El historial solo contiene combates disputados
+                              (la query excluye los programados), así que
+                              siempre hay pelea que ver. */}
+                          <a
+                            href={resolveFightVideoUrl(
+                              fight.videoUrl,
+                              fighter.name,
+                              fight.opponentName ?? "",
+                              fight.eventName ?? undefined,
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`Ver el combate ${fighter.name} vs ${fight.opponentName ?? "oponente"}`}
+                            className="inline-flex items-center gap-1.5 font-medium text-primary transition-colors hover:text-primary/80"
+                          >
+                            <Play className="size-3.5" />
+                            Ver
+                          </a>
                         </TableCell>
                       </TableRow>
                     );
