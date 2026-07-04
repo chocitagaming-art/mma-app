@@ -63,10 +63,9 @@ export function FighterSearchCombobox({
   }, []);
 
   useEffect(() => {
+    // Con el campo vacío no hay nada que buscar; la limpieza del estado la hace
+    // el onChange del input (evita setState síncrono dentro del efecto).
     if (trimmedQuery.length < 1) {
-      setFetchedResults([]);
-      setOpen(false);
-      setLoading(false);
       return;
     }
 
@@ -89,9 +88,13 @@ export function FighterSearchCombobox({
         const data = (await response.json()) as FighterSearchResult[];
         setFetchedResults(data);
         setOpen(true);
+        // Resultados nuevos: ninguna opción queda activa (evita punteros a
+        // opciones que ya no existen).
+        setActiveIndex(-1);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           setFetchedResults([]);
+          setActiveIndex(-1);
         }
       } finally {
         setLoading(false);
@@ -110,12 +113,6 @@ export function FighterSearchCombobox({
   );
 
   const listboxVisible = open && (results.length > 0 || loading || showEmpty);
-
-  // Al cambiar los resultados, ninguna opción queda activa (evita punteros a
-  // opciones que ya no existen).
-  useEffect(() => {
-    setActiveIndex(-1);
-  }, [fetchedResults]);
 
   // Mantener visible la opción activa dentro del scroll del listbox.
   useEffect(() => {
@@ -196,6 +193,9 @@ export function FighterSearchCombobox({
               onSelect(null);
               setQuery("");
               setFetchedResults([]);
+              setOpen(false);
+              setLoading(false);
+              setActiveIndex(-1);
             }}
           >
             <X />
@@ -209,9 +209,18 @@ export function FighterSearchCombobox({
           id={inputId}
           value={selectedName || query}
           onChange={(event) => {
-            setQuery(event.target.value);
-            if (value && event.target.value !== value.name) {
+            const nextValue = event.target.value;
+            setQuery(nextValue);
+            if (value && nextValue !== value.name) {
               onSelect(null);
+            }
+            // Campo vacío: se limpia el estado del listbox aquí, en el handler,
+            // en lugar de reaccionar con un efecto.
+            if (!nextValue.trim()) {
+              setFetchedResults([]);
+              setOpen(false);
+              setLoading(false);
+              setActiveIndex(-1);
             }
           }}
           onFocus={() => {
