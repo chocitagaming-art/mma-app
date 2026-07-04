@@ -48,90 +48,96 @@ function hasStrikeData(data: FighterStrikeBreakdown): boolean {
   });
 }
 
-// --- Silueta humana de cuerpo entero (frontal), estilo ufc.com ---
-// Tres regiones como paths independientes: cabeza+cuello, torso+brazos
-// (tres subtrazados en un mismo path: el winding nonzero evita costuras al
-// solaparse hombro y torso) y piernas. Coordenadas simétricas respecto a
-// x=110 en un viewBox de 220x520.
+// --- Silueta humana v2 (frontal, atlética, estilo ufc.com) ---
+// La mitad IZQUIERDA de cada región se define con curvas Bézier y la derecha se
+// genera espejada respecto a x=CX, garantizando simetría perfecta con un único
+// path cerrado por región (sin costuras). Tres regiones tintables por separado:
+// cabeza+cuello, torso+brazos y piernas. Proporciones ~7.5 cabezas de alto y
+// hombros ~2 cabezas de ancho, afinadas con iteración visual (Ronda B).
 
-const HEAD_PATH = `
-  M110 12
-  C 95 12 85 24 85 43
-  C 85 57 91 69 98 75
-  L 98 85
-  C 98 92 94 97 87 100
-  L 133 100
-  C 126 97 122 92 122 85
-  L 122 75
-  C 129 69 135 57 135 43
-  C 135 24 125 12 110 12
-  Z`;
+const CX = 110;
 
-const BODY_PATH = `
-  M83 103
-  L 137 103
-  C 142 116 144 132 142 148
-  C 139 172 137 190 137 205
-  C 137 225 139 243 141 258
-  L 79 258
-  C 81 243 83 225 83 205
-  C 83 190 81 172 78 148
-  C 76 132 78 116 83 103
-  Z
-  M82 105
-  C 70 109 62 117 58 129
-  C 54 143 51 158 49 175
-  C 47 192 44 208 41 224
-  C 38 240 35 254 33 268
-  C 31 279 32 288 36 294
-  C 41 301 49 300 52 292
-  C 55 284 56 274 58 263
-  C 61 246 64 229 67 212
-  C 70 194 73 176 75 158
-  C 77 143 79 124 82 105
-  Z
-  M138 105
-  C 150 109 158 117 162 129
-  C 166 143 169 158 171 175
-  C 173 192 176 208 179 224
-  C 182 240 185 254 187 268
-  C 189 279 188 288 184 294
-  C 179 301 171 300 168 292
-  C 165 284 164 274 162 263
-  C 159 246 156 229 153 212
-  C 150 194 147 176 145 158
-  C 143 143 141 124 138 105
-  Z`;
+type Pt = readonly [number, number];
+type Seg = { c1: Pt; c2: Pt; p: Pt };
 
-const LEGS_PATH = `
-  M79 260
-  L 141 260
-  C 144 288 142 312 138 336
-  C 135 358 133 375 133 392
-  C 133 418 131 444 129 468
-  L 129 484
-  C 130 495 128 503 122 505
-  L 116 505
-  C 113 503 112 497 113 489
-  L 114 470
-  C 116 448 117 424 117 400
-  C 117 375 116 358 116 336
-  C 115 315 113 296 110 284
-  C 107 296 105 315 104 336
-  C 104 358 103 375 103 400
-  C 103 424 104 448 106 470
-  L 107 489
-  C 108 497 107 503 104 505
-  L 98 505
-  C 92 503 90 495 91 484
-  L 91 468
-  C 89 444 87 418 87 392
-  C 87 375 85 358 82 336
-  C 78 312 76 288 79 260
-  Z`;
+const seg = (c1: Pt, c2: Pt, p: Pt): Seg => ({ c1, c2, p });
+const mirror = ([x, y]: Pt): Pt => [2 * CX - x, y];
 
-// Silueta: capa base gris clara (tema-aware vía tokens) + tinte rojo por
-// región con opacidad proporcional al % de golpes de esa zona.
+// Baja por la mitad izquierda (start y el punto final del último segmento deben
+// estar en x=CX) y vuelve por la derecha espejando los segmentos en orden
+// inverso (controles intercambiados), cerrando la silueta.
+function symmetricPath(start: Pt, segs: Seg[]): string {
+  let d = `M ${start[0]} ${start[1]}`;
+  for (const s of segs) {
+    d += ` C ${s.c1[0]} ${s.c1[1]}, ${s.c2[0]} ${s.c2[1]}, ${s.p[0]} ${s.p[1]}`;
+  }
+  for (let i = segs.length - 1; i >= 0; i -= 1) {
+    const end = i === 0 ? start : segs[i - 1].p;
+    const [c1x, c1y] = mirror(segs[i].c2);
+    const [c2x, c2y] = mirror(segs[i].c1);
+    const [ex, ey] = mirror(end);
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${ex} ${ey}`;
+  }
+  return `${d} Z`;
+}
+
+// Cabeza + cuello (y=12..87): cráneo redondeado, mejilla fundida en un cuello
+// recto y grueso; el ensanche hacia los hombros lo pone el trapecio del torso.
+const HEAD_PATH = symmetricPath(
+  [110, 12],
+  [
+    seg([99, 12], [89, 19], [88, 34]),
+    seg([88, 45], [92, 56], [97, 62]),
+    seg([97, 70], [98, 78], [99, 86]),
+    seg([103, 86.5], [106, 87], [110, 87]),
+  ],
+);
+
+// Torso + brazos (y=87..264): trapecio alto, deltoides anchos, brazos separados
+// del torso con codo y antebrazo marcados, puño compacto, torso en V con
+// cintura y cadera.
+const BODY_PATH = symmetricPath(
+  [110, 87],
+  [
+    seg([107, 87], [103, 87], [99, 87]), // base del cuello
+    seg([90, 89], [77, 93], [64, 102]), // trapecio
+    seg([49, 107], [40, 114], [38, 127]), // deltoides
+    seg([38, 140], [40, 155], [43, 172]), // brazo exterior hasta el codo
+    seg([45, 182], [40, 190], [39, 202]), // codo y bulto del antebrazo
+    seg([38, 216], [41, 228], [45, 240]), // antebrazo a la muñeca
+    seg([43, 246], [43, 258], [49, 266]), // puño exterior/inferior
+    seg([55, 270], [59, 264], [58, 252]), // puño interior
+    seg([57, 240], [56, 226], [58, 208]), // antebrazo interior
+    seg([59, 196], [60, 186], [62, 176]), // codo interior
+    seg([64, 162], [66, 148], [72, 138]), // bíceps interior hasta la axila
+    seg([74, 132], [78, 134], [79, 142]), // axila
+    seg([82, 166], [84, 190], [83, 214]), // dorsal/costado a la cintura
+    seg([82, 234], [79, 250], [77, 264]), // cintura a la cadera
+    seg([88, 264], [99, 264], [110, 264]), // bajo del torso al centro
+  ],
+);
+
+// Piernas (y=264..492): muslos con masa, rodilla, gemelo más ancho que la
+// rodilla, tobillo fino y pie con planta apuntando ligeramente hacia fuera.
+const LEGS_PATH = symmetricPath(
+  [110, 264],
+  [
+    seg([99, 264], [88, 264], [77, 264]), // línea de cadera
+    seg([72, 288], [73, 318], [78, 346]), // muslo exterior a la rodilla
+    seg([79, 356], [74, 366], [74, 380]), // rodilla y salida del gemelo
+    seg([75, 404], [81, 430], [84, 452]), // gemelo exterior al tobillo
+    seg([84, 462], [79, 468], [73, 474]), // tobillo al empeine
+    seg([66, 480], [68, 490], [80, 491]), // punta y planta del pie
+    seg([94, 492], [98, 486], [97, 470]), // talón e interior del tobillo
+    seg([97, 452], [99, 430], [99, 404]), // gemelo interior
+    seg([99, 382], [99, 362], [101, 346]), // rodilla interior
+    seg([102, 322], [104, 300], [108, 288]), // muslo interior a la entrepierna
+    seg([109, 286], [110, 286], [110, 286]), // entrepierna (centro)
+  ],
+);
+
+// Silueta: capa base clara (tema-aware vía tokens) + tinte rojo por región con
+// opacidad proporcional al % de golpes de esa zona.
 function Figure({ data }: { data: FighterStrikeBreakdown }) {
   const regions: { key: ZoneKey; path: string }[] = [
     { key: "head", path: HEAD_PATH },
@@ -141,19 +147,20 @@ function Figure({ data }: { data: FighterStrikeBreakdown }) {
 
   return (
     <svg
-      viewBox="0 0 220 520"
+      viewBox="0 0 220 500"
       className="h-44 w-auto shrink-0"
       role="img"
       aria-label="Silueta de golpes por zona: cabeza, cuerpo y pierna"
     >
-      {/* Base gris de la silueta completa */}
-      <g fill="var(--muted-foreground)" fillOpacity={0.16}>
-        {regions.map(({ key, path }) => (
-          <path key={`base-${key}`} d={path} />
-        ))}
-      </g>
+      {/* Base de la silueta completa: un único path con las tres regiones
+          (winding nonzero) para que las uniones no generen costuras. */}
+      <path
+        d={`${HEAD_PATH} ${BODY_PATH} ${LEGS_PATH}`}
+        fill="var(--muted-foreground)"
+        fillOpacity={0.16}
+      />
       {/* Tinte rojo por región (mín. 0.12 para que siempre se aprecie) */}
-      <g fill="var(--primary)" stroke="var(--border)" strokeWidth={1}>
+      <g fill="var(--primary)">
         {regions.map(({ key, path }) => (
           <path
             key={`tint-${key}`}

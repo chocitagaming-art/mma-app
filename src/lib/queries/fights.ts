@@ -28,6 +28,7 @@ type FightRow = {
   red_nickname: string | null;
   red_headshot: string | null;
   red_full_body: string | null;
+  red_standing_body: string | null;
   red_nationality: string | null;
   red_stance: string | null;
   red_height_cm: string | null;
@@ -44,6 +45,7 @@ type FightRow = {
   blue_nickname: string | null;
   blue_headshot: string | null;
   blue_full_body: string | null;
+  blue_standing_body: string | null;
   blue_nationality: string | null;
   blue_stance: string | null;
   blue_height_cm: string | null;
@@ -166,6 +168,7 @@ export const getFightDetail = cache(async (
       red.nickname as red_nickname,
       red.headshot_url as red_headshot,
       red.full_body_url as red_full_body,
+      red.standing_body_url as red_standing_body,
       red.nationality as red_nationality,
       red.stance as red_stance,
       red.height_cm::text as red_height_cm,
@@ -181,6 +184,7 @@ export const getFightDetail = cache(async (
       blue.nickname as blue_nickname,
       blue.headshot_url as blue_headshot,
       blue.full_body_url as blue_full_body,
+      blue.standing_body_url as blue_standing_body,
       blue.nationality as blue_nationality,
       blue.stance as blue_stance,
       blue.height_cm::text as blue_height_cm,
@@ -258,6 +262,7 @@ export const getFightDetail = cache(async (
       nickname: fight.red_nickname,
       headshotUrl: fight.red_headshot,
       fullBodyUrl: fight.red_full_body,
+      standingBodyUrl: fight.red_standing_body,
       nationality: fight.red_nationality,
       stance: fight.red_stance,
       heightCm: fight.red_height_cm ? Number(fight.red_height_cm) : null,
@@ -276,6 +281,7 @@ export const getFightDetail = cache(async (
       nickname: fight.blue_nickname,
       headshotUrl: fight.blue_headshot,
       fullBodyUrl: fight.blue_full_body,
+      standingBodyUrl: fight.blue_standing_body,
       nationality: fight.blue_nationality,
       stance: fight.blue_stance,
       heightCm: fight.blue_height_cm ? Number(fight.blue_height_cm) : null,

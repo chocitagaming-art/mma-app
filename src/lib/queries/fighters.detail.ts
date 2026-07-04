@@ -105,7 +105,12 @@ export const getFighterDetail = cache(async (
       left join events e on e.id = fi.event_id
       left join fighters red on red.id = fi.fighter_red_id
       left join fighters blue on blue.id = fi.fighter_blue_id
-      where fi.fighter_red_id = $1 or fi.fighter_blue_id = $1
+      where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)
+        -- Solo combates YA disputados: winner y method ambos NULL = bout
+        -- programado, que saldría como "Empate" fantasma en el historial.
+        -- Los programados ya se muestran en la tarjeta "Próximo combate"
+        -- (getFighterUpcomingBouts), no aquí.
+        and not (fi.winner_id is null and fi.method is null)
       order by e.event_date desc nulls last, fi.id desc`,
       [id],
     ),

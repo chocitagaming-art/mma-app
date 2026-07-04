@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
-import { FighterFullBody } from "@/components/fighter-full-body";
+import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { countryNameEs } from "@/lib/flags";
 import {
   ageFromBirthDate,
@@ -116,7 +116,10 @@ function FaceOffCorner({
     <FighterFullBody
       name={fighter.name}
       fullBodyUrl={fighter.fullBodyUrl ?? null}
+      standingBodyUrl={fighter.standingBodyUrl ?? null}
       headshotUrl={fighter.headshotUrl}
+      // Cadena Ronda B: foto de pie primero, luego full body, luego headshot.
+      preference="standing-first"
       // Alturas fijas anti-CLS: pequeñas lado a lado en móvil, ~420px desktop.
       className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
     />

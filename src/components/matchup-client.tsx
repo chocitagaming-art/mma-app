@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Swords } from "lucide-react";
+import { CalendarDays, Swords } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { FighterSearchCombobox } from "@/components/fighter-search-combobox";
@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatMethod, formatWeightClass } from "@/lib/format";
+import {
+  splitDirectMatchups,
+  summarizeDirectMatchups,
+} from "@/lib/matchup-history";
 import type { PredictionResponse } from "@/lib/prediction";
 import type {
   FighterComparisonDetail,
@@ -98,23 +102,28 @@ export function MatchupClient({
     [detail],
   );
 
+  // Separa los combates programados (winner y method NULL) de los disputados:
+  // el resumen y las tarjetas normales solo miran los disputados, y los
+  // programados tienen su propia tarjeta "Combate programado".
+  const directHistory = useMemo(
+    () =>
+      detail
+        ? splitDirectMatchups(detail.directMatchups)
+        : { completed: [], scheduled: [] },
+    [detail],
+  );
+
   const matchupSummary = useMemo(() => {
     if (!detail) {
       return null;
     }
 
-    const redWins = detail.directMatchups.filter(
-      (fight) => fight.winnerId === detail.fighterA.id,
-    ).length;
-    const blueWins = detail.directMatchups.filter(
-      (fight) => fight.winnerId === detail.fighterB.id,
-    ).length;
-    const draws = detail.directMatchups.filter(
-      (fight) => fight.winnerId === null,
-    ).length;
-
-    return { redWins, blueWins, draws };
-  }, [detail]);
+    return summarizeDirectMatchups(
+      directHistory.completed,
+      detail.fighterA.id,
+      detail.fighterB.id,
+    );
+  }, [detail, directHistory]);
 
   const favorite = useMemo(() => {
     if (!prediction) {
@@ -185,16 +194,11 @@ export function MatchupClient({
     <div className="space-y-10">
       <Card className="overflow-visible border-border bg-card">
         <CardContent className="space-y-8 p-6 sm:p-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <SectionHeading
-              eyebrow="Cara a cara"
-              title="Arma tu enfrentamiento UFC"
-              description="Fija las esquinas roja y azul para ver al instante el cara a cara con récords, físico, golpeo y grappling. Después dispara la predicción de IA."
-            />
-            <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
-              La URL compartible se actualiza automáticamente mientras eliges.
-            </div>
-          </div>
+          <SectionHeading
+            eyebrow="Cara a cara"
+            title="Arma tu enfrentamiento UFC"
+            description="Fija las esquinas roja y azul para ver al instante el cara a cara con récords, físico, golpeo y grappling. Después dispara la predicción de IA."
+          />
           <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-end">
             <FighterSearchCombobox
               label="Esquina roja"
@@ -279,7 +283,42 @@ export function MatchupClient({
               title="Enfrentamientos previos"
               description="Cada pelea registrada en la que estos dos luchadores compartieron la jaula."
             />
-            {matchupSummary && detail.directMatchups.length ? (
+            {/* Combates futuros ya anunciados entre ambos: tarjeta propia, sin
+                contaminar el resumen ni las tarjetas de resultados. */}
+            {directHistory.scheduled.map((fight) => (
+              <Link key={fight.fightId} href={`/fights/${fight.fightId}`}>
+                <Card className="border-dashed border-primary/40 bg-primary/5 transition hover:border-primary/60 hover:bg-primary/10">
+                  <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="border-primary/20 bg-primary/10 text-primary">
+                          <CalendarDays />
+                          Combate programado
+                        </Badge>
+                        {fight.weightClass ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-muted text-muted-foreground"
+                          >
+                            {formatWeightClass(fight.weightClass)}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {fight.eventName ?? "Evento por confirmar"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(fight.eventDate)}
+                      </p>
+                    </div>
+                    <p className="text-sm font-medium text-primary">
+                      Ver la previa del combate →
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+            {matchupSummary && directHistory.completed.length ? (
               <Card className="border-border bg-primary/5">
                 <CardContent className="grid gap-4 p-6 md:grid-cols-3 md:items-center">
                   <div>
@@ -311,8 +350,8 @@ export function MatchupClient({
               </Card>
             ) : null}
             <div className="grid gap-4">
-              {detail.directMatchups.length ? (
-                detail.directMatchups.map((fight) => (
+              {directHistory.completed.length ? (
+                directHistory.completed.map((fight) => (
                   <Link key={fight.fightId} href={`/fights/${fight.fightId}`}>
                     <Card className="border-border bg-card transition hover:border-primary/30 hover:bg-accent">
                       <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
@@ -327,11 +366,13 @@ export function MatchupClient({
                                 : "Categoría no disponible"}
                             </Badge>
                             <Badge className="border-primary/20 bg-primary/10 text-primary">
+                              {/* Aquí solo llegan peleas disputadas: winner NULL
+                                  con método registrado = empate o no contest. */}
                               {fight.winnerId === detail.fighterA.id
                                 ? `Ganó ${detail.fighterA.name}`
                                 : fight.winnerId === detail.fighterB.id
                                   ? `Ganó ${detail.fighterB.name}`
-                                  : "Empate / Sin resultado"}
+                                  : "Empate / No contest"}
                             </Badge>
                           </div>
                           <p className="text-lg font-semibold text-foreground">
@@ -350,7 +391,9 @@ export function MatchupClient({
                     </Card>
                   </Link>
                 ))
-              ) : (
+              ) : detail.directMatchups.length === 0 ? (
+                // Solo cuando no hay NADA (ni disputados ni programados): si
+                // existe un combate programado, su tarjeta ya cuenta la historia.
                 <Card className="border-dashed border-border bg-card">
                   <CardContent className="flex flex-col items-center gap-4 px-6 py-16 text-center">
                     <Swords className="size-8 text-muted-foreground" />
@@ -365,7 +408,7 @@ export function MatchupClient({
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
             </div>
           </section>
 

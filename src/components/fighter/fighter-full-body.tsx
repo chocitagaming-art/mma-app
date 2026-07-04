@@ -4,56 +4,105 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { pickBodyPhotoUrl, type BodyPhotoPreference } from "@/lib/fighter-photo";
+import { cn } from "@/lib/utils";
 
 type FighterFullBodyProps = {
   name: string;
   fullBodyUrl: string | null;
+  // Foto "standing" (Ronda B). Opcional: el backfill corre en paralelo y los
+  // callers antiguos pueden no tenerla aún.
+  standingBodyUrl?: string | null;
   headshotUrl: string | null;
+  // Cadena de prioridad de la foto (ver pickBodyPhotoUrl). "full-first" por
+  // defecto: la ficha del luchador conserva exactamente su foto aprobada.
+  preference?: BodyPhotoPreference;
+  // "hero": hero de la ficha (next/image, alturas propias, sombra de suelo).
+  // "embed": el caller fija la altura vía className (anti-CLS), <img> nativo.
+  variant?: "hero" | "embed";
+  className?: string;
 };
 
-// Foto de cuerpo entero estilo ufc.com para el hero de la ficha (fase 3).
-// PNG transparente directamente sobre el fondo (sin marco/carta). El backfill
-// deja full_body_url NULL en ~la mitad de luchadores, así que SIEMPRE hay
-// fallback elegante al headshot actual; también cubre errores de carga.
-// Alturas fijas por variante para no provocar CLS.
+// Foto de cuerpo entero estilo ufc.com. Única fuente para la ficha (hero), el
+// tale-of-the-tape del combate y las esquinas de /enfrentamiento (embed).
+// Si la URL elegida es NULL o falla la carga, degradamos al headshot (que a su
+// vez cae a iniciales). <img> nativo en "embed" siguiendo el precedente de
+// CountryFlag (evita remotePatterns; la CSP ya permite img-src https:).
 export function FighterFullBody({
   name,
   fullBodyUrl,
+  standingBodyUrl = null,
   headshotUrl,
+  preference = "full-first",
+  variant = "embed",
+  className,
 }: FighterFullBodyProps) {
   const [imageFailed, setImageFailed] = useState(false);
+  const photoUrl = pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  const showPhoto = photoUrl != null && !imageFailed;
 
-  if (!fullBodyUrl || imageFailed) {
+  if (variant === "hero") {
+    if (!showPhoto) {
+      return (
+        <div className="flex h-[300px] w-full items-center justify-center sm:h-[340px] lg:h-[540px]">
+          <FighterHeadshot
+            name={name}
+            headshotUrl={headshotUrl}
+            size="xl"
+            priority
+            className="border-0 bg-transparent shadow-md ring-1 ring-border"
+            imageClassName="object-cover object-top"
+          />
+        </div>
+      );
+    }
+
     return (
-      <div className="flex h-[300px] w-full items-center justify-center sm:h-[340px] lg:h-[540px]">
-        <FighterHeadshot
-          name={name}
-          headshotUrl={headshotUrl}
-          size="xl"
-          priority
-          className="border-0 bg-transparent shadow-md ring-1 ring-border"
-          imageClassName="object-cover object-top"
+      <div className="relative h-[420px] w-full sm:h-[480px] lg:h-[540px]">
+        {/* "Suelo" sutil bajo el atleta para asentarlo, como en ufc.com */}
+        <div
+          aria-hidden
+          className="absolute inset-x-10 bottom-1 h-8 rounded-[100%] bg-foreground/10 blur-xl"
+        />
+        <Image
+          src={photoUrl}
+          alt={`Foto de cuerpo entero de ${name}`}
+          fill
+          preload
+          sizes="(min-width: 1024px) 400px, 85vw"
+          className="object-contain object-bottom drop-shadow-xl"
+          onError={() => setImageFailed(true)}
         />
       </div>
     );
   }
 
   return (
-    <div className="relative h-[420px] w-full sm:h-[480px] lg:h-[540px]">
-      {/* "Suelo" sutil bajo el atleta para asentarlo, como en ufc.com */}
-      <div
-        aria-hidden
-        className="absolute inset-x-10 bottom-1 h-8 rounded-[100%] bg-foreground/10 blur-xl"
-      />
-      <Image
-        src={fullBodyUrl}
-        alt={`Foto de cuerpo entero de ${name}`}
-        fill
-        preload
-        sizes="(min-width: 1024px) 400px, 85vw"
-        className="object-contain object-bottom drop-shadow-xl"
-        onError={() => setImageFailed(true)}
-      />
+    <div
+      className={cn(
+        "relative flex items-end justify-center overflow-hidden",
+        className,
+      )}
+    >
+      {showPhoto ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={photoUrl}
+          src={photoUrl}
+          alt={`Foto de cuerpo entero de ${name}`}
+          className="h-full w-auto max-w-full object-contain object-bottom"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <FighterHeadshot
+            name={name}
+            headshotUrl={headshotUrl}
+            size="lg"
+            className="sm:size-36 md:size-44"
+          />
+        </div>
+      )}
     </div>
   );
 }
