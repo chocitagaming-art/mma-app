@@ -187,10 +187,12 @@ export default async function FighterDetailPage({
       {/* HERO estilo ufc.com/athlete: 3 zonas en escritorio (identidad+tiles /
           atleta de cuerpo entero / última pelea y próximo combate); en móvil
           apila badges+nombre → foto → tiles → tarjetas. */}
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card via-card to-muted/40 px-5 py-8 sm:px-8 lg:px-10">
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card via-card to-primary/[0.05] px-5 py-8 sm:px-8 lg:px-10 dark:to-muted/40">
+        {/* Haz rojo tras el atleta: en light necesita más alpha y más radio
+            para leerse sobre blanco; en dark conserva su tamaño/intensidad. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[440px] w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl lg:block"
+          className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl lg:block dark:h-[440px] dark:w-[440px] dark:bg-primary/10"
         />
         <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,400px)_minmax(0,1fr)] lg:grid-rows-[auto_auto] lg:gap-x-10">
           {/* IZQUIERDA: identidad */}

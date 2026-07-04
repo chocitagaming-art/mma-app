@@ -148,7 +148,7 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
           <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-card to-muted/40 p-6 text-center sm:p-8">
             <div
               aria-hidden
-              className="pointer-events-none absolute -right-12 -top-12 size-44 rounded-full bg-primary/20 blur-3xl"
+              className="pointer-events-none absolute -right-12 -top-12 size-44 rounded-full bg-primary/30 blur-3xl dark:bg-primary/20"
             />
             <h2 className="relative font-display text-xl font-extrabold uppercase tracking-tight text-foreground sm:text-2xl">
               ¿Quién se lleva la victoria?

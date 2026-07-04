@@ -245,7 +245,7 @@ function Panel({
   data: FighterStrikeBreakdown;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+    <div className="rounded-xl border border-border/60 bg-muted/70 p-4 dark:bg-muted/40">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           <Icon className="size-3.5 text-primary" />

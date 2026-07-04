@@ -85,7 +85,7 @@ export function VideoHero({ className }: { className?: string }) {
       {/* Soft brand glow behind the portrait frame. */}
       <div
         aria-hidden
-        className="absolute left-1/2 top-1/2 -z-10 h-3/4 w-3/4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/25 blur-[80px]"
+        className="absolute left-1/2 top-1/2 -z-10 h-3/4 w-3/4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/35 blur-[80px] dark:bg-primary/25"
       />
 
       <div className="relative aspect-[9/16] w-full overflow-hidden rounded-2xl mask-feather">
