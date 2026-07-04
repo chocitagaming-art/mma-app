@@ -13,9 +13,11 @@ import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 import { getRecentNews } from "@/lib/queries/news";
 
 // Home data (stats, destacados, noticias) cambia como mucho a diario, no en vivo.
-// ISR: servir estático y revalidar cada hora en vez de consultar la BD en cada
-// request (#33). Las páginas que dependen de query params del usuario siguen dinámicas.
-export const revalidate = 3600;
+// ISR: servir estático y revalidar cada 30 minutos en vez de consultar la BD en
+// cada request (#33). Además existe POST /api/revalidate para forzar la
+// revalidación bajo demanda. Las páginas que dependen de query params del
+// usuario siguen dinámicas.
+export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: { absolute: "MMA STATUS · Perfiles de peleadores UFC y análisis de peleas" },
