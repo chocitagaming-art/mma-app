@@ -339,6 +339,17 @@ export type UpcomingEventItem = {
   fightCount: number;
 };
 
+// Resultado de la ÚLTIMA pelea completada de un luchador (fila "Última pelea"
+// del tale-of-the-tape, Fase 4). Sigue el criterio de FighterHistoryItem:
+// winner_id NULL con method registrado = empate/no contest.
+export type FightLastResult = {
+  fightId: number;
+  eventName: string | null;
+  eventDate: string | null;
+  result: "win" | "loss" | "draw";
+  method: string | null;
+};
+
 export type FightCompetitor = {
   // null cuando el rival está por anunciar (combate próximo TBD): no hay ficha.
   id: number | null;
@@ -352,6 +363,13 @@ export type FightCompetitor = {
   wins: number;
   losses: number;
   draws: number;
+  // Campos opcionales añadidos en Fase 4 (ficha de combate estilo ufc.com).
+  // Opcionales para no romper a otros constructores de FightCompetitor.
+  fullBodyUrl?: string | null;
+  weightGrams?: number | null;
+  birthDate?: string | null;
+  legReachCm?: number | null;
+  lastFight?: FightLastResult | null;
 };
 
 export type FightCompetitorStats = {

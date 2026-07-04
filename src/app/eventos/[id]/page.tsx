@@ -103,17 +103,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         Eventos
       </Link>
 
-      <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6 sm:flex-row sm:items-start">
-        {isUpcoming && event.imageUrl ? (
-          // aspect-[16/9] reserva el alto antes de que cargue el póster remoto y
-          // evita el layout shift (CLS). Mismo tratamiento que las tarjetas de
-          // /eventos (que usan la misma imagen) para mantener la consistencia.
+      <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6">
+        {event.imageUrl ? (
+          // Póster hero (Fase 5): grande y centrado, también en eventos pasados.
+          // aspect-[16/9] + width/height explícitos reservan el alto antes de que
+          // cargue la imagen remota (anti-CLS); eager + fetchPriority alta porque
+          // es el elemento above-the-fold más pesado de la página (LCP).
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.imageUrl}
             alt={`Póster de ${event.name}`}
-            loading="lazy"
-            className="aspect-[16/9] w-full shrink-0 rounded-lg border border-border object-cover sm:w-56"
+            width={1280}
+            height={720}
+            loading="eager"
+            fetchPriority="high"
+            className="mx-auto aspect-[16/9] w-full max-w-3xl rounded-lg border border-border object-cover"
           />
         ) : null}
 
