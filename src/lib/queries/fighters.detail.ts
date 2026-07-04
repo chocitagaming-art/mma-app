@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
+import { containsPattern } from "@/lib/sql-like";
 import type {
   DirectMatchupFight,
   FighterComparisonDetail,
@@ -122,6 +123,12 @@ export const getFighterDetail = cache(async (
       where fighter_id = $1`,
       [id],
     ),
+    // Noticias del luchador: además del enlace directo (news.fighter_id apunta
+    // a UN solo luchador por noticia), incluimos artículos que mencionan su
+    // NOMBRE COMPLETO en titular o resumen (parametrizado y con escape LIKE;
+    // el nombre completo minimiza homónimos frente a buscar solo el apellido).
+    // El OR no multiplica filas (el join a fighters es 1:1), así que cada
+    // noticia sale una única vez aunque cumpla ambas condiciones.
     sql<NewsRow>(
       `select
         n.id,
@@ -138,8 +145,10 @@ export const getFighterDetail = cache(async (
       from news n
       left join fighters f on f.id = n.fighter_id
       where n.fighter_id = $1
+        or n.headline ilike $2
+        or n.summary ilike $2
       order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc`,
-      [id],
+      [id, containsPattern(fighterRow.name)],
     ),
     // Defensa: lo que el RIVAL intentó contra este luchador (su fila en el mismo combate).
     sql<DefenseRow>(

@@ -22,6 +22,11 @@ export type FighterRow = {
   losses: number;
   draws: number;
   updated_at: string | null;
+  // Fase 3 (ficha estilo ufc.com). Opcionales: llegan vía `select f.*`, pero
+  // las queries que enumeran columnas explícitas pueden no incluirlos.
+  full_body_url?: string | null;
+  leg_reach_cm?: string | null; // NUMERIC llega como string desde pg
+  trains_at?: string | null;
   fight_count?: string;
   latest_weight_class?: string | null;
 };

@@ -1,0 +1,87 @@
+import type { FighterHistoryItem } from "@/lib/types";
+
+// Helpers puros para los destacados del hero de la ficha de luchador (fase 3).
+// Sin dependencias de Next/DB para poder testearlos aislados (como fighter-form).
+
+// Edad en años cumplidos a partir de birth_date. La BD guarda DATE, que pg
+// puede entregar como string ISO ("1991-02-27") o como Date según el parser,
+// así que aceptamos ambos. Devuelve null si falta o no es parseable.
+export function computeAge(
+  birthDate: string | Date | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!birthDate) {
+    return null;
+  }
+
+  const birth =
+    birthDate instanceof Date
+      ? birthDate
+      : new Date(`${birthDate.slice(0, 10)}T00:00:00Z`);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - birth.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < birth.getUTCDate())) {
+    age -= 1;
+  }
+
+  // Fechas futuras o absurdas (errores de scraping) no son una edad mostrable.
+  return age >= 0 && age <= 130 ? age : null;
+}
+
+// Mismos buckets (y misma prioridad) que la query de winMethods en
+// fighters.detail.ts: 'decision' excluye, luego KO/TKO, luego sumisión.
+const DECISION_RE = /\bdecision\b/iu;
+const KO_RE = /\b(?:ko|tko)\b|knockout/iu;
+const SUBMISSION_RE =
+  /submission|choke|armbar|kimura|guillotine|triangle|americana|rear|naked|crank|\block\b/iu;
+
+// Clasifica un método de victoria como finalización (KO/TKO o sumisión).
+// Devuelve null para decisiones, DQ, métodos desconocidos o ausentes.
+export function classifyFinish(
+  method: string | null | undefined,
+): "ko" | "submission" | null {
+  if (!method) {
+    return null;
+  }
+
+  if (DECISION_RE.test(method)) {
+    return null;
+  }
+  if (KO_RE.test(method)) {
+    return "ko";
+  }
+  if (SUBMISSION_RE.test(method)) {
+    return "submission";
+  }
+
+  return null;
+}
+
+// 'Finalizaciones en 1er asalto': victorias con end_round = 1 terminadas por
+// KO/TKO o sumisión. Calculado sobre el historial que la ficha ya carga.
+export function countFirstRoundFinishes(history: FighterHistoryItem[]): number {
+  return history.filter(
+    (fight) =>
+      fight.result === "win" &&
+      fight.endRound === 1 &&
+      classifyFinish(fight.method) !== null,
+  ).length;
+}
+
+// El historial llega ordenado del más reciente al más antiguo e incluye
+// combates futuros como placeholder (result 'draw' + method null, ver
+// fighter-form.ts). La "última pelea" es el primer combate ya disputado.
+export function lastCompletedFight(
+  history: FighterHistoryItem[],
+): FighterHistoryItem | null {
+  return (
+    history.find(
+      (fight) => !(fight.result === "draw" && fight.method === null),
+    ) ?? null
+  );
+}
