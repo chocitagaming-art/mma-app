@@ -24,7 +24,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
 
 export function FighterCard({ fighter }: FighterCardProps) {
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(190,30,20,0.05),0_10px_28px_-14px_rgba(140,35,25,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/15 dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-foreground/5">
       {/* Corner accent */}
       <div className="absolute inset-x-0 top-0 z-10 h-1 bg-corner-red transition-[height] duration-200 group-hover:h-1.5" />
 
