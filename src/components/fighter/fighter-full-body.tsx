@@ -90,7 +90,17 @@ export function FighterFullBody({
           key={photoUrl}
           src={photoUrl}
           alt={`Foto de cuerpo entero de ${name}`}
-          className="h-full w-auto max-w-full object-contain object-bottom"
+          className={cn(
+            "h-full",
+            // Las fotos athlete_bio_full_body de ufc.com son un recorte fijo
+            // cabeza-muslo (sin pies): con contain quedan "enterradas" o con
+            // letterbox flotante según el ancho de columna, así que llenan la
+            // caja con cover anclado arriba (recorta laterales, no la cara).
+            // El resto (standing, cuerpo completo) se asienta en la base.
+            photoUrl.includes("athlete_bio_full_body")
+              ? "w-full object-cover object-top"
+              : "w-auto max-w-full object-contain object-bottom",
+          )}
           onError={() => setImageFailed(true)}
         />
       ) : (

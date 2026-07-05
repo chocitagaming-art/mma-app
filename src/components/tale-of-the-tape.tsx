@@ -322,7 +322,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
           {/* VS entre las dos fotos, solo móvil (en desktop separa la columna). */}
           <span
             aria-hidden
-            className="octagon absolute left-1/2 top-32 z-10 grid size-10 -translate-x-1/2 place-items-center bg-foreground font-display text-xs font-extrabold uppercase tracking-tight text-background md:hidden"
+            className="octagon pointer-events-none absolute left-1/2 top-32 z-10 grid size-10 -translate-x-1/2 place-items-center bg-foreground font-display text-xs font-extrabold uppercase tracking-tight text-background md:hidden"
           >
             VS
           </span>

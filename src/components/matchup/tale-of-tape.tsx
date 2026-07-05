@@ -113,7 +113,9 @@ export function TaleStatRow({ row }: { row: TaleRow }) {
       >
         {row.red}
       </p>
-      <p className="w-28 text-center font-mono text-[0.65rem] uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:w-40 sm:text-[0.7rem]">
+      {/* Ancho como TaleRow de /fights/[id]: la fila vive ahora en la columna
+          central de 250-330px del grid 3 columnas y w-40 la asfixiaba. */}
+      <p className="w-24 text-center font-mono text-[0.65rem] uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:w-28 sm:text-[0.7rem]">
         {row.label}
       </p>
       <p

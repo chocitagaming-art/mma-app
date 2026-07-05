@@ -223,26 +223,43 @@ export function MatchupClient({
 
       {canMatchup && detail ? (
         <>
-          {/* Tale of the tape — shown instantly once both corners are set */}
+          {/* Tale of the tape — shown instantly once both corners are set.
+              Grid 3 columnas estilo bout view (ver tale-of-the-tape.tsx):
+              cuerpos enteros enfrentados con la comparativa en medio (desktop)
+              o a ancho completo debajo (móvil). */}
           <section className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="relative flex flex-col gap-5 border-b border-border p-6 sm:grid sm:grid-cols-2 sm:gap-10 sm:p-8">
+            <div className="relative p-6 sm:p-8">
               <span className="absolute inset-y-0 left-0 hidden w-1 bg-corner-red sm:block" />
               <span className="absolute inset-y-0 right-0 hidden w-1 bg-corner-blue sm:block" />
-              <span className="octagon absolute left-1/2 top-1/2 z-10 hidden size-12 -translate-x-1/2 -translate-y-1/2 place-items-center bg-foreground font-display text-sm font-extrabold uppercase tracking-tight text-background sm:grid">
-                VS
-              </span>
-              <CornerBlock corner="red" fighter={detail.fighterA} />
-              <CornerBlock corner="blue" fighter={detail.fighterB} />
-            </div>
-
-            <div className="p-6 sm:p-8">
-              <p className="mb-4 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Comparativa · promedios por pelea
-              </p>
-              <div className="mx-auto max-w-xl">
-                {taleRows.map((row) => (
-                  <TaleStatRow key={row.label} row={row} />
-                ))}
+              <div className="relative grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-[minmax(0,1fr)_minmax(250px,330px)_minmax(0,1fr)] md:items-start md:gap-x-6 lg:gap-x-8">
+                {/* VS entre las dos fotos, solo móvil (en desktop separa la
+                    columna central). */}
+                <span
+                  aria-hidden
+                  className="octagon pointer-events-none absolute left-1/2 top-32 z-10 grid size-10 -translate-x-1/2 place-items-center bg-foreground font-display text-xs font-extrabold uppercase tracking-tight text-background md:hidden"
+                >
+                  VS
+                </span>
+                <CornerBlock
+                  corner="red"
+                  fighter={detail.fighterA}
+                  className="order-1"
+                />
+                <div className="order-3 col-span-2 md:order-2 md:col-span-1 md:self-center">
+                  <p className="mb-4 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                    Comparativa · promedios por pelea
+                  </p>
+                  <div>
+                    {taleRows.map((row) => (
+                      <TaleStatRow key={row.label} row={row} />
+                    ))}
+                  </div>
+                </div>
+                <CornerBlock
+                  corner="blue"
+                  fighter={detail.fighterB}
+                  className="order-2 md:order-3"
+                />
               </div>
             </div>
           </section>
