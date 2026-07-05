@@ -91,8 +91,8 @@ export default async function ClasificacionPage() {
       ) : (
         <div className="mt-10 space-y-12">
           <DivisionGroup label="Libra por libra" divisions={p4p} showPhotos />
-          <DivisionGroup label="Categorías masculinas" divisions={men} threeCols />
-          <DivisionGroup label="Categorías femeninas" divisions={women} threeCols />
+          <DivisionGroup label="Categorías masculinas" divisions={men} threeCols showPhotos />
+          <DivisionGroup label="Categorías femeninas" divisions={women} threeCols showPhotos />
         </div>
       )}
     </div>
