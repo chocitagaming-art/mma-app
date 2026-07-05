@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { pickBodyPhotoUrl, type BodyPhotoPreference } from "@/lib/fighter-photo";
+import { localBody } from "@/lib/local-bodies";
 import { cn } from "@/lib/utils";
 
 type FighterFullBodyProps = {
@@ -38,7 +39,9 @@ export function FighterFullBody({
   className,
 }: FighterFullBodyProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const photoUrl = pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
+  // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
+  const photoUrl = localBody(name) ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
   const showPhoto = photoUrl != null && !imageFailed;
 
   if (variant === "hero") {
@@ -69,8 +72,21 @@ export function FighterFullBody({
           alt={`Foto de cuerpo entero de ${name}`}
           fill
           preload
-          sizes="(min-width: 1024px) 400px, 85vw"
-          className="object-contain object-bottom drop-shadow-xl"
+          // Subimos el ancho pedido: al pasar a cover el atleta llena el marco,
+          // así que un srcset mayor evita el reescalado borroso (Royce/Ken/GSP…).
+          sizes="(min-width: 1024px) 440px, 90vw"
+          className={cn(
+            "drop-shadow-xl",
+            // Mismo criterio que la variante embed: los recortes
+            // athlete_bio_full_body de ufc.com (cabeza-muslo, sin pies) quedan
+            // "enterrados"/pequeños con contain en la caja alta del hero; con
+            // cover anclado arriba llenan el marco (recorta laterales, no la
+            // cara). El resto (standing, full-body curado en local-bodies) se
+            // asienta en la base con contain.
+            photoUrl.includes("athlete_bio_full_body")
+              ? "object-cover object-top"
+              : "object-contain object-bottom",
+          )}
           onError={() => setImageFailed(true)}
         />
       </div>
