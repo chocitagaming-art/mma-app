@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { pickBodyPhotoUrl, type BodyPhotoPreference } from "@/lib/fighter-photo";
+import { localBody } from "@/lib/local-bodies";
 import { cn } from "@/lib/utils";
 
 type FighterFullBodyProps = {
@@ -38,7 +39,9 @@ export function FighterFullBody({
   className,
 }: FighterFullBodyProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const photoUrl = pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
+  // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
+  const photoUrl = localBody(name) ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
   const showPhoto = photoUrl != null && !imageFailed;
 
   if (variant === "hero") {
