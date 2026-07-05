@@ -8,11 +8,20 @@ import {
   formatRecord,
   formatWeightClass,
 } from "@/lib/format";
-import { marketFavorite } from "@/lib/odds";
+import { marketFavorite, toAmericanOdds } from "@/lib/odds";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
 
-export function EventBoutRow({ bout }: { bout: EventBout }) {
+// showRanks: los badges de ranking usan el snapshot ACTUAL, así que solo
+// tienen sentido en eventos futuros — en carteleras históricas el "#3" de hoy
+// leería como el ranking que tenía el luchador al pelear, y sería falso.
+export function EventBoutRow({
+  bout,
+  showRanks = false,
+}: {
+  bout: EventBout;
+  showRanks?: boolean;
+}) {
   const redWon = bout.winnerId != null && bout.winnerId === bout.red.id;
   const blueWon = bout.winnerId != null && bout.winnerId === bout.blue.id;
 
@@ -40,6 +49,13 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
       : bout.oddsBlue
     : null;
 
+  // Cuotas americanas por esquina (FE8): solo con cuota decimal válida (> 1),
+  // para no pintar el "—" de toAmericanOdds cuando no hay línea.
+  const redAmerican =
+    bout.oddsRed != null && bout.oddsRed > 1 ? toAmericanOdds(bout.oddsRed) : null;
+  const blueAmerican =
+    bout.oddsBlue != null && bout.oddsBlue > 1 ? toAmericanOdds(bout.oddsBlue) : null;
+
   return (
     <Link
       href={`/fights/${bout.fightId}`}
@@ -62,9 +78,18 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
           >
             <CountryFlag nationality={bout.red.nationality} />
             <span className="truncate">{bout.red.name}</span>
+            {showRanks && bout.red.rank != null ? (
+              // Ranking actual de su división (FE2); 0 = campeón, estilo ufc.com.
+              <span className="shrink-0 font-mono text-xs font-medium tracking-normal text-muted-foreground">
+                {bout.red.rank === 0 ? "C" : `#${bout.red.rank}`}
+              </span>
+            ) : null}
           </p>
           <p className="font-mono text-xs tabular text-muted-foreground">
             {formatRecord(bout.red.wins, bout.red.losses, bout.red.draws)}
+            {redAmerican ? (
+              <span className="ml-1.5 text-muted-foreground/70">{redAmerican}</span>
+            ) : null}
             {redWon ? <span className="ml-1.5 font-semibold text-win">GANA</span> : null}
           </p>
         </div>
@@ -115,9 +140,18 @@ export function EventBoutRow({ bout }: { bout: EventBout }) {
           >
             <CountryFlag nationality={bout.blue.nationality} />
             <span className="truncate">{bout.blue.name}</span>
+            {showRanks && bout.blue.rank != null ? (
+              // flex-row-reverse: el badge queda a la IZQUIERDA del nombre (espejo de la roja).
+              <span className="shrink-0 font-mono text-xs font-medium tracking-normal text-muted-foreground">
+                {bout.blue.rank === 0 ? "C" : `#${bout.blue.rank}`}
+              </span>
+            ) : null}
           </p>
           <p className="font-mono text-xs tabular text-muted-foreground">
             {blueWon ? <span className="mr-1.5 font-semibold text-win">GANA</span> : null}
+            {blueAmerican ? (
+              <span className="mr-1.5 text-muted-foreground/70">{blueAmerican}</span>
+            ) : null}
             {formatRecord(bout.blue.wins, bout.blue.losses, bout.blue.draws)}
           </p>
         </div>
