@@ -32,7 +32,10 @@ function PersonCard({ inductee, onSelect }: { inductee: HofInductee; onSelect: (
     <div className="group flex h-full flex-col items-center gap-3 rounded-lg border border-border bg-card p-5 text-center transition-colors hover:border-amber-400/40 hover:bg-muted/40">
       <FighterHeadshot
         name={inductee.displayName}
-        headshotUrl={inductee.headshotUrl}
+        // Contributor: su foto curada vive en photo_url (no hay fighter_id →
+        // headshotUrl es NULL). Modern/Pioneer tienen photoUrl NULL y usan su
+        // headshot de la ficha, así que el fallback no les cambia nada.
+        headshotUrl={inductee.photoUrl ?? inductee.headshotUrl}
         size="lg"
         className="border-2 border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.12)]"
       />
