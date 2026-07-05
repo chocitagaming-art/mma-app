@@ -196,6 +196,8 @@ type BoutRow = {
   blue_wins: number | null;
   blue_losses: number | null;
   blue_draws: number | null;
+  red_rank: number | null;
+  blue_rank: number | null;
 };
 
 // cache(): la página de detalle ejecuta esta misma query dos veces por request
@@ -218,8 +220,12 @@ export const getEventDetail = cache(async (
   // LEFT JOIN: los próximos pueden tener luchadores TBD (fighter_red_id/blue_id NULL).
   // En esos casos usamos fighter_red_name/fighter_blue_name (siempre rellenos).
   // bout_order ordena el cartel (1 = estelar); NULLS LAST para eventos lejanos sin orden.
+  // Ranking (FE2): LATERAL por esquina contra el ÚLTIMO snapshot de rankings (mismo
+  // patrón que fighters.detail). Se excluye P4P: queremos la posición en SU división;
+  // rank_position 0 = campeón, y ORDER BY rank_position elige la mejor si hay varias.
   const boutRows = await sql<BoutRow>(
-    `SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
+    `WITH latest_ranking AS (SELECT MAX(snapshot_date) AS d FROM rankings)
+     SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
             fi.scheduled_rounds, fi.winner_id, fi.bout_order, fi.card_segment,
             fi.odds_red, fi.odds_blue,
             fi.fighter_red_name AS red_fighter_name,
@@ -229,10 +235,30 @@ export const getEventDetail = cache(async (
             red.wins AS red_wins, red.losses AS red_losses, red.draws AS red_draws,
             blue.id AS blue_id, blue.name AS blue_name, blue.nickname AS blue_nickname,
             blue.headshot_url AS blue_headshot, blue.nationality AS blue_nationality,
-            blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws
+            blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws,
+            red_rank.rank_position AS red_rank,
+            blue_rank.rank_position AS blue_rank
      FROM fights fi
      LEFT JOIN fighters red ON red.id = fi.fighter_red_id
      LEFT JOIN fighters blue ON blue.id = fi.fighter_blue_id
+     LEFT JOIN LATERAL (
+       SELECT r.rank_position
+       FROM rankings r
+       WHERE r.fighter_id = red.id
+         AND r.snapshot_date = (SELECT d FROM latest_ranking)
+         AND r.division NOT IN ('mens_pound_for_pound', 'womens_pound_for_pound')
+       ORDER BY r.rank_position ASC
+       LIMIT 1
+     ) red_rank ON true
+     LEFT JOIN LATERAL (
+       SELECT r.rank_position
+       FROM rankings r
+       WHERE r.fighter_id = blue.id
+         AND r.snapshot_date = (SELECT d FROM latest_ranking)
+         AND r.division NOT IN ('mens_pound_for_pound', 'womens_pound_for_pound')
+       ORDER BY r.rank_position ASC
+       LIMIT 1
+     ) blue_rank ON true
      WHERE fi.event_id = $1
      ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC`,
     [id],
@@ -261,6 +287,7 @@ export const getEventDetail = cache(async (
             wins: row.red_wins ?? 0,
             losses: row.red_losses ?? 0,
             draws: row.red_draws ?? 0,
+            rank: row.red_rank,
           }
         : {
             id: null,
@@ -271,6 +298,7 @@ export const getEventDetail = cache(async (
             wins: 0,
             losses: 0,
             draws: 0,
+            rank: null,
           },
     blue:
       row.blue_id != null
@@ -283,6 +311,7 @@ export const getEventDetail = cache(async (
             wins: row.blue_wins ?? 0,
             losses: row.blue_losses ?? 0,
             draws: row.blue_draws ?? 0,
+            rank: row.blue_rank,
           }
         : {
             id: null,
@@ -293,6 +322,7 @@ export const getEventDetail = cache(async (
             wins: 0,
             losses: 0,
             draws: 0,
+            rank: null,
           },
   }));
 

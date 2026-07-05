@@ -47,6 +47,10 @@ import {
   formatWeight,
   formatWeightClass,
 } from "@/lib/format";
+import {
+  computeDivisionHistory,
+  formatDivisionStint,
+} from "@/lib/division-history";
 import { computeRecentForm } from "@/lib/fighter-form";
 import {
   computeAge,
@@ -107,8 +111,16 @@ export default async function FighterDetailPage({
     notFound();
   }
 
-  const { fighter, aggregateStats, history, news, defenseStats, winMethods, rateStats } =
-    detail;
+  const {
+    fighter,
+    aggregateStats,
+    history,
+    news,
+    defenseStats,
+    winMethods,
+    rateStats,
+    ufcRecord,
+  } = detail;
 
   const recentForm = computeRecentForm(history);
   const streakLabel =
@@ -137,6 +149,22 @@ export default async function FighterDetailPage({
   const division = detail.latestWeightClass
     ? formatWeightClass(detail.latestWeightClass)
     : null;
+
+  // Récord DENTRO de los combates registrados (BE9a). Se oculta si coincide
+  // con el récord total (carrera entera ya en la BD): sería redundante.
+  const ufcRecordLabel = formatRecord(
+    ufcRecord.wins,
+    ufcRecord.losses,
+    ufcRecord.draws,
+  );
+  const showUfcRecord =
+    ufcRecord.wins + ufcRecord.losses + ufcRecord.draws > 0 &&
+    ufcRecordLabel !==
+      formatRecord(fighter.wins, fighter.losses, fighter.draws);
+
+  // Divisiones históricas (BE10): solo se pintan si hay más de una (con una
+  // única división sería ruido repetido con el badge de categoría).
+  const divisionStints = computeDivisionHistory(history);
 
   const heroHighlights = [
     { value: winMethods.koTko, label: "Victorias por KO" },
@@ -176,6 +204,14 @@ export default async function FighterDetailPage({
     ...(age != null ? [{ label: "Edad", content: `${age} años` }] : []),
     ...(fighter.trainsAt
       ? [{ label: "Gimnasio", content: fighter.trainsAt }]
+      : []),
+    ...(divisionStints.length > 1
+      ? [
+          {
+            label: "Divisiones",
+            content: divisionStints.map(formatDivisionStint).join(" · "),
+          },
+        ]
       : []),
   ];
 
@@ -247,6 +283,12 @@ export default async function FighterDetailPage({
                   V-D-E · {detail.fightCount} peleas registradas
                 </span>
               </div>
+              {/* Récord solo-UFC (BE9a), discreto bajo el récord total. */}
+              {showUfcRecord ? (
+                <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  En UFC: <span className="tabular">{ufcRecordLabel}</span>
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -544,6 +586,7 @@ export default async function FighterDetailPage({
             <PerFightBars
               landedPerFight={rateStats.sigStrikesLandedPerFight}
               absorbedPerFight={rateStats.sigStrikesAbsorbedPerFight}
+              rateStats={rateStats}
             />
           </div>
           {winMethods.total > 0 ? <WinMethodChart methods={winMethods} /> : null}

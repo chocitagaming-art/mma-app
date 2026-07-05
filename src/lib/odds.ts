@@ -31,6 +31,24 @@ export function marketFavorite(
   };
 }
 
+/**
+ * Convierte una cuota decimal en cuota americana (formato "moneyline").
+ * >= 2.0 → underdog/even: "+" + (d - 1) * 100 (p.ej. 2.20 → "+120").
+ * < 2.0 → favorito: "-" + 100 / (d - 1) (p.ej. 1.69 → "-145").
+ * Cuotas inválidas (d <= 1, NaN, Infinity) → "—" (sin línea).
+ */
+export function toAmericanOdds(decimal: number): string {
+  if (!Number.isFinite(decimal) || decimal <= 1) {
+    return "—";
+  }
+
+  if (decimal >= 2) {
+    return `+${Math.round((decimal - 1) * 100)}`;
+  }
+
+  return `-${Math.round(100 / (decimal - 1))}`;
+}
+
 // Model vs Market comparison (#Phase 9). Confronts the pure model probabilities
 // against the vig-removed market implied probabilities. The edge is signed
 // (model - market) per corner; "value" is the corner where the model is more

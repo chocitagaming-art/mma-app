@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
+import { EventStartTime } from "@/components/event-start-time";
 import { formatDate } from "@/lib/format";
 import { getEventDetail } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
@@ -136,6 +137,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <CalendarDays className="size-3.5" />
               {formatDate(event.eventDate)}
             </span>
+            {/* Hora local del main card (FE5a): componente client porque la zona
+                horaria del visitante no existe en SSR (fallback UTC al hidratar). */}
+            <EventStartTime startTime={event.startTime} />
             {event.location ? (
               <span className="flex items-center gap-1.5">
                 <MapPin className="size-3.5" />
@@ -182,7 +186,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               </h2>
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 {section.bouts.map((bout) => (
-                  <EventBoutRow key={bout.fightId} bout={bout} />
+                  <EventBoutRow
+                    key={bout.fightId}
+                    bout={bout}
+                    showRanks={isUpcoming}
+                  />
                 ))}
               </div>
             </section>

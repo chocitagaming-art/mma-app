@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { compareModelVsMarket, marketFavorite } from "@/lib/odds";
+import { compareModelVsMarket, marketFavorite, toAmericanOdds } from "@/lib/odds";
 
 describe("marketFavorite", () => {
   it("identifies the favorite and removes the vig so implied probs sum to 1", () => {
@@ -24,6 +24,40 @@ describe("marketFavorite", () => {
     expect(marketFavorite(1.5, null)).toBeNull();
     expect(marketFavorite(0, 2)).toBeNull();
     expect(marketFavorite(1.0, 2.0)).toBeNull();
+  });
+});
+
+describe("toAmericanOdds", () => {
+  it("converts an underdog decimal to a positive moneyline", () => {
+    expect(toAmericanOdds(2.2)).toBe("+120");
+    expect(toAmericanOdds(3.0)).toBe("+200");
+  });
+
+  it("converts a favorite decimal to a negative moneyline", () => {
+    expect(toAmericanOdds(1.69)).toBe("-145");
+    expect(toAmericanOdds(1.4)).toBe("-250");
+  });
+
+  it("treats even money (2.0) as +100", () => {
+    expect(toAmericanOdds(2.0)).toBe("+100");
+  });
+
+  it("rounds instead of truncating on both sides of the line", () => {
+    // 100 / 0.91 = 109.89… → -110 (no -109).
+    expect(toAmericanOdds(1.91)).toBe("-110");
+    // Favorito extremo: 100 / 0.005 = 20000 exacto.
+    expect(toAmericanOdds(1.005)).toBe("-20000");
+    // (2.204 - 1) * 100 = 120.4 → +120.
+    expect(toAmericanOdds(2.204)).toBe("+120");
+  });
+
+  it("returns the em dash for invalid odds (<= 1 or non-finite)", () => {
+    expect(toAmericanOdds(1)).toBe("—");
+    expect(toAmericanOdds(0.5)).toBe("—");
+    expect(toAmericanOdds(0)).toBe("—");
+    expect(toAmericanOdds(-2)).toBe("—");
+    expect(toAmericanOdds(Number.NaN)).toBe("—");
+    expect(toAmericanOdds(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
 

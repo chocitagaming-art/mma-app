@@ -11,6 +11,7 @@ import type {
   FighterRanking,
   FighterRateStats,
   FighterStrikeProfile,
+  FighterUfcRecord,
 } from "@/lib/types";
 import type {
   AggregateRow,
@@ -33,6 +34,24 @@ import {
   mapWinMethods,
   strikeBreakdownSelect,
 } from "./fighters.mappers";
+
+// Totales del luchador SOLO en peleas con duración conocida (FE4). Locales a
+// este módulo: ninguna otra query los consume.
+type PerMinuteRow = {
+  total_seconds: string | null;
+  sig_strikes_landed: string | null;
+  opp_sig_strikes_landed: string | null;
+  takedowns_landed: string | null;
+  submission_attempts: string | null;
+  timed_fights: string | null;
+};
+
+// Récord W-L-D derivado de la tabla fights (BE9a). Local a este módulo.
+type UfcRecordRow = {
+  wins: string | null;
+  losses: string | null;
+  draws: string | null;
+};
 
 // cache(): la página de detalle ejecuta esta misma query dos veces por request
 // (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
@@ -72,6 +91,8 @@ export const getFighterDetail = cache(async (
     defenseRows,
     winMethodRows,
     rankingRows,
+    perMinuteRows,
+    ufcRecordRows,
   ] = await Promise.all([
     sql<HistoryRow>(
       `select
@@ -216,6 +237,63 @@ export const getFighterDetail = cache(async (
       limit 1`,
       [id],
     ),
+    // Métricas POR MINUTO (FE4). Duración real = (end_round-1)*300 + M:SS del
+    // asalto final. Solo peleas con end_round/end_time válidos Y con fila en
+    // fight_stats para este luchador (inner join): así numerador (golpes,
+    // derribos...) y denominador (minutos) salen de las MISMAS peleas.
+    // Absorbidos = conectados por el rival en esas peleas (mismo patrón
+    // me/opp que la query de defensa de arriba). Se excluye la era pre-2001
+    // (asaltos de duración no estándar + overtimes de 3:00: la fórmula
+    // infla el SLpM de los pioneros — Shamrock salía con SLpM x2).
+    sql<PerMinuteRow>(
+      `select
+        sum(
+          (fi.end_round - 1) * 300
+          + split_part(fi.end_time, ':', 1)::int * 60
+          + split_part(fi.end_time, ':', 2)::int
+        )::text as total_seconds,
+        sum(me.sig_strikes_landed)::text as sig_strikes_landed,
+        sum(opp.sig_strikes_landed)::text as opp_sig_strikes_landed,
+        sum(me.takedowns_landed)::text as takedowns_landed,
+        sum(me.submission_attempts)::text as submission_attempts,
+        count(*)::text as timed_fights
+      from fights fi
+      join events e
+        on e.id = fi.event_id
+       and e.event_date >= '2001-01-01'
+      join fight_stats me
+        on me.fight_id = fi.id
+       and me.fighter_id = $1
+      left join fight_stats opp
+        on opp.fight_id = fi.id
+       and opp.fighter_id <> $1
+      where fi.end_round >= 1
+        and fi.end_time ~ '^[0-9]+:[0-9]{2}$'`,
+      [id],
+    ),
+    // Récord UFC (BE9a): W-L-D contando SOLO combates registrados en la BD ya
+    // disputados. Empate = winner_id NULL con method registrado, EXCLUYENDO
+    // los No Contest (method 'CNC'/'Overturned*'/'Other'), que comparten esa
+    // firma pero no son empates (~94 peleas en BD: Aspinall-Gane, Oliveira-
+    // Lentz...). Los NC no cuentan como W, L ni D, igual que el récord
+    // oficial. winner y method ambos NULL = combate programado (excluido,
+    // evita el "empate fantasma").
+    sql<UfcRecordRow>(
+      `select
+        (count(*) filter (where fi.winner_id = $1))::text as wins,
+        (count(*) filter (
+          where fi.winner_id is not null and fi.winner_id <> $1
+        ))::text as losses,
+        (count(*) filter (
+          where fi.winner_id is null and fi.method is not null
+            and fi.method not ilike 'overturn%'
+            and fi.method not in ('CNC', 'NC', 'Other')
+        ))::text as draws
+      from fights fi
+      where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)
+        and not (fi.winner_id is null and fi.method is null)`,
+      [id],
+    ),
   ]);
 
   const history: FighterHistoryItem[] = historyRows.map((row) => ({
@@ -245,10 +323,32 @@ export const getFighterDetail = cache(async (
       }
     : null;
   const denom = Math.max(1, aggregateStats.totalFightStats);
+  // Tasas por minuto (FE4): totales y segundos salen de la MISMA muestra de
+  // peleas (las que tienen duración conocida), así que dividir es legítimo.
+  const perMinuteRow = perMinuteRows[0];
+  const totalSeconds = Number(perMinuteRow?.total_seconds ?? 0);
+  const timedFights = Number(perMinuteRow?.timed_fights ?? 0);
+  const totalMinutes = totalSeconds / 60;
+  const perMinute = (total: string | null | undefined) =>
+    totalMinutes > 0 ? Number(total ?? 0) / totalMinutes : 0;
+  const per15Min = (total: string | null | undefined) =>
+    totalSeconds > 0 ? (Number(total ?? 0) * 900) / totalSeconds : 0;
   const rateStats: FighterRateStats = {
     sigStrikesLandedPerFight: aggregateStats.sigStrikesLanded / denom,
     sigStrikesAbsorbedPerFight: defenseStats.oppSigStrikesLanded / denom,
     fightStatsCount: aggregateStats.totalFightStats,
+    slpm: perMinute(perMinuteRow?.sig_strikes_landed),
+    sapm: perMinute(perMinuteRow?.opp_sig_strikes_landed),
+    takedownsPer15Min: per15Min(perMinuteRow?.takedowns_landed),
+    submissionAttemptsPer15Min: per15Min(perMinuteRow?.submission_attempts),
+    avgFightSeconds: timedFights > 0 ? totalSeconds / timedFights : 0,
+    timedFightsCount: timedFights,
+  };
+  const ufcRecordRow = ufcRecordRows[0];
+  const ufcRecord: FighterUfcRecord = {
+    wins: Number(ufcRecordRow?.wins ?? 0),
+    losses: Number(ufcRecordRow?.losses ?? 0),
+    draws: Number(ufcRecordRow?.draws ?? 0),
   };
 
   return {
@@ -261,6 +361,7 @@ export const getFighterDetail = cache(async (
     defenseStats,
     winMethods: mapWinMethods(winMethodRows[0]),
     rateStats,
+    ufcRecord,
     ranking,
   };
 });

@@ -107,11 +107,34 @@ export type FighterWinMethods = {
   total: number;
 };
 
-// Promedios POR PELEA (no por minuto: la BD no guarda duración de combate).
+// Promedios POR PELEA + tasas POR MINUTO (FE4). Las tasas por minuto se
+// calculan a partir de fights.end_round/end_time (duración real del combate);
+// solo entran las peleas con esos campos registrados, y numerador y
+// denominador usan SIEMPRE esa misma muestra de peleas.
 export type FighterRateStats = {
   sigStrikesLandedPerFight: number;
   sigStrikesAbsorbedPerFight: number;
   fightStatsCount: number;
+  // SLpM / SApM: golpes significativos conectados/absorbidos por minuto.
+  slpm: number;
+  sapm: number;
+  // Derribos e intentos de sumisión normalizados a 15 minutos (3 asaltos).
+  takedownsPer15Min: number;
+  submissionAttemptsPer15Min: number;
+  // Duración media (en segundos) de las peleas cronometradas; 0 si no hay.
+  avgFightSeconds: number;
+  // Nº de peleas con duración conocida usadas como denominador de las tasas.
+  timedFightsCount: number;
+};
+
+// Récord derivado SOLO de los combates registrados en la BD (historial UFC),
+// frente al récord total de la tabla fighters que incluye la carrera completa
+// (BE9a). Convención de empate: winner_id NULL con method registrado; los
+// combates programados (ambos NULL) no cuentan.
+export type FighterUfcRecord = {
+  wins: number;
+  losses: number;
+  draws: number;
 };
 
 export type FighterSearchResult = {
@@ -217,6 +240,8 @@ export type FighterDetail = {
   defenseStats: FighterDefenseStats;
   winMethods: FighterWinMethods;
   rateStats: FighterRateStats;
+  // Récord dentro de los combates registrados (historial UFC, BE9a).
+  ufcRecord: FighterUfcRecord;
   // Ranking en el último snapshot (#14): null si el luchador no está rankeado.
   ranking: FighterRanking | null;
 };
@@ -295,6 +320,9 @@ export type EventBoutFighter = {
   wins: number;
   losses: number;
   draws: number;
+  // Posición en el ranking de su división (último snapshot, P4P excluido).
+  // 0 = campeón (así lo guarda la tabla rankings); null = sin ranking.
+  rank: number | null;
 };
 
 export type EventBout = {
