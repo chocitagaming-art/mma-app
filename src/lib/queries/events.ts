@@ -193,6 +193,9 @@ type EventRow = {
   ticket_url: string | null;
   tagline: string | null;
   headliner: string | null;
+  // FE9: procedencia del evento; con source='ufc.com', source_id es el slug.
+  source: string | null;
+  source_id: string | null;
 };
 
 type BoutRow = {
@@ -382,7 +385,7 @@ export const getEventDetail = cache(async (
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url,
-            broadcast, ticket_url, tagline, headliner
+            broadcast, ticket_url, tagline, headliner, source, source_id
      FROM events WHERE id = $1`,
     [id],
   );
@@ -405,6 +408,8 @@ export const getEventDetail = cache(async (
     ticketUrl: event.ticket_url,
     tagline: event.tagline,
     headliner: event.headliner,
+    source: event.source,
+    sourceId: event.source_id,
     bouts,
   };
 });

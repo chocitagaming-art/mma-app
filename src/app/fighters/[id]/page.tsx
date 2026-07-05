@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import {
   ArrowRightLeft,
   CalendarDays,
+  ExternalLink,
   History,
   Play,
   Trophy,
@@ -51,6 +52,7 @@ import {
   computeDivisionHistory,
   formatDivisionStint,
 } from "@/lib/division-history";
+import { fighterExternalLinks } from "@/lib/external-links";
 import { computeRecentForm } from "@/lib/fighter-form";
 import {
   computeAge,
@@ -166,6 +168,9 @@ export default async function FighterDetailPage({
   // única división sería ruido repetido con el badge de categoría).
   const divisionStints = computeDivisionHistory(history);
 
+  // Enlaces externos (FE9): perfiles reales del luchador en la fuente de origen.
+  const externalLinks = fighterExternalLinks(fighter);
+
   const heroHighlights = [
     { value: winMethods.koTko, label: "Victorias por KO" },
     { value: winMethods.submission, label: "Victorias por sumisión" },
@@ -210,6 +215,31 @@ export default async function FighterDetailPage({
           {
             label: "Divisiones",
             content: divisionStints.map(formatDivisionStint).join(" · "),
+          },
+        ]
+      : []),
+    // FE9: enlaces externos reales (UFCStats/ESPN) reconstruidos desde
+    // source/source_id. Sin fuente reconocible, la fila no aparece.
+    ...(externalLinks.length > 0
+      ? [
+          {
+            label: "Enlaces",
+            content: (
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                {externalLinks.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {link.label}
+                  </a>
+                ))}
+              </span>
+            ),
           },
         ]
       : []),

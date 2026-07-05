@@ -28,6 +28,10 @@ export type FighterRow = {
   standing_body_url?: string | null; // foto de pie (Ronda B), backfill en curso
   leg_reach_cm?: string | null; // NUMERIC llega como string desde pg
   trains_at?: string | null;
+  // FE9: procedencia del registro (scraper) para enlaces externos.
+  // 'ufcstats' guarda un path ('/fighter-details/<hash>'), 'espn' un id numérico.
+  source?: string | null;
+  source_id?: string | null;
   fight_count?: string;
   latest_weight_class?: string | null;
 };

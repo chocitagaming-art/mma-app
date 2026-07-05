@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventStartTime } from "@/components/event-start-time";
+import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
 import { getEventDetail } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
@@ -93,6 +94,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     event.status === "upcoming" &&
     (event.eventDate == null || event.eventDate >= todayIso);
   const sections = groupBoutsBySegment(event.bouts);
+  // FE9: enlace a la página oficial del evento (solo source='ufc.com').
+  const officialUrl = eventExternalLink(event);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -160,6 +163,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   estimada
                 </span>
               </span>
+            ) : null}
+            {officialUrl ? (
+              <a
+                href={officialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 transition-colors hover:text-primary"
+              >
+                <ExternalLink className="size-3.5" />
+                Ver en UFC.com
+              </a>
             ) : null}
           </div>
 

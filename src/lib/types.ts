@@ -21,6 +21,10 @@ export type Fighter = {
   standingBodyUrl?: string | null;
   legReachCm?: number | null;
   trainsAt?: string | null; // gimnasio/equipo
+  // FE9: procedencia del registro para enlaces externos ('ufcstats', 'espn',
+  // 'manual'...). Opcionales: solo las queries de detalle los exponen.
+  source?: string | null;
+  sourceId?: string | null;
 };
 
 export type FighterCardData = Fighter & {
@@ -359,6 +363,10 @@ export type EventDetail = {
   ticketUrl: string | null;
   tagline: string | null;
   headliner: string | null;
+  // FE9: procedencia del evento ('ufc.com' guarda el slug en sourceId) para
+  // el enlace externo "Ver en UFC.com".
+  source: string | null;
+  sourceId: string | null;
   bouts: EventBout[];
 };
 
