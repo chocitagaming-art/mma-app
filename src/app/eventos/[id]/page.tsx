@@ -190,6 +190,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     key={bout.fightId}
                     bout={bout}
                     showRanks={isUpcoming}
+                    eventDate={event.eventDate}
                   />
                 ))}
               </div>

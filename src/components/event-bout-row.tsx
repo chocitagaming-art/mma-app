@@ -1,16 +1,135 @@
 import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
+import { EventBoutDisclosure } from "@/components/event-bout-disclosure";
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { computeAge } from "@/lib/fighter-highlights";
 import {
+  formatHeight,
   formatMethod,
   formatPercentage,
+  formatReach,
   formatRecord,
+  formatStance,
   formatWeightClass,
 } from "@/lib/format";
 import { marketFavorite, toAmericanOdds } from "@/lib/odds";
 import { cn } from "@/lib/utils";
-import type { EventBout } from "@/lib/types";
+import type { EventBout, EventBoutFighter } from "@/lib/types";
+
+// Fila del mini tale-of-the-tape (FE6): valor rojo | ETIQUETA | valor azul,
+// versión compacta del TaleRow del bout view. Igual que allí, la ventaja se
+// colorea solo cuando "más" es objetivamente mejor (altura/alcance).
+function MiniTapeRow({
+  label,
+  red,
+  blue,
+  redNum,
+  blueNum,
+}: {
+  label: string;
+  red: string;
+  blue: string;
+  redNum?: number | null;
+  blueNum?: number | null;
+}) {
+  const both = redNum != null && blueNum != null;
+  const redBetter = both && (redNum as number) > (blueNum as number);
+  const blueBetter = both && (blueNum as number) > (redNum as number);
+
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border/60 py-2 last:border-b-0 sm:gap-4">
+      <p
+        className={cn(
+          "tabular min-w-0 break-words text-right text-sm font-semibold leading-tight",
+          redBetter ? "text-corner-red" : "text-foreground",
+        )}
+      >
+        {red}
+      </p>
+      <p className="w-20 text-center font-mono text-[0.6rem] uppercase leading-tight tracking-[0.12em] text-muted-foreground sm:w-24">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "tabular min-w-0 break-words text-left text-sm font-semibold leading-tight",
+          blueBetter ? "text-corner-blue" : "text-foreground",
+        )}
+      >
+        {blue}
+      </p>
+    </div>
+  );
+}
+
+// Normaliza la fecha del evento a Date UTC: node-postgres entrega las columnas
+// DATE como objeto Date en runtime aunque el tipo declare string (mismo gotcha
+// que division-history.ts). undefined => computeAge usa "hoy".
+function parseEventDate(eventDate?: string | Date | null): Date | undefined {
+  if (!eventDate) {
+    return undefined;
+  }
+  if (eventDate instanceof Date) {
+    return Number.isNaN(eventDate.getTime()) ? undefined : eventDate;
+  }
+  const date = new Date(`${eventDate.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+// Panel desplegable con la comparativa física de ambas esquinas (FE6).
+// Server-rendered: EventBoutDisclosure solo lo muestra/oculta.
+function BoutTapePanel({
+  bout,
+  eventDate,
+}: {
+  bout: EventBout;
+  eventDate?: string | Date | null;
+}) {
+  // Edad A FECHA DEL EVENTO: en carteleras pasadas la edad actual mentiría.
+  const ageAt = parseEventDate(eventDate);
+  const redAge = computeAge(bout.red.birthDate, ageAt);
+  const blueAge = computeAge(bout.blue.birthDate, ageAt);
+
+  return (
+    <div className="border-t border-border/60 bg-muted/30 px-4 py-2.5 sm:px-5">
+      <MiniTapeRow
+        label="Altura"
+        red={formatHeight(bout.red.heightCm)}
+        blue={formatHeight(bout.blue.heightCm)}
+        redNum={bout.red.heightCm}
+        blueNum={bout.blue.heightCm}
+      />
+      <MiniTapeRow
+        label="Alcance"
+        red={formatReach(bout.red.reachCm)}
+        blue={formatReach(bout.blue.reachCm)}
+        redNum={bout.red.reachCm}
+        blueNum={bout.blue.reachCm}
+      />
+      <MiniTapeRow
+        label="Edad"
+        red={redAge != null ? String(redAge) : "—"}
+        blue={blueAge != null ? String(blueAge) : "—"}
+      />
+      <MiniTapeRow
+        label="Guardia"
+        red={formatStance(bout.red.stance)}
+        blue={formatStance(bout.blue.stance)}
+      />
+    </div>
+  );
+}
+
+// ¿Hay algo que comparar? Con dos esquinas sin ficha física (p.ej. TBD en
+// eventos lejanos) el panel serían cuatro filas de "—": mejor sin chevron.
+function hasTapeData(fighter: EventBoutFighter): boolean {
+  return (
+    fighter.heightCm != null ||
+    fighter.reachCm != null ||
+    fighter.stance != null ||
+    fighter.birthDate != null
+  );
+}
 
 // showRanks: los badges de ranking usan el snapshot ACTUAL, así que solo
 // tienen sentido en eventos futuros — en carteleras históricas el "#3" de hoy
@@ -18,9 +137,11 @@ import type { EventBout } from "@/lib/types";
 export function EventBoutRow({
   bout,
   showRanks = false,
+  eventDate,
 }: {
   bout: EventBout;
   showRanks?: boolean;
+  eventDate?: string | Date | null;
 }) {
   const redWon = bout.winnerId != null && bout.winnerId === bout.red.id;
   const blueWon = bout.winnerId != null && bout.winnerId === bout.blue.id;
@@ -56,10 +177,12 @@ export function EventBoutRow({
   const blueAmerican =
     bout.oddsBlue != null && bout.oddsBlue > 1 ? toAmericanOdds(bout.oddsBlue) : null;
 
-  return (
+  // La fila sigue siendo un único <Link> al detalle del combate; el borde
+  // inferior vive ahora en el contenedor (fila + panel desplegable, FE6).
+  const row = (
     <Link
       href={`/fights/${bout.fightId}`}
-      className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50 sm:gap-4 sm:px-5"
+      className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5"
     >
       {/* Esquina roja */}
       <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -157,5 +280,17 @@ export function EventBoutRow({
         </div>
       </div>
     </Link>
+  );
+
+  // Sin datos físicos en ninguna esquina no hay comparativa que desplegar.
+  if (!hasTapeData(bout.red) && !hasTapeData(bout.blue)) {
+    return <div className="border-b border-border last:border-b-0">{row}</div>;
+  }
+
+  return (
+    <EventBoutDisclosure
+      row={row}
+      panel={<BoutTapePanel bout={bout} eventDate={eventDate} />}
+    />
   );
 }

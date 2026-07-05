@@ -42,7 +42,12 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         {event.bouts.map((bout) => (
-          <EventBoutRow key={bout.fightId} bout={bout} showRanks={false} />
+          <EventBoutRow
+            key={bout.fightId}
+            bout={bout}
+            showRanks={false}
+            eventDate={event.eventDate}
+          />
         ))}
       </div>
 
