@@ -370,6 +370,47 @@ export type UpcomingEventItem = {
   fightCount: number;
 };
 
+// --- Módulo "Up Next" de la home (FE1) ---
+
+// Protagonista del combate estelar del próximo evento: lo mismo que una esquina
+// de EventBout más las fotos de cuerpo entero para el cara a cara grande
+// (cadena standing → full body → headshot, como en combates/enfrentamiento).
+export type NextEventHeroFighter = EventBoutFighter & {
+  fullBodyUrl: string | null;
+  standingBodyUrl: string | null;
+};
+
+export type NextEventMainBout = {
+  fightId: number;
+  weightClass: string | null;
+  red: NextEventHeroFighter;
+  blue: NextEventHeroFighter;
+};
+
+export type NextEventHero = {
+  id: number;
+  name: string;
+  eventDate: string | null;
+  startTime: string | null;
+  location: string | null;
+  imageUrl: string | null;
+  broadcast: string | null;
+  // null cuando el evento aún no tiene cartelera registrada.
+  mainEvent: NextEventMainBout | null;
+};
+
+// --- Sección "Acaba de pasar" de la home (FE10) ---
+
+// Último evento completado con las primeras peleas de su cartelera estelar.
+// Los bouts son EventBout EXACTOS para reutilizar EventBoutRow tal cual.
+export type LastEventResults = {
+  id: number;
+  name: string;
+  eventDate: string | null;
+  location: string | null;
+  bouts: EventBout[];
+};
+
 // Resultado de la ÚLTIMA pelea completada de un luchador (fila "Última pelea"
 // del tale-of-the-tape, Fase 4). Sigue el criterio de FighterHistoryItem:
 // winner_id NULL con method registrado = empate/no contest.
