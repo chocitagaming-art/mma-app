@@ -7,6 +7,7 @@ import {
   formatModelDate,
   formatNewsCategory,
   formatReach,
+  formatRelativeDate,
   formatStance,
   formatWeight,
 } from "@/lib/format";
@@ -124,6 +125,30 @@ describe("formatModelDate", () => {
 
   it("returns the raw value when it is not a parseable date", () => {
     expect(formatModelDate("not-a-date")).toBe("not-a-date");
+  });
+});
+
+describe("formatRelativeDate", () => {
+  const ref = new Date("2026-07-05T10:00:00Z");
+
+  it("formats recent past dates in days ('hace N días', 'ayer', 'hoy')", () => {
+    expect(formatRelativeDate("2026-06-29", ref)).toBe("hace 6 días");
+    expect(formatRelativeDate("2026-07-04", ref)).toBe("ayer");
+    expect(formatRelativeDate("2026-07-05", ref)).toBe("hoy");
+  });
+
+  it("switches to weeks and months for older dates", () => {
+    expect(formatRelativeDate("2026-06-14", ref)).toBe("hace 3 semanas");
+    expect(formatRelativeDate("2026-04-05", ref)).toBe("hace 3 meses");
+  });
+
+  it("accepts a full ISO datetime and uses only the date part", () => {
+    expect(formatRelativeDate("2026-06-29T23:59:00Z", ref)).toBe("hace 6 días");
+  });
+
+  it("returns null for missing or unparsable values", () => {
+    expect(formatRelativeDate(null, ref)).toBeNull();
+    expect(formatRelativeDate("no-date", ref)).toBeNull();
   });
 });
 

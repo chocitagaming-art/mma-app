@@ -7,6 +7,9 @@ import type {
   EventListItem,
   EventListResult,
   EventSearchResult,
+  LastEventResults,
+  NextEventHero,
+  NextEventHeroFighter,
   UpcomingEventItem,
 } from "@/lib/types";
 
@@ -200,29 +203,17 @@ type BoutRow = {
   blue_rank: number | null;
 };
 
-// cache(): la página de detalle ejecuta esta misma query dos veces por request
-// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
-export const getEventDetail = cache(async (
-  id: number,
-): Promise<EventDetail | null> => {
-  const eventRows = await sql<EventRow>(
-    `SELECT id, name, event_date::text AS event_date, location,
-            status, start_time::text AS start_time, image_url,
-            broadcast, ticket_url, tagline, headliner
-     FROM events WHERE id = $1`,
-    [id],
-  );
-  const event = eventRows[0];
-  if (!event) {
-    return null;
-  }
-
-  // LEFT JOIN: los próximos pueden tener luchadores TBD (fighter_red_id/blue_id NULL).
-  // En esos casos usamos fighter_red_name/fighter_blue_name (siempre rellenos).
-  // bout_order ordena el cartel (1 = estelar); NULLS LAST para eventos lejanos sin orden.
-  // Ranking (FE2): LATERAL por esquina contra el ÚLTIMO snapshot de rankings (mismo
-  // patrón que fighters.detail). Se excluye P4P: queremos la posición en SU división;
-  // rank_position 0 = campeón, y ORDER BY rank_position elige la mejor si hay varias.
+// Cartelera completa de un evento, ya mapeada a EventBout. Privada del módulo:
+// la comparten getEventDetail y getLastEventResults (FE10) para no duplicar la
+// query LATERAL de rankings ni el mapeo de esquinas.
+//
+// LEFT JOIN: los próximos pueden tener luchadores TBD (fighter_red_id/blue_id NULL).
+// En esos casos usamos fighter_red_name/fighter_blue_name (siempre rellenos).
+// bout_order ordena el cartel (1 = estelar); NULLS LAST para eventos lejanos sin orden.
+// Ranking (FE2): LATERAL por esquina contra el ÚLTIMO snapshot de rankings (mismo
+// patrón que fighters.detail). Se excluye P4P: queremos la posición en SU división;
+// rank_position 0 = campeón, y ORDER BY rank_position elige la mejor si hay varias.
+async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
   const boutRows = await sql<BoutRow>(
     `WITH latest_ranking AS (SELECT MAX(snapshot_date) AS d FROM rankings)
      SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
@@ -261,10 +252,10 @@ export const getEventDetail = cache(async (
      ) blue_rank ON true
      WHERE fi.event_id = $1
      ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC`,
-    [id],
+    [eventId],
   );
 
-  const bouts: EventBout[] = boutRows.map((row) => ({
+  return boutRows.map((row) => ({
     fightId: row.fight_id,
     weightClass: row.weight_class,
     method: row.method,
@@ -325,6 +316,26 @@ export const getEventDetail = cache(async (
             rank: null,
           },
   }));
+}
+
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getEventDetail = cache(async (
+  id: number,
+): Promise<EventDetail | null> => {
+  const eventRows = await sql<EventRow>(
+    `SELECT id, name, event_date::text AS event_date, location,
+            status, start_time::text AS start_time, image_url,
+            broadcast, ticket_url, tagline, headliner
+     FROM events WHERE id = $1`,
+    [id],
+  );
+  const event = eventRows[0];
+  if (!event) {
+    return null;
+  }
+
+  const bouts = await fetchEventBouts(id);
 
   return {
     id: event.id,
@@ -341,3 +352,248 @@ export const getEventDetail = cache(async (
     bouts,
   };
 });
+
+type NextEventRow = {
+  id: number;
+  name: string;
+  event_date: string | null;
+  start_time: string | null;
+  location: string | null;
+  image_url: string | null;
+  broadcast: string | null;
+};
+
+type MainEventRow = {
+  fight_id: number;
+  weight_class: string | null;
+  red_fighter_name: string;
+  blue_fighter_name: string;
+  red_id: number | null;
+  red_name: string | null;
+  red_nickname: string | null;
+  red_headshot: string | null;
+  red_standing_body: string | null;
+  red_full_body: string | null;
+  red_nationality: string | null;
+  red_wins: number | null;
+  red_losses: number | null;
+  red_draws: number | null;
+  blue_id: number | null;
+  blue_name: string | null;
+  blue_nickname: string | null;
+  blue_headshot: string | null;
+  blue_standing_body: string | null;
+  blue_full_body: string | null;
+  blue_nationality: string | null;
+  blue_wins: number | null;
+  blue_losses: number | null;
+  blue_draws: number | null;
+  red_rank: number | null;
+  blue_rank: number | null;
+};
+
+// Columnas de una esquina del combate estelar ya desprefijadas (red_/blue_).
+type HeroCornerCols = {
+  id: number | null;
+  name: string | null;
+  fallbackName: string; // fights.fighter_*_name, siempre relleno
+  nickname: string | null;
+  headshot: string | null;
+  standingBody: string | null;
+  fullBody: string | null;
+  nationality: string | null;
+  wins: number | null;
+  losses: number | null;
+  draws: number | null;
+  rank: number | null;
+};
+
+// Esquina del combate estelar (FE1). Mismo criterio TBD que fetchEventBouts:
+// sin ficha (id NULL) caemos al nombre plano de la tabla fights.
+function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
+  if (cols.id == null) {
+    return {
+      id: null,
+      name: cols.fallbackName,
+      nickname: null,
+      headshotUrl: null,
+      nationality: null,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      rank: null,
+      fullBodyUrl: null,
+      standingBodyUrl: null,
+    };
+  }
+
+  return {
+    id: cols.id,
+    name: cols.name ?? cols.fallbackName,
+    nickname: cols.nickname,
+    headshotUrl: cols.headshot,
+    nationality: cols.nationality,
+    wins: cols.wins ?? 0,
+    losses: cols.losses ?? 0,
+    draws: cols.draws ?? 0,
+    rank: cols.rank,
+    fullBodyUrl: cols.fullBody,
+    standingBodyUrl: cols.standingBody,
+  };
+}
+
+// FE1: el próximo evento (el de fecha >= hoy más cercana) con su COMBATE
+// ESTELAR para el módulo "Up Next" de la home. El estelar es la primera pelea
+// según el mismo orden que usa la cartelera (bout_order ASC NULLS LAST, 1 =
+// estelar) y el ranking de cada esquina reutiliza el patrón LATERAL de
+// fetchEventBouts. Devuelve null si no hay eventos futuros.
+export async function getNextEventHero(): Promise<NextEventHero | null> {
+  const eventRows = await sql<NextEventRow>(
+    `SELECT e.id, e.name, e.event_date::text AS event_date,
+            e.start_time::text AS start_time, e.location, e.image_url, e.broadcast
+     FROM events e
+     WHERE COALESCE(
+             e.start_time,
+             (e.event_date + interval '1 day')::timestamptz
+           ) > now() - interval '6 hours'
+       AND e.status IS DISTINCT FROM 'completed'
+     ORDER BY e.event_date ASC, e.id ASC
+     LIMIT 1`,
+  );
+  const event = eventRows[0];
+  if (!event) {
+    return null;
+  }
+
+  const boutRows = await sql<MainEventRow>(
+    `WITH latest_ranking AS (SELECT MAX(snapshot_date) AS d FROM rankings)
+     SELECT fi.id AS fight_id, fi.weight_class,
+            fi.fighter_red_name AS red_fighter_name,
+            fi.fighter_blue_name AS blue_fighter_name,
+            red.id AS red_id, red.name AS red_name, red.nickname AS red_nickname,
+            red.headshot_url AS red_headshot,
+            red.standing_body_url AS red_standing_body,
+            red.full_body_url AS red_full_body,
+            red.nationality AS red_nationality,
+            red.wins AS red_wins, red.losses AS red_losses, red.draws AS red_draws,
+            blue.id AS blue_id, blue.name AS blue_name, blue.nickname AS blue_nickname,
+            blue.headshot_url AS blue_headshot,
+            blue.standing_body_url AS blue_standing_body,
+            blue.full_body_url AS blue_full_body,
+            blue.nationality AS blue_nationality,
+            blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws,
+            red_rank.rank_position AS red_rank,
+            blue_rank.rank_position AS blue_rank
+     FROM fights fi
+     LEFT JOIN fighters red ON red.id = fi.fighter_red_id
+     LEFT JOIN fighters blue ON blue.id = fi.fighter_blue_id
+     LEFT JOIN LATERAL (
+       SELECT r.rank_position
+       FROM rankings r
+       WHERE r.fighter_id = red.id
+         AND r.snapshot_date = (SELECT d FROM latest_ranking)
+         AND r.division NOT IN ('mens_pound_for_pound', 'womens_pound_for_pound')
+       ORDER BY r.rank_position ASC
+       LIMIT 1
+     ) red_rank ON true
+     LEFT JOIN LATERAL (
+       SELECT r.rank_position
+       FROM rankings r
+       WHERE r.fighter_id = blue.id
+         AND r.snapshot_date = (SELECT d FROM latest_ranking)
+         AND r.division NOT IN ('mens_pound_for_pound', 'womens_pound_for_pound')
+       ORDER BY r.rank_position ASC
+       LIMIT 1
+     ) blue_rank ON true
+     WHERE fi.event_id = $1
+     ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC
+     LIMIT 1`,
+    [event.id],
+  );
+  const mainEventRow = boutRows[0];
+
+  return {
+    id: event.id,
+    name: event.name,
+    eventDate: event.event_date,
+    startTime: event.start_time,
+    location: event.location,
+    imageUrl: absolutePoster(event.image_url),
+    broadcast: event.broadcast,
+    mainEvent: mainEventRow
+      ? {
+          fightId: mainEventRow.fight_id,
+          weightClass: mainEventRow.weight_class,
+          red: toHeroFighter({
+            id: mainEventRow.red_id,
+            name: mainEventRow.red_name,
+            fallbackName: mainEventRow.red_fighter_name,
+            nickname: mainEventRow.red_nickname,
+            headshot: mainEventRow.red_headshot,
+            standingBody: mainEventRow.red_standing_body,
+            fullBody: mainEventRow.red_full_body,
+            nationality: mainEventRow.red_nationality,
+            wins: mainEventRow.red_wins,
+            losses: mainEventRow.red_losses,
+            draws: mainEventRow.red_draws,
+            rank: mainEventRow.red_rank,
+          }),
+          blue: toHeroFighter({
+            id: mainEventRow.blue_id,
+            name: mainEventRow.blue_name,
+            fallbackName: mainEventRow.blue_fighter_name,
+            nickname: mainEventRow.blue_nickname,
+            headshot: mainEventRow.blue_headshot,
+            standingBody: mainEventRow.blue_standing_body,
+            fullBody: mainEventRow.blue_full_body,
+            nationality: mainEventRow.blue_nationality,
+            wins: mainEventRow.blue_wins,
+            losses: mainEventRow.blue_losses,
+            draws: mainEventRow.blue_draws,
+            rank: mainEventRow.blue_rank,
+          }),
+        }
+      : null,
+  };
+}
+
+type LastEventRow = {
+  id: number;
+  name: string;
+  event_date: string | null;
+  location: string | null;
+};
+
+// FE10: el último evento completado (fecha < hoy más reciente, status
+// 'completed' para garantizar resultados) con las 5 primeras peleas de su
+// cartelera estelar, en formato EventBout para reutilizar EventBoutRow.
+export async function getLastEventResults(): Promise<LastEventResults | null> {
+  const rows = await sql<LastEventRow>(
+    `SELECT e.id, e.name, e.event_date::text AS event_date, e.location
+     FROM events e
+     WHERE e.event_date < CURRENT_DATE AND e.status = 'completed'
+     ORDER BY e.event_date DESC, e.id DESC
+     LIMIT 1`,
+  );
+  const event = rows[0];
+  if (!event) {
+    return null;
+  }
+
+  const bouts = await fetchEventBouts(event.id);
+  // "Main card": si el evento tiene segmentos nos quedamos con 'main'; en
+  // eventos históricos sin card_segment la cartelera completa ya viene en el
+  // orden correcto (estelar primero), así que vale tal cual.
+  const hasSegments = bouts.some((bout) => bout.cardSegment != null);
+  const mainCard = hasSegments
+    ? bouts.filter((bout) => bout.cardSegment === "main")
+    : bouts;
+
+  return {
+    id: event.id,
+    name: event.name,
+    eventDate: event.event_date,
+    location: event.location,
+    bouts: mainCard.slice(0, 5),
+  };
+}

@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { FighterCard } from "@/components/fighter-card";
+import { LastEventSection } from "@/components/home/last-event-section";
+import { UpNextHero } from "@/components/home/up-next-hero";
 import { NewsMarquee } from "@/components/news-marquee";
 import { RecentNewsGrid } from "@/components/recent-news-grid";
 import { SearchHero } from "@/components/search-hero";
@@ -9,6 +11,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { UfcVideosColumn } from "@/components/ufc-videos-column";
 import { VideoHero } from "@/components/video-hero";
 import { Button } from "@/components/ui/button";
+import { getLastEventResults, getNextEventHero } from "@/lib/queries/events";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 import { getRecentNews } from "@/lib/queries/news";
 
@@ -29,11 +32,15 @@ export default async function HomePage() {
   // Noticias para el marquee (12 recientes, con o sin foto). La rejilla pide
   // aparte sus 6 con foto (paridad visual exacta); con ISR ambas consultas solo
   // corren al revalidar, así que el coste extra es irrelevante (#68/#33).
-  const [stats, featuredFighters, recentNews] = await Promise.all([
-    getHomeStats(),
-    getFeaturedFighters(),
-    getRecentNews(12),
-  ]);
+  const [stats, featuredFighters, recentNews, nextEvent, lastEvent] =
+    await Promise.all([
+      getHomeStats(),
+      getFeaturedFighters(),
+      getRecentNews(12),
+      // FE1/FE10: próximo evento (Up Next) y resultados del último completado.
+      getNextEventHero(),
+      getLastEventResults(),
+    ]);
 
   const statItems = [
     { value: stats.fighters.toLocaleString(), label: "Luchadores" },
@@ -99,6 +106,10 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Up Next (FE1): próximo evento con combate estelar y cuenta atrás.
+          Si no hay eventos futuros en la BD, la sección no se pinta. */}
+      {nextEvent ? <UpNextHero event={nextEvent} /> : null}
+
       {/* Stat strip */}
       <section className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-border lg:grid-cols-4">
@@ -122,6 +133,13 @@ export default async function HomePage() {
 
       {/* Marquee de noticias (se desplaza derecha→izquierda, clicable) */}
       <NewsMarquee articles={recentNews} />
+
+      {/* Acaba de pasar (FE10): resultados del último evento completado. Va
+          tras la pareja de franjas full-bleed (stats + marquee) para no
+          separarlas y encadenar con el bloque de noticias. */}
+      {lastEvent && lastEvent.bouts.length > 0 ? (
+        <LastEventSection event={lastEvent} />
+      ) : null}
 
       {/* Noticias recientes + columna de vídeos UFC (estilo ufc.com) */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">

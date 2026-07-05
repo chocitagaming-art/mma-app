@@ -216,6 +216,45 @@ export function formatDate(date: string | null) {
   }).format(new Date(date));
 }
 
+// Fecha relativa en español ("hace 6 días", "ayer", "hace 2 semanas"…) para la
+// sección "Acaba de pasar" de la home (FE10). Compara solo la parte de fecha
+// en UTC (mismo criterio que ageFromBirthDate) para evitar derivas de zona
+// horaria; `ref` es inyectable para tests. Devuelve null si no es parseable.
+export function formatRelativeDate(
+  value: string | null,
+  ref: Date = new Date(),
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const refDayUtc = Date.UTC(
+    ref.getUTCFullYear(),
+    ref.getUTCMonth(),
+    ref.getUTCDate(),
+  );
+  const days = Math.round((refDayUtc - date.getTime()) / 86_400_000);
+
+  // numeric "auto" da "hoy"/"ayer"/"mañana" en vez de "hace 0 días".
+  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  const magnitude = Math.abs(days);
+  if (magnitude < 7) {
+    return rtf.format(-days, "day");
+  }
+  if (magnitude < 30) {
+    return rtf.format(-Math.round(days / 7), "week");
+  }
+  if (magnitude < 365) {
+    return rtf.format(-Math.round(days / 30), "month");
+  }
+  return rtf.format(-Math.round(days / 365), "year");
+}
+
 // News category slugs (written by the backend classifier, see news.py CATEGORIES)
 // → Spanish labels. 'other' maps to "General" to match the null fallback below.
 const NEWS_CATEGORY_ES: Record<string, string> = {
