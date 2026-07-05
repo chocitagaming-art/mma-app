@@ -18,6 +18,20 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   "theodor berggren": "/fighters/theodor-berggren.jpg",
 };
 
+// Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para
+// curar cabezas ausentes o de baja calidad, p.ej. sustituir el headshot B/N de
+// una leyenda por una foto en color. A diferencia de LOCAL_HEADSHOTS (solo
+// fallback), estas pisan el headshot_url de la BD.
+const LOCAL_HEADSHOT_OVERRIDES: Record<string, string> = {
+  // Forrest Griffin: en BD solo está su headshot 2012 en blanco y negro; foto en
+  // color provista por el dueño, optimizada a webp.
+  "forrest griffin": "/fighters/forrest-griffin.webp",
+};
+
 export function localHeadshot(name: string): string | null {
   return LOCAL_HEADSHOTS[name.trim().toLowerCase()] ?? null;
+}
+
+export function localHeadshotOverride(name: string): string | null {
+  return LOCAL_HEADSHOT_OVERRIDES[name.trim().toLowerCase()] ?? null;
 }

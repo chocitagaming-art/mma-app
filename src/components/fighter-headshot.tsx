@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import { localHeadshot } from "@/lib/local-headshots";
+import { localHeadshot, localHeadshotOverride } from "@/lib/local-headshots";
 import { cn } from "@/lib/utils";
 
 type FighterHeadshotProps = {
@@ -41,7 +41,9 @@ export function FighterHeadshot({
 }: FighterHeadshotProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const initials = getInitials(name);
-  const resolvedUrl = headshotUrl ?? localHeadshot(name);
+  // Prioridad: override curado (color) > BD > fallback curado. El override cubre
+  // headshots ausentes o malos (p.ej. la cabeza B/N de Forrest en la BD).
+  const resolvedUrl = localHeadshotOverride(name) ?? headshotUrl ?? localHeadshot(name);
 
   return (
     <div
