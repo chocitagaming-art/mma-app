@@ -7,6 +7,11 @@ export type HofInductee = {
   displayName: string;
   inducteeYear: number | null;
   subtitle: string | null;
+  // Foto curada hospedada en la app (/hof/…) para contributor/fight; NULL hasta
+  // que el seed la puebla. bio: prosa para el panel expandible (columna nueva de
+  // la migración 014; NULL o ausente antes de migrar).
+  photoUrl: string | null;
+  bio: string | null;
   // Persona (modern/pioneer/contributor): enlace a su ficha si la tenemos.
   fighterId: number | null;
   headshotUrl: string | null;
@@ -27,6 +32,8 @@ type Row = {
   display_name: string;
   inductee_year: number | null;
   subtitle: string | null;
+  photo_url: string | null;
+  bio: string | null;
   fighter_id: number | null;
   headshot_url: string | null;
   nationality: string | null;
@@ -42,11 +49,12 @@ function emptyData(): HallOfFameData {
   return { modern: [], pioneer: [], contributor: [], fight: [] };
 }
 
-export async function getHallOfFame(): Promise<HallOfFameData> {
-  let rows: Row[];
-  try {
-    rows = await sql<Row>(
-      `SELECT h.wing, h.display_name, h.inductee_year, h.subtitle, h.sort_order,
+// Query base parametrizada por cómo se selecciona `bio`: con la columna real o
+// con NULL cuando aún no existe (migración 014 pendiente). Así el mismo SELECT
+// sirve antes y después de migrar sin duplicar SQL.
+function hallOfFameQuery(bioExpr: string): string {
+  return `SELECT h.wing, h.display_name, h.inductee_year, h.subtitle, h.sort_order,
+              h.photo_url, ${bioExpr} AS bio,
               h.fighter_id, f.headshot_url, f.nationality,
               h.fighter_a_id AS corner_a_id, fa.name AS corner_a_name, fa.headshot_url AS corner_a_headshot,
               h.fighter_b_id AS corner_b_id, fb.name AS corner_b_name, fb.headshot_url AS corner_b_headshot
@@ -54,8 +62,19 @@ export async function getHallOfFame(): Promise<HallOfFameData> {
        LEFT JOIN fighters f  ON f.id  = h.fighter_id
        LEFT JOIN fighters fa ON fa.id = h.fighter_a_id
        LEFT JOIN fighters fb ON fb.id = h.fighter_b_id
-       ORDER BY h.wing, h.sort_order`,
-    );
+       ORDER BY h.wing, h.sort_order`;
+}
+
+export async function getHallOfFame(): Promise<HallOfFameData> {
+  let rows: Row[];
+  try {
+    try {
+      rows = await sql<Row>(hallOfFameQuery("h.bio"));
+    } catch {
+      // La columna bio puede no existir todavía (migración 014 pendiente):
+      // reintenta con bio=NULL para no dejar el Salón en blanco.
+      rows = await sql<Row>(hallOfFameQuery("NULL::text"));
+    }
   } catch (error) {
     // La tabla hall_of_fame puede no estar migrada todavía: degradamos a vacío
     // en vez de romper la página.
@@ -72,6 +91,8 @@ export async function getHallOfFame(): Promise<HallOfFameData> {
       displayName: row.display_name,
       inducteeYear: row.inductee_year,
       subtitle: row.subtitle,
+      photoUrl: row.photo_url,
+      bio: row.bio,
       fighterId: row.fighter_id,
       headshotUrl: row.headshot_url,
       nationality: row.nationality,
