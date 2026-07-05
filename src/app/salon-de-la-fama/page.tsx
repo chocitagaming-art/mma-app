@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { HallOfFameTabs } from "@/components/hall-of-fame-tabs";
 import { SectionHeading } from "@/components/section-heading";
@@ -34,7 +35,9 @@ export default async function SalonDeLaFamaPage() {
         </p>
       ) : (
         <div className="mt-10">
-          <HallOfFameTabs data={data} />
+          <Suspense fallback={<div className="min-h-[420px]" />}>
+            <HallOfFameTabs data={data} />
+          </Suspense>
         </div>
       )}
     </div>

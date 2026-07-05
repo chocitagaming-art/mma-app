@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Trophy } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
@@ -88,7 +88,27 @@ function FightCard({ inductee }: { inductee: HofInductee }) {
 }
 
 export function HallOfFameTabs({ data }: { data: HallOfFameData }) {
-  const [active, setActive] = useState<HofWing>("modern");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // El ala activa se DERIVA de la URL (?wing=), no de estado local, para que el
+  // botón "atrás" del navegador (tras abrir el perfil de un luchador) devuelva al
+  // ala correcta en vez de resetear siempre a "modern".
+  const wingParam = searchParams.get("wing");
+  const active: HofWing = WINGS.some((w) => w.key === wingParam)
+    ? (wingParam as HofWing)
+    : "modern";
+
+  function selectWing(wing: HofWing) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (wing === "modern") next.delete("wing");
+    else next.set("wing", wing);
+    const qs = next.toString();
+    router.replace(`${pathname ?? "/salon-de-la-fama"}${qs ? `?${qs}` : ""}`, {
+      scroll: false,
+    });
+  }
+
   const items = data[active];
   const activeWing = WINGS.find((w) => w.key === active);
 
@@ -103,7 +123,7 @@ export function HallOfFameTabs({ data }: { data: HallOfFameData }) {
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => setActive(wing.key)}
+              onClick={() => selectWing(wing.key)}
               className={cn(
                 "rounded-full border px-4 py-2 font-display text-sm font-semibold uppercase tracking-wide transition-colors",
                 selected
