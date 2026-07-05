@@ -16,6 +16,16 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   "jefferson nascimento": "/fighters/jefferson-nascimento.jpg",
   "tahir abdullayev": "/fighters/tahir-abdullayev.png",
   "theodor berggren": "/fighters/theodor-berggren.jpg",
+  // Pioneers del Salón de la Fama sin headshot en BD (mostraban iniciales).
+  // Retratos de Wikimedia Commons, optimizados a webp.
+  "pat miletich": "/fighters/pat-miletich.webp",
+  "bas rutten": "/fighters/bas-rutten.webp",
+  "antônio rodrigo nogueira": "/fighters/antonio-rodrigo-nogueira.webp",
+  "antonio rodrigo nogueira": "/fighters/antonio-rodrigo-nogueira.webp",
+  "kazushi sakuraba": "/fighters/kazushi-sakuraba.webp",
+  "kevin randleman": "/fighters/kevin-randleman.webp",
+  "jens pulver": "/fighters/jens-pulver.webp",
+  "mark kerr": "/fighters/mark-kerr.webp",
 };
 
 // Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para
