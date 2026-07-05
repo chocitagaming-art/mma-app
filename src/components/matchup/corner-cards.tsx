@@ -11,23 +11,26 @@ import { formatSignalPercent } from "./helpers";
 export function CornerBlock({
   corner,
   fighter,
+  className,
 }: {
   corner: "red" | "blue";
   fighter: FighterComparisonProfile;
+  // Permite al caller pasar los order-* del grid 3 columnas (ver FaceOffCorner
+  // en tale-of-the-tape.tsx, mismo patrón).
+  className?: string;
 }) {
   const isRed = corner === "red";
   return (
     <div
       className={cn(
-        "flex items-end gap-3 sm:gap-4",
-        isRed ? "flex-row" : "flex-row sm:flex-row-reverse",
+        "flex min-w-0 flex-col items-center gap-1.5 text-center",
+        className,
       )}
     >
-      {/* Foto de cuerpo entero (Ronda B): standing → full body → headshot.
-          Roja a la izquierda, azul a la derecha (flex-row-reverse). */}
+      {/* Foto de cuerpo entero (Ronda B): standing → full body → headshot. */}
       <Link
         href={`/fighters/${fighter.id}`}
-        className="shrink-0 transition-opacity hover:opacity-80"
+        className="w-full transition-opacity hover:opacity-80"
       >
         <FighterFullBody
           name={fighter.name}
@@ -35,36 +38,29 @@ export function CornerBlock({
           standingBodyUrl={fighter.standingBodyUrl ?? null}
           headshotUrl={fighter.headshotUrl}
           preference="standing-first"
-          className="h-[300px] w-32 sm:h-[340px] sm:w-44"
+          className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
         />
       </Link>
-      <div
+      <span
         className={cn(
-          "flex min-w-0 flex-col gap-1.5",
-          isRed ? "items-start text-left" : "items-start text-left sm:items-end sm:text-right",
+          "font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
+          isRed ? "text-corner-red" : "text-corner-blue",
         )}
       >
-        <span
-          className={cn(
-            "font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
-            isRed ? "text-corner-red" : "text-corner-blue",
-          )}
-        >
-          Esquina {isRed ? "roja" : "azul"}
-        </span>
-        <Link
-          href={`/fighters/${fighter.id}`}
-          className="font-display text-2xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-3xl"
-        >
-          {fighter.name}
-        </Link>
-        <p className="tabular font-mono text-sm text-muted-foreground">
-          {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
-        </p>
-        <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-muted-foreground">
-          {formatWeightClass(fighter.latestWeightClass || "Open Weight")}
-        </span>
-      </div>
+        Esquina {isRed ? "roja" : "azul"}
+      </span>
+      <Link
+        href={`/fighters/${fighter.id}`}
+        className="break-words font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
+      >
+        {fighter.name}
+      </Link>
+      <p className="tabular font-mono text-sm text-muted-foreground">
+        {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
+      </p>
+      <span className="rounded-sm border border-border px-2 py-0.5 font-mono text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+        {formatWeightClass(fighter.latestWeightClass || "Open Weight")}
+      </span>
     </div>
   );
 }
