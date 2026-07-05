@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
@@ -25,9 +25,11 @@ function Movement({ change }: { change: number | null }) {
       <span
         role="img"
         aria-label="nuevo en el ranking"
-        className="w-9 shrink-0 text-center font-mono text-[0.6rem] font-bold uppercase tracking-wide text-primary"
+        className="flex w-9 shrink-0 items-center justify-center"
       >
-        Nuevo
+        <span className="rounded bg-primary/15 px-1 py-0.5 font-mono text-[0.55rem] font-bold uppercase leading-none tracking-wide text-primary">
+          Nuevo
+        </span>
       </span>
     );
   }
@@ -93,22 +95,23 @@ export function RankingDivisionCard({
       </div>
 
       {champion ? (
-        <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-5 py-4">
+        <div className="flex items-center gap-3 border-b border-border bg-gradient-to-r from-amber-400/10 via-muted/40 to-transparent px-5 py-4">
           <FighterHeadshot
             name={champion.fighterName}
             headshotUrl={champion.headshotUrl}
             size="md"
-            className="shrink-0 border-2 border-corner-red"
+            className="size-[4.5rem] shrink-0 border-2 border-amber-400/70 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
           />
-          <div className="min-w-0">
-            <p className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-primary">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-amber-400">
+              <Trophy className="size-3" aria-hidden />
               Campeón
             </p>
-            <div className="mt-1">
+            <div className="mt-1 text-[0.95rem]">
               <FighterName entry={champion} />
             </div>
             {champion.wins != null ? (
-              <p className="mt-1 font-mono text-xs tabular text-muted-foreground">
+              <p className="mt-0.5 font-mono text-xs tabular text-muted-foreground">
                 {formatRecord(champion.wins, champion.losses ?? 0, champion.draws ?? 0)}
               </p>
             ) : null}
@@ -117,28 +120,39 @@ export function RankingDivisionCard({
       ) : null}
 
       <ol className="divide-y divide-border">
-        {ranked.map((entry, index) => (
-          <li
-            key={`${index}-${entry.fighterId ?? entry.fighterName}`}
-            className="flex items-center gap-3 px-5 py-2 transition-colors hover:bg-muted/50"
-          >
-            <span className="w-5 shrink-0 text-right font-mono text-sm font-semibold tabular text-muted-foreground">
-              {index + 1}
-            </span>
-            {showPhotos ? (
-              <FighterHeadshot
-                name={entry.fighterName}
-                headshotUrl={entry.headshotUrl}
-                size="sm"
-                className="size-9 shrink-0"
-              />
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <FighterName entry={entry} />
-            </div>
-            <Movement change={entry.rankChange} />
-          </li>
-        ))}
+        {ranked.map((entry, index) => {
+          const rank = index + 1;
+          return (
+            <li
+              key={`${index}-${entry.fighterId ?? entry.fighterName}`}
+              className={cn(
+                "flex items-center gap-3 px-5 py-2 transition-colors hover:bg-muted/50",
+                rank === 1 && "bg-primary/[0.05]",
+              )}
+            >
+              <span
+                className={cn(
+                  "w-7 shrink-0 text-right font-display text-lg font-extrabold tabular leading-none",
+                  rank === 1 ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {rank}
+              </span>
+              {showPhotos ? (
+                <FighterHeadshot
+                  name={entry.fighterName}
+                  headshotUrl={entry.headshotUrl}
+                  size="sm"
+                  className="size-9 shrink-0"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <FighterName entry={entry} />
+              </div>
+              <Movement change={entry.rankChange} />
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
