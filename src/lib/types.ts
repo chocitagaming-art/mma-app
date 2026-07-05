@@ -323,6 +323,12 @@ export type EventBoutFighter = {
   // Posición en el ranking de su división (último snapshot, P4P excluido).
   // 0 = campeón (así lo guarda la tabla rankings); null = sin ranking.
   rank: number | null;
+  // Ficha física para el mini tale-of-the-tape desplegable de la cartelera
+  // (FE6). NULL cuando el luchador es TBD o el dato falta en la BD.
+  heightCm: number | null;
+  reachCm: number | null;
+  stance: string | null;
+  birthDate: string | null;
 };
 
 export type EventBout = {

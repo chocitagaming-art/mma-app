@@ -31,14 +31,27 @@ type EventListRow = {
 
 // "Pasados" = eventos ya celebrados (event_date < hoy, o sin fecha histórica).
 // El filtro por fecha excluye los futuros automáticamente cuando el backend añada upcoming.
-export async function getPastEvents(page: number): Promise<EventListResult> {
+// `year` (FE7) restringe a un año concreto; los eventos sin fecha quedan fuera
+// del filtro anual porque no tienen año que comparar.
+export async function getPastEvents(
+  page: number,
+  year?: number,
+): Promise<EventListResult> {
   const currentPage = Math.max(1, page);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
+  const whereClause =
+    year != null
+      ? `WHERE e.event_date < CURRENT_DATE
+           AND extract(year FROM e.event_date) = $1`
+      : `WHERE e.event_date < CURRENT_DATE OR e.event_date IS NULL`;
+  const whereParams = year != null ? [year] : [];
+
   const countRows = await sql<{ total: string }>(
     `SELECT count(*)::text AS total
-     FROM events
-     WHERE event_date < CURRENT_DATE OR event_date IS NULL`,
+     FROM events e
+     ${whereClause}`,
+    whereParams,
   );
   const total = Number(countRows[0]?.total ?? "0");
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -48,11 +61,11 @@ export async function getPastEvents(page: number): Promise<EventListResult> {
             count(f.id)::text AS fight_count
      FROM events e
      LEFT JOIN fights f ON f.event_id = e.id
-     WHERE e.event_date < CURRENT_DATE OR e.event_date IS NULL
+     ${whereClause}
      GROUP BY e.id, e.name, e.event_date, e.location
      ORDER BY e.event_date DESC NULLS LAST, e.id DESC
-     LIMIT $1 OFFSET $2`,
-    [PAGE_SIZE, offset],
+     LIMIT $${whereParams.length + 1} OFFSET $${whereParams.length + 2}`,
+    [...whereParams, PAGE_SIZE, offset],
   );
 
   const events: EventListItem[] = rows.map((row) => ({
@@ -64,6 +77,19 @@ export async function getPastEvents(page: number): Promise<EventListResult> {
   }));
 
   return { events, total, page: currentPage, totalPages };
+}
+
+// FE7: años con eventos ya celebrados (DESC) para el <select> de la vista
+// "Pasados". Los eventos sin fecha no aportan año, así que no entran.
+export async function getEventYears(): Promise<number[]> {
+  const rows = await sql<{ year: number | string }>(
+    `SELECT DISTINCT extract(year FROM event_date)::int AS year
+     FROM events
+     WHERE event_date < CURRENT_DATE
+     ORDER BY year DESC`,
+  );
+
+  return rows.map((row) => Number(row.year));
 }
 
 type EventSearchRow = {
@@ -191,6 +217,12 @@ type BoutRow = {
   red_wins: number | null;
   red_losses: number | null;
   red_draws: number | null;
+  // Ficha física para el mini tale-of-the-tape (FE6). height/reach son numeric
+  // en la BD: se seleccionan ::text y se convierten con Number() (como fights.ts).
+  red_height_cm: string | null;
+  red_reach_cm: string | null;
+  red_stance: string | null;
+  red_birth_date: string | null;
   blue_id: number | null;
   blue_name: string | null;
   blue_nickname: string | null;
@@ -199,6 +231,10 @@ type BoutRow = {
   blue_wins: number | null;
   blue_losses: number | null;
   blue_draws: number | null;
+  blue_height_cm: string | null;
+  blue_reach_cm: string | null;
+  blue_stance: string | null;
+  blue_birth_date: string | null;
   red_rank: number | null;
   blue_rank: number | null;
 };
@@ -224,9 +260,13 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
             red.id AS red_id, red.name AS red_name, red.nickname AS red_nickname,
             red.headshot_url AS red_headshot, red.nationality AS red_nationality,
             red.wins AS red_wins, red.losses AS red_losses, red.draws AS red_draws,
+            red.height_cm::text AS red_height_cm, red.reach_cm::text AS red_reach_cm,
+            red.stance AS red_stance, red.birth_date::text AS red_birth_date,
             blue.id AS blue_id, blue.name AS blue_name, blue.nickname AS blue_nickname,
             blue.headshot_url AS blue_headshot, blue.nationality AS blue_nationality,
             blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws,
+            blue.height_cm::text AS blue_height_cm, blue.reach_cm::text AS blue_reach_cm,
+            blue.stance AS blue_stance, blue.birth_date::text AS blue_birth_date,
             red_rank.rank_position AS red_rank,
             blue_rank.rank_position AS blue_rank
      FROM fights fi
@@ -279,6 +319,10 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
             losses: row.red_losses ?? 0,
             draws: row.red_draws ?? 0,
             rank: row.red_rank,
+            heightCm: row.red_height_cm ? Number(row.red_height_cm) : null,
+            reachCm: row.red_reach_cm ? Number(row.red_reach_cm) : null,
+            stance: row.red_stance,
+            birthDate: row.red_birth_date,
           }
         : {
             id: null,
@@ -290,6 +334,10 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
             losses: 0,
             draws: 0,
             rank: null,
+            heightCm: null,
+            reachCm: null,
+            stance: null,
+            birthDate: null,
           },
     blue:
       row.blue_id != null
@@ -303,6 +351,10 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
             losses: row.blue_losses ?? 0,
             draws: row.blue_draws ?? 0,
             rank: row.blue_rank,
+            heightCm: row.blue_height_cm ? Number(row.blue_height_cm) : null,
+            reachCm: row.blue_reach_cm ? Number(row.blue_reach_cm) : null,
+            stance: row.blue_stance,
+            birthDate: row.blue_birth_date,
           }
         : {
             id: null,
@@ -314,6 +366,10 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
             losses: 0,
             draws: 0,
             rank: null,
+            heightCm: null,
+            reachCm: null,
+            stance: null,
+            birthDate: null,
           },
   }));
 }
@@ -410,6 +466,8 @@ type HeroCornerCols = {
 
 // Esquina del combate estelar (FE1). Mismo criterio TBD que fetchEventBouts:
 // sin ficha (id NULL) caemos al nombre plano de la tabla fights.
+// La ficha física (FE6) va siempre a NULL: el hero de la home no la pinta y
+// así la query no arrastra columnas que nadie usa.
 function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
   if (cols.id == null) {
     return {
@@ -422,6 +480,10 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
       losses: 0,
       draws: 0,
       rank: null,
+      heightCm: null,
+      reachCm: null,
+      stance: null,
+      birthDate: null,
       fullBodyUrl: null,
       standingBodyUrl: null,
     };
@@ -437,6 +499,10 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
     losses: cols.losses ?? 0,
     draws: cols.draws ?? 0,
     rank: cols.rank,
+    heightCm: null,
+    reachCm: null,
+    stance: null,
+    birthDate: null,
     fullBodyUrl: cols.fullBody,
     standingBodyUrl: cols.standingBody,
   };

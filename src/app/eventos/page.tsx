@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarDays, MapPin, Tv, Ticket } from "lucide-react";
 
+import { EventSearchCombobox } from "@/components/event-search-combobox";
+import { EventosYearFilter } from "@/components/eventos-year-filter";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
-import { getPastEvents, getUpcomingEvents } from "@/lib/queries/events";
+import {
+  getEventYears,
+  getPastEvents,
+  getUpcomingEvents,
+} from "@/lib/queries/events";
 import { parsePageParam } from "@/lib/route-params";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +23,18 @@ export const metadata: Metadata = {
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+// ?anio=2024 (FE7): solo un año de 4 cifras es un filtro válido; cualquier otra
+// cosa (texto, vacío, años imposibles) cae al listado completo sin filtrar.
+function parseYearParam(value: string | string[] | undefined): number | undefined {
+  const raw = getSingleValue(value)?.trim();
+
+  if (!raw || !/^\d{4}$/.test(raw)) {
+    return undefined;
+  }
+
+  return Number(raw);
 }
 
 type EventosPageProps = {
@@ -33,8 +51,14 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
   // Default to upcoming events; past events require an explicit ?view=pasados.
   const view = getSingleValue(params.view) === "pasados" ? "pasados" : "proximos";
   const page = parsePageParam(params.page);
+  const year = parseYearParam(params.anio);
 
-  const result = view === "pasados" ? await getPastEvents(page) : null;
+  // Vista "Pasados": listado (filtrado por año si lo hay) + años disponibles
+  // para el select, en paralelo (son queries independientes).
+  const [result, years] =
+    view === "pasados"
+      ? await Promise.all([getPastEvents(page, year), getEventYears()])
+      : [null, null];
   const upcoming = view === "proximos" ? await getUpcomingEvents() : null;
 
   return (
@@ -45,7 +69,7 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
         description="Próximos eventos y resultados de los eventos ya celebrados."
       />
 
-      <div className="mt-6 flex items-center gap-1 border-b border-border">
+      <div className="mt-6 flex flex-wrap items-end gap-1 border-b border-border">
         {TABS.map((tab) => {
           const active = view === tab.key;
           return (
@@ -64,6 +88,11 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
             </Link>
           );
         })}
+        {/* Salto a evento (FE7): buscar cualquier evento por nombre y navegar
+            directo a su cartelera, sin paginar entre 700 eventos pasados. */}
+        <div className="ml-auto w-full pb-2 sm:w-72">
+          <EventSearchCombobox />
+        </div>
       </div>
 
       {view === "proximos" ? (
@@ -158,12 +187,21 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
         )
       ) : result ? (
         <>
-          <p className="mt-6 text-sm text-muted-foreground">
-            <span className="tabular font-semibold text-foreground">
-              {result.total.toLocaleString("es")}
-            </span>{" "}
-            eventos celebrados
-          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {/* Con filtro el encabezado dice el año ("Eventos de 2024"). */}
+              {year != null ? (
+                <span className="mr-2 font-display text-sm font-bold uppercase tracking-wide text-foreground">
+                  Eventos de {year} ·
+                </span>
+              ) : null}
+              <span className="tabular font-semibold text-foreground">
+                {result.total.toLocaleString("es")}
+              </span>{" "}
+              eventos celebrados
+            </p>
+            <EventosYearFilter years={years ?? []} current={year ?? null} />
+          </div>
 
           {result.events.length > 0 ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -201,9 +239,17 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
             <PaginationControls
               page={result.page}
               totalPages={result.totalPages}
-              createHref={(target) =>
-                target > 1 ? `/eventos?view=pasados&page=${target}` : "/eventos?view=pasados"
-              }
+              createHref={(target) => {
+                // Conserva el filtro de año al paginar (FE7).
+                const query = new URLSearchParams({ view: "pasados" });
+                if (year != null) {
+                  query.set("anio", String(year));
+                }
+                if (target > 1) {
+                  query.set("page", String(target));
+                }
+                return `/eventos?${query.toString()}`;
+              }}
             />
           </div>
         </>
