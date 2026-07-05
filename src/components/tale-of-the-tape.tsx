@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
+import { FightOfficials } from "@/components/fight/officials";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { countryNameEs } from "@/lib/flags";
 import {
@@ -184,6 +185,8 @@ function FaceOffCorner({
 
 export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
   const { red, blue, redStats, blueStats } = fight;
+  // Cancelado: sin resultado que pintar; su banner ocupa el hueco de la barra.
+  const isCancelled = fight.status === "cancelled";
   // Mismo criterio que la página de detalle: sin ganador ni método = pendiente.
   const isUpcoming = fight.winnerId == null && fight.method == null;
   const redWins = fight.winnerId != null && fight.winnerId === red.id;
@@ -361,6 +364,16 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
         </div>
       </div>
 
+      {/* Aviso de cancelación: ocupa el hueco de la barra de resultado para
+          que la pelea no parezca un combate programado eterno. */}
+      {isCancelled ? (
+        <div className="border-t border-destructive/30 bg-destructive/10 px-6 py-4 text-center">
+          <span className="font-display text-lg font-bold uppercase tracking-tight text-destructive">
+            Combate cancelado
+          </span>
+        </div>
+      ) : null}
+
       {/* Barra de resultado: solo peleas terminadas */}
       {!isUpcoming ? (
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-border bg-muted/40 px-6 py-4 text-center">
@@ -376,6 +389,12 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
             </span>
           ) : null}
         </div>
+      ) : null}
+
+      {/* Árbitro + tarjetas de los jueces (BE8), justo bajo la barra de
+          resultado. El componente no pinta nada si no hay datos. */}
+      {!isUpcoming ? (
+        <FightOfficials referee={fight.referee} scorecards={fight.scorecards} />
       ) : null}
 
       {/* Estadísticas del combate: golpes/derribos/control (peleas terminadas) */}

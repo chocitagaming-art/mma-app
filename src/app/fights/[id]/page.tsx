@@ -4,13 +4,14 @@ import type { Metadata } from "next";
 import { Play, Sparkles } from "lucide-react";
 
 import { FightVideoPlayer } from "@/components/fight-video-player";
+import { RoundByRound } from "@/components/fight/round-by-round";
 import { MarketOnlyCard } from "@/components/market-corner-tile";
 import { MarketModelComparison } from "@/components/market-model-comparison";
 import { SectionHeading } from "@/components/section-heading";
 import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
 import { marketFavorite } from "@/lib/odds";
-import { getFightDetail } from "@/lib/queries/fights";
+import { getFightDetail, getFightRoundStats } from "@/lib/queries/fights";
 import { parseId } from "@/lib/route-params";
 import { parseYouTubeId, resolveFightVideoUrl } from "@/lib/video";
 
@@ -45,14 +46,22 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
     notFound();
   }
 
-  const fight = await getFightDetail(fightId);
+  // Detalle + desglose por asaltos (BE4) en paralelo: son independientes y el
+  // detalle ya está deduplicado con cache() frente a generateMetadata.
+  const [fight, roundStats] = await Promise.all([
+    getFightDetail(fightId),
+    getFightRoundStats(fightId),
+  ]);
 
   if (!fight) {
     notFound();
   }
 
+  // Cancelado: comparte firma con los pendientes (winner/method NULL) pero no
+  // debe ofrecer predicción ni vídeo; el aviso lo pinta TaleOfTheTape.
+  const isCancelled = fight.status === "cancelled";
   // Combate sin resultado registrado = pendiente -> ofrecer predicción IA (#36).
-  const isUpcoming = !fight.winnerId && !fight.method;
+  const isUpcoming = !isCancelled && !fight.winnerId && !fight.method;
   // Vídeo curado de YouTube -> reproductor embebido; si no, botón (#43, Fase 10).
   const youTubeId = isUpcoming ? null : parseYouTubeId(fight.videoUrl);
   // La predicción necesita ambas fichas; un rival TBD (id null) no es comparable.
@@ -80,9 +89,11 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         eyebrow="Desglose de la pelea"
         title={`${fight.red.name} vs ${fight.blue.name}`}
         description={
-          isUpcoming
-            ? "Cara a cara y comparativa de ambos luchadores antes del combate."
-            : "Resultado oficial y comparación lado a lado de las estadísticas registradas."
+          isCancelled
+            ? "Este combate fue cancelado y no llegó a disputarse."
+            : isUpcoming
+              ? "Cara a cara y comparativa de ambos luchadores antes del combate."
+              : "Resultado oficial y comparación lado a lado de las estadísticas registradas."
         }
       />
 
@@ -108,7 +119,7 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         )
       ) : null}
 
-      {!isUpcoming ? (
+      {!isUpcoming && !isCancelled ? (
         youTubeId ? (
           <div className="mx-auto w-full max-w-3xl">
             <FightVideoPlayer
@@ -139,6 +150,16 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
       ) : null}
 
       <TaleOfTheTape fight={fight} />
+
+      {/* BE4: desglose por asaltos, bajo las estadísticas del combate (última
+          sección del tale-of-the-tape). No pinta nada sin filas por asalto. */}
+      <RoundByRound
+        rounds={roundStats}
+        redId={fight.red.id}
+        blueId={fight.blue.id}
+        redName={fight.red.name}
+        blueName={fight.blue.name}
+      />
 
       {/* CTA de predicción para combates futuros SIN cuotas (con cuotas, la
           comparación Mercado vs Modelo de arriba ya es el CTA primario). Vive

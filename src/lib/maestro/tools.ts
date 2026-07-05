@@ -55,7 +55,8 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
             f.height_cm::text as height_cm, f.reach_cm::text as reach_cm,
             f.stance, f.weight_grams, f.wins, f.losses, f.draws,
             (select count(*) from fights fi
-              where fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id) as fight_count,
+              where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+                and fi.status is distinct from 'cancelled') as fight_count,
             (select fi2.weight_class from fights fi2
               where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
               order by fi2.updated_at desc nulls last, fi2.id desc limit 1) as latest_weight_class
@@ -184,6 +185,7 @@ async function evento(input: unknown): Promise<ToolResult> {
      left join fighters red on red.id = fi.fighter_red_id
      left join fighters blue on blue.id = fi.fighter_blue_id
      where fi.event_id = $1
+       and fi.status is distinct from 'cancelled'
      order by fi.bout_order asc nulls last, fi.id asc
      limit 16`,
     [ev.id],

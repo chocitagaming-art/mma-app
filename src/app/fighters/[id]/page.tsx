@@ -207,8 +207,16 @@ export default async function FighterDetailPage({
       : []),
     { label: "Peso", content: formatWeight(fighter.weightGrams) },
     ...(age != null ? [{ label: "Edad", content: `${age} años` }] : []),
+    // BE5 (bio extendida): lugar de nacimiento y debut en UFC, solo si la BD
+    // los tiene (mismo criterio "sin huecos" que el resto de opcionales).
+    ...(fighter.birthPlace
+      ? [{ label: "Lugar de nacimiento", content: fighter.birthPlace }]
+      : []),
     ...(fighter.trainsAt
       ? [{ label: "Gimnasio", content: fighter.trainsAt }]
+      : []),
+    ...(fighter.octagonDebut
+      ? [{ label: "Debut en UFC", content: formatDate(fighter.octagonDebut) }]
       : []),
     ...(divisionStints.length > 1
       ? [

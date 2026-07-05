@@ -62,6 +62,31 @@ function MiniTapeRow({
   );
 }
 
+// Badge dorado compartido por TÍTULO (BE9b) y los bonos FOTN/POTN (BE3):
+// mono pequeño, discreto, con tooltip nativo. El mismo estilo ámbar que ya
+// usan prediction-section y market-model-comparison.
+function GoldBadge({
+  title,
+  className,
+  children,
+}: {
+  title: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      title={title}
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-sm border border-amber-500/40 bg-amber-500/10 px-1.5 py-px font-mono text-[0.6rem] font-bold uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 // Normaliza la fecha del evento a Date UTC: node-postgres entrega las columnas
 // DATE como objeto Date en runtime aunque el tipo declare string (mismo gotcha
 // que division-history.ts). undefined => computeAge usa "hoy".
@@ -214,6 +239,14 @@ export function EventBoutRow({
               <span className="ml-1.5 text-muted-foreground/70">{redAmerican}</span>
             ) : null}
             {redWon ? <span className="ml-1.5 font-semibold text-win">GANA</span> : null}
+            {/* BE3: bono "Actuación de la Noche". Vive en la línea del récord:
+                en la del nombre (flex + truncate) el chip central de favorito
+                lo aplastaba a ~0px en pantallas de 375px. */}
+            {bout.red.isPotn ? (
+              <GoldBadge title="Actuación de la Noche" className="ml-1.5 tracking-normal">
+                POTN
+              </GoldBadge>
+            ) : null}
           </p>
         </div>
       </div>
@@ -227,6 +260,18 @@ export function EventBoutRow({
           <span className="mt-0.5 hidden max-w-[8rem] truncate font-mono text-[0.6rem] uppercase tracking-[0.12em] text-muted-foreground sm:block">
             {formatWeightClass(bout.weightClass)}
           </span>
+        ) : null}
+        {/* BE9b: pelea por el título, junto a la categoría (visible también en móvil). */}
+        {bout.isTitleFight ? (
+          <GoldBadge title="Pelea por el título" className="mt-1">
+            Título
+          </GoldBadge>
+        ) : null}
+        {/* BE3: bono "Pelea de la Noche" (solo llega relleno en eventos pasados). */}
+        {bout.isFotn ? (
+          <GoldBadge title="Pelea de la Noche" className="mt-1">
+            FOTN
+          </GoldBadge>
         ) : null}
         {resultLine ? (
           <span className="mt-0.5 hidden max-w-[10rem] truncate font-mono text-[0.6rem] text-muted-foreground sm:block">
@@ -271,6 +316,13 @@ export function EventBoutRow({
             ) : null}
           </p>
           <p className="font-mono text-xs tabular text-muted-foreground">
+            {/* BE3: bono "Actuación de la Noche" en la línea del récord
+                (espejo de la roja: el badge queda hacia el centro). */}
+            {bout.blue.isPotn ? (
+              <GoldBadge title="Actuación de la Noche" className="mr-1.5 tracking-normal">
+                POTN
+              </GoldBadge>
+            ) : null}
             {blueWon ? <span className="mr-1.5 font-semibold text-win">GANA</span> : null}
             {blueAmerican ? (
               <span className="mr-1.5 text-muted-foreground/70">{blueAmerican}</span>
