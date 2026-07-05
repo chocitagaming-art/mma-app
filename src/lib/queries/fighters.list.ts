@@ -23,7 +23,7 @@ export async function getHomeStats(): Promise<HomeStats> {
     `select
       (select count(*) from fighters) as fighters,
       (select count(*) from events) as events,
-      (select count(*) from fights) as fights,
+      (select count(*) from fights where status is distinct from 'cancelled') as fights,
       (select count(*) from fight_stats) as fight_stats`,
   );
 
@@ -41,7 +41,8 @@ export async function getFeaturedFighters(
   const latestWeightClass = `(
         select fi2.weight_class
         from fights fi2
-        where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
+        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
+          and fi2.status is distinct from 'cancelled'
         order by fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class`;
@@ -55,7 +56,9 @@ export async function getFeaturedFighters(
       ${latestWeightClass}
     from rankings r
     join fighters f on f.id = r.fighter_id
-    left join fights fi on fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+    left join fights fi
+      on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+     and fi.status is distinct from 'cancelled'
     where r.snapshot_date = (select d from latest)
       and r.division = 'mens_pound_for_pound'
       and r.rank_position between 1 and $1
@@ -72,7 +75,9 @@ export async function getFeaturedFighters(
         count(fi.id)::text as fight_count,
         ${latestWeightClass}
       from fighters f
-      left join fights fi on fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+      left join fights fi
+        on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+       and fi.status is distinct from 'cancelled'
       group by f.id
       order by count(fi.id) desc, f.updated_at desc nulls last, f.id desc
       limit $1`,
@@ -194,9 +199,11 @@ export async function getFighters(
     fight_counts as (
       select fighter_id, count(*) as n
       from (
-        select fighter_red_id as fighter_id from fights where fighter_red_id is not null
+        select fighter_red_id as fighter_id from fights
+          where fighter_red_id is not null and status is distinct from 'cancelled'
         union all
-        select fighter_blue_id as fighter_id from fights where fighter_blue_id is not null
+        select fighter_blue_id as fighter_id from fights
+          where fighter_blue_id is not null and status is distinct from 'cancelled'
       ) s
       group by fighter_id
     )
@@ -206,7 +213,8 @@ export async function getFighters(
       (
         select fi2.weight_class
         from fights fi2
-        where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
+        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
+          and fi2.status is distinct from 'cancelled'
         order by fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class

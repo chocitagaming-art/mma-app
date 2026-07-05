@@ -7,6 +7,7 @@ import type {
   EventListItem,
   EventListResult,
   EventSearchResult,
+  EventWeighIn,
   LastEventResults,
   NextEventHero,
   NextEventHeroFighter,
@@ -60,7 +61,9 @@ export async function getPastEvents(
     `SELECT e.id, e.name, e.event_date::text AS event_date, e.location,
             count(f.id)::text AS fight_count
      FROM events e
-     LEFT JOIN fights f ON f.event_id = e.id
+     -- BE7: las peleas canceladas no cuentan en el "N peleas" del listado.
+     LEFT JOIN fights f
+       ON f.event_id = e.id AND f.status IS DISTINCT FROM 'cancelled'
      ${whereClause}
      GROUP BY e.id, e.name, e.event_date, e.location
      ORDER BY e.event_date DESC NULLS LAST, e.id DESC
@@ -155,7 +158,9 @@ export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
             e.broadcast, e.ticket_url, e.tagline,
             count(f.id)::text AS fight_count
      FROM events e
-     LEFT JOIN fights f ON f.event_id = e.id
+     -- BE7: las canceladas fuera del conteo, igual que en getPastEvents.
+     LEFT JOIN fights f
+       ON f.event_id = e.id AND f.status IS DISTINCT FROM 'cancelled'
      -- status='upcoming' marca la intención, pero un evento puede quedarse en
      -- 'upcoming' hasta que el scraper lo complete. El guard de fecha lo saca de
      -- "Próximos" en cuanto pasa su día (la lista de "Pasados" lo recoge por fecha).
@@ -196,6 +201,17 @@ type EventRow = {
   // FE9: procedencia del evento; con source='ufc.com', source_id es el slug.
   source: string | null;
   source_id: string | null;
+  // FE5b (migración 011): horarios de los tramos previos al main card.
+  early_prelims_time: string | null;
+  prelims_time: string | null;
+};
+
+// BE3 (migración 010): bonos del evento. FOTN referencia la pelea (fight_id);
+// POTN referencia al luchador (fighter_id). La columna contraria queda NULL.
+type FightBonusRow = {
+  fight_id: number | null;
+  fighter_id: number | null;
+  bonus_type: string;
 };
 
 type BoutRow = {
@@ -208,6 +224,9 @@ type BoutRow = {
   winner_id: number | null;
   bout_order: number | null;
   card_segment: string | null;
+  // BE7/BE9b (migración 010): NULL o 'cancelled'; boolean de pelea titular.
+  status: string | null;
+  is_title_fight: boolean | null;
   odds_red: string | null;
   odds_blue: string | null;
   red_fighter_name: string;
@@ -252,11 +271,22 @@ type BoutRow = {
 // Ranking (FE2): LATERAL por esquina contra el ÚLTIMO snapshot de rankings (mismo
 // patrón que fighters.detail). Se excluye P4P: queremos la posición en SU división;
 // rank_position 0 = campeón, y ORDER BY rank_position elige la mejor si hay varias.
-async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
+//
+// BE7: por defecto EXCLUYE las peleas canceladas (fights.status='cancelled');
+// getEventDetail pasa includeCancelled=true para separarlas él mismo y poder
+// pintar la sección "Peleas canceladas" en eventos futuros.
+async function fetchEventBouts(
+  eventId: number,
+  includeCancelled = false,
+): Promise<EventBout[]> {
+  const cancelledFilter = includeCancelled
+    ? ""
+    : " AND fi.status IS DISTINCT FROM 'cancelled'";
   const boutRows = await sql<BoutRow>(
     `WITH latest_ranking AS (SELECT MAX(snapshot_date) AS d FROM rankings)
      SELECT fi.id AS fight_id, fi.weight_class, fi.method, fi.end_round, fi.end_time,
             fi.scheduled_rounds, fi.winner_id, fi.bout_order, fi.card_segment,
+            fi.status, fi.is_title_fight,
             fi.odds_red, fi.odds_blue,
             fi.fighter_red_name AS red_fighter_name,
             fi.fighter_blue_name AS blue_fighter_name,
@@ -293,7 +323,7 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
        ORDER BY r.rank_position ASC
        LIMIT 1
      ) blue_rank ON true
-     WHERE fi.event_id = $1
+     WHERE fi.event_id = $1${cancelledFilter}
      ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC`,
     [eventId],
   );
@@ -308,6 +338,8 @@ async function fetchEventBouts(eventId: number): Promise<EventBout[]> {
     winnerId: row.winner_id,
     boutOrder: row.bout_order,
     cardSegment: row.card_segment,
+    status: row.status,
+    isTitleFight: row.is_title_fight ?? false,
     oddsRed: row.odds_red != null ? Number(row.odds_red) : null,
     oddsBlue: row.odds_blue != null ? Number(row.odds_blue) : null,
     red:
@@ -385,7 +417,9 @@ export const getEventDetail = cache(async (
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url,
-            broadcast, ticket_url, tagline, headliner, source, source_id
+            broadcast, ticket_url, tagline, headliner, source, source_id,
+            early_prelims_time::text AS early_prelims_time,
+            prelims_time::text AS prelims_time
      FROM events WHERE id = $1`,
     [id],
   );
@@ -394,7 +428,48 @@ export const getEventDetail = cache(async (
     return null;
   }
 
-  const bouts = await fetchEventBouts(id);
+  // BE7: pedimos TAMBIÉN las canceladas para separarlas en cancelledBouts.
+  // BE3: los bonos del evento van en query aparte (una tabla pequeña; el JOIN
+  // ensancharía las filas de la query LATERAL para 2-3 matches como mucho).
+  const [allBouts, bonusRows] = await Promise.all([
+    fetchEventBouts(id, true),
+    sql<FightBonusRow>(
+      `SELECT fight_id, fighter_id, bonus_type
+       FROM fight_bonuses
+       WHERE event_id = $1`,
+      [id],
+    ),
+  ]);
+
+  // FOTN premia la pelea; POTN premia al luchador (en cualquiera de sus esquinas).
+  const fotnFightIds = new Set(
+    bonusRows
+      .filter((row) => row.bonus_type === "FOTN" && row.fight_id != null)
+      .map((row) => row.fight_id),
+  );
+  const potnFighterIds = new Set(
+    bonusRows
+      .filter((row) => row.bonus_type === "POTN" && row.fighter_id != null)
+      .map((row) => row.fighter_id),
+  );
+
+  const decorated = allBouts.map((bout) => ({
+    ...bout,
+    isFotn: fotnFightIds.has(bout.fightId),
+    red:
+      bout.red.id != null && potnFighterIds.has(bout.red.id)
+        ? { ...bout.red, isPotn: true }
+        : bout.red,
+    blue:
+      bout.blue.id != null && potnFighterIds.has(bout.blue.id)
+        ? { ...bout.blue, isPotn: true }
+        : bout.blue,
+  }));
+
+  const bouts = decorated.filter((bout) => bout.status !== "cancelled");
+  const cancelledBouts = decorated.filter(
+    (bout) => bout.status === "cancelled",
+  );
 
   return {
     id: event.id,
@@ -410,7 +485,10 @@ export const getEventDetail = cache(async (
     headliner: event.headliner,
     source: event.source,
     sourceId: event.source_id,
+    earlyPrelimsTime: event.early_prelims_time,
+    prelimsTime: event.prelims_time,
     bouts,
+    cancelledBouts,
   };
 });
 
@@ -576,7 +654,9 @@ export async function getNextEventHero(): Promise<NextEventHero | null> {
        ORDER BY r.rank_position ASC
        LIMIT 1
      ) blue_rank ON true
+     -- BE7: si el estelar se cae, el hero debe enseñar la siguiente pelea viva.
      WHERE fi.event_id = $1
+       AND fi.status IS DISTINCT FROM 'cancelled'
      ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC
      LIMIT 1`,
     [event.id],
@@ -667,4 +747,43 @@ export async function getLastEventResults(): Promise<LastEventResults | null> {
     location: event.location,
     bouts: mainCard.slice(0, 5),
   };
+}
+
+type WeighInRow = {
+  fight_id: number;
+  fighter_id: number;
+  fighter_name: string;
+  headshot_url: string | null;
+  weight_lbs: string | null;
+  missed_weight: boolean | null;
+};
+
+// BE2 (migración 011): pesaje oficial de un evento. weigh_ins referencia la
+// pelea y al luchador; el evento se resuelve vía fights. JOIN interno con
+// fighters: una fila de báscula sin ficha de luchador no se puede pintar.
+// NO filtramos canceladas a propósito: el pesaje ocurrió aunque la pelea se
+// cayera después (a menudo precisamente por no dar el peso).
+// weight_lbs es NUMERIC: ::text + Number() como el resto de numéricos del módulo.
+export async function getEventWeighIns(
+  eventId: number,
+): Promise<EventWeighIn[]> {
+  const rows = await sql<WeighInRow>(
+    `SELECT w.fight_id, w.fighter_id, f.name AS fighter_name,
+            f.headshot_url, w.weight_lbs::text AS weight_lbs, w.missed_weight
+     FROM weigh_ins w
+     JOIN fights fi ON fi.id = w.fight_id
+     JOIN fighters f ON f.id = w.fighter_id
+     WHERE fi.event_id = $1
+     ORDER BY fi.bout_order ASC NULLS LAST, fi.id ASC, w.fighter_id ASC`,
+    [eventId],
+  );
+
+  return rows.map((row) => ({
+    fightId: row.fight_id,
+    fighterId: row.fighter_id,
+    fighterName: row.fighter_name,
+    headshotUrl: row.headshot_url,
+    weightLbs: row.weight_lbs != null ? Number(row.weight_lbs) : null,
+    missedWeight: row.missed_weight ?? false,
+  }));
 }

@@ -39,6 +39,8 @@ export function mapFighter(row: FighterRow): FighterCardData {
     trainsAt: row.trains_at ?? null,
     source: row.source ?? null,
     sourceId: row.source_id ?? null,
+    birthPlace: row.birth_place ?? null,
+    octagonDebut: row.octagon_debut ?? null,
     fightCount: Number(row.fight_count ?? 0),
     latestWeightClass: row.latest_weight_class ?? null,
   };

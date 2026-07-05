@@ -5,6 +5,8 @@ import type {
   FightCompetitorStats,
   FightDetail,
   FightLastResult,
+  FightRoundStats,
+  FightScorecard,
 } from "@/lib/types";
 
 type FightRow = {
@@ -18,7 +20,9 @@ type FightRow = {
   method: string | null;
   end_round: number | null;
   end_time: string | null;
+  referee: string | null;
   winner_id: number | null;
+  status: string | null;
   video_url: string | null;
   odds_red: string | null;
   odds_blue: string | null;
@@ -75,6 +79,18 @@ type FightStatsRow = {
   submission_attempts: number | null;
   control_time_seconds: number | null;
   knockdowns: number | null;
+};
+
+// BE8: una tarjeta de juez (fight_scorecards). Solo hay filas en decisiones.
+type ScorecardRow = {
+  judge_name: string;
+  red_score: number;
+  blue_score: number;
+};
+
+// BE4: fila de fight_stats_rounds (un luchador en un asalto).
+type FightRoundStatsRow = FightStatsRow & {
+  round: number;
 };
 
 function mapStats(row?: FightStatsRow): FightCompetitorStats | null {
@@ -157,7 +173,9 @@ export const getFightDetail = cache(async (
       fi.method,
       fi.end_round,
       fi.end_time,
+      fi.referee,
       fi.winner_id,
+      fi.status,
       fi.video_url,
       fi.odds_red,
       fi.odds_blue,
@@ -209,10 +227,10 @@ export const getFightDetail = cache(async (
     return null;
   }
 
-  // Stats del combate + última pelea de cada esquina: independientes entre sí,
-  // una sola pasada en paralelo (espeja getFighterDetail). Esquina TBD (id
-  // null) no tiene historial que consultar.
-  const [statsRows, redLastRows, blueLastRows] = await Promise.all([
+  // Stats del combate + tarjetas de los jueces + última pelea de cada esquina:
+  // independientes entre sí, una sola pasada en paralelo (espeja
+  // getFighterDetail). Esquina TBD (id null) no tiene historial que consultar.
+  const [statsRows, scorecardRows, redLastRows, blueLastRows] = await Promise.all([
     sql<FightStatsRow>(
       `select
         fighter_id,
@@ -225,6 +243,18 @@ export const getFightDetail = cache(async (
         knockdowns
       from fight_stats
       where fight_id = $1`,
+      [id],
+    ),
+    // BE8: tarjetas de los jueces. Orden alfabético por juez para que la
+    // mini-tabla sea determinista (la tabla no tiene un orden natural).
+    sql<ScorecardRow>(
+      `select
+        judge_name,
+        red_score,
+        blue_score
+      from fight_scorecards
+      where fight_id = $1
+      order by judge_name asc`,
       [id],
     ),
     fight.red_id != null
@@ -251,7 +281,9 @@ export const getFightDetail = cache(async (
     method: fight.method,
     endRound: fight.end_round,
     endTime: fight.end_time,
+    referee: fight.referee,
     winnerId: fight.winner_id,
+    status: fight.status,
     videoUrl: fight.video_url,
     oddsRed: fight.odds_red != null ? Number(fight.odds_red) : null,
     oddsBlue: fight.odds_blue != null ? Number(fight.odds_blue) : null,
@@ -298,5 +330,48 @@ export const getFightDetail = cache(async (
     },
     redStats,
     blueStats,
+    scorecards: scorecardRows.map(
+      (row): FightScorecard => ({
+        judgeName: row.judge_name,
+        redScore: row.red_score,
+        blueScore: row.blue_score,
+      }),
+    ),
   };
 });
+
+// BE4: stats por asalto de AMBOS luchadores (fight_stats_rounds), ordenadas
+// por asalto. Devuelve [] para peleas sin desglose (antiguas o próximas): el
+// componente "Por asaltos" solo se pinta cuando hay filas.
+export async function getFightRoundStats(
+  fightId: number,
+): Promise<FightRoundStats[]> {
+  const rows = await sql<FightRoundStatsRow>(
+    `select
+      fighter_id,
+      round,
+      sig_strikes_landed,
+      sig_strikes_attempted,
+      takedowns_landed,
+      takedowns_attempted,
+      submission_attempts,
+      control_time_seconds,
+      knockdowns
+    from fight_stats_rounds
+    where fight_id = $1
+    order by round asc, fighter_id asc`,
+    [fightId],
+  );
+
+  return rows.map((row) => ({
+    fighterId: row.fighter_id,
+    round: row.round,
+    sigStrikesLanded: row.sig_strikes_landed ?? 0,
+    sigStrikesAttempted: row.sig_strikes_attempted ?? 0,
+    takedownsLanded: row.takedowns_landed ?? 0,
+    takedownsAttempted: row.takedowns_attempted ?? 0,
+    submissionAttempts: row.submission_attempts ?? 0,
+    controlTimeSeconds: row.control_time_seconds ?? 0,
+    knockdowns: row.knockdowns ?? 0,
+  }));
+}

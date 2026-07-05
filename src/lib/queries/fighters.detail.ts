@@ -61,15 +61,20 @@ export const getFighterDetail = cache(async (
   const fighterRows = await sql<FighterRow>(
     `select
       f.*,
+      -- BE5: DATE llega como Date de JS vía f.*; el alias ::text (posterior en
+      -- la lista, pisa al de f.*) fija el ISO "YYYY-MM-DD" que espera la UI.
+      f.octagon_debut::text as octagon_debut,
       (
         select count(*)::text
         from fights fi
-        where fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+        where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+          and fi.status is distinct from 'cancelled'
       ) as fight_count,
       (
         select fi2.weight_class
         from fights fi2
-        where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
+        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
+          and fi2.status is distinct from 'cancelled'
         order by fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class
@@ -373,15 +378,20 @@ export async function getFighterComparisonDetail(
   const fighterRows = await sql<FighterRow>(
     `select
       f.*,
+      -- BE5: mismo cast que getFighterDetail para que octagon_debut nunca
+      -- llegue como Date de JS a mapFighter.
+      f.octagon_debut::text as octagon_debut,
       (
         select count(*)::text
         from fights fi
-        where fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id
+        where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+          and fi.status is distinct from 'cancelled'
       ) as fight_count,
       (
         select fi2.weight_class
         from fights fi2
-        where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
+        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
+          and fi2.status is distinct from 'cancelled'
         order by fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class
@@ -429,9 +439,14 @@ export async function getFighterComparisonDetail(
         from fights fi
         left join events e on e.id = fi.event_id
         where
-          (fi.fighter_red_id = $1 and fi.fighter_blue_id = $2)
-          or
-          (fi.fighter_red_id = $2 and fi.fighter_blue_id = $1)
+          (
+            (fi.fighter_red_id = $1 and fi.fighter_blue_id = $2)
+            or
+            (fi.fighter_red_id = $2 and fi.fighter_blue_id = $1)
+          )
+          -- Sin canceladas: winner/method NULL se pintaría como "Combate
+          -- programado" eterno en el cara a cara.
+          and fi.status is distinct from 'cancelled'
         order by e.event_date desc nulls last, fi.id desc`,
         [fighterAId, fighterBId],
       ),

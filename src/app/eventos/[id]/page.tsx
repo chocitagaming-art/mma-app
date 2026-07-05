@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, ExternalLink, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
+import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
+import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
-import { getEventDetail } from "@/lib/queries/events";
+import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
 import type { EventBout } from "@/lib/types";
 
@@ -97,6 +99,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   // FE9: enlace a la página oficial del evento (solo source='ufc.com').
   const officialUrl = eventExternalLink(event);
 
+  // FE5b: hora de inicio de cada segmento para su encabezado de sección.
+  const sectionTimes: Record<string, string | null> = {
+    main: event.startTime,
+    prelims: event.prelimsTime,
+    early_prelims: event.earlyPrelimsTime,
+  };
+
+  // BE2: el pesaje solo existe en la semana del evento (se celebra la víspera)
+  // o cuando ya pasó; en eventos lejanos ahorramos la query. La sección se
+  // pinta únicamente si hay filas registradas. Comparación de strings ISO,
+  // igual que isUpcoming/todayIso.
+  const weekAhead = new Date();
+  weekAhead.setUTCDate(weekAhead.getUTCDate() + 7);
+  const weekAheadIso = weekAhead.toISOString().slice(0, 10);
+  const isEventWeek =
+    event.eventDate != null && event.eventDate.slice(0, 10) <= weekAheadIso;
+  const weighIns =
+    !isUpcoming || isEventWeek ? await getEventWeighIns(event.id) : [];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <Link
@@ -177,6 +198,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             ) : null}
           </div>
 
+          {/* FE5b: línea de horarios por tramo (hora local del visitante).
+              El propio componente se omite si no hay early/prelims. */}
+          <EventScheduleLine
+            earlyPrelimsTime={event.earlyPrelimsTime}
+            prelimsTime={event.prelimsTime}
+            startTime={event.startTime}
+          />
+
           {isUpcoming && event.ticketUrl ? (
             <a
               href={event.ticketUrl}
@@ -195,8 +224,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         <div className="mt-8 space-y-8">
           {sections.map((section) => (
             <section key={section.key}>
-              <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              <h2 className="mb-3 flex items-baseline gap-2.5 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
                 {section.label}
+                {/* FE5b: hora local del tramo, si el evento la tiene. */}
+                <EventSectionTime time={sectionTimes[section.key] ?? null} />
               </h2>
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 {section.bouts.map((bout) => (
@@ -218,6 +249,33 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             : "No hay peleas registradas para este evento."}
         </p>
       )}
+
+      {/* BE7: peleas canceladas de un evento FUTURO, colapsadas al final. En
+          pasados no se pintan: la cartelera cuenta la historia de lo celebrado. */}
+      {isUpcoming && event.cancelledBouts.length > 0 ? (
+        <details className="group mt-8">
+          {/* [&::-webkit-details-marker]:hidden — Safari <=18.3 ignora
+              list-none en summary y pintaría un marcador doble. */}
+          <summary className="cursor-pointer list-none font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <span className="mr-2 inline-block transition-transform group-open:rotate-90">
+              ›
+            </span>
+            Peleas canceladas ({event.cancelledBouts.length})
+          </summary>
+          <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card opacity-70">
+            {event.cancelledBouts.map((bout) => (
+              <EventBoutRow
+                key={bout.fightId}
+                bout={bout}
+                eventDate={event.eventDate}
+              />
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      {/* BE2: pesaje oficial (solo pinta si hay filas). */}
+      <EventWeighInsSection weighIns={weighIns} />
     </div>
   );
 }

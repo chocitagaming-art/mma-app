@@ -25,6 +25,11 @@ export type Fighter = {
   // 'manual'...). Opcionales: solo las queries de detalle los exponen.
   source?: string | null;
   sourceId?: string | null;
+  // BE5: bio extendida de la ficha. Opcionales: pueden faltar en la BD y las
+  // queries antiguas no los seleccionan. octagonDebut es ISO "YYYY-MM-DD"
+  // (DATE casteado a ::text en las queries de detalle).
+  birthPlace?: string | null;
+  octagonDebut?: string | null;
 };
 
 export type FighterCardData = Fighter & {
@@ -333,6 +338,9 @@ export type EventBoutFighter = {
   reachCm: number | null;
   stance: string | null;
   birthDate: string | null;
+  // BE3: bono "Actuación de la Noche" (POTN) de este evento. Opcional: solo
+  // lo rellena getEventDetail; el resto de queries (hero, home) no lo cargan.
+  isPotn?: boolean;
 };
 
 export type EventBout = {
@@ -345,6 +353,14 @@ export type EventBout = {
   winnerId: number | null;
   boutOrder: number | null;
   cardSegment: string | null;
+  // BE7: fights.status crudo (NULL = programada/celebrada, 'cancelled' =
+  // cancelada). Las queries excluyen canceladas por defecto; solo
+  // getEventDetail las trae aparte (EventDetail.cancelledBouts).
+  status: string | null;
+  // BE9b: pelea por el título (fights.is_title_fight).
+  isTitleFight: boolean;
+  // BE3: bono "Pelea de la Noche" (FOTN). Opcional: solo getEventDetail.
+  isFotn?: boolean;
   oddsRed: number | null;
   oddsBlue: number | null;
   red: EventBoutFighter;
@@ -367,7 +383,26 @@ export type EventDetail = {
   // el enlace externo "Ver en UFC.com".
   source: string | null;
   sourceId: string | null;
+  // FE5b: horarios por sección (timestamptz ::text de Postgres). startTime
+  // sigue siendo la cartelera estelar; estos dos son sus tramos previos.
+  earlyPrelimsTime: string | null;
+  prelimsTime: string | null;
   bouts: EventBout[];
+  // BE7: peleas canceladas, separadas de `bouts` para que ni la cartelera ni
+  // el conteo "N peleas" las incluyan. Solo la vista de futuros las pinta.
+  cancelledBouts: EventBout[];
+};
+
+// BE2: una fila del pesaje oficial del evento (weigh_ins JOIN fighters).
+// weightLbs llega como NUMERIC ::text y se convierte con Number(); null si el
+// registro existe sin peso (p.ej. luchador que no se presentó a la báscula).
+export type EventWeighIn = {
+  fightId: number;
+  fighterId: number;
+  fighterName: string;
+  headshotUrl: string | null;
+  weightLbs: number | null;
+  missedWeight: boolean;
 };
 
 export type UpcomingEventItem = {
@@ -472,6 +507,29 @@ export type FightCompetitorStats = {
   knockdowns: number;
 };
 
+// BE8: tarjeta de UN juez (fight_scorecards). Solo hay filas cuando la pelea
+// se decidió en las tarjetas; red/blue son los totales que ese juez otorgó a
+// cada esquina (p.ej. 48-47).
+export type FightScorecard = {
+  judgeName: string;
+  redScore: number;
+  blueScore: number;
+};
+
+// BE4: stats de UN luchador en UN asalto (fight_stats_rounds). Peleas antiguas
+// no tienen desglose por asalto: entonces la tabla no devuelve filas.
+export type FightRoundStats = {
+  fighterId: number;
+  round: number;
+  sigStrikesLanded: number;
+  sigStrikesAttempted: number;
+  takedownsLanded: number;
+  takedownsAttempted: number;
+  submissionAttempts: number;
+  controlTimeSeconds: number;
+  knockdowns: number;
+};
+
 export type FightDetail = {
   id: number;
   eventId: number | null;
@@ -483,7 +541,12 @@ export type FightDetail = {
   method: string | null;
   endRound: number | null;
   endTime: string | null;
+  // BE8: árbitro del combate (fights.referee); null si no está registrado.
+  referee: string | null;
   winnerId: number | null;
+  // fights.status crudo (mismo convenio que EventBout): NULL =
+  // programada/celebrada, 'cancelled' = cancelada.
+  status: string | null;
   videoUrl: string | null;
   oddsRed: number | null;
   oddsBlue: number | null;
@@ -491,6 +554,8 @@ export type FightDetail = {
   blue: FightCompetitor;
   redStats: FightCompetitorStats | null;
   blueStats: FightCompetitorStats | null;
+  // BE8: tarjetas de los jueces; vacío salvo en decisiones.
+  scorecards: FightScorecard[];
 };
 
 // --- Silueta de golpes por zona/posición estilo ufc.com (#45) ---

@@ -32,6 +32,11 @@ export type FighterRow = {
   // 'ufcstats' guarda un path ('/fighter-details/<hash>'), 'espn' un id numérico.
   source?: string | null;
   source_id?: string | null;
+  // BE5 (bio extendida): lugar de nacimiento y debut en UFC. Opcionales: las
+  // queries de detalle castean octagon_debut (DATE) a ::text; vía `f.*` a secas
+  // pg podría entregarlo como Date, así que solo el detalle debe consumirlo.
+  birth_place?: string | null;
+  octagon_debut?: string | null;
   fight_count?: string;
   latest_weight_class?: string | null;
 };
