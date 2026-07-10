@@ -26,6 +26,11 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   "kevin randleman": "/fighters/kevin-randleman.webp",
   "jens pulver": "/fighters/jens-pulver.webp",
   "mark kerr": "/fighters/mark-kerr.webp",
+  // Esquinas del Fight Wing del Salón de la Fama sin headshot en BD (mostraban
+  // iniciales). Retratos de dominio público de Wikimedia Commons, optimizados a
+  // webp. Al keyear por nombre, también rellenan la ficha /fighters del luchador.
+  "chael sonnen": "/fighters/chael-sonnen.webp",
+  "frank trigg": "/fighters/frank-trigg.webp",
 };
 
 // Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para
