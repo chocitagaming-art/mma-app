@@ -1,13 +1,20 @@
+import { cn } from "@/lib/utils";
+
 type SectionHeadingProps = {
   eyebrow?: string;
   title: string;
   description?: string;
+  // Ancho máximo del párrafo de descripción. Por defecto max-w-2xl (≈672px)
+  // para una lectura cómoda; pásalo (p.ej. "max-w-none") cuando la descripción
+  // deba ocupar todo el contenedor y quepa en una sola línea.
+  descriptionClassName?: string;
 };
 
 export function SectionHeading({
   eyebrow,
   title,
   description,
+  descriptionClassName = "max-w-2xl",
 }: SectionHeadingProps) {
   return (
     <div className="space-y-1.5">
@@ -20,7 +27,12 @@ export function SectionHeading({
         {title}
       </h2>
       {description ? (
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+        <p
+          className={cn(
+            descriptionClassName,
+            "text-sm leading-6 text-muted-foreground sm:text-base",
+          )}
+        >
           {description}
         </p>
       ) : null}

@@ -165,6 +165,10 @@ function FaceOffCorner({
           {fighter.name}
         </p>
       )}
+      <span className="flex items-center justify-center gap-1.5 font-mono text-xs text-muted-foreground">
+        <CountryFlag nationality={fighter.nationality} />
+        {country ?? "País desconocido"}
+      </span>
       {isWinner ? (
         <span
           className={cn(
@@ -175,10 +179,6 @@ function FaceOffCorner({
           Ganador
         </span>
       ) : null}
-      <span className="flex items-center justify-center gap-1.5 font-mono text-xs text-muted-foreground">
-        <CountryFlag nationality={fighter.nationality} />
-        {country ?? "País desconocido"}
-      </span>
     </div>
   );
 }

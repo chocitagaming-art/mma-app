@@ -41,8 +41,16 @@ export function FighterFullBody({
   const [imageFailed, setImageFailed] = useState(false);
   // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
   // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
-  const photoUrl = localBody(name) ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  const local = localBody(name);
+  const photoUrl = local?.src ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
   const showPhoto = photoUrl != null && !imageFailed;
+  // Encuadre explícito en vez de inferirlo del substring de la URL: los cuerpos
+  // curados (local-bodies) traen su propio fit; para las fotos de BD seguimos
+  // distinguiendo el recorte oficial de ufc.com (athlete_bio_full_body =
+  // cabeza-muslo → cover-top) del resto (standing/cuerpo entero → contain-bottom).
+  const bodyFit =
+    local?.fit ??
+    (photoUrl?.includes("athlete_bio_full_body") ? "cover-top" : "contain-bottom");
 
   if (variant === "hero") {
     if (!showPhoto) {
@@ -83,7 +91,7 @@ export function FighterFullBody({
             // cover anclado arriba llenan el marco (recorta laterales, no la
             // cara). El resto (standing, full-body curado en local-bodies) se
             // asienta en la base con contain.
-            photoUrl.includes("athlete_bio_full_body")
+            bodyFit === "cover-top"
               ? "object-cover object-top"
               : "object-contain object-bottom",
           )}
@@ -113,7 +121,7 @@ export function FighterFullBody({
             // letterbox flotante según el ancho de columna, así que llenan la
             // caja con cover anclado arriba (recorta laterales, no la cara).
             // El resto (standing, cuerpo completo) se asienta en la base.
-            photoUrl.includes("athlete_bio_full_body")
+            bodyFit === "cover-top"
               ? "w-full object-cover object-top"
               : "w-auto max-w-full object-contain object-bottom",
           )}

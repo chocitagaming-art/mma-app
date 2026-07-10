@@ -637,6 +637,7 @@ export default async function FighterDetailPage({
             eyebrow="Ranking"
             title="Trayectoria de ranking"
             description={`Evolución de la posición de ${fighter.name} en el ranking oficial a lo largo del tiempo. El #1 (y el campeón) aparecen arriba.`}
+            descriptionClassName="max-w-none"
           />
           <RankingTrajectory history={rankingHistory} />
         </section>

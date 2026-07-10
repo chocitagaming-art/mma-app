@@ -12,7 +12,7 @@ export const revalidate = 86400;
 export const metadata: Metadata = {
   title: "Salón de la Fama",
   description:
-    "El UFC Hall of Fame: las leyendas del octágono por alas (Modern, Pioneer, Contributor y Fight Wing).",
+    "El UFC Hall of Fame: las leyendas del octágono por alas (Moderna, Pionera, Contribuidora y de Combate).",
 };
 
 export default async function SalonDeLaFamaPage() {
@@ -25,7 +25,7 @@ export default async function SalonDeLaFamaPage() {
       <SectionHeading
         eyebrow="UFC Hall of Fame"
         title="Salón de la Fama"
-        description="Las leyendas del octágono, organizadas por alas: Modern, Pioneer, Contributor y Fight Wing."
+        description="Las leyendas del octágono, organizadas por alas: Moderna, Pionera, Contribuidora y de Combate."
       />
 
       {total === 0 ? (

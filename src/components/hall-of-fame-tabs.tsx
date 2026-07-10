@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 import type { HallOfFameData, HofInductee, HofWing } from "@/lib/queries/hall-of-fame";
 
 const WINGS: { key: HofWing; label: string; blurb: string }[] = [
-  { key: "modern", label: "Modern Wing", blurb: "Debut desde el 17 nov 2000" },
-  { key: "pioneer", label: "Pioneer Wing", blurb: "Debut antes del 17 nov 2000" },
-  { key: "contributor", label: "Contributor Wing", blurb: "Aportaciones fuera del octágono" },
-  { key: "fight", label: "Fight Wing", blurb: "Peleas históricas" },
+  { key: "modern", label: "Ala Moderna", blurb: "Debut desde el 17 nov 2000" },
+  { key: "pioneer", label: "Ala Pionera", blurb: "Debut antes del 17 nov 2000" },
+  { key: "contributor", label: "Ala Contribuidora", blurb: "Aportaciones fuera del octágono" },
+  { key: "fight", label: "Ala de Combate", blurb: "Peleas históricas" },
 ];
 
 function YearLine({ year }: { year: number | null }) {

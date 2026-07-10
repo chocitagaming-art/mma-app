@@ -13,19 +13,15 @@ type SourceRef = {
   sourceId?: string | null;
 };
 
-// Luchadores: 'ufcstats' guarda un PATH ('/fighter-details/<hash>') que se
-// cuelga de http://ufcstats.com (el sitio no sirve HTTPS); 'espn' guarda el id
-// numérico de espn.com. Otros sources ('manual'...) no tienen URL → sin enlace.
+// Luchadores: solo 'espn' expone enlace (id numérico de espn.com). 'ufcstats'
+// se omite a propósito (decisión de producto: no mostrarlo en la ficha). Otros
+// sources ('manual'...) tampoco tienen enlace. Sin source/sourceId → sin enlace.
 export function fighterExternalLinks({ source, sourceId }: SourceRef): ExternalLink[] {
   if (!source || !sourceId) {
     return [];
   }
 
   switch (source) {
-    case "ufcstats": {
-      const path = sourceId.startsWith("/") ? sourceId : `/${sourceId}`;
-      return [{ label: "UFCStats", url: `http://ufcstats.com${path}` }];
-    }
     case "espn":
       return [
         {
