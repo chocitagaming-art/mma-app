@@ -49,7 +49,14 @@ const VIDEO_CATEGORY_KEYS = new Set(YOUTUBE_CATEGORIES.map((cat) => cat.key));
 export default async function TendenciasPage({ searchParams }: TendenciasPageProps) {
   const params = await searchParams;
   const kind = parseKind(getSingleValue(params.tipo));
-  const rawCategory = getSingleValue(params.categoria);
+  // Alias legados de /news (la redirección del edge pasa los params tal cual):
+  // ?category=X → categoría; ?page=N → mostrar acumulado equivalente.
+  const rawCategory =
+    getSingleValue(params.categoria) || getSingleValue(params.category);
+  const legacyPage = Number.parseInt(getSingleValue(params.page), 10);
+  const showParam =
+    getSingleValue(params.mostrar) ||
+    (Number.isFinite(legacyPage) && legacyPage > 1 ? String(legacyPage * 12) : "");
 
   // La categoría solo aplica dentro de su pestaña (taxonomías distintas:
   // slugs de la tabla news vs las 4 categorías fijas de YouTube).
@@ -75,7 +82,7 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
   ]);
 
   const feed = mergeTrendingItems(news, videos);
-  const shown = parseShowParam(getSingleValue(params.mostrar), feed.length);
+  const shown = parseShowParam(showParam, feed.length);
   const items = feed.slice(0, shown);
   const hasMore = feed.length > items.length;
 

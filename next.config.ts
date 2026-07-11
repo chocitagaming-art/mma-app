@@ -42,6 +42,20 @@ const nextConfig: NextConfig = {
     // on Vercel (Linux). Avoids hardcoding a machine-specific absolute path.
     root: fileURLToPath(new URL(".", import.meta.url)),
   },
+  // T3-B: /news se fusionó en /tendencias. Redirección aquí (edge, 308 REAL
+  // para SEO) y no con permanentRedirect en una page: en esta versión de Next
+  // el redirect de página en un GET de documento llega como 200 + redirección
+  // en cliente. Los query params antiguos (?category, ?page) se PASAN solos al
+  // destino y la página de Tendencias los acepta como alias legados.
+  async redirects() {
+    return [
+      {
+        source: "/news",
+        destination: "/tendencias?tipo=noticias",
+        permanent: true,
+      },
+    ];
+  },
   // Apply the security headers to every route.
   async headers() {
     // CSP estricta en producción; en desarrollo se relaja para el HMR de Turbopack.
