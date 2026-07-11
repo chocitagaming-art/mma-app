@@ -8,63 +8,15 @@ import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule
 import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
+import { groupBoutsBySegment } from "@/lib/event-sections";
 import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
-import type { EventBout } from "@/lib/types";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
 };
-
-const CARD_SEGMENT_LABELS: Record<string, string> = {
-  main: "Cartelera estelar",
-  prelims: "Preliminares",
-  early_prelims: "Preliminares iniciales",
-};
-
-const CARD_SEGMENT_ORDER = ["main", "prelims", "early_prelims"];
-
-type BoutSection = {
-  key: string;
-  label: string;
-  bouts: EventBout[];
-};
-
-// Agrupa los bouts por card_segment manteniendo el orden de aparición (ya vienen
-// ordenados por bout_order). Si todos los segmentos son NULL → una sola "Cartelera".
-function groupBoutsBySegment(bouts: EventBout[]): BoutSection[] {
-  const hasSegments = bouts.some((bout) => bout.cardSegment != null);
-
-  if (!hasSegments) {
-    return bouts.length > 0
-      ? [{ key: "cartelera", label: "Cartelera", bouts }]
-      : [];
-  }
-
-  const groups = new Map<string, EventBout[]>();
-  for (const bout of bouts) {
-    const key = bout.cardSegment ?? "main";
-    const group = groups.get(key);
-    if (group) {
-      group.push(bout);
-    } else {
-      groups.set(key, [bout]);
-    }
-  }
-
-  const orderedKeys = [
-    ...CARD_SEGMENT_ORDER.filter((key) => groups.has(key)),
-    ...[...groups.keys()].filter((key) => !CARD_SEGMENT_ORDER.includes(key)),
-  ];
-
-  return orderedKeys.map((key) => ({
-    key,
-    label: CARD_SEGMENT_LABELS[key] ?? "Cartelera",
-    bouts: groups.get(key) ?? [],
-  }));
-}
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params;

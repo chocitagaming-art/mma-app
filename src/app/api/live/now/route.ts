@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+
+import { resolveLivePhase, type LiveNowPayload } from "@/lib/live-event";
+import { getLiveEventCandidate } from "@/lib/queries/live";
+
+// T3-A: estado "en directo" para el chip de navegación y el banner de la home.
+// Son componentes cliente que consultan esta ruta tras montar, así el header y
+// la home (ISR) siguen cacheados y solo esta respuesta es dinámica.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const candidate = await getLiveEventCandidate();
+    const phase = candidate
+      ? resolveLivePhase(candidate, new Date())
+      : "none";
+
+    const payload: LiveNowPayload = {
+      phase,
+      live: phase === "live",
+      eventId: candidate?.id ?? null,
+      eventName: candidate?.name ?? null,
+    };
+
+    return NextResponse.json(payload, {
+      // El estado cambia con el reloj: ni el CDN ni el navegador deben retenerlo.
+      headers: { "cache-control": "no-store, max-age=0" },
+    });
+  } catch {
+    // Fallo de BD: el chip simplemente no se pinta (los clientes tratan
+    // cualquier error como phase "none"); la página /en-vivo tiene su propio SSR.
+    return NextResponse.json(
+      { phase: "none", live: false, eventId: null, eventName: null },
+      { status: 503, headers: { "cache-control": "no-store, max-age=0" } },
+    );
+  }
+}

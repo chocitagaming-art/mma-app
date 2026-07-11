@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
+import { LiveNavChip } from "@/components/live/live-nav-chip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -144,6 +145,9 @@ export function SiteHeader() {
               <DesktopNavLink key={link.href} pathname={pathname} {...link} />
             ))}
           </nav>
+          {/* T3-A: chip EN VIVO/HOY, solo cuando hay evento en marcha o en <24 h.
+              Visible también en móvil (vive junto al ThemeToggle, fuera del menú). */}
+          <LiveNavChip />
           <ThemeToggle />
         </div>
       </div>

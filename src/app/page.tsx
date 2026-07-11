@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { FighterCard } from "@/components/fighter-card";
 import { LastEventSection } from "@/components/home/last-event-section";
+import { LiveBanner } from "@/components/live/live-banner";
 import { UpNextHero } from "@/components/home/up-next-hero";
 import { NewsMarquee } from "@/components/news-marquee";
 import { RecentNewsGrid } from "@/components/recent-news-grid";
@@ -51,6 +52,10 @@ export default async function HomePage() {
 
   return (
     <div className="pb-16">
+      {/* T3-A: franja EN DIRECTO (cliente; no rompe el ISR de la home). Solo
+          aparece con un evento en marcha — la fase previa ya la cubre Up Next. */}
+      <LiveBanner />
+
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
