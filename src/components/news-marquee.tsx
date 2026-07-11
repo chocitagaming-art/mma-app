@@ -19,7 +19,10 @@ export function NewsMarquee({ articles }: { articles: NewsArticle[] }) {
       </div>
 
       <div
-        className="animate-marquee flex w-max items-center gap-8 py-2.5"
+        // Separación vía mr-8 en cada item (no gap en el track): así el ancho
+        // total es exactamente 2x la primera copia y el bucle -50% no da el
+        // saltito de medio gap al reiniciar (revisión adversarial 11-jul).
+        className="animate-marquee flex w-max items-center py-2.5"
         // Velocidad de lectura cómoda y constante: ~14s por titular (antes 48s
         // fijos para toda la cinta → con muchas noticias volaba). Mínimo 90s.
         style={{ "--marquee-duration": `${Math.max(90, articles.length * 14)}s` } as React.CSSProperties}
@@ -36,7 +39,7 @@ export function NewsMarquee({ articles }: { articles: NewsArticle[] }) {
             rel="noreferrer"
             aria-hidden={isDuplicate || undefined}
             tabIndex={isDuplicate ? -1 : undefined}
-            className="inline-flex items-center gap-2.5 whitespace-nowrap px-1 transition-colors hover:text-primary"
+            className="mr-8 inline-flex items-center gap-2.5 whitespace-nowrap px-1 transition-colors hover:text-primary"
           >
             {article.category ? (
               <span className="font-mono text-[10px] uppercase tracking-widest text-primary">

@@ -93,7 +93,10 @@ function getAnthropicClient() {
   if (!apiKey) {
     return null;
   }
-  return new Anthropic({ apiKey });
+  // Presupuesto corto y sin reintentos: /api/predict tiene maxDuration=60 y los
+  // reintentos contra Render pueden consumir ~46s; si la explicación no llega
+  // en 10s, el catch degrada al resumen local (mejor que un 504 de Vercel).
+  return new Anthropic({ apiKey, timeout: 10_000, maxRetries: 0 });
 }
 
 function formatPercent(value: number) {
@@ -170,11 +173,20 @@ export async function generatePredictionExplanation(
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = response.content
+    let text = response.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)
       .join("\n")
       .trim();
+
+    // Si el modelo agotó max_tokens, el texto puede cortarse a mitad de frase:
+    // recortamos hasta el último punto para que siempre termine limpio.
+    if (response.stop_reason === "max_tokens") {
+      const lastPeriod = text.lastIndexOf(".");
+      if (lastPeriod > 0) {
+        text = text.slice(0, lastPeriod + 1);
+      }
+    }
 
     return {
       explanation: text || buildFallbackExplanation(data),

@@ -39,12 +39,14 @@ async function fetchPrediction(
 
   // Hasta 2 intentos: el 1º puede morir por el arranque en frío de Render
   // (~50s); ese mismo intento ya ha despertado el servicio, así que el 2º
-  // responde en caliente. 25s + 1s + 26s ≈ 52s, dentro del maxDuration de 60.
-  const ATTEMPT_TIMEOUTS_MS = [25_000, 26_000];
-  let response: Response | null = null;
+  // responde en caliente. 20s + 1s + 25s ≈ 46s: el resto del maxDuration de 60
+  // queda reservado para la explicación IA (que tiene su propio timeout corto
+  // y cae al resumen local si no llega — ver prediction.ts).
+  const ATTEMPT_TIMEOUTS_MS = [20_000, 25_000];
   for (let attempt = 0; attempt < ATTEMPT_TIMEOUTS_MS.length; attempt += 1) {
+    const isLastAttempt = attempt === ATTEMPT_TIMEOUTS_MS.length - 1;
     try {
-      const attemptResponse = await fetch(`${baseUrl.replace(/\/$/u, "")}/predict`, {
+      const response = await fetch(`${baseUrl.replace(/\/$/u, "")}/predict`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,19 +56,37 @@ async function fetchPrediction(
         signal: AbortSignal.timeout(ATTEMPT_TIMEOUTS_MS[attempt]),
       });
       // El proxy de Render responde 502/503/504 mientras la instancia
-      // arranca: cuenta como "aún dormido" y se reintenta.
-      if (
-        [502, 503, 504].includes(attemptResponse.status) &&
-        attempt < ATTEMPT_TIMEOUTS_MS.length - 1
-      ) {
+      // arranca: cuenta como "aún dormido" y se reintenta. Se cancela el body
+      // para no dejar la conexión del pool retenida.
+      if ([502, 503, 504].includes(response.status) && !isLastAttempt) {
+        await response.body?.cancel().catch(() => {});
         await new Promise((resolve) => setTimeout(resolve, 1_000));
         continue;
       }
-      response = attemptResponse;
-      break;
-    } catch {
-      // Fallo de red o timeout alcanzando el microservicio.
-      if (attempt === ATTEMPT_TIMEOUTS_MS.length - 1) {
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
+        if (response.status === 400) {
+          throw new InvalidPredictionRequestError(
+            "Identificadores de peleador no válidos.",
+          );
+        }
+        throw new PredictionUnavailableError(
+          `El servicio de predicción falló (${response.status}).`,
+        );
+      }
+      // La lectura del body va DENTRO del try: el AbortSignal del intento
+      // también puede abortar json() (cabeceras a tiempo, body tardío) y ese
+      // timeout debe contar como reintentable, no como 500 genérico.
+      return (await response.json()) as RawPrediction;
+    } catch (error) {
+      if (
+        error instanceof InvalidPredictionRequestError ||
+        error instanceof PredictionUnavailableError
+      ) {
+        throw error;
+      }
+      // Fallo de red, timeout o body abortado alcanzando el microservicio.
+      if (isLastAttempt) {
         throw new PredictionUnavailableError(
           "El servicio de predicción no responde. Inténtalo de nuevo en un momento.",
         );
@@ -75,25 +95,10 @@ async function fetchPrediction(
     }
   }
 
-  if (response === null) {
-    // Inalcanzable (el bucle siempre asigna o lanza), pero satisface a TS.
-    throw new PredictionUnavailableError(
-      "El servicio de predicción no responde. Inténtalo de nuevo en un momento.",
-    );
-  }
-
-  if (!response.ok) {
-    if (response.status === 400) {
-      throw new InvalidPredictionRequestError(
-        "Identificadores de peleador no válidos.",
-      );
-    }
-    throw new PredictionUnavailableError(
-      `El servicio de predicción falló (${response.status}).`,
-    );
-  }
-
-  return (await response.json()) as RawPrediction;
+  // Inalcanzable (el bucle siempre devuelve o lanza), pero satisface a TS.
+  throw new PredictionUnavailableError(
+    "El servicio de predicción no responde. Inténtalo de nuevo en un momento.",
+  );
 }
 
 export async function POST(request: Request) {

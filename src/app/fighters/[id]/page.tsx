@@ -482,7 +482,10 @@ export default async function FighterDetailPage({
               <Link href="#historial" className="flex-1">
                 <Button
                   variant="outline"
-                  className="w-full border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary"
+                  // Overrides también con prefijo dark:: la variante outline trae
+                  // dark:border-input/dark:bg-input que ganan a las clases sin
+                  // prefijo en modo oscuro (revisión adversarial 11-jul).
+                  className="w-full border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"
                 >
                   <History />
                   Ver historial completo

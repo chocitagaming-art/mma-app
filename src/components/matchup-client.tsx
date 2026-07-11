@@ -105,11 +105,14 @@ export function MatchupClient({
 
   // Divisiones distintas → enfrentamiento hipotético: no se daría en la
   // realidad y hay que avisarlo (dueño, 11-jul). Solo cuando AMBAS divisiones
-  // son conocidas (con NULL no se puede afirmar nada).
+  // son conocidas (con NULL no se puede afirmar nada). Se comparan las
+  // etiquetas NORMALIZADAS (formatWeightClass), no el string crudo de la BD:
+  // "Lightweight Title Bout" y "Lightweight" son la misma división.
   const hypothetical = Boolean(
     detail?.fighterA.latestWeightClass &&
       detail?.fighterB.latestWeightClass &&
-      detail.fighterA.latestWeightClass !== detail.fighterB.latestWeightClass,
+      formatWeightClass(detail.fighterA.latestWeightClass) !==
+        formatWeightClass(detail.fighterB.latestWeightClass),
   );
 
   // Separa los combates programados (winner y method NULL) de los disputados:
