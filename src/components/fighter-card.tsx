@@ -35,6 +35,7 @@ export function FighterCard({ fighter }: FighterCardProps) {
         <FighterHeadshot
           name={fighter.name}
           headshotUrl={fighter.headshotUrl}
+          division={fighter.latestWeightClass}
           size="md"
           className="shrink-0"
         />

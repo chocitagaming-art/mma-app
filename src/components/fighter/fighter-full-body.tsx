@@ -5,7 +5,9 @@ import { useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { pickBodyPhotoUrl, type BodyPhotoPreference } from "@/lib/fighter-photo";
+import { inferFighterGender, silhouetteBody } from "@/lib/fighter-silhouette";
 import { localBody } from "@/lib/local-bodies";
+import { localHeadshot, localHeadshotOverride } from "@/lib/local-headshots";
 import { cn } from "@/lib/utils";
 
 type FighterFullBodyProps = {
@@ -15,6 +17,9 @@ type FighterFullBodyProps = {
   // callers antiguos pueden no tenerla aún.
   standingBodyUrl?: string | null;
   headshotUrl: string | null;
+  // División o clase de peso (texto UFC o slug), solo para elegir la silueta de
+  // fallback por género cuando el luchador no tiene ninguna foto.
+  division?: string | null;
   // Cadena de prioridad de la foto (ver pickBodyPhotoUrl). "full-first" por
   // defecto: la ficha del luchador conserva exactamente su foto aprobada.
   preference?: BodyPhotoPreference;
@@ -27,13 +32,17 @@ type FighterFullBodyProps = {
 // Foto de cuerpo entero estilo ufc.com. Única fuente para la ficha (hero), el
 // tale-of-the-tape del combate y las esquinas de /enfrentamiento (embed).
 // Si la URL elegida es NULL o falla la carga, degradamos al headshot (que a su
-// vez cae a iniciales). <img> nativo en "embed" siguiendo el precedente de
-// CountryFlag (evita remotePatterns; la CSP ya permite img-src https:).
+// vez cae a su silueta/iniciales). Si TAMPOCO hay headshot, mostramos la silueta
+// oficial de UFC de cuerpo entero (gender-aware, servida desde /public — la BD
+// se mantiene limpia de placeholders a propósito; ver fighter-silhouette.ts).
+// <img> nativo en "embed" siguiendo el precedente de CountryFlag (evita
+// remotePatterns; la CSP ya permite img-src https:).
 export function FighterFullBody({
   name,
   fullBodyUrl,
   standingBodyUrl = null,
   headshotUrl,
+  division = null,
   preference = "full-first",
   variant = "embed",
   className,
@@ -42,15 +51,34 @@ export function FighterFullBody({
   // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
   // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
   const local = localBody(name);
-  const photoUrl = local?.src ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  const dbPhotoUrl =
+    local?.src ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+  // Sin foto de cuerpo Y sin headshot al que degradar: silueta oficial de UFC
+  // de cuerpo entero. Se renderiza por la misma ruta que una foto real (con
+  // sombra y "suelo" en el hero), como en ufc.com.
+  const hasHeadshot = Boolean(
+    localHeadshotOverride(name) ?? headshotUrl ?? localHeadshot(name),
+  );
+  const silhouetteUrl =
+    dbPhotoUrl == null && !hasHeadshot
+      ? silhouetteBody(inferFighterGender(name, division))
+      : null;
+  const photoUrl = dbPhotoUrl ?? silhouetteUrl;
   const showPhoto = photoUrl != null && !imageFailed;
+  const altText =
+    photoUrl === silhouetteUrl && silhouetteUrl != null
+      ? `Silueta de ${name} (sin foto)`
+      : `Foto de cuerpo entero de ${name}`;
   // Encuadre explícito en vez de inferirlo del substring de la URL: los cuerpos
-  // curados (local-bodies) traen su propio fit; para las fotos de BD seguimos
+  // curados (local-bodies) traen su propio fit; la silueta oficial usa el mismo
+  // recorte cabeza-muslo de ufc.com (cover-top); para las fotos de BD seguimos
   // distinguiendo el recorte oficial de ufc.com (athlete_bio_full_body =
   // cabeza-muslo → cover-top) del resto (standing/cuerpo entero → contain-bottom).
   const bodyFit =
     local?.fit ??
-    (photoUrl?.includes("athlete_bio_full_body") ? "cover-top" : "contain-bottom");
+    (silhouetteUrl != null || photoUrl?.includes("athlete_bio_full_body")
+      ? "cover-top"
+      : "contain-bottom");
 
   if (variant === "hero") {
     if (!showPhoto) {
@@ -59,6 +87,7 @@ export function FighterFullBody({
           <FighterHeadshot
             name={name}
             headshotUrl={headshotUrl}
+            division={division}
             size="xl"
             priority
             className="border-0 bg-transparent shadow-md ring-1 ring-border"
@@ -77,7 +106,7 @@ export function FighterFullBody({
         />
         <Image
           src={photoUrl}
-          alt={`Foto de cuerpo entero de ${name}`}
+          alt={altText}
           fill
           preload
           // Subimos el ancho pedido: al pasar a cover el atleta llena el marco,
@@ -113,7 +142,7 @@ export function FighterFullBody({
         <img
           key={photoUrl}
           src={photoUrl}
-          alt={`Foto de cuerpo entero de ${name}`}
+          alt={altText}
           className={cn(
             "h-full",
             // Las fotos athlete_bio_full_body de ufc.com son un recorte fijo
@@ -132,6 +161,7 @@ export function FighterFullBody({
           <FighterHeadshot
             name={name}
             headshotUrl={headshotUrl}
+            division={division}
             size="lg"
             className="sm:size-36 md:size-44"
           />

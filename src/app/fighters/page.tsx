@@ -112,6 +112,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                   <FighterHeadshot
                     name={fighter.name}
                     headshotUrl={fighter.headshotUrl}
+                    division={fighter.latestWeightClass}
                     size="sm"
                     className="shrink-0"
                   />

@@ -337,6 +337,7 @@ export default async function FighterDetailPage({
               fullBodyUrl={fighter.fullBodyUrl ?? null}
               standingBodyUrl={fighter.standingBodyUrl ?? null}
               headshotUrl={fighter.headshotUrl}
+              division={detail.latestWeightClass}
               variant="hero"
             />
           </div>

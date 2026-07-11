@@ -101,11 +101,14 @@ function FaceOffCorner({
   corner,
   fighter,
   isWinner,
+  weightClass,
   className,
 }: {
   corner: "red" | "blue";
   fighter: FightCompetitor;
   isWinner: boolean;
+  // Clase de peso del combate: solo para la silueta de fallback por género.
+  weightClass?: string | null;
   className?: string;
 }) {
   const isRed = corner === "red";
@@ -119,6 +122,7 @@ function FaceOffCorner({
       fullBodyUrl={fighter.fullBodyUrl ?? null}
       standingBodyUrl={fighter.standingBodyUrl ?? null}
       headshotUrl={fighter.headshotUrl}
+      division={weightClass}
       // Cadena Ronda B: foto de pie primero, luego full body, luego headshot.
       preference="standing-first"
       // Alturas fijas anti-CLS: pequeñas lado a lado en móvil, ~420px desktop.
@@ -333,6 +337,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
             corner="red"
             fighter={red}
             isWinner={redWins}
+            weightClass={fight.weightClass}
             className="order-1"
           />
           <div className="order-3 col-span-2 md:order-2 md:col-span-1 md:self-center">
@@ -359,6 +364,7 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
             corner="blue"
             fighter={blue}
             isWinner={blueWins}
+            weightClass={fight.weightClass}
             className="order-2 md:order-3"
           />
         </div>

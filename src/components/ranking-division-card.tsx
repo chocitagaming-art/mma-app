@@ -99,6 +99,7 @@ export function RankingDivisionCard({
           <FighterHeadshot
             name={champion.fighterName}
             headshotUrl={champion.headshotUrl}
+            division={division.division}
             size="md"
             className="size-[4.5rem] shrink-0 border-2 border-amber-400/70 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
           />
@@ -142,6 +143,7 @@ export function RankingDivisionCard({
                 <FighterHeadshot
                   name={entry.fighterName}
                   headshotUrl={entry.headshotUrl}
+                  division={division.division}
                   size="sm"
                   className="size-9 shrink-0"
                 />

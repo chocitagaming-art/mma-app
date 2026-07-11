@@ -31,9 +31,12 @@ function RankBadge({ rank }: { rank: number | null }) {
 // headshot, como en combates), apodo, nombre + bandera, récord y ranking.
 function HeroCorner({
   fighter,
+  weightClass,
   className,
 }: {
   fighter: NextEventHeroFighter;
+  // Clase de peso del estelar: solo para la silueta de fallback por género.
+  weightClass?: string | null;
   className?: string;
 }) {
   // Enlazable solo con ficha real (el rival puede estar por anunciar, TBD).
@@ -45,6 +48,7 @@ function HeroCorner({
       fullBodyUrl={fighter.fullBodyUrl}
       standingBodyUrl={fighter.standingBodyUrl}
       headshotUrl={fighter.headshotUrl}
+      division={weightClass}
       preference="standing-first"
       // Alturas fijas anti-CLS, algo menores que el tale-of-the-tape del combate.
       className="h-[220px] w-full sm:h-[280px] lg:h-[400px]"
@@ -194,11 +198,19 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
               {/* En móvil el bloque central va ARRIBA (order) y los dos
                   luchadores quedan cara a cara debajo; en md+ es la columna
                   central del cara a cara, como en tale-of-the-tape. */}
-              <HeroCorner fighter={main.red} className="order-2 md:order-none" />
+              <HeroCorner
+                fighter={main.red}
+                weightClass={main.weightClass}
+                className="order-2 md:order-none"
+              />
               <div className="order-1 col-span-2 self-center md:order-none md:col-span-1">
                 {centerInfo}
               </div>
-              <HeroCorner fighter={main.blue} className="order-3 md:order-none" />
+              <HeroCorner
+                fighter={main.blue}
+                weightClass={main.weightClass}
+                className="order-3 md:order-none"
+              />
             </div>
           ) : (
             <div className="relative mx-auto max-w-2xl">{centerInfo}</div>

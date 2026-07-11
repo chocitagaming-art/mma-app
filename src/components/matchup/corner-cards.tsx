@@ -37,6 +37,7 @@ export function CornerBlock({
           fullBodyUrl={fighter.fullBodyUrl ?? null}
           standingBodyUrl={fighter.standingBodyUrl ?? null}
           headshotUrl={fighter.headshotUrl}
+          division={fighter.latestWeightClass}
           preference="standing-first"
           className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
         />

@@ -214,6 +214,7 @@ export function EventBoutRow({
         <FighterHeadshot
           name={bout.red.name}
           headshotUrl={bout.red.headshotUrl}
+          division={bout.weightClass}
           size="sm"
           className={cn("shrink-0", redWon && "ring-2 ring-win")}
         />
@@ -296,6 +297,7 @@ export function EventBoutRow({
         <FighterHeadshot
           name={bout.blue.name}
           headshotUrl={bout.blue.headshotUrl}
+          division={bout.weightClass}
           size="sm"
           className={cn("shrink-0", blueWon && "ring-2 ring-win")}
         />
