@@ -105,7 +105,7 @@ export function LiveBoutStatsPanel({
       })}
 
       <p className="pt-2 text-right font-mono text-[0.55rem] uppercase tracking-[0.12em] text-muted-foreground/70">
-        Fuente ESPN · provisional
+        Datos provisionales
       </p>
     </div>
   );
