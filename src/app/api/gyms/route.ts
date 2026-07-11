@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { OVERPASS_SPORT_REGEX, buildGym, type Gym, type OverpassElement } from "@/lib/gyms";
+
 export const runtime = "nodejs";
 
 const RADIUS_M = 15000;
 const UA = "MMA-STATUS/1.0 (+https://mma-app-ruby.vercel.app)";
-
-type OverpassElement = {
-  type: string;
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
-};
-
-type Gym = { id: string; lat: number; lon: number; name: string; type: string };
 
 async function geocodeCity(query: string): Promise<[number, number] | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
@@ -32,8 +23,9 @@ async function geocodeCity(query: string): Promise<[number, number] | null> {
 async function fetchGyms(lat: number, lon: number): Promise<Gym[]> {
   // Solo el tag `sport~` (indexado, rápido y fiable). Añadir un regex sobre el
   // `name` de todos los fitness_centre disparaba el timeout server-side de
-  // Overpass y devolvía vacío.
-  const query = `[out:json][timeout:25];nwr[sport~"martial_arts|boxing|muay_thai|brazilian_jiu_jitsu|mixed_martial_arts|kickboxing|judo|karate|taekwondo|wrestling|sambo|grappling|aikido|krav_maga"](around:${RADIUS_M},${lat},${lon});out center 80;`;
+  // Overpass y devolvía vacío. La regex va anclada por token; el filtro fino
+  // (cadenas fitness, sport=fitness;boxing) se hace en buildGym.
+  const query = `[out:json][timeout:25];nwr[sport~"${OVERPASS_SPORT_REGEX}"](around:${RADIUS_M},${lat},${lon});out center 120;`;
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" },
@@ -46,15 +38,13 @@ async function fetchGyms(lat: number, lon: number): Promise<Gym[]> {
   const seen = new Set<string>();
   const gyms: Gym[] = [];
   for (const element of data.elements ?? []) {
-    const mlat = element.lat ?? element.center?.lat;
-    const mlon = element.lon ?? element.center?.lon;
-    const tags = element.tags ?? {};
-    const name = tags.name;
-    if (mlat == null || mlon == null || !name || seen.has(name)) continue;
-    seen.add(name);
-    const type = tags.sport ? tags.sport.replace(/[_;]+/g, " ") : "Gimnasio";
-    gyms.push({ id: `${element.type}/${element.id}`, lat: mlat, lon: mlon, name, type });
+    const gym = buildGym(element, [lat, lon]);
+    // Dedupe por id OSM (dos gimnasios distintos pueden compartir nombre).
+    if (!gym || seen.has(gym.id)) continue;
+    seen.add(gym.id);
+    gyms.push(gym);
   }
+  gyms.sort((a, b) => a.distanceKm - b.distanceKm);
   return gyms;
 }
 

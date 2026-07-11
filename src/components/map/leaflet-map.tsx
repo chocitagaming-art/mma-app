@@ -6,13 +6,7 @@ import L from "leaflet";
 import { useEffect } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
-export type MapMarker = {
-  id: string;
-  lat: number;
-  lon: number;
-  name: string;
-  type: string;
-};
+import { formatDistance, type Gym } from "@/lib/gyms";
 
 // Marcador propio (divIcon con SVG) para evitar el icono por defecto de Leaflet,
 // que se rompe con los bundlers (Turbopack/Next) porque no resuelve las rutas de
@@ -42,7 +36,7 @@ export default function LeafletMap({
   markers,
 }: {
   center: [number, number];
-  markers: MapMarker[];
+  markers: Gym[];
 }) {
   return (
     <MapContainer
@@ -59,17 +53,32 @@ export default function LeafletMap({
       {markers.map((marker) => (
         <Marker key={marker.id} position={[marker.lat, marker.lon]} icon={gymIcon}>
           <Popup>
-            <strong className="font-display text-sm font-bold uppercase tracking-tight">{marker.name}</strong>
-            <br />
-            <span style={{ textTransform: "capitalize" }}>{marker.type}</span>
-            <br />
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${marker.lat},${marker.lon}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Cómo llegar
-            </a>
+            <div className="space-y-1">
+              <strong className="font-display text-sm font-bold uppercase tracking-tight">
+                {marker.name}
+              </strong>
+              {marker.sports.length > 0 ? (
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#f5333a]">
+                  {marker.sports.join(" · ")}
+                </div>
+              ) : null}
+              {marker.address ? <div className="text-xs">{marker.address}</div> : null}
+              <div className="text-xs">{formatDistance(marker.distanceKm)}</div>
+              <div className="flex gap-3 text-xs">
+                {marker.website ? (
+                  <a href={marker.website} target="_blank" rel="noreferrer">
+                    Web
+                  </a>
+                ) : null}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${marker.lat},${marker.lon}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Cómo llegar
+                </a>
+              </div>
+            </div>
           </Popup>
         </Marker>
       ))}

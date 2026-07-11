@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { useState, type FormEvent } from "react";
-import { MapPin, Navigation, Search } from "lucide-react";
+import { Globe, MapPin, Navigation, Phone, Search } from "lucide-react";
 
-import type { MapMarker } from "@/components/map/leaflet-map";
+import { formatDistance, type Gym } from "@/lib/gyms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,11 +19,11 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map"), {
 // Madrid como centro por defecto antes de cualquier búsqueda.
 const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038];
 
-type GymsResponse = { center: [number, number]; gyms: MapMarker[] };
+type GymsResponse = { center: [number, number]; gyms: Gym[] };
 
 export function GymsClient() {
   const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
-  const [gyms, setGyms] = useState<MapMarker[]>([]);
+  const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [city, setCity] = useState("");
@@ -136,15 +136,57 @@ export function GymsClient() {
               <ul className="divide-y divide-border">
                 {gyms.map((gym) => (
                   <li key={gym.id} className="px-4 py-3">
-                    <p className="font-display text-sm font-bold uppercase tracking-tight text-foreground">{gym.name}</p>
-                    <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                      <span className="capitalize">{gym.type}</span>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
+                        {gym.name}
+                      </p>
+                      <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+                        {formatDistance(gym.distanceKm)}
+                      </span>
+                    </div>
+                    {gym.sports.length > 0 ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {gym.sports.map((sport) => (
+                          <span
+                            key={sport}
+                            className="rounded-sm border border-primary/35 bg-primary/10 px-1.5 py-0.5 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-primary"
+                          >
+                            {sport}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {gym.address ? (
+                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{gym.address}</p>
+                    ) : null}
+                    <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                      {gym.website ? (
+                        <a
+                          href={gym.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <Globe className="size-3" aria-hidden />
+                          Web
+                        </a>
+                      ) : null}
+                      {gym.phone ? (
+                        <a
+                          href={`tel:${gym.phone.replace(/[^+\d]/g, "")}`}
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <Phone className="size-3" aria-hidden />
+                          {gym.phone}
+                        </a>
+                      ) : null}
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${gym.lat},${gym.lon}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 text-primary hover:underline"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
                       >
+                        <MapPin className="size-3" aria-hidden />
                         Cómo llegar
                       </a>
                     </p>
