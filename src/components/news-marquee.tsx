@@ -18,7 +18,12 @@ export function NewsMarquee({ articles }: { articles: NewsArticle[] }) {
         <span className="h-full w-10 bg-gradient-to-r from-card to-transparent" />
       </div>
 
-      <div className="animate-marquee flex w-max items-center gap-8 py-2.5">
+      <div
+        className="animate-marquee flex w-max items-center gap-8 py-2.5"
+        // Velocidad de lectura cómoda y constante: ~14s por titular (antes 48s
+        // fijos para toda la cinta → con muchas noticias volaba). Mínimo 90s.
+        style={{ "--marquee-duration": `${Math.max(90, articles.length * 14)}s` } as React.CSSProperties}
+      >
         {items.map((article, index) => {
           // La segunda mitad es la copia que da el bucle sin costura: se oculta a
           // lectores de pantalla y se saca del tabulado para no duplicar titulares.

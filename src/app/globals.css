@@ -160,7 +160,8 @@
   }
   /* Atmósfera premium: glow rojo de marca, con receta propia por tema.
      LIGHT: mezclas suaves (~10%/6%) pero con radios mucho más amplios + baño
-     cálido superior + grano fino (rompe el efecto "documento en blanco").
+     cálido superior (la malla/rejilla se quitó a petición del dueño, 11-jul:
+     se veía como una cuadrícula en claro).
      DARK: la receta original intacta (20%/11%), calibrada para negro. */
   body::before {
     content: "";
@@ -169,21 +170,6 @@
     z-index: -1;
     pointer-events: none;
     background:
-      /* Grano/malla sutil, solo perceptible de cerca (≈1.5% alpha). */
-      repeating-linear-gradient(
-        0deg,
-        rgb(64 26 20 / 0.015) 0px,
-        rgb(64 26 20 / 0.015) 1px,
-        transparent 1px,
-        transparent 3px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        rgb(64 26 20 / 0.011) 0px,
-        rgb(64 26 20 / 0.011) 1px,
-        transparent 1px,
-        transparent 3px
-      ),
       /* Baño cálido superior: ancla la cabecera a la marca. */
       linear-gradient(
         to bottom,

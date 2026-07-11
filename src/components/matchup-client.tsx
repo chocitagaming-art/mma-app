@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Swords } from "lucide-react";
+import { CalendarDays, Info, Swords } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { FighterSearchCombobox } from "@/components/fighter-search-combobox";
 import { StrikeSilhouette } from "@/components/fighter/strike-silhouette";
 import { SectionHeading } from "@/components/section-heading";
+import { VsGlove } from "@/components/vs-glove";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -100,6 +101,15 @@ export function MatchupClient({
   const taleRows = useMemo(
     () => (detail ? buildTaleRows(detail.fighterA, detail.fighterB) : []),
     [detail],
+  );
+
+  // Divisiones distintas → enfrentamiento hipotético: no se daría en la
+  // realidad y hay que avisarlo (dueño, 11-jul). Solo cuando AMBAS divisiones
+  // son conocidas (con NULL no se puede afirmar nada).
+  const hypothetical = Boolean(
+    detail?.fighterA.latestWeightClass &&
+      detail?.fighterB.latestWeightClass &&
+      detail.fighterA.latestWeightClass !== detail.fighterB.latestWeightClass,
   );
 
   // Separa los combates programados (winner y method NULL) de los disputados:
@@ -207,9 +217,7 @@ export function MatchupClient({
               excludeId={blueFighter?.id}
             />
             <div className="flex justify-center pb-2">
-              <div className="octagon grid size-12 place-items-center bg-foreground font-display text-sm font-extrabold uppercase tracking-tight text-background">
-                VS
-              </div>
+              <VsGlove size={48} className="size-12" />
             </div>
             <FighterSearchCombobox
               label="Esquina azul"
@@ -223,6 +231,17 @@ export function MatchupClient({
 
       {canMatchup && detail ? (
         <>
+          {hypothetical ? (
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <span>
+                <span className="font-semibold">Enfrentamiento hipotético:</span>{" "}
+                {formatWeightClass(detail.fighterA.latestWeightClass ?? "")} contra{" "}
+                {formatWeightClass(detail.fighterB.latestWeightClass ?? "")} — por
+                peso y división, esta pelea no se daría en la realidad.
+              </span>
+            </div>
+          ) : null}
           {/* Tale of the tape — shown instantly once both corners are set.
               Grid 3 columnas estilo bout view (ver tale-of-the-tape.tsx):
               cuerpos enteros enfrentados con la comparativa en medio (desktop)
@@ -236,9 +255,9 @@ export function MatchupClient({
                     columna central). */}
                 <span
                   aria-hidden
-                  className="octagon pointer-events-none absolute left-1/2 top-32 z-10 grid size-10 -translate-x-1/2 place-items-center bg-foreground font-display text-xs font-extrabold uppercase tracking-tight text-background md:hidden"
+                  className="pointer-events-none absolute left-1/2 top-32 z-10 -translate-x-1/2 md:hidden"
                 >
-                  VS
+                  <VsGlove size={40} className="size-10" />
                 </span>
                 <CornerBlock
                   corner="red"
@@ -438,6 +457,7 @@ export function MatchupClient({
             favorite={favorite}
             showPrediction={showPrediction}
             handlePredict={handlePredict}
+            hypothetical={hypothetical}
           />
         </>
       ) : (

@@ -38,7 +38,10 @@ export function CornerBlock({
           standingBodyUrl={fighter.standingBodyUrl ?? null}
           headshotUrl={fighter.headshotUrl}
           division={fighter.latestWeightClass}
-          preference="standing-first"
+          // "full-first" (recorte oficial cabeza-muslo): en /enfrentamiento las
+          // DOS esquinas salen a medio cuerpo consistente (dueño, 11-jul; antes
+          // standing-first mezclaba cuerpo entero de pie con medio cuerpo).
+          preference="full-first"
           className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
         />
       </Link>

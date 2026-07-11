@@ -172,8 +172,9 @@ export default async function FighterDetailPage({
   const externalLinks = fighterExternalLinks(fighter);
 
   const heroHighlights = [
-    { value: winMethods.koTko, label: "Victorias por KO" },
-    { value: winMethods.submission, label: "Victorias por sumisión" },
+    // Sin "por": los labels contiguos se amontonaban visualmente (dueño, 11-jul).
+    { value: winMethods.koTko, label: "Victorias KO" },
+    { value: winMethods.submission, label: "Victorias sumisión" },
     { value: firstRoundFinishes, label: "Finalizaciones en 1er asalto" },
   ];
 
@@ -475,21 +476,20 @@ export default async function FighterDetailPage({
               </div>
             ) : null}
 
+            {/* CTAs en rojo UFC (dueño, 11-jul): "Comparar" sólido y
+                "Historial" outline — ambos visibles, con jerarquía. */}
             <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
               <Link href="#historial" className="flex-1">
                 <Button
-                  variant="secondary"
-                  className="w-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                  variant="outline"
+                  className="w-full border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary"
                 >
                   <History />
                   Ver historial completo
                 </Button>
               </Link>
               <Link href={`/enfrentamiento?red=${fighter.id}`} className="flex-1">
-                <Button
-                  variant="secondary"
-                  className="w-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
+                <Button className="w-full font-semibold shadow-[0_0_16px_-4px_var(--primary)]">
                   <ArrowRightLeft />
                   Comparar luchador
                 </Button>

@@ -108,10 +108,12 @@ function humanizeFeatureName(name: string) {
 }
 
 function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" | "explanationSource">) {
+  // Un único párrafo corto (3-4 frases): el dueño pidió explicaciones
+  // resumidas y claras (11-jul).
   if (data.lowConfidence) {
     // No confident favorite: one fighter lacks enough history, so the model falls
     // back to a ~50/50 baseline. Do NOT frame either corner as a real favorite.
-    return `Este enfrentamiento es de baja confianza: uno de los peleadores no tiene suficiente historial registrado, así que el modelo no puede establecer un favorito claro y la probabilidad se mantiene cerca del 50/50. Trátalo como una estimación de referencia, no como una predicción fiable.\n\nCon más peleas registradas para ambos perfiles, el modelo podría detectar diferencias reales. Por ahora, las señales disponibles son insuficientes para inclinar el resultado hacia ${data.fighters.red.name} o ${data.fighters.blue.name}.`;
+    return `Enfrentamiento de baja confianza: uno de los peleadores no tiene suficiente historial registrado, así que el modelo no puede fijar un favorito claro y la probabilidad se queda cerca del 50/50. Tómalo como una referencia, no como una predicción fiable de ${data.fighters.red.name} contra ${data.fighters.blue.name}.`;
   }
 
   const favorite =
@@ -119,13 +121,13 @@ function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" |
   const underdog =
     data.redProbability >= data.blueProbability ? data.fighters.blue.name : data.fighters.red.name;
   const topFactors = data.topFeatures
-    .slice(0, 3)
-    .map((feature) => `${humanizeFeatureName(feature.name)} (${feature.value})`)
-    .join(", ");
+    .slice(0, 2)
+    .map((feature) => humanizeFeatureName(feature.name))
+    .join(" y ");
 
-  return `${favorite} parte como favorito con una probabilidad estimada de ${formatPercent(
+  return `${favorite} parte como favorito con un ${formatPercent(
     Math.max(data.redProbability, data.blueProbability),
-  )}. El modelo detecta ventajas comparativas recientes frente a ${underdog}, especialmente en ${topFactors}. Estas señales combinan volumen ofensivo, eficiencia y contexto competitivo acumulado.\n\nAun así, la predicción no garantiza el resultado real de la pelea. Refleja únicamente patrones históricos del dataset y cómo el modelo pondera las diferencias entre ambos perfiles para este enfrentamiento.`;
+  )} de probabilidad frente a ${underdog}. Las ventajas que más pesan son ${topFactors}. Recuerda que es una estimación basada en patrones históricos: no garantiza el resultado real.`;
 }
 
 export async function generatePredictionExplanation(
@@ -141,9 +143,10 @@ export async function generatePredictionExplanation(
   }
 
   const prompt = [
-    "Explica en español, en 2 párrafos, una predicción de pelea UFC.",
-    "Sé claro, analítico y evita afirmar certezas absolutas.",
-    "Responde directamente con los 2 párrafos, sin preámbulo ni meta-comentarios.",
+    "Explica en español una predicción de pelea UFC en UN SOLO párrafo de 3-4 frases.",
+    "Resumido, claro y con lenguaje sencillo: quédate solo con las 2-3 claves que más pesan.",
+    "Evita certezas absolutas y jerga estadística.",
+    "Responde directamente con el párrafo, sin preámbulo ni meta-comentarios.",
     data.lowConfidence
       ? "IMPORTANTE: este enfrentamiento es de BAJA CONFIANZA porque uno de los peleadores no tiene suficiente historial. NO declares un favorito claro; explica que la probabilidad es una base cercana al 50/50 por datos insuficientes y debe tomarse como referencia, no como predicción fiable."
       : "",
@@ -162,7 +165,8 @@ export async function generatePredictionExplanation(
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
+      // Un párrafo corto: presupuesto ajustado (antes 1024 para 2 párrafos).
+      max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
 

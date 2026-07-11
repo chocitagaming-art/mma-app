@@ -3,6 +3,7 @@ import { Brain, Info, Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { VsGlove } from "@/components/vs-glove";
 import { formatModelDate, formatWeightClass } from "@/lib/format";
 import type { PredictionResponse } from "@/lib/prediction";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,9 @@ type PredictionSectionProps = {
   favorite: "red" | "blue" | null;
   showPrediction: boolean;
   handlePredict: () => void;
+  // Divisiones distintas entre esquinas: el enfrentamiento es hipotético y la
+  // predicción debe avisarlo (dueño, 11-jul).
+  hypothetical?: boolean;
 };
 
 export function PredictionSection({
@@ -33,6 +37,7 @@ export function PredictionSection({
   favorite,
   showPrediction,
   handlePredict,
+  hypothetical = false,
 }: PredictionSectionProps) {
   return (
     <section className="space-y-6">
@@ -74,6 +79,11 @@ export function PredictionSection({
                 ? "Reintentar"
                 : "Predecir resultado"}
           </Button>
+          {loading ? (
+            <p className="font-mono text-[0.7rem] uppercase tracking-[0.15em] text-muted-foreground">
+              Despertando el motor… puede tardar hasta 1 minuto la primera vez
+            </p>
+          ) : null}
           {unavailable ? (
             <div className="flex w-full items-start gap-3 rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm text-muted-foreground">
               <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -96,6 +106,17 @@ export function PredictionSection({
 
       {showPrediction && prediction ? (
         <>
+          {hypothetical ? (
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <span>
+                <span className="font-semibold">Enfrentamiento hipotético:</span>{" "}
+                los dos luchadores compiten en divisiones distintas, así que esta
+                pelea no se daría en la realidad. La predicción es solo un
+                ejercicio estadístico.
+              </span>
+            </div>
+          ) : null}
           {prediction.context.weightClass ? (
             <div className="flex justify-center">
               <span className="inline-flex items-center rounded-full border border-border bg-muted px-4 py-1.5 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -181,9 +202,7 @@ export function PredictionSection({
             </Card>
 
             <div className="flex items-center justify-center">
-              <div className="octagon grid size-14 place-items-center bg-foreground font-display text-base font-extrabold uppercase tracking-tight text-background">
-                VS
-              </div>
+              <VsGlove size={56} className="size-14" />
             </div>
 
             <Card className="border-border bg-card">
@@ -319,12 +338,6 @@ export function PredictionSection({
                 <div className="whitespace-pre-line rounded-2xl border border-border bg-muted p-5 text-sm leading-7 text-muted-foreground">
                   {prediction.explanation}
                 </div>
-                <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">
-                  Fuente:{" "}
-                  {prediction.explanationSource === "anthropic"
-                    ? "Claude"
-                    : "Resumen local"}
-                </p>
               </CardContent>
             </Card>
           </div>

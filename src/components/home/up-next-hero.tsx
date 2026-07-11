@@ -4,6 +4,7 @@ import { CalendarDays, MapPin, Tv } from "lucide-react";
 import { CountryFlag } from "@/components/country-flag";
 import { EventStartTime } from "@/components/event-start-time";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
+import { VsGlove } from "@/components/vs-glove";
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { EventCountdown } from "@/components/home/event-countdown";
 import { Button } from "@/components/ui/button";
@@ -95,27 +96,13 @@ function HeroCorner({
   );
 }
 
-// Octágono "VS" central, guiño al octágono de la UFC. Dos capas con el mismo
-// clip-path: la exterior hace de borde y la interior de fondo.
-const OCTAGON_CLIP =
-  "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)";
-
+// Guante de la marca como "VS" central (antes: octágono con texto; dueño 11-jul).
 function VsOctagon() {
   return (
-    <div className="relative size-14 drop-shadow-[0_0_16px_color-mix(in_oklch,var(--primary)_35%,transparent)] sm:size-16">
-      <div
-        className="absolute inset-0 bg-primary/70"
-        style={{ clipPath: OCTAGON_CLIP }}
-      />
-      <div
-        className="absolute inset-[3px] flex items-center justify-center bg-card"
-        style={{ clipPath: OCTAGON_CLIP }}
-      >
-        <span className="font-display text-base font-extrabold uppercase tracking-tight text-foreground sm:text-lg">
-          VS
-        </span>
-      </div>
-    </div>
+    <VsGlove
+      size={64}
+      className="size-14 drop-shadow-[0_0_16px_color-mix(in_oklch,var(--primary)_35%,transparent)] sm:size-16"
+    />
   );
 }
 

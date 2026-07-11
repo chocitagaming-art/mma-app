@@ -4,6 +4,10 @@ import { z } from "zod";
 import { generatePredictionExplanation, type PredictionResponse } from "@/lib/prediction";
 
 export const runtime = "nodejs";
+// El microservicio (Render free) se duerme a los 15 min: el primer request lo
+// despierta y puede tardar ~50s. Presupuesto amplio + reintento (abajo) para
+// que el usuario nunca vea el fallo de arranque en frío (dueño, 11-jul).
+export const maxDuration = 60;
 
 const requestSchema = z.object({
   redFighterId: z.number().int().positive(),
@@ -33,19 +37,46 @@ async function fetchPrediction(
 
   const apiKey = process.env.PREDICTION_SERVICE_API_KEY;
 
-  let response: Response;
-  try {
-    response = await fetch(`${baseUrl.replace(/\/$/u, "")}/predict`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { "X-API-Key": apiKey } : {}),
-      },
-      body: JSON.stringify({ red: redFighterId, blue: blueFighterId }),
-      signal: AbortSignal.timeout(25_000),
-    });
-  } catch {
-    // Network failure or timeout reaching the microservice.
+  // Hasta 2 intentos: el 1º puede morir por el arranque en frío de Render
+  // (~50s); ese mismo intento ya ha despertado el servicio, así que el 2º
+  // responde en caliente. 25s + 1s + 26s ≈ 52s, dentro del maxDuration de 60.
+  const ATTEMPT_TIMEOUTS_MS = [25_000, 26_000];
+  let response: Response | null = null;
+  for (let attempt = 0; attempt < ATTEMPT_TIMEOUTS_MS.length; attempt += 1) {
+    try {
+      const attemptResponse = await fetch(`${baseUrl.replace(/\/$/u, "")}/predict`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "X-API-Key": apiKey } : {}),
+        },
+        body: JSON.stringify({ red: redFighterId, blue: blueFighterId }),
+        signal: AbortSignal.timeout(ATTEMPT_TIMEOUTS_MS[attempt]),
+      });
+      // El proxy de Render responde 502/503/504 mientras la instancia
+      // arranca: cuenta como "aún dormido" y se reintenta.
+      if (
+        [502, 503, 504].includes(attemptResponse.status) &&
+        attempt < ATTEMPT_TIMEOUTS_MS.length - 1
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        continue;
+      }
+      response = attemptResponse;
+      break;
+    } catch {
+      // Fallo de red o timeout alcanzando el microservicio.
+      if (attempt === ATTEMPT_TIMEOUTS_MS.length - 1) {
+        throw new PredictionUnavailableError(
+          "El servicio de predicción no responde. Inténtalo de nuevo en un momento.",
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+  }
+
+  if (response === null) {
+    // Inalcanzable (el bucle siempre asigna o lanza), pero satisface a TS.
     throw new PredictionUnavailableError(
       "El servicio de predicción no responde. Inténtalo de nuevo en un momento.",
     );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CountryFlag } from "@/components/country-flag";
 import { FightOfficials } from "@/components/fight/officials";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
+import { VsGlove } from "@/components/vs-glove";
 import { countryNameEs } from "@/lib/flags";
 import {
   ageFromBirthDate,
@@ -329,9 +330,9 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
           {/* VS entre las dos fotos, solo móvil (en desktop separa la columna). */}
           <span
             aria-hidden
-            className="octagon pointer-events-none absolute left-1/2 top-32 z-10 grid size-10 -translate-x-1/2 place-items-center bg-foreground font-display text-xs font-extrabold uppercase tracking-tight text-background md:hidden"
+            className="pointer-events-none absolute left-1/2 top-32 z-10 -translate-x-1/2 md:hidden"
           >
-            VS
+            <VsGlove size={40} className="size-10" />
           </span>
           <FaceOffCorner
             corner="red"

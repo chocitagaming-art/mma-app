@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,6 +8,28 @@ import { Info, Loader2, SendHorizonal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Avatar del Maestro: la mascota de la marca (recorte de badge-circular),
+// en vez de la antigua "M" en octágono (dueño, 11-jul).
+function MaestroAvatar({ size, className }: { size: 28 | 44; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "octagon grid shrink-0 place-items-center overflow-hidden bg-card",
+        size === 44 ? "size-11" : "size-7",
+        className,
+      )}
+    >
+      <Image
+        src="/brand/mascot-avatar.webp"
+        alt=""
+        width={size}
+        height={size}
+        className="size-full object-cover"
+      />
+    </span>
+  );
+}
 
 type ChatMsg = {
   role: "user" | "assistant";
@@ -92,9 +115,7 @@ export function MaestroChat() {
     <div className="flex h-full flex-1 flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border pb-5">
-        <span className="octagon grid size-11 place-items-center bg-primary font-display text-2xl font-extrabold leading-none text-primary-foreground shadow-[0_0_18px_2px_var(--primary)]">
-          M
-        </span>
+        <MaestroAvatar size={44} className="shadow-[0_0_18px_2px_var(--primary)]" />
         <div>
           <h1 className="font-display text-2xl font-extrabold uppercase leading-none tracking-tight text-foreground">
             Maestro de UFC
@@ -146,9 +167,7 @@ export function MaestroChat() {
             aria-live="polite"
             className="flex items-center gap-2.5 text-muted-foreground"
           >
-            <span className="octagon grid size-7 shrink-0 place-items-center bg-primary font-display text-sm font-extrabold text-primary-foreground">
-              M
-            </span>
+            <MaestroAvatar size={28} />
             <span className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em]">
               <Loader2 className="size-3.5 animate-spin" />
               El Maestro está pensando…
@@ -242,9 +261,7 @@ function MessageBubble({ message }: { message: ChatMsg }) {
 
   return (
     <div className="flex gap-2.5">
-      <span className="octagon mt-0.5 grid size-7 shrink-0 place-items-center bg-primary font-display text-sm font-extrabold text-primary-foreground">
-        M
-      </span>
+      <MaestroAvatar size={28} className="mt-0.5" />
       <div className="min-w-0 flex-1">
         <div
           className={cn(
