@@ -54,6 +54,7 @@ import {
   formatDivisionStint,
 } from "@/lib/division-history";
 import { fighterExternalLinks } from "@/lib/external-links";
+import { mergeFightHistories } from "@/lib/fight-history";
 import { computeRecentForm } from "@/lib/fighter-form";
 import {
   computeAge,
@@ -124,6 +125,12 @@ export default async function FighterDetailPage({
     rateStats,
     ufcRecord,
   } = detail;
+
+  // S3-G: la TABLA del historial muestra la carrera completa (UFC +
+  // Bellator/regionales vía ESPN). Todo lo demás (racha, forma, divisiones,
+  // finalizaciones, última pelea) sigue calculándose SOLO sobre `history`
+  // (peleas UFC): las espn no tienen stats y mezclarían promociones.
+  const fullHistory = mergeFightHistories(history, detail.espnHistory);
 
   const recentForm = computeRecentForm(history);
   const streakLabel =
@@ -320,7 +327,8 @@ export default async function FighterDetailPage({
                   {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                 </span>
                 <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  V-D-E · {detail.fightCount} peleas registradas
+                  V-D-E · {detail.fightCount + detail.espnHistory.length} peleas
+                  registradas
                 </span>
               </div>
               {/* Récord solo-UFC (BE9a), discreto bajo el récord total. */}
@@ -655,9 +663,9 @@ export default async function FighterDetailPage({
         <SectionHeading
           eyebrow="Historial de peleas"
           title="Cada enfrentamiento registrado"
-          description="Revisa oponentes, eventos y resultados desde la tabla de peleas."
+          description="La carrera completa: UFC y también Bellator u otras promociones (vía ESPN). Las estadísticas de la ficha solo cuentan peleas UFC."
         />
-        {history.length ? (
+        {fullHistory.length ? (
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="overflow-x-auto">
               <Table>
@@ -682,6 +690,9 @@ export default async function FighterDetailPage({
                       Tiempo
                     </TableHead>
                     <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Org.
+                    </TableHead>
+                    <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
                       Evento
                     </TableHead>
                     <TableHead className="font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground">
@@ -690,7 +701,7 @@ export default async function FighterDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {history.map((fight) => {
+                  {fullHistory.map((fight) => {
                     const resultLabel =
                       fight.result === "win"
                         ? "Victoria"
@@ -705,9 +716,23 @@ export default async function FighterDetailPage({
                         : fight.result === "loss"
                           ? "bg-loss/10 text-loss"
                           : "bg-muted text-muted-foreground";
+                    // Badge de promoción (S3-G): UFC rojo, Bellator ámbar,
+                    // resto (regionales) gris con su nombre corto.
+                    const isEspnRow = fight.origin === "espn";
+                    const promotionLabel = isEspnRow
+                      ? (fight.promotion ?? "Otra")
+                      : "UFC";
+                    const promotionClass = !isEspnRow
+                      ? "bg-primary/10 text-primary"
+                      : fight.promotion === "Bellator"
+                        ? "bg-amber-500/15 text-amber-600 dark:bg-amber-400/15 dark:text-amber-400"
+                        : "bg-muted text-muted-foreground";
 
                     return (
-                      <TableRow key={fight.fightId} className="hover:bg-muted">
+                      <TableRow
+                        key={`${fight.origin ?? "ufc"}-${fight.fightId}`}
+                        className="hover:bg-muted"
+                      >
                         <TableCell className="tabular text-muted-foreground">
                           {formatDate(fight.eventDate)}
                         </TableCell>
@@ -739,17 +764,33 @@ export default async function FighterDetailPage({
                         <TableCell className="tabular text-muted-foreground">
                           {fight.endTime ?? "—"}
                         </TableCell>
+                        <TableCell>
+                          <span
+                            title={promotionLabel}
+                            className={`inline-flex max-w-36 items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${promotionClass}`}
+                          >
+                            <span className="truncate">{promotionLabel}</span>
+                          </span>
+                        </TableCell>
                         <TableCell className="font-display text-sm font-bold uppercase tracking-tight text-muted-foreground">
-                          {fight.eventId ? (
-                            <Link
-                              href={`/eventos/${fight.eventId}`}
-                              className="transition-colors hover:text-primary"
-                            >
-                              {fight.eventName ?? "Evento desconocido"}
-                            </Link>
-                          ) : (
-                            (fight.eventName ?? "Evento desconocido")
-                          )}
+                          <span className="inline-flex items-center gap-1.5">
+                            {fight.isTitleFight ? (
+                              <Trophy
+                                aria-label="Pelea por el título"
+                                className="size-3.5 shrink-0 text-amber-500"
+                              />
+                            ) : null}
+                            {fight.eventId ? (
+                              <Link
+                                href={`/eventos/${fight.eventId}`}
+                                className="transition-colors hover:text-primary"
+                              >
+                                {fight.eventName ?? "Evento desconocido"}
+                              </Link>
+                            ) : (
+                              (fight.eventName ?? "Evento desconocido")
+                            )}
+                          </span>
                         </TableCell>
                         <TableCell>
                           {/* El historial solo contiene combates disputados

@@ -17,6 +17,7 @@ import type {
   AggregateRow,
   DefenseRow,
   DirectMatchupRow,
+  EspnHistoryRow,
   FighterRankingRow,
   FighterRow,
   HistoryRow,
@@ -104,6 +105,7 @@ export const getFighterDetail = cache(async (
     rankingRows,
     perMinuteRows,
     ufcRecordRows,
+    espnHistoryRows,
   ] = await Promise.all([
     sql<HistoryRow>(
       `select
@@ -305,6 +307,26 @@ export const getFighterDetail = cache(async (
         and not (fi.winner_id is null and fi.method is null)`,
       [id],
     ),
+    // S3-G: historial no-UFC importado de ESPN (tabla aparte, migración 016).
+    // Solo alimenta la TABLA del historial; ninguna stat se calcula sobre él.
+    sql<EspnHistoryRow>(
+      `select
+        h.id,
+        h.promotion,
+        h.event_name,
+        h.event_date,
+        h.opponent_name,
+        h.opponent_fighter_id,
+        h.result,
+        h.method,
+        h.end_round,
+        h.end_time,
+        h.is_title_fight
+      from fight_history_espn h
+      where h.fighter_id = $1
+      order by h.event_date desc nulls last, h.id desc`,
+      [id],
+    ),
   ]);
 
   const history: FighterHistoryItem[] = historyRows.map((row) => ({
@@ -321,6 +343,30 @@ export const getFighterDetail = cache(async (
     endTime: row.end_time,
     weightClass: row.weight_class,
     videoUrl: row.video_url,
+  }));
+
+  // S3-G: filas espn -> misma forma que el historial UFC. Sin eventId (los
+  // eventos no-UFC no existen en `events`, el nombre se pinta sin link), sin
+  // esquina ni weight_class (ESPN no los da en el eventsMap), y con
+  // origin/promotion para el badge. El método ya llega en el formato
+  // canónico de ufcstats (lo normaliza la ingesta), así formatMethod lo
+  // traduce igual que el resto.
+  const espnHistory: FighterHistoryItem[] = espnHistoryRows.map((row) => ({
+    fightId: row.id,
+    eventId: null,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    opponentId: row.opponent_fighter_id,
+    opponentName: row.opponent_name,
+    result: row.result,
+    method: row.method,
+    endRound: row.end_round,
+    endTime: row.end_time,
+    weightClass: null,
+    videoUrl: null,
+    origin: "espn" as const,
+    promotion: row.promotion,
+    isTitleFight: row.is_title_fight,
   }));
 
   const aggregateStats = mapAggregate(aggregateRows[0]);
@@ -367,6 +413,7 @@ export const getFighterDetail = cache(async (
     latestWeightClass: fighterRow.latest_weight_class ?? null,
     fightCount: Number(fighterRow.fight_count ?? 0),
     history,
+    espnHistory,
     aggregateStats,
     news: newsRows.map(mapNewsArticle),
     fighterFacts: mapFighterFacts(fighterRow.fighter_facts),

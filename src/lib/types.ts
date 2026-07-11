@@ -74,13 +74,21 @@ export type FighterHistoryItem = {
   eventDate: string | null;
   opponentId: number | null;
   opponentName: string | null;
-  corner: "red" | "blue";
+  // Las filas espn (S3-G) no traen esquina: ESPN lista la carrera desde la
+  // perspectiva del propio luchador.
+  corner?: "red" | "blue";
   result: "win" | "loss" | "draw" | "nc";
   method: string | null;
   endRound: number | null;
   endTime: string | null;
   weightClass: string | null;
   videoUrl: string | null;
+  // S3-G: procedencia para el badge del historial. Las filas de `fights`
+  // (UFC, ufcstats/ufc.com) no la llevan (=UFC); las de fight_history_espn
+  // llegan con origin 'espn' + su promoción ('Bellator', 'CFFC'...).
+  origin?: "ufc" | "espn";
+  promotion?: string | null;
+  isTitleFight?: boolean;
 };
 
 export type FighterAggregateStats = {
@@ -249,6 +257,10 @@ export type FighterDetail = {
   latestWeightClass: string | null;
   fightCount: number;
   history: FighterHistoryItem[];
+  // S3-G: historial no-UFC (fight_history_espn). SOLO para la tabla del
+  // historial (fusionado allí con `history`); las stats/racha/forma de la
+  // ficha siguen calculándose únicamente sobre `history` (solo UFC).
+  espnHistory: FighterHistoryItem[];
   aggregateStats: FighterAggregateStats;
   news: NewsArticle[];
   // S2-E: Fighter Facts + Q&A de ufc.com traducidos (vacíos si el luchador no

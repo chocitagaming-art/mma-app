@@ -61,6 +61,23 @@ export type HistoryRow = {
   video_url: string | null;
 };
 
+// S3-G (migración 016): fila de fight_history_espn — historial no-UFC
+// (Bellator/regionales) importado de ESPN. Tabla APARTE de `fights`: estas
+// filas solo alimentan la TABLA del historial de la ficha, nunca las stats.
+export type EspnHistoryRow = {
+  id: number;
+  promotion: string | null;
+  event_name: string | null;
+  event_date: string | null;
+  opponent_name: string | null;
+  opponent_fighter_id: number | null;
+  result: "win" | "loss" | "draw" | "nc";
+  method: string | null;
+  end_round: number | null;
+  end_time: string | null;
+  is_title_fight: boolean;
+};
+
 export type AggregateRow = {
   sig_strikes_landed: string | null;
   sig_strikes_attempted: string | null;
