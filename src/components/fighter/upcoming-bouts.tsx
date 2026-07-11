@@ -7,7 +7,15 @@ import { formatDate, formatRecord } from "@/lib/format";
 import type { FighterUpcomingBout } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function BoutCard({ bout }: { bout: FighterUpcomingBout }) {
+function BoutCard({
+  bout,
+  division,
+}: {
+  bout: FighterUpcomingBout;
+  // División del luchador de la ficha: el rival comparte combate (y por tanto
+  // género de división), así que sirve para su silueta de fallback.
+  division?: string | null;
+}) {
   const isRed = bout.corner === "red";
   const opponentName = bout.opponentName ?? "Oponente por confirmar";
   const record =
@@ -25,6 +33,7 @@ function BoutCard({ bout }: { bout: FighterUpcomingBout }) {
     <FighterHeadshot
       name={opponentName}
       headshotUrl={bout.opponentHeadshotUrl}
+      division={division}
       size="sm"
       className={cn("border-2", isRed ? "border-corner-red" : "border-corner-blue")}
     />
@@ -99,11 +108,17 @@ function BoutCard({ bout }: { bout: FighterUpcomingBout }) {
   );
 }
 
-export function UpcomingBouts({ bouts }: { bouts: FighterUpcomingBout[] }) {
+export function UpcomingBouts({
+  bouts,
+  division,
+}: {
+  bouts: FighterUpcomingBout[];
+  division?: string | null;
+}) {
   return (
     <div className="grid gap-4">
       {bouts.map((bout) => (
-        <BoutCard key={bout.fightId} bout={bout} />
+        <BoutCard key={bout.fightId} bout={bout} division={division} />
       ))}
     </div>
   );

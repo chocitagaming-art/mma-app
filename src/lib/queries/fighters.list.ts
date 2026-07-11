@@ -43,7 +43,11 @@ export async function getFeaturedFighters(
         from fights fi2
         where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
           and fi2.status is distinct from 'cancelled'
-        order by fi2.updated_at desc nulls last, fi2.id desc
+          and fi2.weight_class is not null
+        -- catch/open weight no es división real (misma semántica que
+        -- division-history.ts): solo gana si el luchador no tiene otra
+        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
+          fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class`;
 
@@ -215,7 +219,11 @@ export async function getFighters(
         from fights fi2
         where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
           and fi2.status is distinct from 'cancelled'
-        order by fi2.updated_at desc nulls last, fi2.id desc
+          and fi2.weight_class is not null
+        -- catch/open weight no es división real (misma semántica que
+        -- division-history.ts): solo gana si el luchador no tiene otra
+        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
+          fi2.updated_at desc nulls last, fi2.id desc
         limit 1
       ) as latest_weight_class
     from fighters f

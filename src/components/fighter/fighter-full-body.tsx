@@ -48,37 +48,41 @@ export function FighterFullBody({
   className,
 }: FighterFullBodyProps) {
   const [imageFailed, setImageFailed] = useState(false);
+  const [silhouetteFailed, setSilhouetteFailed] = useState(false);
   // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
   // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
   const local = localBody(name);
   const dbPhotoUrl =
     local?.src ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
-  // Sin foto de cuerpo Y sin headshot al que degradar: silueta oficial de UFC
-  // de cuerpo entero. Se renderiza por la misma ruta que una foto real (con
-  // sombra y "suelo" en el hero), como en ufc.com.
+  // Sin foto de cuerpo utilizable (NULL o que falló en cargar) Y sin headshot al
+  // que degradar: silueta oficial de UFC de cuerpo entero. Se renderiza por la
+  // misma ruta que una foto real (con sombra y "suelo" en el hero), como en
+  // ufc.com. Si la propia silueta fallara, degradamos al headshot (iniciales).
   const hasHeadshot = Boolean(
     localHeadshotOverride(name) ?? headshotUrl ?? localHeadshot(name),
   );
+  const usableDbPhotoUrl = imageFailed ? null : dbPhotoUrl;
   const silhouetteUrl =
-    dbPhotoUrl == null && !hasHeadshot
+    usableDbPhotoUrl == null && !hasHeadshot && !silhouetteFailed
       ? silhouetteBody(inferFighterGender(name, division))
       : null;
-  const photoUrl = dbPhotoUrl ?? silhouetteUrl;
-  const showPhoto = photoUrl != null && !imageFailed;
-  const altText =
-    photoUrl === silhouetteUrl && silhouetteUrl != null
-      ? `Silueta de ${name} (sin foto)`
-      : `Foto de cuerpo entero de ${name}`;
+  const photoUrl = usableDbPhotoUrl ?? silhouetteUrl;
+  const isSilhouette = photoUrl != null && photoUrl === silhouetteUrl;
+  const showPhoto = photoUrl != null;
+  const handleImageError = () =>
+    isSilhouette ? setSilhouetteFailed(true) : setImageFailed(true);
+  const altText = isSilhouette
+    ? `Silueta de ${name} (sin foto)`
+    : `Foto de cuerpo entero de ${name}`;
   // Encuadre explícito en vez de inferirlo del substring de la URL: los cuerpos
   // curados (local-bodies) traen su propio fit; la silueta oficial usa el mismo
   // recorte cabeza-muslo de ufc.com (cover-top); para las fotos de BD seguimos
   // distinguiendo el recorte oficial de ufc.com (athlete_bio_full_body =
   // cabeza-muslo → cover-top) del resto (standing/cuerpo entero → contain-bottom).
-  const bodyFit =
-    local?.fit ??
-    (silhouetteUrl != null || photoUrl?.includes("athlete_bio_full_body")
-      ? "cover-top"
-      : "contain-bottom");
+  const bodyFit = isSilhouette
+    ? "cover-top"
+    : (local?.fit ??
+      (photoUrl?.includes("athlete_bio_full_body") ? "cover-top" : "contain-bottom"));
 
   if (variant === "hero") {
     if (!showPhoto) {
@@ -124,7 +128,7 @@ export function FighterFullBody({
               ? "object-cover object-top"
               : "object-contain object-bottom",
           )}
-          onError={() => setImageFailed(true)}
+          onError={handleImageError}
         />
       </div>
     );
@@ -154,7 +158,7 @@ export function FighterFullBody({
               ? "w-full object-cover object-top"
               : "w-auto max-w-full object-contain object-bottom",
           )}
-          onError={() => setImageFailed(true)}
+          onError={handleImageError}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">

@@ -429,6 +429,9 @@ export default async function FighterDetailPage({
                   <FighterHeadshot
                     name={nextBout.opponentName ?? "Oponente por confirmar"}
                     headshotUrl={nextBout.opponentHeadshotUrl}
+                    // El rival comparte combate (y por tanto género de división)
+                    // con el luchador de la ficha.
+                    division={detail.latestWeightClass}
                     size="sm"
                   />
                   <div className="min-w-0">
@@ -844,7 +847,7 @@ export default async function FighterDetailPage({
               </Card>
             ))
           ) : showUpcoming ? (
-            <UpcomingBouts bouts={upcomingBouts} />
+            <UpcomingBouts bouts={upcomingBouts} division={detail.latestWeightClass} />
           ) : (
             <Card className="border-dashed border-border bg-card">
               <CardContent className="px-6 py-16 text-center text-muted-foreground">
