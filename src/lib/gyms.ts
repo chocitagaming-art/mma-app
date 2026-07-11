@@ -52,15 +52,19 @@ const MARTIAL_SPORT_TOKENS = Object.keys(SPORT_LABELS);
 export const OVERPASS_SPORT_REGEX = `(^|;| )(${MARTIAL_SPORT_TOKENS.join("|")})( |;|$)`;
 
 // Cadenas de gimnasios fitness que etiquetan `boxing`/`martial_arts` en OSM
-// pero no son gimnasios de lucha.
+// pero no son gimnasios de lucha. `metropolitan\b` no matchea "Metropolitano"
+// (clubs de lucha legítimos con ese nombre) — solo la cadena "Metropolitan".
 const FITNESS_CHAIN_RE =
-  /basic.?fit|mcfit|anytime|smart.?fit|vivagym|synergym|altafit|holmes|metropolitan|fitboxing/i;
+  /basic.?fit|mcfit|anytime|smart.?fit|vivagym|synergym|altafit|holmes|metropolitan\b|fitboxing/i;
 
 export function parseSportTokens(sport: string | undefined): string[] {
   if (!sport) return [];
+  // Separador OSM canónico es ';', pero hay datos reales con espacios/comas
+  // ("fitness boxing") — la regex Overpass anclada también los acepta, así que
+  // el post-filtro debe trocear igual para no dejar pasar el token fitness.
   return sport
     .toLowerCase()
-    .split(";")
+    .split(/[;,\s]+/)
     .map((token) => token.trim())
     .filter(Boolean);
 }
@@ -91,10 +95,17 @@ export function composeAddress(tags: GymTags): string | null {
   return parts.length ? parts.join(", ") : null;
 }
 
+// OSM permite MULTIVALOR separado por ';' en phone/website; para un href solo
+// sirve el primero (dos números concatenados forman un tel: inválido).
+export function firstOsmValue(raw: string | undefined): string | null {
+  const value = raw?.split(";")[0]?.trim();
+  return value || null;
+}
+
 // OSM guarda a veces webs sin protocolo ("www.gym.es"); un href relativo
 // rompería la navegación.
 export function normalizeWebsite(raw: string | undefined): string | null {
-  const value = raw?.trim();
+  const value = firstOsmValue(raw);
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
   return `https://${value}`;
@@ -132,7 +143,24 @@ export function buildGym(element: OverpassElement, center: [number, number]): Gy
     sports: sportLabels(tags.sport),
     address: composeAddress(tags),
     website: normalizeWebsite(tags.website ?? tags["contact:website"]),
-    phone: tags.phone?.trim() || tags["contact:phone"]?.trim() || null,
+    phone: firstOsmValue(tags.phone) ?? firstOsmValue(tags["contact:phone"]),
     distanceKm: Math.round(haversineKm(center[0], center[1], lat, lon) * 100) / 100,
   };
+}
+
+// El mismo gimnasio puede venir mapeado DOS veces en OSM (un node dentro del
+// edificio y el way del edificio, ambos con sport=*): además del id, se
+// deduplica por nombre normalizado + celda de coordenadas (~110 m).
+export function dedupeGyms(gyms: Gym[]): Gym[] {
+  const seenIds = new Set<string>();
+  const seenNameCells = new Set<string>();
+  const result: Gym[] = [];
+  for (const gym of gyms) {
+    const nameCell = `${gym.name.trim().toLowerCase()}|${gym.lat.toFixed(3)}|${gym.lon.toFixed(3)}`;
+    if (seenIds.has(gym.id) || seenNameCells.has(nameCell)) continue;
+    seenIds.add(gym.id);
+    seenNameCells.add(nameCell);
+    result.push(gym);
+  }
+  return result;
 }

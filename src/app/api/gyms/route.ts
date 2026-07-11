@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { OVERPASS_SPORT_REGEX, buildGym, type Gym, type OverpassElement } from "@/lib/gyms";
+import {
+  OVERPASS_SPORT_REGEX,
+  buildGym,
+  dedupeGyms,
+  type Gym,
+  type OverpassElement,
+} from "@/lib/gyms";
 
 export const runtime = "nodejs";
 
@@ -35,17 +41,17 @@ async function fetchGyms(lat: number, lon: number): Promise<Gym[]> {
   });
   if (!res.ok) throw new Error("overpass");
   const data = (await res.json()) as { elements?: OverpassElement[] };
-  const seen = new Set<string>();
   const gyms: Gym[] = [];
   for (const element of data.elements ?? []) {
     const gym = buildGym(element, [lat, lon]);
-    // Dedupe por id OSM (dos gimnasios distintos pueden compartir nombre).
-    if (!gym || seen.has(gym.id)) continue;
-    seen.add(gym.id);
-    gyms.push(gym);
+    if (gym) gyms.push(gym);
   }
-  gyms.sort((a, b) => a.distanceKm - b.distanceKm);
-  return gyms;
+  // Dedupe por id OSM Y por nombre+celda (el mismo gimnasio puede venir como
+  // node + way del edificio); dos gimnasios distintos con el mismo nombre en
+  // barrios distintos sobreviven (celdas diferentes).
+  const deduped = dedupeGyms(gyms);
+  deduped.sort((a, b) => a.distanceKm - b.distanceKm);
+  return deduped;
 }
 
 export async function GET(request: Request) {

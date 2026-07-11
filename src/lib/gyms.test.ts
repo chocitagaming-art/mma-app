@@ -4,17 +4,25 @@ import {
   OVERPASS_SPORT_REGEX,
   buildGym,
   composeAddress,
+  dedupeGyms,
+  firstOsmValue,
   formatDistance,
   haversineKm,
   isExcludedGym,
   normalizeWebsite,
   parseSportTokens,
   sportLabels,
+  type Gym,
 } from "@/lib/gyms";
 
 describe("parseSportTokens", () => {
   it("separa por ; y normaliza espacios y mayúsculas", () => {
     expect(parseSportTokens("Boxing; muay_thai ;MMA")).toEqual(["boxing", "muay_thai", "mma"]);
+  });
+
+  it("separa también por espacios y comas (datos OSM reales)", () => {
+    expect(parseSportTokens("fitness boxing")).toEqual(["fitness", "boxing"]);
+    expect(parseSportTokens("judo, karate")).toEqual(["judo", "karate"]);
   });
 
   it("devuelve vacío sin tag", () => {
@@ -41,6 +49,55 @@ describe("isExcludedGym", () => {
 
   it("mantiene gimnasios de lucha normales", () => {
     expect(isExcludedGym("Climent Club", "boxing;muay_thai")).toBe(false);
+  });
+
+  it("descarta sport=fitness con separador espacio y no penaliza 'Metropolitano'", () => {
+    expect(isExcludedGym("Club X", "fitness boxing")).toBe(true);
+    expect(isExcludedGym("Club de Lucha Metropolitano", "wrestling")).toBe(false);
+    expect(isExcludedGym("Metropolitan Sagrada Familia", "boxing")).toBe(true);
+  });
+});
+
+describe("firstOsmValue", () => {
+  it("recorta multivalores OSM al primero", () => {
+    expect(firstOsmValue("+34 91 555 12 12;+34 600 111 222")).toBe("+34 91 555 12 12");
+    expect(firstOsmValue("https://a.es;https://b.es")).toBe("https://a.es");
+  });
+
+  it("devuelve null para vacío", () => {
+    expect(firstOsmValue(undefined)).toBeNull();
+    expect(firstOsmValue(";")).toBeNull();
+  });
+});
+
+describe("dedupeGyms", () => {
+  const gym = (over: Partial<Gym>): Gym => ({
+    id: "node/1",
+    lat: 40.42,
+    lon: -3.7,
+    name: "Dojo",
+    sports: [],
+    address: null,
+    website: null,
+    phone: null,
+    distanceKm: 1,
+    ...over,
+  });
+
+  it("colapsa el mismo gimnasio mapeado como node y way (mismo nombre, ~misma coordenada)", () => {
+    const twice = [
+      gym({ id: "node/1", lat: 40.42001, lon: -3.70002 }),
+      gym({ id: "way/9", lat: 40.42004, lon: -3.70001 }),
+    ];
+    expect(dedupeGyms(twice)).toHaveLength(1);
+  });
+
+  it("conserva gimnasios distintos con el mismo nombre en zonas distintas", () => {
+    const franchises = [
+      gym({ id: "node/1", lat: 40.42, lon: -3.7 }),
+      gym({ id: "node/2", lat: 40.5, lon: -3.65 }),
+    ];
+    expect(dedupeGyms(franchises)).toHaveLength(2);
   });
 });
 
