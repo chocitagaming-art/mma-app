@@ -182,7 +182,7 @@ function CornerLink({
   const inner = (
     <div className="flex w-24 flex-col items-center gap-1.5">
       <FighterHeadshot name={name ?? "?"} headshotUrl={headshot} size="lg" className="border border-border" />
-      <span className="line-clamp-2 text-center text-sm font-medium text-foreground">{name ?? "—"}</span>
+      <span className="line-clamp-2 text-center font-display text-sm font-bold uppercase leading-tight tracking-tight text-foreground">{name ?? "—"}</span>
     </div>
   );
   if (!id) return inner;

@@ -275,7 +275,7 @@ export function FighterSearchCombobox({
                       className="size-10 shrink-0"
                     />
                     <div className="space-y-1">
-                      <p className="font-medium text-foreground">{fighter.name}</p>
+                      <p className="font-display text-sm font-bold uppercase tracking-tight text-foreground">{fighter.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {cleanNationality(fighter.nationality) ?? "Nacionalidad no disponible"}
                       </p>

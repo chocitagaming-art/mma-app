@@ -59,7 +59,7 @@ export default function LeafletMap({
       {markers.map((marker) => (
         <Marker key={marker.id} position={[marker.lat, marker.lon]} icon={gymIcon}>
           <Popup>
-            <strong>{marker.name}</strong>
+            <strong className="font-display text-sm font-bold uppercase tracking-tight">{marker.name}</strong>
             <br />
             <span style={{ textTransform: "capitalize" }}>{marker.type}</span>
             <br />

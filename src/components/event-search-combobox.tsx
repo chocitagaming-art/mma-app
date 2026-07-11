@@ -235,7 +235,7 @@ export function EventSearchCombobox() {
                 >
                   <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{event.name}</p>
+                    <p className="truncate font-display text-sm font-bold uppercase tracking-tight text-foreground">{event.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {formatDate(event.eventDate)}
                       {event.location ? ` · ${event.location}` : ""}

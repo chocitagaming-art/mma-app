@@ -127,7 +127,7 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
                       {event.name}
                     </Link>
                     {event.headliner ? (
-                      <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                      <p className="font-display text-xs font-bold uppercase tracking-tight text-muted-foreground">
                         {event.headliner}
                       </p>
                     ) : null}

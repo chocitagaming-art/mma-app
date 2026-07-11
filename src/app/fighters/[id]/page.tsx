@@ -394,7 +394,7 @@ export default async function FighterDetailPage({
                   {lastFight.eventId ? (
                     <Link
                       href={`/eventos/${lastFight.eventId}`}
-                      className="transition-colors hover:text-primary"
+                      className="font-display font-bold uppercase tracking-tight transition-colors hover:text-primary"
                     >
                       {lastFight.eventName ?? "Evento desconocido"}
                     </Link>
@@ -465,7 +465,7 @@ export default async function FighterDetailPage({
                   {nextBout.eventId ? (
                     <Link
                       href={`/eventos/${nextBout.eventId}`}
-                      className="font-medium text-foreground transition-colors hover:text-primary"
+                      className="font-display text-sm font-bold uppercase tracking-tight text-foreground transition-colors hover:text-primary"
                     >
                       {nextBout.eventName ?? "Evento por confirmar"}
                     </Link>
@@ -707,7 +707,7 @@ export default async function FighterDetailPage({
                         <TableCell className="tabular text-muted-foreground">
                           {formatDate(fight.eventDate)}
                         </TableCell>
-                        <TableCell className="font-medium text-foreground">
+                        <TableCell className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
                           {fight.opponentId ? (
                             <Link
                               href={`/fighters/${fight.opponentId}`}
@@ -735,7 +735,7 @@ export default async function FighterDetailPage({
                         <TableCell className="tabular text-muted-foreground">
                           {fight.endTime ?? "—"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="font-display text-sm font-bold uppercase tracking-tight text-muted-foreground">
                           {fight.eventId ? (
                             <Link
                               href={`/eventos/${fight.eventId}`}

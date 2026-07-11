@@ -89,12 +89,12 @@ function BoutCard({
           {bout.eventId ? (
             <Link
               href={`/eventos/${bout.eventId}`}
-              className="font-semibold text-foreground transition-colors hover:text-primary"
+              className="font-display text-sm font-bold uppercase tracking-tight text-foreground transition-colors hover:text-primary"
             >
               {bout.eventName ?? "Evento por confirmar"}
             </Link>
           ) : (
-            <span className="font-semibold text-foreground">
+            <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
               {bout.eventName ?? "Evento por confirmar"}
             </span>
           )}

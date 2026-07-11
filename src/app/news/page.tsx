@@ -152,7 +152,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
                         Luchador vinculado:{" "}
                         <Link
                           href={`/fighters/${article.fighterId}`}
-                          className="relative z-10 font-medium text-primary transition hover:text-primary/80"
+                          className="relative z-10 font-display text-sm font-bold uppercase tracking-tight text-primary transition hover:text-primary/80"
                         >
                           {article.fighterName}
                         </Link>

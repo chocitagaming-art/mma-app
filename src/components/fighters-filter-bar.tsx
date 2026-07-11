@@ -193,7 +193,7 @@ export function FightersFilterBar({
                     className="size-10 shrink-0"
                   />
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
+                    <p className="truncate font-display text-sm font-bold uppercase tracking-tight text-foreground">
                       {fighter.name}
                     </p>
                     <p className="truncate text-sm text-muted-foreground">

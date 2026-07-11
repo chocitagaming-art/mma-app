@@ -117,7 +117,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
                     className="shrink-0"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-semibold text-foreground">{fighter.name}</p>
+                    <p className="truncate font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">{fighter.name}</p>
                     <p className="truncate text-sm text-muted-foreground">
                       {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
                     </p>

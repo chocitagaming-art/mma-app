@@ -80,7 +80,7 @@ function CornerStatic({ name, headshot }: { name: string | null; headshot: strin
   return (
     <div className="flex flex-col items-center gap-1.5">
       <FighterHeadshot name={name ?? "?"} headshotUrl={headshot} size="md" className="border border-border" />
-      <span className="max-w-[7rem] truncate text-center text-xs font-medium text-foreground">{name ?? "—"}</span>
+      <span className="max-w-[7rem] truncate text-center font-display text-xs font-bold uppercase leading-tight tracking-tight text-foreground">{name ?? "—"}</span>
     </div>
   );
 }

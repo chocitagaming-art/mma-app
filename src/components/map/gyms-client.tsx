@@ -136,7 +136,7 @@ export function GymsClient() {
               <ul className="divide-y divide-border">
                 {gyms.map((gym) => (
                   <li key={gym.id} className="px-4 py-3">
-                    <p className="font-medium text-foreground">{gym.name}</p>
+                    <p className="font-display text-sm font-bold uppercase tracking-tight text-foreground">{gym.name}</p>
                     <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span className="capitalize">{gym.type}</span>
                       <a

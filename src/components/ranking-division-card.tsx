@@ -56,7 +56,7 @@ function FighterName({ entry }: { entry: RankingEntry }) {
   const inner = (
     <>
       <CountryFlag nationality={entry.nationality} />
-      <span className="truncate font-medium text-foreground group-hover:text-primary">
+      <span className="truncate font-display text-sm font-bold uppercase tracking-tight text-foreground group-hover:text-primary">
         {entry.fighterName}
       </span>
     </>

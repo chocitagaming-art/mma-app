@@ -292,7 +292,7 @@ export function MatchupClient({
             />
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-3">
-                <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-corner-red">
+                <p className="font-display text-sm font-bold uppercase tracking-tight text-corner-red">
                   {detail.fighterA.name}
                 </p>
                 <StrikeSilhouette
@@ -301,7 +301,7 @@ export function MatchupClient({
                 />
               </div>
               <div className="space-y-3">
-                <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-corner-blue">
+                <p className="font-display text-sm font-bold uppercase tracking-tight text-corner-blue">
                   {detail.fighterB.name}
                 </p>
                 <StrikeSilhouette
@@ -340,7 +340,7 @@ export function MatchupClient({
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="text-lg font-semibold text-foreground">
+                      <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">
                         {fight.eventName ?? "Evento por confirmar"}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -358,7 +358,7 @@ export function MatchupClient({
               <Card className="border-border bg-primary/5">
                 <CardContent className="grid gap-4 p-6 md:grid-cols-3 md:items-center">
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-[0.3em] text-corner-red">
+                    <p className="font-display text-sm font-bold uppercase tracking-tight text-corner-red">
                       {detail.fighterA.name}
                     </p>
                     <p className="tabular mt-2 font-display text-3xl font-bold text-foreground">
@@ -375,7 +375,7 @@ export function MatchupClient({
                     </p>
                   </div>
                   <div className="text-left md:text-right">
-                    <p className="font-mono text-xs uppercase tracking-[0.3em] text-corner-blue">
+                    <p className="font-display text-sm font-bold uppercase tracking-tight text-corner-blue">
                       {detail.fighterB.name}
                     </p>
                     <p className="tabular mt-2 font-display text-3xl font-bold text-foreground">
@@ -411,7 +411,7 @@ export function MatchupClient({
                                   : "Empate / No contest"}
                             </Badge>
                           </div>
-                          <p className="text-lg font-semibold text-foreground">
+                          <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">
                             {fight.eventName ?? "Evento desconocido"}
                           </p>
                           <p className="text-sm text-muted-foreground">
