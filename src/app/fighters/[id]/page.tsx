@@ -326,9 +326,11 @@ export default async function FighterDetailPage({
                 <span className="tabular font-display text-3xl font-bold text-foreground">
                   {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
                 </span>
+                {/* Mismo criterio que la tabla del historial: combates YA
+                    disputados (UFC + otras promociones). Los programados van
+                    aparte en la tarjeta "Próximo combate". */}
                 <span className="font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  V-D-E · {detail.fightCount + detail.espnHistory.length} peleas
-                  registradas
+                  V-D-E · {fullHistory.length} peleas registradas
                 </span>
               </div>
               {/* Récord solo-UFC (BE9a), discreto bajo el récord total. */}
@@ -722,10 +724,12 @@ export default async function FighterDetailPage({
                     const promotionLabel = isEspnRow
                       ? (fight.promotion ?? "Otra")
                       : "UFC";
+                    // amber-800 en claro: amber-600 daba 2.84:1 sobre la card
+                    // blanca, bajo el 4.5:1 de WCAG AA (revisión adversarial).
                     const promotionClass = !isEspnRow
                       ? "bg-primary/10 text-primary"
                       : fight.promotion === "Bellator"
-                        ? "bg-amber-500/15 text-amber-600 dark:bg-amber-400/15 dark:text-amber-400"
+                        ? "bg-amber-500/15 text-amber-800 dark:bg-amber-400/15 dark:text-amber-400"
                         : "bg-muted text-muted-foreground";
 
                     return (
@@ -777,7 +781,7 @@ export default async function FighterDetailPage({
                             {fight.isTitleFight ? (
                               <Trophy
                                 aria-label="Pelea por el título"
-                                className="size-3.5 shrink-0 text-amber-500"
+                                className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
                               />
                             ) : null}
                             {fight.eventId ? (

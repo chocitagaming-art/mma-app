@@ -128,6 +128,12 @@ export function formatDivision(division: string | null): string {
 
 // Clean, common method strings mapped directly to their Spanish label.
 const METHOD_ES: Record<string, string> = {
+  // Códigos canónicos cortos de ufcstats (los escriben backfill_results y la
+  // ingesta de historial ESPN); sin estas claves se pintaban crudos (S3-G).
+  "u-dec": "Decisión unánime",
+  "s-dec": "Decisión dividida",
+  "m-dec": "Decisión mayoritaria",
+  cnc: "Sin resultado",
   "ko/tko": "KO/TKO",
   ko: "KO/TKO",
   tko: "KO/TKO",

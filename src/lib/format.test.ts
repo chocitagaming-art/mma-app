@@ -4,6 +4,7 @@ import {
   ageFromBirthDate,
   cleanNationality,
   formatHeight,
+  formatMethod,
   formatModelDate,
   formatNewsCategory,
   formatReach,
@@ -149,6 +150,30 @@ describe("formatRelativeDate", () => {
   it("returns null for missing or unparsable values", () => {
     expect(formatRelativeDate(null, ref)).toBeNull();
     expect(formatRelativeDate("no-date", ref)).toBeNull();
+  });
+});
+
+describe("formatMethod", () => {
+  it("traduce los códigos canónicos cortos de ufcstats (S3-G)", () => {
+    // Antes se pintaban crudos: METHOD_ES no tenía las claves y ningún regex
+    // de fallback captura "u-dec"/"cnc" (hallazgo de la revisión adversarial).
+    expect(formatMethod("U-DEC")).toBe("Decisión unánime");
+    expect(formatMethod("S-DEC")).toBe("Decisión dividida");
+    expect(formatMethod("M-DEC")).toBe("Decisión mayoritaria");
+    expect(formatMethod("CNC")).toBe("Sin resultado");
+  });
+
+  it("conserva los formatos largos y compuestos", () => {
+    expect(formatMethod("KO/TKO - Punches")).toBe("KO/TKO");
+    expect(formatMethod("SUB - Anaconda Choke")).toBe("Sumisión");
+    expect(formatMethod("Decision - Unanimous")).toBe("Decisión unánime");
+    expect(formatMethod("DQ")).toBe("Descalificación");
+    expect(formatMethod("Overturned")).toBe("Resultado anulado");
+  });
+
+  it("cae al valor crudo para métodos desconocidos y a guion sin método", () => {
+    expect(formatMethod("Something Odd")).toBe("Something Odd");
+    expect(formatMethod(null)).toBe("—");
   });
 });
 
