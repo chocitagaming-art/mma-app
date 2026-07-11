@@ -9,7 +9,7 @@ const explore = [
 
 const tools = [
   { href: "/enfrentamiento", label: "Enfrentamiento" },
-  { href: "/news", label: "Noticias" },
+  { href: "/tendencias", label: "Tendencias" },
 ];
 
 function FooterColumn({

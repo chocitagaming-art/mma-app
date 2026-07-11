@@ -153,6 +153,48 @@ export async function searchNews(
   }));
 }
 
+// T3-B: lote de noticias para el feed fusionado de /tendencias — como
+// getRecentNews pero con categoría opcional y límites mayores (la paginación
+// del feed mezclado con vídeos se hace EN MEMORIA con ?mostrar=N).
+export async function getTrendingNews(
+  limit: number,
+  category?: string,
+): Promise<NewsArticle[]> {
+  const trimmedCategory = category?.trim() ?? "";
+  const rows = await sql<NewsRow>(
+    `select
+        n.id,
+        n.headline,
+        n.summary,
+        n.source,
+        n.url,
+        n.published_at,
+        n.fighter_id,
+        f.name as fighter_name,
+        n.category,
+        n.relevance::text,
+        n.image_url
+      from news n
+      left join fighters f on f.id = n.fighter_id
+      ${trimmedCategory ? "where n.category = $2" : ""}
+      order by n.published_at desc nulls last, n.relevance desc nulls last, n.id desc
+      limit $1`,
+    trimmedCategory ? [limit, trimmedCategory] : [limit],
+  );
+  return rows.map(mapNewsArticle);
+}
+
+// Categorías reales presentes en la tabla (chips secundarios de /tendencias).
+export async function getNewsCategories(): Promise<string[]> {
+  const rows = await sql<{ category: string }>(
+    `select distinct category
+     from news
+     where category is not null
+     order by category asc`,
+  );
+  return rows.map((row) => row.category);
+}
+
 // Últimas noticias para el Inicio (rejilla estilo ufc.com) y el marquee.
 // `requireImage` filtra a las que tienen foto (la rejilla la necesita; el marquee no).
 export async function getRecentNews(

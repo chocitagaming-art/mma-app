@@ -156,7 +156,7 @@ export default async function HomePage() {
                 title="Noticias recientes"
                 description="Lo más reciente del mundo UFC, con foto y titular."
               />
-              <Link href="/news" className="hidden shrink-0 sm:inline-flex">
+              <Link href="/tendencias" className="hidden shrink-0 sm:inline-flex">
                 <Button variant="ghost" size="lg" className="h-10">
                   Ver todas →
                 </Button>

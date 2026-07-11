@@ -18,7 +18,7 @@ const contentLinks = [
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/salon-de-la-fama", label: "Salón de la Fama" },
   { href: "/eventos", label: "Eventos" },
-  { href: "/news", label: "Noticias" },
+  { href: "/tendencias", label: "Tendencias" },
 ];
 
 const toolLinks = [
