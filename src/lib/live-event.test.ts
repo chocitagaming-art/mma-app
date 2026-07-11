@@ -200,6 +200,37 @@ describe("computeBoutStates", () => {
     expect(states.get(9)).toBe("finished");
   });
 
+  it("liveFinishedIds marca finished un empate/NC sin resultado en fights (hallazgo 6)", () => {
+    // ESPN dio la pelea por terminada (fila viva 'post') pero el pipeline no
+    // escribió method/winner (empate/NC): sin la señal seguía "En curso".
+    const card = [
+      bout(1, 1, "main"),
+      bout(2, 2, "main"),
+      bout(3, 3, "prelims"), // el empate: sin method/winner en fights
+      bout(4, 4, "prelims", true),
+      bout(5, 5, "early_prelims", true),
+    ];
+    const sinSenal = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      new Date("2026-07-12T01:05:00Z"),
+    );
+    // Sin señal: la 3 (empate) queda como candidata EN CURSO, contradictorio.
+    expect(sinSenal.get(3)).toBe("live");
+
+    const conSenal = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      new Date("2026-07-12T01:05:00Z"),
+      new Set([3]),
+    );
+    // Con la señal: la 3 pasa a "finished" y el puntero avanza a la 2.
+    expect(conSenal.get(3)).toBe("finished");
+    expect(conSenal.get(2)).toBe("live");
+  });
+
   it("la siguiente es 'next' si su tramo aún no ha empezado", () => {
     // Prelims terminados a las 00:40; el main card no abre hasta la 01:00.
     const card = [

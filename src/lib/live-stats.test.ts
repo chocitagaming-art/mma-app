@@ -4,6 +4,7 @@ import {
   buildLiveStatRows,
   formatControlTime,
   formatLandedPair,
+  isCancelledLiveStatus,
   liveStatusLabel,
   mapLiveFightStatsRow,
   mapLiveStatValues,
@@ -117,6 +118,29 @@ describe("liveStatusLabel", () => {
     expect(
       liveStatusLabel(liveRow({ statusName: "STATUS_ALGO_NUEVO", statusDetail: "End R2" })),
     ).toBe("End R2");
+  });
+
+  it("una fila cancelada dice 'Cancelada', nunca 'Final' (hallazgo 5)", () => {
+    // Aunque venga como state='post', el status cancelado manda.
+    expect(liveStatusLabel(liveRow({ state: "post", statusName: "STATUS_CANCELED" })))
+      .toBe("Cancelada");
+    expect(liveStatusLabel(liveRow({ state: "post", statusName: "STATUS_POSTPONED" })))
+      .toBe("Cancelada");
+  });
+});
+
+describe("isCancelledLiveStatus", () => {
+  it("detecta los marcadores de cancelación/aplazamiento de ESPN", () => {
+    expect(isCancelledLiveStatus("STATUS_CANCELED")).toBe(true);
+    expect(isCancelledLiveStatus("STATUS_CANCELLED")).toBe(true);
+    expect(isCancelledLiveStatus("STATUS_POSTPONED")).toBe(true);
+    expect(isCancelledLiveStatus("STATUS_FORFEIT")).toBe(true);
+  });
+
+  it("no marca los estados normales", () => {
+    expect(isCancelledLiveStatus("STATUS_FINAL")).toBe(false);
+    expect(isCancelledLiveStatus("STATUS_IN_PROGRESS_2")).toBe(false);
+    expect(isCancelledLiveStatus(null)).toBe(false);
   });
 });
 

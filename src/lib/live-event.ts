@@ -106,7 +106,11 @@ function segmentStart(
 
 // Estado por pelea. Reglas:
 // - "finished": ya hay resultado (winner_id o method; empates/NC llegan solo
-//   con method — mismo criterio que FightLastResult).
+//   con method — mismo criterio que FightLastResult), O ESPN ya dio la pelea
+//   por terminada en su fila viva (liveFinishedIds: state='post'). Esto último
+//   cubre empates/NC, que el pipeline de resultados deja sin escribir en
+//   `fights` hasta ufcstats — sin la señal, la pelea acabada seguía saliendo
+//   "En curso" con punto rojo mientras su panel decía "Final" (hallazgo 6).
 // - "live"/"next": la CRONOLÓGICAMENTE siguiente sin resultado. El cartel corre
 //   en bout_order DESCENDENTE (1 = estelar cierra la noche), así que la próxima
 //   es la de MAYOR bout_order sin terminar. Si su tramo aún no ha empezado
@@ -124,11 +128,15 @@ export function computeBoutStates(
   phase: LivePhase,
   times: LiveEventTimes,
   now: Date,
+  liveFinishedIds?: ReadonlySet<number>,
 ): Map<number, BoutLiveState> {
   const states = new Map<number, BoutLiveState>();
 
   for (const bout of bouts) {
-    const finished = bout.method != null || bout.winnerId != null;
+    const finished =
+      bout.method != null ||
+      bout.winnerId != null ||
+      (liveFinishedIds?.has(bout.fightId) ?? false);
     states.set(bout.fightId, finished ? "finished" : "pending");
   }
 

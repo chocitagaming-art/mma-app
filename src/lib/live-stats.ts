@@ -120,6 +120,19 @@ export function mapLiveFightStatsRow(row: {
   };
 }
 
+// Marcadores de estado ESPN para peleas canceladas/aplazadas (mismo criterio
+// que el escritor is_cancelled_status). El escritor ya borra esas filas, pero
+// como defensa una fila cancelada que se colara NO debe leerse como "Final".
+const CANCELLED_STATUS_MARKERS = ["CANCEL", "POSTPON", "FORFEIT", "ABANDON", "SUSPEND"];
+
+export function isCancelledLiveStatus(statusName: string | null): boolean {
+  if (!statusName) {
+    return false;
+  }
+  const upper = statusName.toUpperCase();
+  return CANCELLED_STATUS_MARKERS.some((marker) => upper.includes(marker));
+}
+
 // Estado fino en español para la cabecera del panel. Los nombres conocidos se
 // traducen; lo desconocido degrada al detail crudo de ESPN ("End R2") antes
 // que inventar. El reloj de ESPN solo se muestra si parece un reloj.
@@ -130,6 +143,9 @@ export function liveStatusLabel(stats: LiveFightStats): string | null {
       : null;
   const name = stats.statusName ?? "";
 
+  if (isCancelledLiveStatus(name)) {
+    return "Cancelada";
+  }
   if (stats.state === "post" || name === "STATUS_FINAL") {
     return "Final";
   }

@@ -82,10 +82,15 @@ export async function getLiveFightStats(
   }
   try {
     const rows = await sql<LiveFightStatsRow>(
+      // Guarda de frescura (hallazgo 7c): una fila 'in' rancia (evento
+      // abortado tras los walkouts y reprogramado con los mismos fight_ids)
+      // no debe pintarse como "en directo" días después. Los finales ('post')
+      // sí persisten hasta la poda de 48 h del escritor.
       `SELECT fight_id, state, status_name, status_detail, period,
               display_clock, stats, updated_at::text AS updated_at
        FROM live_fight_stats
-       WHERE fight_id = ANY($1)`,
+       WHERE fight_id = ANY($1)
+         AND (state = 'post' OR updated_at > now() - interval '30 minutes')`,
       [fightIds],
     );
     const map = new Map<number, LiveFightStats>();

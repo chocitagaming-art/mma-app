@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import {
   buildLiveStatRows,
+  isCancelledLiveStatus,
   liveStatusLabel,
   type LiveFightStats,
 } from "@/lib/live-stats";
@@ -21,8 +22,12 @@ function sideFor(
 }
 
 // ¿El panel aportaría algo? En curso basta el estado fino ("Salida al
-// octágono"); en post sin filas de stats no hay nada que enseñar.
+// octágono"); en post sin filas de stats no hay nada que enseñar. Una fila
+// cancelada (defensa: el escritor ya la borra) nunca pinta panel.
 export function hasLiveStatsContent(bout: EventBout, stats: LiveFightStats): boolean {
+  if (isCancelledLiveStatus(stats.statusName)) {
+    return false;
+  }
   const rows = buildLiveStatRows(
     sideFor(stats, bout.red.id),
     sideFor(stats, bout.blue.id),
@@ -104,7 +109,9 @@ export function LiveBoutStatsPanel({
         );
       })}
 
-      <p className="pt-2 text-right font-mono text-[0.55rem] uppercase tracking-[0.12em] text-muted-foreground/70">
+      {/* Sin /70: a 0.55rem el /70 caía por debajo de 4.5:1 en ambos temas
+          (hallazgo 7b). A opacidad completa pasa AA (~7:1). */}
+      <p className="pt-2 text-right font-mono text-[0.55rem] uppercase tracking-[0.12em] text-muted-foreground">
         Datos provisionales
       </p>
     </div>

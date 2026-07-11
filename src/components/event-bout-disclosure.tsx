@@ -17,14 +17,39 @@ export function EventBoutDisclosure({
 }: {
   row: ReactNode;
   panel: ReactNode;
-  // T3-A fase B: /en-vivo abre de serie el panel de la pelea EN CURSO (solo
-  // el estado inicial: si el usuario lo cierra, cerrado se queda — los
-  // router.refresh() conservan el estado cliente).
+  // T3-A fase B: /en-vivo abre de serie el panel de la pelea EN CURSO. Como
+  // los router.refresh() de AutoRefresh conservan el estado cliente, el prop
+  // recalculado no bastaba: hace falta sincronizarlo en los cambios de estado
+  // (ver el efecto de abajo).
   defaultOpen?: boolean;
   toggleLabel?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
+  // Revisión adversarial (hallazgo 3): useState(defaultOpen) solo aplica en el
+  // montaje, así que con la pestaña abierta toda la velada la nueva pelea EN
+  // CURSO se quedaba cerrada y la vieja abierta. Sincronizamos las TRANSICIONES
+  // de defaultOpen AJUSTANDO EL ESTADO EN EL RENDER (patrón oficial de React
+  // para derivar de un cambio de prop sin efecto ni renders en cascada): al
+  // pasar a EN CURSO (false→true) abrimos y olvidamos el toque manual previo
+  // (empieza un tramo live nuevo); al dejar de estarlo (true→false) cerramos
+  // SALVO que el usuario la abriera/cerrara a mano durante el directo.
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen);
+  const [userToggled, setUserToggled] = useState(false);
+  if (defaultOpen !== prevDefaultOpen) {
+    setPrevDefaultOpen(defaultOpen);
+    if (defaultOpen) {
+      setUserToggled(false);
+      setOpen(true);
+    } else if (!userToggled) {
+      setOpen(false);
+    }
+  }
+
+  const handleToggle = () => {
+    setUserToggled(true);
+    setOpen((value) => !value);
+  };
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -35,7 +60,7 @@ export function EventBoutDisclosure({
           aria-label={toggleLabel}
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((value) => !value)}
+          onClick={handleToggle}
           className="flex w-9 shrink-0 cursor-pointer items-center justify-center border-l border-border/60 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:w-10"
         >
           <ChevronDown
