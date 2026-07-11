@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarDays, ExternalLink, MapPin, Ticket, Tv } from "lucid
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
+import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
@@ -206,16 +207,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             startTime={event.startTime}
           />
 
-          {isUpcoming && event.ticketUrl ? (
-            <a
-              href={event.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              <Ticket className="size-3.5" />
-              Entradas
-            </a>
+          {isUpcoming ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {event.ticketUrl ? (
+                <a
+                  href={event.ticketUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  <Ticket className="size-3.5" />
+                  Entradas
+                </a>
+              ) : null}
+              {/* S2-F: dónde ver el combate en España (gratis y de pago). */}
+              <EventWatchOptions hasEarlyPrelims={Boolean(event.earlyPrelimsTime)} />
+            </div>
           ) : null}
         </div>
       </div>
