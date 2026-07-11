@@ -238,6 +238,12 @@ export type FighterRankingHistoryEntry = {
   isChampion: boolean;
 };
 
+// S2-E: par pregunta/respuesta del bloque Q&A de ufc.com, ya en español.
+export type FighterQaItem = {
+  q: string;
+  a: string;
+};
+
 export type FighterDetail = {
   fighter: Fighter;
   latestWeightClass: string | null;
@@ -245,6 +251,10 @@ export type FighterDetail = {
   history: FighterHistoryItem[];
   aggregateStats: FighterAggregateStats;
   news: NewsArticle[];
+  // S2-E: Fighter Facts + Q&A de ufc.com traducidos (vacíos si el luchador no
+  // tiene el bloque; la sección INFO de la ficha no se renderiza).
+  fighterFacts: string[];
+  fighterQa: FighterQaItem[];
   // Agregados extra para la ficha estilo UFC.com (#39):
   defenseStats: FighterDefenseStats;
   winMethods: FighterWinMethods;

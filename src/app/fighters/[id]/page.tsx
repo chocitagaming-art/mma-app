@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import {
   ArrowRightLeft,
   CalendarDays,
+  ChevronDown,
   ExternalLink,
   History,
   Play,
@@ -785,6 +786,70 @@ export default async function FighterDetailPage({
           </Card>
         )}
       </section>
+
+      {detail.fighterFacts.length > 0 || detail.fighterQa.length > 0 ? (
+        <section id="info" className="scroll-mt-24 space-y-6">
+          <SectionHeading
+            eyebrow="Info"
+            title={`Conoce a ${fighter.name}`}
+            description="Datos y respuestas del propio luchador, publicados por la UFC y traducidos al español."
+          />
+          <div
+            className={`grid gap-4 ${
+              detail.fighterFacts.length > 0 && detail.fighterQa.length > 0
+                ? "lg:grid-cols-[1fr_1.4fr]"
+                : ""
+            }`}
+          >
+            {detail.fighterFacts.length > 0 ? (
+              <div className="self-start overflow-hidden rounded-lg border border-border bg-card">
+                <div className="border-b border-border px-5 py-3">
+                  <h3 className="font-display text-sm font-bold uppercase tracking-wide text-foreground">
+                    Datos del luchador
+                  </h3>
+                </div>
+                <ul className="space-y-3 p-5">
+                  {detail.fighterFacts.map((fact, index) => (
+                    <li
+                      key={index}
+                      className="flex gap-3 text-sm leading-6 text-muted-foreground"
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-2.5 size-1.5 shrink-0 rounded-full bg-primary"
+                      />
+                      {fact}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {detail.fighterQa.length > 0 ? (
+              <div className="self-start overflow-hidden rounded-lg border border-border bg-card">
+                <div className="border-b border-border px-5 py-3">
+                  <h3 className="font-display text-sm font-bold uppercase tracking-wide text-foreground">
+                    Preguntas y respuestas
+                  </h3>
+                </div>
+                <div className="divide-y divide-border">
+                  {detail.fighterQa.map((item, index) => (
+                    <details key={index} className="group px-5 py-3.5">
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 font-display text-sm font-bold uppercase tracking-tight text-foreground transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
+                        {item.q}
+                        <ChevronDown
+                          aria-hidden
+                          className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                        />
+                      </summary>
+                      <p className="pt-2.5 text-sm leading-6 text-muted-foreground">{item.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-6">
         <SectionHeading

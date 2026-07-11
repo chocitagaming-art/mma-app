@@ -39,6 +39,10 @@ export type FighterRow = {
   octagon_debut?: string | null;
   fight_count?: string;
   latest_weight_class?: string | null;
+  // S2-E (migración 015): Fighter Facts + Q&A en español. pg parsea JSONB a
+  // JSON automáticamente; `unknown` porque la forma se valida en el mapper.
+  fighter_facts?: unknown;
+  fighter_qa?: unknown;
 };
 
 export type HistoryRow = {

@@ -3,6 +3,7 @@ import type {
   FighterComparisonAverages,
   FighterCardData,
   FighterDefenseStats,
+  FighterQaItem,
   FighterStrikeBreakdown,
   FighterWinMethods,
   StrikeZoneStat,
@@ -44,6 +45,30 @@ export function mapFighter(row: FighterRow): FighterCardData {
     fightCount: Number(row.fight_count ?? 0),
     latestWeightClass: row.latest_weight_class ?? null,
   };
+}
+
+// S2-E: las columnas JSONB llegan ya parseadas por pg, pero la forma se valida
+// aquí de forma defensiva (una fila corrupta degrada a sección ausente, nunca
+// rompe la ficha).
+export function mapFighterFacts(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is string => typeof item === "string" && item.trim().length > 0,
+  );
+}
+
+export function mapFighterQa(value: unknown): FighterQaItem[] {
+  if (!Array.isArray(value)) return [];
+  const items: FighterQaItem[] = [];
+  for (const raw of value) {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const { q, a } = raw as Record<string, unknown>;
+      if (typeof q === "string" && typeof a === "string" && q.trim() && a.trim()) {
+        items.push({ q, a });
+      }
+    }
+  }
+  return items;
 }
 
 export function mapAggregate(row?: AggregateRow): FighterAggregateStats {
