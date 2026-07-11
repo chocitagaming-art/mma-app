@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 
 import type { LiveEventTimes } from "@/lib/live-event";
+import { mapLiveFightStatsRow, type LiveFightStats } from "@/lib/live-stats";
 
 export type LiveEventCandidate = LiveEventTimes & {
   id: number;
@@ -55,4 +56,48 @@ export async function getLiveEventCandidate(): Promise<LiveEventCandidate | null
     location: row.location,
     broadcast: row.broadcast,
   };
+}
+
+type LiveFightStatsRow = {
+  fight_id: number;
+  state: string | null;
+  status_name: string | null;
+  status_detail: string | null;
+  period: number | null;
+  display_clock: string | null;
+  stats: unknown;
+  updated_at: string | null;
+};
+
+// T3-A fase B: filas vivas de live_fight_stats para la cartelera de /en-vivo
+// (1 SELECT batcheado por render; el bucle de mma-ingesta las escribe cada
+// ~2 min durante el evento). DEGRADA a mapa vacío ante cualquier error: el
+// panel de stats es un extra y un fallo aquí no debe mandar la página al
+// error boundary (que en /en-vivo reintenta y "parpadea" el directo entero).
+export async function getLiveFightStats(
+  fightIds: number[],
+): Promise<Map<number, LiveFightStats>> {
+  if (fightIds.length === 0) {
+    return new Map();
+  }
+  try {
+    const rows = await sql<LiveFightStatsRow>(
+      `SELECT fight_id, state, status_name, status_detail, period,
+              display_clock, stats, updated_at::text AS updated_at
+       FROM live_fight_stats
+       WHERE fight_id = ANY($1)`,
+      [fightIds],
+    );
+    const map = new Map<number, LiveFightStats>();
+    for (const row of rows) {
+      const mapped = mapLiveFightStatsRow(row);
+      if (mapped) {
+        map.set(mapped.fightId, mapped);
+      }
+    }
+    return map;
+  } catch (error) {
+    console.error("getLiveFightStats degraded to empty map:", error);
+    return new Map();
+  }
 }

@@ -12,11 +12,18 @@ import { cn } from "@/lib/utils";
 export function EventBoutDisclosure({
   row,
   panel,
+  defaultOpen = false,
+  toggleLabel = "Ver comparativa física",
 }: {
   row: ReactNode;
   panel: ReactNode;
+  // T3-A fase B: /en-vivo abre de serie el panel de la pelea EN CURSO (solo
+  // el estado inicial: si el usuario lo cierra, cerrado se queda — los
+  // router.refresh() conservan el estado cliente).
+  defaultOpen?: boolean;
+  toggleLabel?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
 
   return (
@@ -25,7 +32,7 @@ export function EventBoutDisclosure({
         <div className="min-w-0 flex-1">{row}</div>
         <button
           type="button"
-          aria-label="Ver comparativa física"
+          aria-label={toggleLabel}
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((value) => !value)}

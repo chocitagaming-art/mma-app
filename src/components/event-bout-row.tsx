@@ -159,14 +159,21 @@ function hasTapeData(fighter: EventBoutFighter): boolean {
 // showRanks: los badges de ranking usan el snapshot ACTUAL, así que solo
 // tienen sentido en eventos futuros — en carteleras históricas el "#3" de hoy
 // leería como el ranking que tenía el luchador al pelear, y sería falso.
+// statsPanel (T3-A fase B): panel extra server-rendered (stats en vivo de
+// /en-vivo) que se apila ENCIMA de la comparativa física dentro del mismo
+// acordeón. Opcional y default off: /eventos/[id] y la home no cambian.
 export function EventBoutRow({
   bout,
   showRanks = false,
   eventDate,
+  statsPanel,
+  panelDefaultOpen = false,
 }: {
   bout: EventBout;
   showRanks?: boolean;
   eventDate?: string | Date | null;
+  statsPanel?: React.ReactNode;
+  panelDefaultOpen?: boolean;
 }) {
   const redWon = bout.winnerId != null && bout.winnerId === bout.red.id;
   const blueWon = bout.winnerId != null && bout.winnerId === bout.blue.id;
@@ -339,15 +346,28 @@ export function EventBoutRow({
     </Link>
   );
 
-  // Sin datos físicos en ninguna esquina no hay comparativa que desplegar.
-  if (!hasTapeData(bout.red) && !hasTapeData(bout.blue)) {
+  // Sin datos físicos en ninguna esquina no hay comparativa que desplegar
+  // (salvo que /en-vivo aporte un panel de stats: entonces sí hay acordeón).
+  const tapePanel =
+    hasTapeData(bout.red) || hasTapeData(bout.blue) ? (
+      <BoutTapePanel bout={bout} eventDate={eventDate} />
+    ) : null;
+
+  if (!tapePanel && !statsPanel) {
     return <div className="border-b border-border last:border-b-0">{row}</div>;
   }
 
   return (
     <EventBoutDisclosure
       row={row}
-      panel={<BoutTapePanel bout={bout} eventDate={eventDate} />}
+      defaultOpen={panelDefaultOpen}
+      toggleLabel={statsPanel ? "Ver estadísticas y comparativa" : undefined}
+      panel={
+        <>
+          {statsPanel}
+          {tapePanel}
+        </>
+      }
     />
   );
 }

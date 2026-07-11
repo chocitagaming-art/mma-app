@@ -5,6 +5,10 @@ import { CalendarDays, MapPin, Tv } from "lucide-react";
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventStartTime } from "@/components/event-start-time";
 import { AutoRefresh } from "@/components/live/auto-refresh";
+import {
+  LiveBoutStatsPanel,
+  hasLiveStatsContent,
+} from "@/components/live/live-bout-stats";
 import { EventCountdown } from "@/components/home/event-countdown";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate, formatMethod } from "@/lib/format";
@@ -14,7 +18,7 @@ import {
   type BoutLiveState,
 } from "@/lib/live-event";
 import { getEventDetail } from "@/lib/queries/events";
-import { getLiveEventCandidate } from "@/lib/queries/live";
+import { getLiveEventCandidate, getLiveFightStats } from "@/lib/queries/live";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
 
@@ -141,6 +145,12 @@ export default async function LivePage() {
   const live = phase === "live";
   const states = computeBoutStates(event.bouts, phase, candidate, new Date());
   const sections = groupBoutsBySegment(event.bouts);
+  // T3-A fase B: filas vivas (estado fino + stats por pelea) que el bucle de
+  // mma-ingesta escribe cada ~2 min. 1 SELECT batcheado; degrada a mapa vacío
+  // ante cualquier fallo (el panel es un extra, nunca tumba el directo).
+  const liveStats = await getLiveFightStats(
+    event.bouts.map((bout) => bout.fightId),
+  );
   const finishedCount = event.bouts.filter(
     (bout) => states.get(bout.fightId) === "finished",
   ).length;
@@ -234,6 +244,15 @@ export default async function LivePage() {
                   const state = states.get(bout.fightId) ?? "pending";
                   const resultLine =
                     state === "finished" ? mobileResultLine(bout) : null;
+                  // Panel de stats en vivo (pedido del dueño: al expandir la
+                  // flecha, los datos como en el fightcenter de ESPN). Solo
+                  // se pasa si de verdad hay algo que pintar — sin fila viva
+                  // el acordeón queda como en la fase A.
+                  const boutStats = liveStats.get(bout.fightId);
+                  const statsPanel =
+                    boutStats && hasLiveStatsContent(bout, boutStats) ? (
+                      <LiveBoutStatsPanel bout={bout} stats={boutStats} />
+                    ) : undefined;
                   return (
                     <div
                       key={bout.fightId}
@@ -260,6 +279,11 @@ export default async function LivePage() {
                         bout={bout}
                         showRanks
                         eventDate={event.eventDate}
+                        statsPanel={statsPanel}
+                        // La pelea EN CURSO llega con sus stats a la vista
+                        // (estado inicial; si el usuario la pliega, plegada
+                        // se queda entre refrescos).
+                        panelDefaultOpen={state === "live" && Boolean(statsPanel)}
                       />
                     </div>
                   );
