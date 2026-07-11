@@ -103,6 +103,15 @@ export function MatchupClient({
     [detail],
   );
 
+  // Cuerpo ENTERO siempre que la pareja lo permita (dueño, 11-jul tarde):
+  // si ambas esquinas tienen foto standing (de pie, con piernas) se usa esa;
+  // si a una le falta, ambas caen al mismo medio cuerpo — nunca encuadres
+  // mezclados. El cron backfill-standing va ampliando la cobertura standing.
+  const bodyPreference =
+    detail?.fighterA.standingBodyUrl && detail?.fighterB.standingBodyUrl
+      ? ("standing-first" as const)
+      : ("full-first" as const);
+
   // Divisiones distintas → enfrentamiento hipotético: no se daría en la
   // realidad y hay que avisarlo (dueño, 11-jul). Solo cuando AMBAS divisiones
   // son conocidas (con NULL no se puede afirmar nada). Se comparan las
@@ -265,6 +274,7 @@ export function MatchupClient({
                 <CornerBlock
                   corner="red"
                   fighter={detail.fighterA}
+                  preference={bodyPreference}
                   className="order-1"
                 />
                 <div className="order-3 col-span-2 md:order-2 md:col-span-1 md:self-center">
@@ -280,6 +290,7 @@ export function MatchupClient({
                 <CornerBlock
                   corner="blue"
                   fighter={detail.fighterB}
+                  preference={bodyPreference}
                   className="order-2 md:order-3"
                 />
               </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
+import type { BodyPhotoPreference } from "@/lib/fighter-photo";
 import { formatPercentage, formatRecord, formatWeightClass } from "@/lib/format";
 import type { FighterHistorySummary } from "@/lib/prediction";
 import type { FighterComparisonProfile } from "@/lib/types";
@@ -11,10 +12,15 @@ import { formatSignalPercent } from "./helpers";
 export function CornerBlock({
   corner,
   fighter,
+  preference = "full-first",
   className,
 }: {
   corner: "red" | "blue";
   fighter: FighterComparisonProfile;
+  // Cadena de foto elegida POR PAREJA en matchup-client: cuerpo entero
+  // (standing) cuando ambas esquinas lo tienen; medio cuerpo si no, para que
+  // los dos encuadres siempre coincidan (dueño, 11-jul).
+  preference?: BodyPhotoPreference;
   // Permite al caller pasar los order-* del grid 3 columnas (ver FaceOffCorner
   // en tale-of-the-tape.tsx, mismo patrón).
   className?: string;
@@ -38,10 +44,7 @@ export function CornerBlock({
           standingBodyUrl={fighter.standingBodyUrl ?? null}
           headshotUrl={fighter.headshotUrl}
           division={fighter.latestWeightClass}
-          // "full-first" (recorte oficial cabeza-muslo): en /enfrentamiento las
-          // DOS esquinas salen a medio cuerpo consistente (dueño, 11-jul; antes
-          // standing-first mezclaba cuerpo entero de pie con medio cuerpo).
-          preference="full-first"
+          preference={preference}
           className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
         />
       </Link>
