@@ -6,6 +6,13 @@ import { buildSecurityHeaders } from "./src/lib/security-headers";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@anthropic-ai/sdk"],
   images: {
+    // Servimos las imágenes SIN pasar por el optimizador de Vercel (/_next/image).
+    // Con ~1.000+ fotos externas (ufc.com/espn) el plan Hobby agota su cuota de
+    // Image Optimization y /_next/image devuelve 402 → las fotos aún no cacheadas
+    // caen a iniciales. `unoptimized` sirve el src directo (ufc.com responde 200;
+    // la CSP ya permite img-src https:). `remotePatterns` se conserva por si algún
+    // día se reactiva la optimización (p.ej. tras subir de plan).
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
