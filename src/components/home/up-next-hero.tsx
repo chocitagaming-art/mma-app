@@ -7,6 +7,7 @@ import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { VsGlove } from "@/components/vs-glove";
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { EventCountdown } from "@/components/home/event-countdown";
+import { LiveCtaButton } from "@/components/live/live-cta-button";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatRecord, formatWeightClass } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -158,11 +159,16 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
 
       <EventCountdown startTime={event.startTime} eventDate={event.eventDate} />
 
-      <Link href={`/eventos/${event.id}`}>
-        <Button size="lg" className="h-10">
-          Ver cartelera →
-        </Button>
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* T3-A (pedido del dueño): cuando el evento se aproxima o está en
+            marcha, CTA directo a /en-vivo (mismo destino que el chip HOY). */}
+        <LiveCtaButton />
+        <Link href={`/eventos/${event.id}`}>
+          <Button size="lg" className="h-10">
+            Ver cartelera →
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 

@@ -144,6 +144,16 @@ export default async function LivePage() {
   const finishedCount = event.bouts.filter(
     (bout) => states.get(bout.fightId) === "finished",
   ).length;
+  // Revisión adversarial: la cuenta atrás apunta al PRIMER tramo (23:00) pero
+  // la meta-línea muestra la hora del main card (03:00) — sin etiqueta parecen
+  // contradictorias. Etiquetamos a qué tramo cuenta.
+  const countdownTarget =
+    candidate.earlyPrelimsTime ?? candidate.prelimsTime ?? event.startTime;
+  const countdownLabel = candidate.earlyPrelimsTime
+    ? "las preliminares iniciales"
+    : candidate.prelimsTime
+      ? "las preliminares"
+      : "la cartelera estelar";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -179,14 +189,23 @@ export default async function LivePage() {
         {live ? (
           <>
             <AutoRefresh intervalSeconds={45} />
-            <p className="font-mono text-xs tabular text-muted-foreground">
+            {/* aria-live: los lectores de pantalla se enteran cuando cae un
+                resultado sin re-explorar la lista (revisión adversarial). */}
+            <p
+              role="status"
+              aria-live="polite"
+              className="font-mono text-xs tabular text-muted-foreground"
+            >
               {finishedCount} de {event.bouts.length} combates resueltos
             </p>
           </>
         ) : (
           <div className="flex w-full flex-col items-center gap-3 py-2">
+            <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Empiezan {countdownLabel} en
+            </p>
             <EventCountdown
-              startTime={candidate.earlyPrelimsTime ?? candidate.prelimsTime ?? event.startTime}
+              startTime={countdownTarget}
               eventDate={event.eventDate}
             />
             <p className="text-center text-sm text-muted-foreground">

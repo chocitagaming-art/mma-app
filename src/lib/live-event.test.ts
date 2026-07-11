@@ -225,6 +225,36 @@ describe("computeBoutStates", () => {
     expect(after.get(2)).toBe("live");
   });
 
+  it("una pelea saltada (posterior ya terminada) no estanca el puntero", () => {
+    // La 4 (prelims) se canceló a última hora sin marcarse en BD: la 3 ya
+    // tiene resultado, así que la cronología demuestra que la 4 fue saltada.
+    const card = [
+      bout(1, 1, "main"),
+      bout(2, 2, "main"),
+      bout(3, 3, "prelims", true),
+      bout(4, 4, "prelims"),
+      bout(5, 5, "early_prelims", true),
+    ];
+    const states = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      new Date("2026-07-12T01:10:00Z"),
+    );
+    expect(states.get(4)).toBe("pending");
+    expect(states.get(2)).toBe("live");
+  });
+
+  it("sin resultados todavía, el puntero es el de mayor bout_order", () => {
+    const states = computeBoutStates(
+      CARD,
+      "live",
+      TIMES,
+      new Date("2026-07-11T23:30:00Z"),
+    );
+    expect(states.get(5)).toBe("live");
+  });
+
   it("bout_order NULL nunca se marca live", () => {
     const card = [bout(1, null, "main"), bout(2, null, "main")];
     const states = computeBoutStates(

@@ -280,8 +280,11 @@ export function EventBoutRow({
           </span>
         ) : null}
         {fav ? (
+          // hidden sm:inline-flex (revisión adversarial): a 390px este chip
+          // comprimía las esquinas hasta dejar los NOMBRES a 0px de ancho —
+          // en móvil ganan los nombres, como ya hacen categoría y resultado.
           <span
-            className="mt-1 inline-flex max-w-[7rem] items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-primary sm:max-w-[9rem]"
+            className="mt-1 hidden max-w-[7rem] items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-primary sm:inline-flex sm:max-w-[9rem]"
             title={`Favorito del mercado: ${favName}${favOdds != null ? ` · cuota ${favOdds.toFixed(2)}` : ""}`}
           >
             <span className="truncate">{favName}</span>

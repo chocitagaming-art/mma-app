@@ -11,6 +11,7 @@ import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
+import { resolveLivePhase } from "@/lib/live-event";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
 
@@ -51,6 +52,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const sections = groupBoutsBySegment(event.bouts);
   // FE9: enlace a la página oficial del evento (solo source='ufc.com').
   const officialUrl = eventExternalLink(event);
+
+  // T3-A (pedido del dueño): si ESTE evento está en marcha o arranca en <24 h,
+  // CTA "Ver en directo" → /en-vivo. Se calcula en servidor (la página ya es
+  // dinámica) con los horarios del propio evento: vale para cualquier evento
+  // futuro sin tocar nada. OJO: no depende de isUpcoming — pasada la medianoche
+  // UTC el evento sigue EN VIVO aunque su fecha ya sea "ayer".
+  const livePhase = resolveLivePhase(
+    {
+      eventDate: event.eventDate,
+      startTime: event.startTime,
+      prelimsTime: event.prelimsTime,
+      earlyPrelimsTime: event.earlyPrelimsTime,
+    },
+    new Date(),
+  );
 
   // FE5b: hora de inicio de cada segmento para su encabezado de sección.
   const sectionTimes: Record<string, string | null> = {
@@ -159,9 +175,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             startTime={event.startTime}
           />
 
-          {isUpcoming ? (
+          {isUpcoming || livePhase !== "none" ? (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              {event.ticketUrl ? (
+              {/* T3-A: evento en marcha o a <24 h → seguirlo en /en-vivo. */}
+              {livePhase !== "none" ? (
+                <Link
+                  href="/en-vivo"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  <span className="live-dot inline-block size-1.5 rounded-full bg-primary-foreground" />
+                  Ver en directo
+                </Link>
+              ) : null}
+              {isUpcoming && event.ticketUrl ? (
                 <a
                   href={event.ticketUrl}
                   target="_blank"
@@ -173,7 +199,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </a>
               ) : null}
               {/* S2-F: dónde ver el combate en España (gratis y de pago). */}
-              <EventWatchOptions hasEarlyPrelims={Boolean(event.earlyPrelimsTime)} />
+              {isUpcoming ? (
+                <EventWatchOptions hasEarlyPrelims={Boolean(event.earlyPrelimsTime)} />
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -1,32 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import type { LiveNowPayload } from "@/lib/live-event";
+import { useLiveNow } from "@/components/live/use-live-now";
 
-// T3-A: franja "EN DIRECTO" de la home. Cliente + fetch tras montar para que
-// la home conserve su ISR (revalidate 1800); solo aparece con un evento EN
-// MARCHA (la fase "pre" ya la cubre la cuenta atrás del hero Up Next).
+// T3-A: franja "EN DIRECTO" de la home. Solo aparece con un evento EN MARCHA
+// (la fase "pre" ya la cubre la cuenta atrás del hero Up Next). El hook cachea
+// en sessionStorage, así que en visitas sucesivas pinta sin salto de layout.
 export function LiveBanner() {
-  const [payload, setPayload] = useState<LiveNowPayload | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/live/now")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: LiveNowPayload | null) => {
-        if (!cancelled && data) {
-          setPayload(data);
-        }
-      })
-      .catch(() => {
-        // Silencio: sin estado no hay banner.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const payload = useLiveNow();
 
   if (!payload?.live) {
     return null;

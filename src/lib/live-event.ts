@@ -112,6 +112,11 @@ function segmentStart(
 //   es la de MAYOR bout_order sin terminar. Si su tramo aún no ha empezado
 //   (huecos entre prelims y estelares) es "next"; si ya empezó, "live".
 // - "pending": el resto. Con fase != "live" nadie está en curso.
+// Vía de escape (revisión adversarial): si una pelea con bout_order MENOR que
+// la candidata ya terminó, la cronología demuestra que la candidata fue SALTADA
+// (cancelación del día no marcada aún, o live-results sin match para ella) —
+// sin esto el puntero EN CURSO se estancaría en ella el resto de la noche.
+// Las saltadas quedan "pending" y el puntero avanza a la siguiente real.
 // Las peleas con bout_order NULL (no debería pasar en eventos upcoming) nunca
 // se marcan live: no hay forma fiable de ordenarlas en la cronología.
 export function computeBoutStates(
@@ -131,9 +136,24 @@ export function computeBoutStates(
     return states;
   }
 
+  let minFinishedOrder = Infinity;
+  for (const bout of bouts) {
+    if (
+      states.get(bout.fightId) === "finished" &&
+      bout.boutOrder != null &&
+      bout.boutOrder < minFinishedOrder
+    ) {
+      minFinishedOrder = bout.boutOrder;
+    }
+  }
+
   let candidate: LiveBoutInput | null = null;
   for (const bout of bouts) {
     if (states.get(bout.fightId) === "finished" || bout.boutOrder == null) {
+      continue;
+    }
+    if (bout.boutOrder >= minFinishedOrder) {
+      // Saltada: una pelea posterior en la cronología ya tiene resultado.
       continue;
     }
     if (candidate == null || bout.boutOrder > (candidate.boutOrder as number)) {
