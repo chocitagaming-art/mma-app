@@ -300,10 +300,13 @@ export default async function LivePage() {
                         showRanks
                         eventDate={event.eventDate}
                         statsPanel={statsPanel}
-                        // La pelea EN CURSO llega con sus stats a la vista
-                        // (estado inicial; si el usuario la pliega, plegada
-                        // se queda entre refrescos).
-                        panelDefaultOpen={state === "live" && Boolean(statsPanel)}
+                        // La pelea EN CURSO llega abierta. Se deriva SOLO de
+                        // state==='live' (no de Boolean(statsPanel)): un fallo
+                        // transitorio del fetch de stats degradaba statsPanel a
+                        // undefined y hacía oscilar defaultOpen, reabriendo un
+                        // panel que el usuario había cerrado (re-revisión). El
+                        // estado 'live' es estable ante esos fallos.
+                        panelDefaultOpen={state === "live"}
                       />
                     </div>
                   );
