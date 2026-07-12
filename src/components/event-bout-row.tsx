@@ -214,7 +214,7 @@ export function EventBoutRow({
   const row = (
     <Link
       href={`/fights/${bout.fightId}`}
-      className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5"
+      className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5"
     >
       {/* Esquina roja */}
       <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -223,7 +223,9 @@ export function EventBoutRow({
           headshotUrl={bout.red.headshotUrl}
           division={bout.weightClass}
           size="sm"
-          className={cn("shrink-0", redWon && "ring-2 ring-win")}
+          // F4: headshot más pequeño en móvil (36px) para dar aire al nombre; en
+          // sm+ vuelve a 48px (twMerge sobreescribe el size-12 de sizeClasses).
+          className={cn("size-9 shrink-0 sm:size-12", redWon && "ring-2 ring-win")}
         />
         <div className="min-w-0">
           <p
@@ -232,8 +234,13 @@ export function EventBoutRow({
               redWon ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            <CountryFlag nationality={bout.red.nationality} />
-            <span className="truncate">{bout.red.name}</span>
+            {/* F4: bandera oculta en móvil (pedido del dueño): libera ancho para
+                que el nombre sea legible; vuelve en sm+. */}
+            <CountryFlag
+              nationality={bout.red.nationality}
+              className="hidden sm:inline-block"
+            />
+            <span className="min-w-0 flex-1 truncate">{bout.red.name}</span>
             {showRanks && bout.red.rank != null ? (
               // Ranking actual de su división (FE2); 0 = campeón, estilo ufc.com.
               <span className="shrink-0 font-mono text-xs font-medium tracking-normal text-muted-foreground">
@@ -309,7 +316,8 @@ export function EventBoutRow({
           headshotUrl={bout.blue.headshotUrl}
           division={bout.weightClass}
           size="sm"
-          className={cn("shrink-0", blueWon && "ring-2 ring-win")}
+          // F4: headshot 36px en móvil, 48px en sm+.
+          className={cn("size-9 shrink-0 sm:size-12", blueWon && "ring-2 ring-win")}
         />
         <div className="min-w-0">
           <p
@@ -318,8 +326,12 @@ export function EventBoutRow({
               blueWon ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            <CountryFlag nationality={bout.blue.nationality} />
-            <span className="truncate">{bout.blue.name}</span>
+            {/* F4: bandera oculta en móvil (pedido del dueño). */}
+            <CountryFlag
+              nationality={bout.blue.nationality}
+              className="hidden sm:inline-block"
+            />
+            <span className="min-w-0 flex-1 truncate">{bout.blue.name}</span>
             {showRanks && bout.blue.rank != null ? (
               // flex-row-reverse: el badge queda a la IZQUIERDA del nombre (espejo de la roja).
               <span className="shrink-0 font-mono text-xs font-medium tracking-normal text-muted-foreground">

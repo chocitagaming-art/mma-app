@@ -358,11 +358,11 @@ export default async function FighterDetailPage({
           <div className="grid grid-cols-3 gap-4 lg:col-start-1 lg:row-start-2 lg:self-end">
             {heroHighlights.map((highlight) => (
               <div key={highlight.label}>
-                <p className="tabular font-display text-4xl font-extrabold leading-none text-foreground sm:text-5xl">
+                <p className="tabular font-display text-3xl font-extrabold leading-none text-foreground sm:text-4xl xl:text-5xl">
                   {highlight.value}
                 </p>
                 <div className="mt-2.5 h-1 w-10 rounded-full bg-primary" />
-                <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+                <p className="mt-2 font-mono text-[10px] uppercase leading-snug tracking-[0.12em] text-muted-foreground">
                   {highlight.label}
                 </p>
               </div>

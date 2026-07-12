@@ -107,7 +107,7 @@ export function TaleStatRow({ row }: { row: TaleRow }) {
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-border py-3 last:border-b-0">
       <p
         className={cn(
-          "tabular text-right font-display text-lg font-bold leading-none sm:text-xl",
+          "tabular min-w-0 break-words text-right font-display text-lg font-bold leading-tight sm:text-xl",
           redBetter ? "text-corner-red" : "text-foreground",
         )}
       >
@@ -120,7 +120,7 @@ export function TaleStatRow({ row }: { row: TaleRow }) {
       </p>
       <p
         className={cn(
-          "tabular text-left font-display text-lg font-bold leading-none sm:text-xl",
+          "tabular min-w-0 break-words text-left font-display text-lg font-bold leading-tight sm:text-xl",
           blueBetter ? "text-corner-blue" : "text-foreground",
         )}
       >
