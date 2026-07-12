@@ -134,14 +134,16 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
       />
 
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tipo de contenido">
+        {/* Son enlaces de navegación reales (cambian la URL), no un widget de
+            tabs ARIA: nav + aria-current, no role=tablist/tab (que prometería
+            flechas y un tabpanel que no existe). */}
+        <nav className="flex flex-wrap gap-2" aria-label="Tipo de contenido">
           {primaryTabs.map((tab) => {
             const isActive = tab.key === kind;
             return (
               <Link
                 key={tab.key}
-                role="tab"
-                aria-selected={isActive}
+                aria-current={isActive ? "page" : undefined}
                 href={createHref({ tipo: tab.key, categoria: "", mostrar: 0 })}
                 className={cn(
                   "rounded-full border px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-colors",
@@ -154,7 +156,7 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
               </Link>
             );
           })}
-        </div>
+        </nav>
 
         {secondaryChips.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -192,7 +194,10 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
 
       {items.length ? (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* grid-flow-row-dense: las destacadas ocupan col-span-2; en desktop
+              (3 col) una destacada que no cabe en la última columna dejaba un
+              hueco vacío. El empaquetado denso rellena esos huecos. */}
+          <div className="grid grid-flow-row-dense gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item, i) => (
               <TrendingCard
                 key={item.type === "news" ? `n-${item.article.id}` : `v-${item.video.videoId}`}

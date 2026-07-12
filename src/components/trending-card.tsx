@@ -73,9 +73,11 @@ export function TrendingCard({
         )}
       >
         <div className="relative overflow-hidden">
+          {/* Imagen decorativa: el titular ya está como <h3> dentro del mismo
+              enlace. alt="" evita que el lector lo anuncie dos veces. */}
           <NewsImage
             src={article.imageUrl}
-            alt={article.headline}
+            alt=""
             className="aspect-video w-full transition-transform duration-300 group-hover:scale-105"
           />
           <CardChip>{formatNewsCategory(article.category)}</CardChip>

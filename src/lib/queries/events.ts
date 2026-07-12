@@ -17,17 +17,27 @@ import type {
 const PAGE_SIZE = 24;
 
 // SQL: true si el combate ESTELAR del evento `e` (el de MENOR bout_order no
-// cancelado) ya tiene resultado. Espejo de isMainEventFinished() de
-// live-event.ts. Marca un evento como "terminado" en cuanto cae su estelar, sin
-// esperar a que el cron ponga status='completed' (que va con retraso: solo se
-// aplica cuando el evento cae del listado de ufc.com). Se usa para SACAR el
-// evento recién acabado de "Próximo evento"/"en directo" y METERLO en "Último
-// evento". Requiere el alias `e` para la tabla events en la consulta que lo use.
+// cancelado) ya está terminado. Espejo de isMainEventFinished() de
+// live-event.ts: cuenta como terminado si tiene winner/method O si ESPN marcó
+// su fila viva state='post' (esto último cubre empates/NC/decisiones sin
+// puntuar, que el pipeline NO escribe en fights hasta el backfill tardío de
+// ufcstats — sin esta rama, un estelar en tablas dejaba la web "EN DIRECTO"
+// toda la noche). Exige bout_order NOT NULL para no "adivinar" el estelar por id
+// cuando la cartelera aún no trae orden (igual que el helper, que salta los
+// bout_order NULL). Marca el evento como "terminado" sin esperar al cron de
+// status='completed' (que va con retraso). Requiere el alias `e` para events.
 export const MAIN_EVENT_FINISHED_SQL = `COALESCE((
-  SELECT f.winner_id IS NOT NULL OR f.method IS NOT NULL
+  SELECT f.winner_id IS NOT NULL
+      OR f.method IS NOT NULL
+      OR EXISTS (
+           SELECT 1 FROM live_fight_stats lfs
+           WHERE lfs.fight_id = f.id AND lfs.state = 'post'
+         )
   FROM fights f
-  WHERE f.event_id = e.id AND f.status IS DISTINCT FROM 'cancelled'
-  ORDER BY f.bout_order ASC NULLS LAST, f.id ASC
+  WHERE f.event_id = e.id
+    AND f.status IS DISTINCT FROM 'cancelled'
+    AND f.bout_order IS NOT NULL
+  ORDER BY f.bout_order ASC, f.id ASC
   LIMIT 1
 ), false)`;
 
@@ -745,7 +755,10 @@ export async function getLastEventResults(): Promise<LastEventResults | null> {
      FROM events e
      WHERE (e.event_date < CURRENT_DATE AND e.status = 'completed')
         OR ${MAIN_EVENT_FINISHED_SQL}
-     ORDER BY e.event_date DESC, e.id DESC
+     -- NULLS LAST: la rama OR readmite eventos sin fecha (event_date NULL); sin
+     -- esto, el DESC los pondría los PRIMEROS (NULLS FIRST por defecto en PG) y
+     -- un evento histórico sin fecha se colaría como "Último evento".
+     ORDER BY e.event_date DESC NULLS LAST, e.id DESC
      LIMIT 1`,
   );
   const event = rows[0];

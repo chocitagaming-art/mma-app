@@ -90,12 +90,30 @@ function mobileResultLine(bout: EventBout): string | null {
 export default async function LivePage() {
   const candidate = await getLiveEventCandidate();
   const phase = candidate ? resolveLivePhase(candidate, new Date()) : "none";
-  // Cargamos el detalle en cuanto hay candidato para saber si el estelar ya
-  // cayó (evento recién terminado). En ese caso NO es estado vacío: mostramos
-  // sus resultados en modo "Finalizado" (no "En directo") aunque la ventana
-  // horaria 'live' (main+8h) siga abierta.
   const event = candidate ? await getEventDetail(candidate.id) : null;
-  const over = event ? isMainEventFinished(event.bouts) : false;
+  // Filas vivas (estado fino + stats por pelea) que el bucle de mma-ingesta
+  // escribe cada ~2 min. Solo en fase 'live': en 'pre' la tabla no tiene filas
+  // de este evento todavía (SELECT vacío garantizado, hallazgo 7a). Se piden
+  // ANTES de decidir "terminado": la señal ESPN state='post' (liveFinishedIds)
+  // es la ÚNICA que marca un estelar en empate/NC — que el pipeline no escribe
+  // en fights hasta el backfill tardío de ufcstats (re-revisión adversarial).
+  const liveStats =
+    event && phase === "live"
+      ? await getLiveFightStats(event.bouts.map((bout) => bout.fightId))
+      : new Map<number, LiveFightStats>();
+  const liveFinishedIds = new Set(
+    [...liveStats.values()]
+      .filter(
+        (stats) =>
+          stats.state === "post" && !isCancelledLiveStatus(stats.statusName),
+      )
+      .map((stats) => stats.fightId),
+  );
+  // Evento recién terminado: el estelar ya cayó (por resultado en fights O por
+  // ESPN 'post', que cubre empates/NC). Aunque la ventana 'live' (main+8h) siga
+  // abierta NO es "En directo": mostramos resultados en modo "Finalizado" y no
+  // es estado vacío.
+  const over = event ? isMainEventFinished(event.bouts, liveFinishedIds) : false;
 
   // Sin candidato/detalle, o fase 'none' que NO sea un evento recién acabado:
   // estado vacío con el siguiente evento como invitación a actuar.
@@ -136,25 +154,6 @@ export default async function LivePage() {
 
   const live = phase === "live" && !over;
   const sections = groupBoutsBySegment(event.bouts);
-  // T3-A fase B: filas vivas (estado fino + stats por pelea) que el bucle de
-  // mma-ingesta escribe cada ~2 min. 1 SELECT batcheado; degrada a mapa vacío
-  // ante cualquier fallo (el panel es un extra, nunca tumba el directo). Solo
-  // en fase 'live': en 'pre' la tabla no tiene filas de este evento todavía,
-  // así que el SELECT sería vacío garantizado en cada refresco (hallazgo 7a).
-  const liveStats = live
-    ? await getLiveFightStats(event.bouts.map((bout) => bout.fightId))
-    : new Map<number, LiveFightStats>();
-  // ESPN marca la fila 'post' en cuanto la pelea acaba, aun sin ganador en
-  // `fights` (empate/NC/decisión sin puntuar): esa señal cierra el chip y hace
-  // avanzar el puntero EN CURSO sin esperar al backfill de ufcstats (hallazgo 6).
-  const liveFinishedIds = new Set(
-    [...liveStats.values()]
-      .filter(
-        (stats) =>
-          stats.state === "post" && !isCancelledLiveStatus(stats.statusName),
-      )
-      .map((stats) => stats.fightId),
-  );
   const states = computeBoutStates(
     // Evento terminado: nadie "En curso" aunque la ventana horaria siga abierta.
     event.bouts,
