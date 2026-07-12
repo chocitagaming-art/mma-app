@@ -44,5 +44,11 @@ next-env.d.ts
 # playwright (visual QA snapshots/screenshots)
 .playwright-mcp/
 
+# playwright E2E (F6 mega test): reportes y artefactos, no versionados
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
 # dev server log temporal
 _devlog.txt

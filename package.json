@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:report": "playwright show-report",
+    "megatest": "node scripts/megatest.mjs",
     "commit:deploy": "git commit --author=\"chocitagaming-art <285652576+chocitagaming-art@users.noreply.github.com>\""
   },
   "dependencies": {
@@ -32,6 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
