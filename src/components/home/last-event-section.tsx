@@ -45,12 +45,8 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
           en todos los tamaños (antes solo en la cabecera desktop). */}
       <div className="flex justify-center">
         <Link href={`/eventos/${event.id}`} className="w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-11 w-full px-6 sm:w-auto"
-          >
-            Resultados completos →
+          <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
+            Ver resultados completos →
           </Button>
         </Link>
       </div>

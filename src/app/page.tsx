@@ -158,22 +158,14 @@ export default async function HomePage() {
             <RecentNewsGrid limit={6} articles={recentNews} />
             {/* CTAs bajo las noticias: más noticias (→ Tendencias) y próximas
                 carteleras (→ Eventos próximos), estética UFC. */}
-            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-center">
               <Link href="/tendencias" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-11 w-full px-6 sm:w-auto"
-                >
+                <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
                   Más noticias →
                 </Button>
               </Link>
               <Link href="/eventos?view=proximos" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-11 w-full px-6 sm:w-auto"
-                >
+                <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
                   Próximas carteleras →
                 </Button>
               </Link>
