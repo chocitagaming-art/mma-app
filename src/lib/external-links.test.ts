@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { eventExternalLink, fighterExternalLinks } from "@/lib/external-links";
+import { fighterExternalLinks } from "@/lib/external-links";
 
 describe("fighterExternalLinks", () => {
   it("builds the ESPN link from the numeric id", () => {
@@ -21,25 +21,5 @@ describe("fighterExternalLinks", () => {
     expect(fighterExternalLinks({ source: "ufcstats", sourceId: null })).toEqual([]);
     expect(fighterExternalLinks({ source: "espn", sourceId: "" })).toEqual([]);
     expect(fighterExternalLinks({})).toEqual([]);
-  });
-});
-
-describe("eventExternalLink", () => {
-  it("builds the ufc.com event URL from the slug", () => {
-    expect(
-      eventExternalLink({ source: "ufc.com", sourceId: "ufc-319" }),
-    ).toBe("https://www.ufc.com/event/ufc-319");
-  });
-
-  it("returns null for other sources", () => {
-    expect(eventExternalLink({ source: "ufcstats", sourceId: "ufc-319" })).toBeNull();
-    expect(eventExternalLink({ source: "manual", sourceId: "ufc-319" })).toBeNull();
-  });
-
-  it("returns null when source or slug are missing", () => {
-    expect(eventExternalLink({ source: null, sourceId: "ufc-319" })).toBeNull();
-    expect(eventExternalLink({ source: "ufc.com", sourceId: null })).toBeNull();
-    expect(eventExternalLink({ source: "ufc.com", sourceId: "" })).toBeNull();
-    expect(eventExternalLink({})).toBeNull();
   });
 });

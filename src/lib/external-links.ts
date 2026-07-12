@@ -33,12 +33,3 @@ export function fighterExternalLinks({ source, sourceId }: SourceRef): ExternalL
       return [];
   }
 }
-
-// Eventos: solo 'ufc.com' (source_id = slug del evento). El resto, sin enlace.
-export function eventExternalLink({ source, sourceId }: SourceRef): string | null {
-  if (source !== "ufc.com" || !sourceId) {
-    return null;
-  }
-
-  return `https://www.ufc.com/event/${encodeURIComponent(sourceId)}`;
-}
