@@ -122,8 +122,13 @@ function FaceOffCorner({
       name={fighter.name}
       fullBodyUrl={fighter.fullBodyUrl ?? null}
       standingBodyUrl={fighter.standingBodyUrl ?? null}
+      standingBodyUrlL={fighter.standingBodyUrlL ?? null}
+      standingBodyUrlR={fighter.standingBodyUrlR ?? null}
       headshotUrl={fighter.headshotUrl}
       division={weightClass}
+      // F1: la esquina elige su variante direccional y se espeja si hace falta
+      // para que ambos se miren; preference queda de respaldo sin corner.
+      corner={corner}
       // Cadena Ronda B: foto de pie primero, luego full body, luego headshot.
       preference="standing-first"
       // Alturas fijas anti-CLS: pequeñas lado a lado en móvil, ~420px desktop.

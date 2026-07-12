@@ -19,6 +19,10 @@ export type Fighter = {
   // Foto "standing" (cuerpo entero de pie, Ronda B). Cadena de fallback en
   // combates/enfrentamiento: standing → full body → headshot.
   standingBodyUrl?: string | null;
+  // F1 (migración 019): variantes direccionales de la foto standing para el
+  // cara a cara. _l mira a la derecha (esquina roja), _r a la izquierda (azul).
+  standingBodyUrlL?: string | null;
+  standingBodyUrlR?: string | null;
   legReachCm?: number | null;
   trainsAt?: string | null; // gimnasio/equipo
   // FE9: procedencia del registro para enlaces externos ('ufcstats', 'espn',
@@ -449,6 +453,9 @@ export type UpcomingEventItem = {
 export type NextEventHeroFighter = EventBoutFighter & {
   fullBodyUrl: string | null;
   standingBodyUrl: string | null;
+  // F1: variantes direccionales de la foto standing (roja=_l, azul=_r).
+  standingBodyUrlL?: string | null;
+  standingBodyUrlR?: string | null;
 };
 
 export type NextEventMainBout = {
@@ -510,6 +517,9 @@ export type FightCompetitor = {
   // Opcionales para no romper a otros constructores de FightCompetitor.
   fullBodyUrl?: string | null;
   standingBodyUrl?: string | null; // foto de pie (Ronda B), prioritaria en combates
+  // F1: variantes direccionales de la foto standing (roja=_l, azul=_r).
+  standingBodyUrlL?: string | null;
+  standingBodyUrlR?: string | null;
   weightGrams?: number | null;
   birthDate?: string | null;
   legReachCm?: number | null;

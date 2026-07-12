@@ -26,6 +26,9 @@ export type FighterRow = {
   // las queries que enumeran columnas explícitas pueden no incluirlos.
   full_body_url?: string | null;
   standing_body_url?: string | null; // foto de pie (Ronda B), backfill en curso
+  // F1 (migración 019): variantes direccionales para el cara a cara.
+  standing_body_url_l?: string | null;
+  standing_body_url_r?: string | null;
   leg_reach_cm?: string | null; // NUMERIC llega como string desde pg
   trains_at?: string | null;
   // FE9: procedencia del registro (scraper) para enlaces externos.

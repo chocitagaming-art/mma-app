@@ -36,6 +36,8 @@ export function mapFighter(row: FighterRow): FighterCardData {
     updatedAt: row.updated_at,
     fullBodyUrl: row.full_body_url ?? null,
     standingBodyUrl: row.standing_body_url ?? null,
+    standingBodyUrlL: row.standing_body_url_l ?? null,
+    standingBodyUrlR: row.standing_body_url_r ?? null,
     legReachCm: row.leg_reach_cm ? Number(row.leg_reach_cm) : null,
     trainsAt: row.trains_at ?? null,
     source: row.source ?? null,

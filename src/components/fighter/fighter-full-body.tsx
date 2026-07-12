@@ -4,7 +4,12 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
-import { pickBodyPhotoUrl, type BodyPhotoPreference } from "@/lib/fighter-photo";
+import {
+  pickBodyPhotoUrl,
+  pickCornerBodyPhoto,
+  type BodyPhotoPreference,
+  type Corner,
+} from "@/lib/fighter-photo";
 import { inferFighterGender, silhouetteBody } from "@/lib/fighter-silhouette";
 import { localBody } from "@/lib/local-bodies";
 import { localHeadshot, localHeadshotOverride } from "@/lib/local-headshots";
@@ -16,6 +21,14 @@ type FighterFullBodyProps = {
   // Foto "standing" (Ronda B). Opcional: el backfill corre en paralelo y los
   // callers antiguos pueden no tenerla aún.
   standingBodyUrl?: string | null;
+  // F1 Tanda 4: variantes direccionales de la foto standing (migración 019).
+  // _l mira a la derecha (esquina roja), _r mira a la izquierda (esquina azul).
+  standingBodyUrlL?: string | null;
+  standingBodyUrlR?: string | null;
+  // Esquina del cara a cara. Cuando se pasa, la foto standing se elige por
+  // dirección (roja=_l, azul=_r) y se espeja si hace falta para que se miren.
+  // Sin `corner` (ficha del luchador) el comportamiento es el de siempre.
+  corner?: Corner;
   headshotUrl: string | null;
   // División o clase de peso (texto UFC o slug), solo para elegir la silueta de
   // fallback por género cuando el luchador no tiene ninguna foto.
@@ -41,6 +54,9 @@ export function FighterFullBody({
   name,
   fullBodyUrl,
   standingBodyUrl = null,
+  standingBodyUrlL = null,
+  standingBodyUrlR = null,
+  corner,
   headshotUrl,
   division = null,
   preference = "full-first",
@@ -52,8 +68,22 @@ export function FighterFullBody({
   // Override curado (local-bodies) con prioridad sobre la BD: cubre luchadores
   // sin full/standing en BD (p.ej. Forrest Griffin) o con foto mala.
   const local = localBody(name);
+  // F1: en el cara a cara (corner definido) elegimos la variante direccional y
+  // su flag de espejo; en la ficha (sin corner) se conserva la cadena de siempre.
+  const cornerPhoto =
+    corner != null && !local
+      ? pickCornerBodyPhoto(corner, {
+          standingL: standingBodyUrlL,
+          standingR: standingBodyUrlR,
+          standing: standingBodyUrl,
+          fullBody: fullBodyUrl,
+        })
+      : null;
   const dbPhotoUrl =
-    local?.src ?? pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl);
+    local?.src ??
+    (cornerPhoto
+      ? cornerPhoto.url
+      : pickBodyPhotoUrl(preference, standingBodyUrl, fullBodyUrl));
   // Sin foto de cuerpo utilizable (NULL o que falló en cargar) Y sin headshot al
   // que degradar: silueta oficial de UFC de cuerpo entero. Se renderiza por la
   // misma ruta que una foto real (con sombra y "suelo" en el hero), como en
@@ -69,6 +99,13 @@ export function FighterFullBody({
   const photoUrl = usableDbPhotoUrl ?? silhouetteUrl;
   const isSilhouette = photoUrl != null && photoUrl === silhouetteUrl;
   const showPhoto = photoUrl != null;
+  // F1: espejar horizontalmente solo cuando mostramos la foto de BD elegida por
+  // esquina y su dirección real no coincide con la esquina (la silueta/headshot
+  // no se espejan; no tienen orientación).
+  const mirror =
+    (cornerPhoto?.mirror ?? false) &&
+    usableDbPhotoUrl != null &&
+    photoUrl === usableDbPhotoUrl;
   const handleImageError = () =>
     isSilhouette ? setSilhouetteFailed(true) : setImageFailed(true);
   const altText = isSilhouette
@@ -127,6 +164,8 @@ export function FighterFullBody({
             bodyFit === "cover-top"
               ? "object-cover object-top"
               : "object-contain object-bottom",
+            // F1: espejo para que la esquina mire hacia el centro.
+            mirror && "-scale-x-100",
           )}
           onError={handleImageError}
         />
@@ -157,6 +196,8 @@ export function FighterFullBody({
             bodyFit === "cover-top"
               ? "w-full object-cover object-top"
               : "w-auto max-w-full object-contain object-bottom",
+            // F1: espejo para que la esquina mire hacia el centro.
+            mirror && "-scale-x-100",
           )}
           onError={handleImageError}
         />

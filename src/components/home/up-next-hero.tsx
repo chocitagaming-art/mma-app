@@ -32,10 +32,12 @@ function RankBadge({ rank }: { rank: number | null }) {
 // Columna de un protagonista: foto de cuerpo entero (standing → full body →
 // headshot, como en combates), apodo, nombre + bandera, récord y ranking.
 function HeroCorner({
+  corner,
   fighter,
   weightClass,
   className,
 }: {
+  corner: "red" | "blue";
   fighter: NextEventHeroFighter;
   // Clase de peso del estelar: solo para la silueta de fallback por género.
   weightClass?: string | null;
@@ -49,8 +51,12 @@ function HeroCorner({
       name={fighter.name}
       fullBodyUrl={fighter.fullBodyUrl}
       standingBodyUrl={fighter.standingBodyUrl}
+      standingBodyUrlL={fighter.standingBodyUrlL ?? null}
+      standingBodyUrlR={fighter.standingBodyUrlR ?? null}
       headshotUrl={fighter.headshotUrl}
       division={weightClass}
+      // F1: espejo por esquina para que ambos se miren.
+      corner={corner}
       preference="standing-first"
       // Alturas fijas anti-CLS, algo menores que el tale-of-the-tape del combate.
       className="h-[220px] w-full sm:h-[280px] lg:h-[400px]"
@@ -192,6 +198,7 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
                   luchadores quedan cara a cara debajo; en md+ es la columna
                   central del cara a cara, como en tale-of-the-tape. */}
               <HeroCorner
+                corner="red"
                 fighter={main.red}
                 weightClass={main.weightClass}
                 className="order-2 md:order-none"
@@ -200,6 +207,7 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
                 {centerInfo}
               </div>
               <HeroCorner
+                corner="blue"
                 fighter={main.blue}
                 weightClass={main.weightClass}
                 className="order-3 md:order-none"

@@ -537,6 +537,8 @@ type MainEventRow = {
   red_nickname: string | null;
   red_headshot: string | null;
   red_standing_body: string | null;
+  red_standing_body_l: string | null;
+  red_standing_body_r: string | null;
   red_full_body: string | null;
   red_nationality: string | null;
   red_wins: number | null;
@@ -547,6 +549,8 @@ type MainEventRow = {
   blue_nickname: string | null;
   blue_headshot: string | null;
   blue_standing_body: string | null;
+  blue_standing_body_l: string | null;
+  blue_standing_body_r: string | null;
   blue_full_body: string | null;
   blue_nationality: string | null;
   blue_wins: number | null;
@@ -564,6 +568,8 @@ type HeroCornerCols = {
   nickname: string | null;
   headshot: string | null;
   standingBody: string | null;
+  standingBodyL: string | null;
+  standingBodyR: string | null;
   fullBody: string | null;
   nationality: string | null;
   wins: number | null;
@@ -594,6 +600,8 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
       birthDate: null,
       fullBodyUrl: null,
       standingBodyUrl: null,
+      standingBodyUrlL: null,
+      standingBodyUrlR: null,
     };
   }
 
@@ -613,6 +621,8 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
     birthDate: null,
     fullBodyUrl: cols.fullBody,
     standingBodyUrl: cols.standingBody,
+    standingBodyUrlL: cols.standingBodyL,
+    standingBodyUrlR: cols.standingBodyR,
   };
 }
 
@@ -651,12 +661,16 @@ export async function getNextEventHero(): Promise<NextEventHero | null> {
             red.id AS red_id, red.name AS red_name, red.nickname AS red_nickname,
             red.headshot_url AS red_headshot,
             red.standing_body_url AS red_standing_body,
+            red.standing_body_url_l AS red_standing_body_l,
+            red.standing_body_url_r AS red_standing_body_r,
             red.full_body_url AS red_full_body,
             red.nationality AS red_nationality,
             red.wins AS red_wins, red.losses AS red_losses, red.draws AS red_draws,
             blue.id AS blue_id, blue.name AS blue_name, blue.nickname AS blue_nickname,
             blue.headshot_url AS blue_headshot,
             blue.standing_body_url AS blue_standing_body,
+            blue.standing_body_url_l AS blue_standing_body_l,
+            blue.standing_body_url_r AS blue_standing_body_r,
             blue.full_body_url AS blue_full_body,
             blue.nationality AS blue_nationality,
             blue.wins AS blue_wins, blue.losses AS blue_losses, blue.draws AS blue_draws,
@@ -711,6 +725,8 @@ export async function getNextEventHero(): Promise<NextEventHero | null> {
             nickname: mainEventRow.red_nickname,
             headshot: mainEventRow.red_headshot,
             standingBody: mainEventRow.red_standing_body,
+            standingBodyL: mainEventRow.red_standing_body_l,
+            standingBodyR: mainEventRow.red_standing_body_r,
             fullBody: mainEventRow.red_full_body,
             nationality: mainEventRow.red_nationality,
             wins: mainEventRow.red_wins,
@@ -725,6 +741,8 @@ export async function getNextEventHero(): Promise<NextEventHero | null> {
             nickname: mainEventRow.blue_nickname,
             headshot: mainEventRow.blue_headshot,
             standingBody: mainEventRow.blue_standing_body,
+            standingBodyL: mainEventRow.blue_standing_body_l,
+            standingBodyR: mainEventRow.blue_standing_body_r,
             fullBody: mainEventRow.blue_full_body,
             nationality: mainEventRow.blue_nationality,
             wins: mainEventRow.blue_wins,

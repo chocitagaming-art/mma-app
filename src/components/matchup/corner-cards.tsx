@@ -42,8 +42,12 @@ export function CornerBlock({
           name={fighter.name}
           fullBodyUrl={fighter.fullBodyUrl ?? null}
           standingBodyUrl={fighter.standingBodyUrl ?? null}
+          standingBodyUrlL={fighter.standingBodyUrlL ?? null}
+          standingBodyUrlR={fighter.standingBodyUrlR ?? null}
           headshotUrl={fighter.headshotUrl}
           division={fighter.latestWeightClass}
+          // F1: espejo por esquina para que ambos se miren.
+          corner={corner}
           preference={preference}
           className="h-[220px] w-full sm:h-[300px] md:h-[420px]"
         />
