@@ -12,7 +12,9 @@ import { eventExternalLink } from "@/lib/external-links";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate } from "@/lib/format";
 import { isMainEventFinished, resolveLivePhase } from "@/lib/live-event";
+import { isCancelledLiveStatus, type LiveFightStats } from "@/lib/live-stats";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
+import { getLiveFightStats } from "@/lib/queries/live";
 import { parseId } from "@/lib/route-params";
 
 type EventDetailPageProps = {
@@ -71,10 +73,27 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     },
     new Date(),
   );
-  // Evento ya terminado (estelar con resultado): NO ofrecer "Ver en directo"
-  // aunque la ventana horaria 'live' (main+8h) siga abierta — misma señal que
-  // apaga el modo directo en la home y en /en-vivo.
-  const eventOver = isMainEventFinished(event.bouts);
+  // F7: en fase 'live' pedimos las filas vivas para construir liveFinishedIds
+  // (ESPN state='post'), la ÚNICA señal que marca un estelar en EMPATE/NC —
+  // que el pipeline no escribe en fights.method hasta el backfill tardío de
+  // ufcstats. Sin esto, un estelar en empate/NC dentro de la ventana 'live'
+  // (main+8h) seguía ofreciendo "Ver en directo". Espejo de /en-vivo y la home.
+  const liveStats =
+    livePhase === "live"
+      ? await getLiveFightStats(event.bouts.map((bout) => bout.fightId))
+      : new Map<number, LiveFightStats>();
+  const liveFinishedIds = new Set(
+    [...liveStats.values()]
+      .filter(
+        (stats) =>
+          stats.state === "post" && !isCancelledLiveStatus(stats.statusName),
+      )
+      .map((stats) => stats.fightId),
+  );
+  // Evento ya terminado (estelar con resultado O ESPN 'post'): NO ofrecer "Ver
+  // en directo" aunque la ventana horaria 'live' (main+8h) siga abierta — misma
+  // señal que apaga el modo directo en la home y en /en-vivo.
+  const eventOver = isMainEventFinished(event.bouts, liveFinishedIds);
 
   // FE5b: hora de inicio de cada segmento para su encabezado de sección.
   const sectionTimes: Record<string, string | null> = {
