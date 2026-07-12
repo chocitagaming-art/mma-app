@@ -62,6 +62,7 @@ export type HistoryRow = {
   end_time: string | null;
   weight_class: string | null;
   video_url: string | null;
+  is_title_fight: boolean;
 };
 
 // S3-G (migración 016): fila de fight_history_espn — historial no-UFC

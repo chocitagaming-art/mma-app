@@ -134,7 +134,8 @@ export const getFighterDetail = cache(async (
         fi.end_round,
         fi.end_time,
         fi.weight_class,
-        fi.video_url
+        fi.video_url,
+        fi.is_title_fight
       from fights fi
       left join events e on e.id = fi.event_id
       left join fighters red on red.id = fi.fighter_red_id
@@ -343,6 +344,7 @@ export const getFighterDetail = cache(async (
     endTime: row.end_time,
     weightClass: row.weight_class,
     videoUrl: row.video_url,
+    isTitleFight: row.is_title_fight,
   }));
 
   // S3-G: filas espn -> misma forma que el historial UFC. Sin eventId (los
