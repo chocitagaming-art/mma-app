@@ -734,14 +734,17 @@ type LastEventRow = {
   location: string | null;
 };
 
-// FE10: el último evento completado (fecha < hoy más reciente, status
-// 'completed' para garantizar resultados) con las 5 primeras peleas de su
-// cartelera estelar, en formato EventBout para reutilizar EventBoutRow.
+// FE10: el último evento con resultados (el de fecha más reciente) con las 5
+// primeras peleas de su cartelera estelar, en formato EventBout para reutilizar
+// EventBoutRow. Incluye tanto los ya marcados 'completed' por el cron como el
+// que ACABA de terminar (su estelar ya cayó) aunque siga 'upcoming': así pasa a
+// "Último evento" al instante, en cuanto getNextEventHero lo saca de "Próximo".
 export async function getLastEventResults(): Promise<LastEventResults | null> {
   const rows = await sql<LastEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date, e.location
      FROM events e
-     WHERE e.event_date < CURRENT_DATE AND e.status = 'completed'
+     WHERE (e.event_date < CURRENT_DATE AND e.status = 'completed')
+        OR ${MAIN_EVENT_FINISHED_SQL}
      ORDER BY e.event_date DESC, e.id DESC
      LIMIT 1`,
   );
