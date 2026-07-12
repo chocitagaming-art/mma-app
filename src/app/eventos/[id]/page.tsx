@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
+import { ArrowLeft, CalendarDays, ExternalLink, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
+import { eventExternalLink } from "@/lib/external-links";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate } from "@/lib/format";
 import { isMainEventFinished, resolveLivePhase } from "@/lib/live-event";
@@ -49,6 +50,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     event.status === "upcoming" &&
     (event.eventDate == null || event.eventDate >= todayIso);
   const sections = groupBoutsBySegment(event.bouts);
+  // FE9: enlace oficial reconstruido desde source/source_id (solo eventos con
+  // source='ufc.com'). Se pinta para TODO evento (próximo o pasado).
+  const ufcUrl = eventExternalLink({
+    source: event.source,
+    sourceId: event.sourceId,
+  });
 
   // T3-A (pedido del dueño): si ESTE evento está en marcha o arranca en <24 h,
   // CTA "Ver en directo" → /en-vivo. Se calcula en servidor (la página ya es
@@ -164,6 +171,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             prelimsTime={event.prelimsTime}
             startTime={event.startTime}
           />
+
+          {/* FE9: enlace oficial del evento (UFC.com). Visible en próximos y
+              pasados; se omite si el evento no viene de ufc.com. */}
+          {ufcUrl ? (
+            <a
+              href={ufcUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-primary"
+            >
+              <ExternalLink className="size-3.5" />
+              Ver en UFC.com
+            </a>
+          ) : null}
 
           {isUpcoming || (livePhase !== "none" && !eventOver) ? (
             <div className="mt-4 flex flex-wrap items-center gap-2">

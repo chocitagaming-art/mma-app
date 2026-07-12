@@ -82,7 +82,7 @@ export default async function HomePage() {
               datos reales de eventos.
             </p>
             <div
-              className="animate-rise mt-7 max-w-xl"
+              className="animate-rise relative z-20 mt-7 max-w-xl"
               style={{ animationDelay: "240ms" }}
             >
               <SearchHero />
