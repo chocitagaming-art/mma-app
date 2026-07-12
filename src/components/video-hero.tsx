@@ -14,6 +14,9 @@ const CLIPS: Clip[] = [
   { src: "/videos/topuria-ko.mp4", poster: "/videos/topuria-ko.jpg" },
   { src: "/videos/mcgregor-ko.mp4", poster: "/videos/mcgregor-ko.jpg" },
   { src: "/videos/mvp-cannonier.mp4", poster: "/videos/mvp-cannonier.jpg" },
+  { src: "/videos/buckley-ko.mp4", poster: "/videos/buckley-ko.jpg" },
+  { src: "/videos/ufc-mejores-kos.mp4", poster: "/videos/ufc-mejores-kos.jpg" },
+  { src: "/videos/chandler-slam.mp4", poster: "/videos/chandler-slam.jpg" },
 ];
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
