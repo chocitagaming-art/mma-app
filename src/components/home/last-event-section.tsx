@@ -20,25 +20,15 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
 
   return (
     <section className="mx-auto max-w-7xl space-y-7 px-4 pt-12 sm:px-6 lg:px-8">
-      <div className="flex items-end justify-between gap-6">
-        <SectionHeading
-          eyebrow="ÚLTIMO EVENTO"
-          title={event.name}
-          description={
-            description
-              ? `${description}. Resultados de la cartelera estelar.`
-              : "Resultados de la cartelera estelar."
-          }
-        />
-        <Link
-          href={`/eventos/${event.id}`}
-          className="hidden shrink-0 sm:inline-flex"
-        >
-          <Button variant="ghost" size="lg" className="h-10">
-            Resultados completos →
-          </Button>
-        </Link>
-      </div>
+      <SectionHeading
+        eyebrow="ÚLTIMO EVENTO"
+        title={event.name}
+        description={
+          description
+            ? `${description}. Resultados de la cartelera estelar.`
+            : "Resultados de la cartelera estelar."
+        }
+      />
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         {event.bouts.map((bout) => (
@@ -51,10 +41,15 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
         ))}
       </div>
 
-      {/* CTA visible en móvil (el botón de la cabecera se oculta en <sm). */}
-      <div className="sm:hidden">
-        <Link href={`/eventos/${event.id}`}>
-          <Button variant="outline" className="w-full">
+      {/* "Resultados completos" como botón DEBAJO del recuadro (estética UFC),
+          en todos los tamaños (antes solo en la cabecera desktop). */}
+      <div className="flex justify-center">
+        <Link href={`/eventos/${event.id}`} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-11 w-full px-6 sm:w-auto"
+          >
             Resultados completos →
           </Button>
         </Link>

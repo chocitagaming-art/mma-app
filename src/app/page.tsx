@@ -150,19 +150,34 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-7">
-            <div className="flex items-end justify-between gap-6">
-              <SectionHeading
-                eyebrow="Lo último"
-                title="Noticias recientes"
-                description="Lo más reciente del mundo UFC, con foto y titular."
-              />
-              <Link href="/tendencias" className="hidden shrink-0 sm:inline-flex">
-                <Button variant="ghost" size="lg" className="h-10">
-                  Ver todas →
+            <SectionHeading
+              eyebrow="Lo último"
+              title="Noticias recientes"
+              description="Lo más reciente del mundo UFC, con foto y titular."
+            />
+            <RecentNewsGrid limit={6} articles={recentNews} />
+            {/* CTAs bajo las noticias: más noticias (→ Tendencias) y próximas
+                carteleras (→ Eventos próximos), estética UFC. */}
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              <Link href="/tendencias" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-11 w-full px-6 sm:w-auto"
+                >
+                  Más noticias →
+                </Button>
+              </Link>
+              <Link href="/eventos?view=proximos" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-11 w-full px-6 sm:w-auto"
+                >
+                  Próximas carteleras →
                 </Button>
               </Link>
             </div>
-            <RecentNewsGrid limit={6} articles={recentNews} />
           </div>
           <UfcVideosColumn limit={5} />
         </div>

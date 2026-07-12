@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, ExternalLink, MapPin, Ticket, Tv } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
@@ -9,9 +9,8 @@ import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { groupBoutsBySegment } from "@/lib/event-sections";
-import { eventExternalLink } from "@/lib/external-links";
 import { formatDate } from "@/lib/format";
-import { resolveLivePhase } from "@/lib/live-event";
+import { isMainEventFinished, resolveLivePhase } from "@/lib/live-event";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { parseId } from "@/lib/route-params";
 
@@ -50,8 +49,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     event.status === "upcoming" &&
     (event.eventDate == null || event.eventDate >= todayIso);
   const sections = groupBoutsBySegment(event.bouts);
-  // FE9: enlace a la página oficial del evento (solo source='ufc.com').
-  const officialUrl = eventExternalLink(event);
 
   // T3-A (pedido del dueño): si ESTE evento está en marcha o arranca en <24 h,
   // CTA "Ver en directo" → /en-vivo. Se calcula en servidor (la página ya es
@@ -67,6 +64,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     },
     new Date(),
   );
+  // Evento ya terminado (estelar con resultado): NO ofrecer "Ver en directo"
+  // aunque la ventana horaria 'live' (main+8h) siga abierta — misma señal que
+  // apaga el modo directo en la home y en /en-vivo.
+  const eventOver = isMainEventFinished(event.bouts);
 
   // FE5b: hora de inicio de cada segmento para su encabezado de sección.
   const sectionTimes: Record<string, string | null> = {
@@ -154,17 +155,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 </span>
               </span>
             ) : null}
-            {officialUrl ? (
-              <a
-                href={officialUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 transition-colors hover:text-primary"
-              >
-                <ExternalLink className="size-3.5" />
-                Ver en UFC.com
-              </a>
-            ) : null}
           </div>
 
           {/* FE5b: línea de horarios por tramo (hora local del visitante).
@@ -175,10 +165,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             startTime={event.startTime}
           />
 
-          {isUpcoming || livePhase !== "none" ? (
+          {isUpcoming || (livePhase !== "none" && !eventOver) ? (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              {/* T3-A: evento en marcha o a <24 h → seguirlo en /en-vivo. */}
-              {livePhase !== "none" ? (
+              {/* T3-A: evento en marcha o a <24 h → seguirlo en /en-vivo. NO si
+                  el evento ya terminó (estelar con resultado), aunque la ventana
+                  horaria 'live' siga abierta. */}
+              {livePhase !== "none" && !eventOver ? (
                 <Link
                   href="/en-vivo"
                   className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
