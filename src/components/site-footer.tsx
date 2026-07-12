@@ -70,9 +70,17 @@ export function SiteFooter() {
           <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70">
             © {year} MMA STATUS
           </span>
-          <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70">
-            Datos en vivo · Neon PostgreSQL
-          </span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+            <Link
+              href="/creditos"
+              className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70 transition-colors hover:text-primary"
+            >
+              Créditos de imágenes
+            </Link>
+            <span className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70">
+              Datos en vivo · Neon PostgreSQL
+            </span>
+          </div>
         </div>
       </div>
     </footer>
