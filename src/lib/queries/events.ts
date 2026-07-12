@@ -143,10 +143,10 @@ export async function searchEvents(
   const rows = await sql<EventSearchRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date, e.location, e.image_url
      FROM events e
-     WHERE e.name ILIKE $1 OR e.location ILIKE $1
+     WHERE f_unaccent(e.name) ILIKE f_unaccent($1) OR f_unaccent(e.location) ILIKE f_unaccent($1)
      ORDER BY
-       CASE WHEN lower(e.name) = lower($2) THEN 0 ELSE 1 END,
-       CASE WHEN lower(e.name) LIKE lower($3) THEN 0 ELSE 1 END,
+       CASE WHEN lower(f_unaccent(e.name)) = lower(f_unaccent($2)) THEN 0 ELSE 1 END,
+       CASE WHEN lower(f_unaccent(e.name)) LIKE lower(f_unaccent($3)) THEN 0 ELSE 1 END,
        e.event_date DESC NULLS LAST,
        e.id DESC
      LIMIT $4`,

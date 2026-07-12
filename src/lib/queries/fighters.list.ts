@@ -264,12 +264,12 @@ export async function searchFighters(
         headshot_url,
         nationality
      from fighters
-     where name ilike $1
+     where f_unaccent(name) ilike f_unaccent($1)
      order by
        lower(name),
        case when headshot_url is not null then 0 else 1 end,
-       case when lower(name) = lower($2) then 0 else 1 end,
-       case when lower(name) like lower($3) then 0 else 1 end,
+       case when lower(f_unaccent(name)) = lower(f_unaccent($2)) then 0 else 1 end,
+       case when lower(f_unaccent(name)) like lower(f_unaccent($3)) then 0 else 1 end,
        id asc
      limit $4`,
     [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
