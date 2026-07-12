@@ -288,8 +288,13 @@ export function EventBoutRow({
             FOTN
           </GoldBadge>
         ) : null}
+        {/* Resultado (método · round · tiempo): lo más destacado de la fila en
+            una cartelera pasada. Negrita + color de primer plano y en UNA sola
+            línea (whitespace-nowrap, sin el truncate que cortaba el "5:00").
+            Sigue oculto en móvil (hidden sm:block) para no comerle el ancho a
+            los nombres — decisión responsive de F4. */}
         {resultLine ? (
-          <span className="mt-0.5 hidden max-w-[10rem] truncate font-mono text-[0.6rem] text-muted-foreground sm:block">
+          <span className="mt-1 hidden whitespace-nowrap font-mono text-[0.65rem] font-bold text-foreground sm:block">
             {resultLine}
           </span>
         ) : null}
