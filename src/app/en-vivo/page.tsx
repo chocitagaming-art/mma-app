@@ -14,6 +14,7 @@ import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate, formatMethod } from "@/lib/format";
 import {
   computeBoutStates,
+  isMainEventFinished,
   resolveLivePhase,
   type BoutLiveState,
 } from "@/lib/live-event";
@@ -89,10 +90,16 @@ function mobileResultLine(bout: EventBout): string | null {
 export default async function LivePage() {
   const candidate = await getLiveEventCandidate();
   const phase = candidate ? resolveLivePhase(candidate, new Date()) : "none";
+  // Cargamos el detalle en cuanto hay candidato para saber si el estelar ya
+  // cayó (evento recién terminado). En ese caso NO es estado vacío: mostramos
+  // sus resultados en modo "Finalizado" (no "En directo") aunque la ventana
+  // horaria 'live' (main+8h) siga abierta.
+  const event = candidate ? await getEventDetail(candidate.id) : null;
+  const over = event ? isMainEventFinished(event.bouts) : false;
 
-  // Sin evento en marcha ni a la vista (24 h): estado vacío con el siguiente
-  // evento como invitación — una pantalla vacía es una invitación a actuar.
-  if (!candidate || phase === "none") {
+  // Sin candidato/detalle, o fase 'none' que NO sea un evento recién acabado:
+  // estado vacío con el siguiente evento como invitación a actuar.
+  if (!candidate || !event || (phase === "none" && !over)) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
         <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
@@ -127,23 +134,7 @@ export default async function LivePage() {
     );
   }
 
-  const event = await getEventDetail(candidate.id);
-
-  if (!event) {
-    // Candidato sin detalle (no debería pasar): mismo estado vacío.
-    return (
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          En vivo
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-4xl">
-          Ahora mismo no hay ningún evento en directo
-        </h1>
-      </div>
-    );
-  }
-
-  const live = phase === "live";
+  const live = phase === "live" && !over;
   const sections = groupBoutsBySegment(event.bouts);
   // T3-A fase B: filas vivas (estado fino + stats por pelea) que el bucle de
   // mma-ingesta escribe cada ~2 min. 1 SELECT batcheado; degrada a mapa vacío
@@ -165,8 +156,9 @@ export default async function LivePage() {
       .map((stats) => stats.fightId),
   );
   const states = computeBoutStates(
+    // Evento terminado: nadie "En curso" aunque la ventana horaria siga abierta.
     event.bouts,
-    phase,
+    over ? "none" : phase,
     candidate,
     new Date(),
     liveFinishedIds,
@@ -187,9 +179,16 @@ export default async function LivePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-      <p className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-        <span className="live-dot inline-block size-2 rounded-full bg-primary shadow-[0_0_12px_2px_var(--primary)]" />
-        {live ? "En directo" : "Evento de hoy"}
+      <p
+        className={cn(
+          "flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.2em]",
+          over ? "text-win" : "text-primary",
+        )}
+      >
+        {over ? null : (
+          <span className="live-dot inline-block size-2 rounded-full bg-primary shadow-[0_0_12px_2px_var(--primary)]" />
+        )}
+        {over ? "Finalizado" : live ? "En directo" : "Evento de hoy"}
       </p>
       <h1 className="mt-1 font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-4xl">
         {event.name}
@@ -216,7 +215,16 @@ export default async function LivePage() {
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
-        {live ? (
+        {over ? (
+          // Evento terminado: recuento estático, sin AutoRefresh ni cuenta atrás.
+          <p
+            role="status"
+            className="font-mono text-xs tabular text-muted-foreground"
+          >
+            {finishedCount} de {event.bouts.length} combates resueltos ·
+            resultados finales provisionales
+          </p>
+        ) : live ? (
           <>
             <AutoRefresh intervalSeconds={45} />
             {/* aria-live: los lectores de pantalla se enteran cuando cae un

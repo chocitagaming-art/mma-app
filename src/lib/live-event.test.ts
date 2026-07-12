@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeBoutStates,
   firstSegmentStart,
+  isMainEventFinished,
   resolveLivePhase,
   type LiveBoutInput,
   type LiveEventTimes,
@@ -309,5 +310,63 @@ describe("computeBoutStates", () => {
     expect([...states.values()].every((state) => state === "finished")).toBe(
       true,
     );
+  });
+});
+
+describe("isMainEventFinished", () => {
+  it("false mientras el estelar (bout_order 1) sigue sin resultado", () => {
+    const card = [
+      bout(1, 1, "main"), // estelar aún sin resultado
+      bout(2, 2, "main", true),
+      bout(5, 5, "early_prelims", true),
+    ];
+    expect(isMainEventFinished(card)).toBe(false);
+  });
+
+  it("true cuando el estelar (menor bout_order) ya tiene resultado", () => {
+    const card = [
+      bout(1, 1, "main", true),
+      bout(2, 2, "main"),
+      bout(5, 5, "early_prelims", true),
+    ];
+    expect(isMainEventFinished(card)).toBe(true);
+  });
+
+  it("prelims terminados pero el estelar en curso -> aún NO terminado", () => {
+    const card = [
+      bout(1, 1, "main"),
+      bout(2, 2, "main"),
+      bout(3, 3, "prelims", true),
+      bout(4, 4, "prelims", true),
+      bout(5, 5, "early_prelims", true),
+    ];
+    expect(isMainEventFinished(card)).toBe(false);
+  });
+
+  it("empate/NC en el estelar (method sin winner) cuenta como terminado", () => {
+    const draw: LiveBoutInput = {
+      fightId: 1,
+      boutOrder: 1,
+      cardSegment: "main",
+      method: "Decision",
+      winnerId: null,
+    };
+    expect(isMainEventFinished([draw])).toBe(true);
+  });
+
+  it("liveFinishedIds cierra el estelar sin resultado en fights (ESPN 'post')", () => {
+    const card = [bout(1, 1, "main"), bout(2, 2, "main", true)];
+    expect(isMainEventFinished(card)).toBe(false);
+    expect(isMainEventFinished(card, new Set([1]))).toBe(true);
+  });
+
+  it("sin bouts o con bout_order NULL -> false (no se afirma terminado)", () => {
+    expect(isMainEventFinished([])).toBe(false);
+    expect(isMainEventFinished([bout(1, null, "main", true)])).toBe(false);
+  });
+
+  it("el menor bout_order presente manda (las canceladas ya vienen excluidas)", () => {
+    const card = [bout(2, 2, "main", true), bout(3, 3, "prelims")];
+    expect(isMainEventFinished(card)).toBe(true);
   });
 });

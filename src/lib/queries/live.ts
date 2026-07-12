@@ -2,12 +2,17 @@ import { sql } from "@/lib/db";
 
 import type { LiveEventTimes } from "@/lib/live-event";
 import { mapLiveFightStatsRow, type LiveFightStats } from "@/lib/live-stats";
+import { MAIN_EVENT_FINISHED_SQL } from "@/lib/queries/events";
 
 export type LiveEventCandidate = LiveEventTimes & {
   id: number;
   name: string;
   location: string | null;
   broadcast: string | null;
+  // El estelar ya cayó: el evento acabó aunque la ventana horaria 'live' siga
+  // abierta. /api/live/now devuelve 'none' (chip/CTA/banner off) y /en-vivo lo
+  // pinta en modo "Finalizado" en vez de "En directo".
+  mainEventFinished: boolean;
 };
 
 type LiveEventRow = {
@@ -19,6 +24,7 @@ type LiveEventRow = {
   early_prelims_time: string | null;
   location: string | null;
   broadcast: string | null;
+  main_event_finished: boolean;
 };
 
 // T3-A: el candidato a "evento de hoy" para /en-vivo. Mismo criterio temporal
@@ -31,7 +37,8 @@ export async function getLiveEventCandidate(): Promise<LiveEventCandidate | null
             e.start_time::text AS start_time,
             e.prelims_time::text AS prelims_time,
             e.early_prelims_time::text AS early_prelims_time,
-            e.location, e.broadcast
+            e.location, e.broadcast,
+            ${MAIN_EVENT_FINISHED_SQL} AS main_event_finished
      FROM events e
      WHERE COALESCE(
              e.start_time,
@@ -55,6 +62,7 @@ export async function getLiveEventCandidate(): Promise<LiveEventCandidate | null
     earlyPrelimsTime: row.early_prelims_time,
     location: row.location,
     broadcast: row.broadcast,
+    mainEventFinished: row.main_event_finished,
   };
 }
 

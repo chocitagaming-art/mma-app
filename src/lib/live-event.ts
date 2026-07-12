@@ -177,3 +177,37 @@ export function computeBoutStates(
 
   return states;
 }
+
+// Un cartel se considera TERMINADO cuando su combate estelar (el de MENOR
+// bout_order — 1 = estelar, cierra la noche) ya tiene resultado. Es la señal
+// de dato que faltaba: la fase 'live' es solo temporal (main + 8 h) y no sabe
+// que la velada acabó, así que sin esto la web seguía anunciando "EN DIRECTO",
+// "¡ES HOY!" y "Ver en directo" horas después del último combate. Con el
+// estelar resuelto (o cerrado por ESPN en su fila viva 'post', que cubre
+// empates/NC sin resultado en `fights`) el evento deja de estar en directo.
+// bout_order NULL se ignora (no situable en la cronología); sin ningún
+// bout_order no se afirma "terminado". Las canceladas ya vienen excluidas de
+// `bouts` (getEventDetail las separa), así que el menor bout_order presente es
+// el estelar efectivo aunque el nº1 original se cayera.
+export function isMainEventFinished(
+  bouts: LiveBoutInput[],
+  liveFinishedIds?: ReadonlySet<number>,
+): boolean {
+  let main: LiveBoutInput | null = null;
+  for (const bout of bouts) {
+    if (bout.boutOrder == null) {
+      continue;
+    }
+    if (main == null || bout.boutOrder < (main.boutOrder as number)) {
+      main = bout;
+    }
+  }
+  if (main == null) {
+    return false;
+  }
+  return (
+    main.method != null ||
+    main.winnerId != null ||
+    (liveFinishedIds?.has(main.fightId) ?? false)
+  );
+}

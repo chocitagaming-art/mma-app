@@ -12,9 +12,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const candidate = await getLiveEventCandidate();
-    const phase = candidate
-      ? resolveLivePhase(candidate, new Date())
-      : "none";
+    // Evento cuyo estelar ya cayó: 'none' aunque la ventana horaria 'live'
+    // (main + 8 h) siga abierta, para que el chip EN VIVO, la franja de la home
+    // y el botón "Ver en directo" se apaguen en cuanto termina la velada.
+    const phase =
+      candidate && !candidate.mainEventFinished
+        ? resolveLivePhase(candidate, new Date())
+        : "none";
 
     const payload: LiveNowPayload = {
       phase,

@@ -16,6 +16,21 @@ import type {
 
 const PAGE_SIZE = 24;
 
+// SQL: true si el combate ESTELAR del evento `e` (el de MENOR bout_order no
+// cancelado) ya tiene resultado. Espejo de isMainEventFinished() de
+// live-event.ts. Marca un evento como "terminado" en cuanto cae su estelar, sin
+// esperar a que el cron ponga status='completed' (que va con retraso: solo se
+// aplica cuando el evento cae del listado de ufc.com). Se usa para SACAR el
+// evento recién acabado de "Próximo evento"/"en directo" y METERLO en "Último
+// evento". Requiere el alias `e` para la tabla events en la consulta que lo use.
+export const MAIN_EVENT_FINISHED_SQL = `COALESCE((
+  SELECT f.winner_id IS NOT NULL OR f.method IS NOT NULL
+  FROM fights f
+  WHERE f.event_id = e.id AND f.status IS DISTINCT FROM 'cancelled'
+  ORDER BY f.bout_order ASC NULLS LAST, f.id ASC
+  LIMIT 1
+), false)`;
+
 // Algunos pósters de ufc.com vienen como ruta relativa (/s3/files/...). Los absolutizamos
 // para que el <img> no los busque en localhost y den 404.
 function absolutePoster(url: string | null): string | null {
@@ -606,6 +621,10 @@ export async function getNextEventHero(): Promise<NextEventHero | null> {
              (e.event_date + interval '1 day')::timestamptz
            ) > now() - interval '6 hours'
        AND e.status IS DISTINCT FROM 'completed'
+       -- Un evento cuyo estelar ya cayó deja de ser "el próximo": pasa a
+       -- "Último evento" (getLastEventResults) aunque el cron aún no lo haya
+       -- marcado completed. Sin esto la home seguía con "¡ES HOY!/Ver en directo".
+       AND NOT ${MAIN_EVENT_FINISHED_SQL}
      ORDER BY e.event_date ASC, e.id ASC
      LIMIT 1`,
   );
