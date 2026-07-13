@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
+import { headers } from "next/headers";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -35,11 +36,17 @@ export const metadata: Metadata = {
     "Perfiles profesionales de peleadores de MMA, historial de peleas y comparaciones de estadísticas impulsadas por una base de datos Neon PostgreSQL en vivo.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // El proxy (src/proxy.ts) pone un nonce único por petición en esta cabecera. Leerlo
+  // aquí cumple dos funciones: (1) pasarlo a next-themes para que su <script> de tema
+  // inline lleve el nonce y no lo bloquee la CSP; (2) opta a TODO el árbol a render
+  // dinámico, imprescindible para que Next estampe el nonce en sus scripts.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="es"
@@ -48,6 +55,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground">
         <ThemeProvider
+          nonce={nonce}
           attribute="class"
           defaultTheme="system"
           enableSystem

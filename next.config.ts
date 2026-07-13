@@ -56,14 +56,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Apply the security headers to every route.
+  // Cabeceras de seguridad ESTÁTICAS (HSTS, nosniff, …) a toda respuesta. La CSP NO
+  // va aquí: la emite src/proxy.ts porque lleva un nonce único por petición (definirla
+  // también aquí mandaría dos cabeceras Content-Security-Policy en conflicto).
   async headers() {
-    // CSP estricta en producción; en desarrollo se relaja para el HMR de Turbopack.
-    const isDev = process.env.NODE_ENV !== "production";
     return [
       {
         source: "/(.*)",
-        headers: buildSecurityHeaders(isDev),
+        headers: buildSecurityHeaders(),
       },
     ];
   },
