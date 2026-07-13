@@ -18,7 +18,7 @@ import type {
 } from "./fighters.types";
 import { mapFighter } from "./fighters.mappers";
 
-export async function getHomeStats(): Promise<HomeStats> {
+async function getHomeStatsUncached(): Promise<HomeStats> {
   const [row] = await sql<CountRow>(
     `select
       (select count(*) from fighters) as fighters,
@@ -35,7 +35,7 @@ export async function getHomeStats(): Promise<HomeStats> {
   };
 }
 
-export async function getFeaturedFighters(
+async function getFeaturedFightersUncached(
   limit = 6,
 ): Promise<FighterCardData[]> {
   const latestWeightClass = `(
@@ -91,6 +91,21 @@ export async function getFeaturedFighters(
 
   return rows.map(mapFighter);
 }
+
+// Cacheadas con unstable_cache para no pegar a Neon en cada visita a la home: la
+// página es dinámica (por el nonce de la CSP) pero reutiliza estos datos 30 min (la
+// misma ventana del ISR anterior). El tag "home" permite refrescarlas on-demand
+// desde /api/revalidate tras una ingesta.
+export const getHomeStats = unstable_cache(getHomeStatsUncached, ["home-stats"], {
+  revalidate: 1800,
+  tags: ["home"],
+});
+
+export const getFeaturedFighters = unstable_cache(
+  getFeaturedFightersUncached,
+  ["featured-fighters"],
+  { revalidate: 1800, tags: ["home"] },
+);
 
 // Las opciones del filtro (categorías de peso, guardias, nacionalidades) sólo
 // cambian cuando la ingesta diaria añade luchadores/peleas nuevos. En vez de

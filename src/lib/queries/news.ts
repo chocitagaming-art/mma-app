@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { sql } from "@/lib/db";
 import type {
   NewsArticle,
@@ -156,7 +158,7 @@ export async function searchNews(
 // T3-B: lote de noticias para el feed fusionado de /tendencias — como
 // getRecentNews pero con categoría opcional y límites mayores (la paginación
 // del feed mezclado con vídeos se hace EN MEMORIA con ?mostrar=N).
-export async function getTrendingNews(
+async function getTrendingNewsUncached(
   limit: number,
   category?: string,
 ): Promise<NewsArticle[]> {
@@ -185,7 +187,7 @@ export async function getTrendingNews(
 }
 
 // Categorías reales presentes en la tabla (chips secundarios de /tendencias).
-export async function getNewsCategories(): Promise<string[]> {
+async function getNewsCategoriesUncached(): Promise<string[]> {
   const rows = await sql<{ category: string }>(
     `select distinct category
      from news
@@ -197,7 +199,7 @@ export async function getNewsCategories(): Promise<string[]> {
 
 // Últimas noticias para el Inicio (rejilla estilo ufc.com) y el marquee.
 // `requireImage` filtra a las que tienen foto (la rejilla la necesita; el marquee no).
-export async function getRecentNews(
+async function getRecentNewsUncached(
   limit = 6,
   opts: { requireImage?: boolean } = {},
 ): Promise<NewsArticle[]> {
@@ -223,3 +225,23 @@ export async function getRecentNews(
   );
   return rows.map(mapNewsArticle);
 }
+
+// Cacheadas con unstable_cache: las páginas son dinámicas (nonce de la CSP) pero
+// reutilizan las noticias 30 min sin pegar a Neon en cada visita. El tag "news"
+// permite refrescarlas on-demand desde /api/revalidate tras una ingesta de noticias.
+export const getTrendingNews = unstable_cache(
+  getTrendingNewsUncached,
+  ["trending-news"],
+  { revalidate: 1800, tags: ["news"] },
+);
+
+export const getNewsCategories = unstable_cache(
+  getNewsCategoriesUncached,
+  ["news-categories"],
+  { revalidate: 1800, tags: ["news"] },
+);
+
+export const getRecentNews = unstable_cache(getRecentNewsUncached, ["recent-news"], {
+  revalidate: 1800,
+  tags: ["home", "news"],
+});

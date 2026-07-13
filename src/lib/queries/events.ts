@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
 import type {
@@ -631,7 +632,7 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
 // según el mismo orden que usa la cartelera (bout_order ASC NULLS LAST, 1 =
 // estelar) y el ranking de cada esquina reutiliza el patrón LATERAL de
 // fetchEventBouts. Devuelve null si no hay eventos futuros.
-export async function getNextEventHero(): Promise<NextEventHero | null> {
+async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
   const eventRows = await sql<NextEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date,
             e.start_time::text AS start_time, e.location, e.image_url, e.broadcast
@@ -767,7 +768,7 @@ type LastEventRow = {
 // EventBoutRow. Incluye tanto los ya marcados 'completed' por el cron como el
 // que ACABA de terminar (su estelar ya cayó) aunque siga 'upcoming': así pasa a
 // "Último evento" al instante, en cuanto getNextEventHero lo saca de "Próximo".
-export async function getLastEventResults(): Promise<LastEventResults | null> {
+async function getLastEventResultsUncached(): Promise<LastEventResults | null> {
   const rows = await sql<LastEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date, e.location
      FROM events e
@@ -801,6 +802,22 @@ export async function getLastEventResults(): Promise<LastEventResults | null> {
     bouts: mainCard.slice(0, 5),
   };
 }
+
+// Cacheadas con unstable_cache: la home es dinámica (nonce de la CSP) pero reutiliza
+// estos datos 30 min (la ventana del ISR anterior). El tag "home" permite refrescarlas
+// on-demand desde /api/revalidate. El estado EN VIVO no se ve afectado: va por
+// /en-vivo (force-dynamic) y el banner en vivo del cliente.
+export const getNextEventHero = unstable_cache(
+  getNextEventHeroUncached,
+  ["next-event-hero"],
+  { revalidate: 1800, tags: ["home"] },
+);
+
+export const getLastEventResults = unstable_cache(
+  getLastEventResultsUncached,
+  ["last-event-results"],
+  { revalidate: 1800, tags: ["home"] },
+);
 
 type WeighInRow = {
   fight_id: number;

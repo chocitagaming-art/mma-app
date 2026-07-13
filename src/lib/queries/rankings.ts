@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
 import type {
@@ -74,11 +75,8 @@ function buildDivision(slug: string, label: string, rows: RankingRow[]): Divisio
   };
 }
 
-export async function getRankings(): Promise<RankingsResult> {
-  let rows: RankingRow[];
-
-  try {
-    rows = await sql<RankingRow>(
+async function getRankingsUncached(): Promise<RankingsResult> {
+  const rows = await sql<RankingRow>(
       `WITH latest AS (SELECT MAX(snapshot_date) AS d FROM rankings)
        SELECT r.division,
               r.rank_position,
@@ -97,13 +95,7 @@ export async function getRankings(): Promise<RankingsResult> {
        LEFT JOIN fighters f ON f.id = r.fighter_id
        WHERE r.snapshot_date = (SELECT d FROM latest)
        ORDER BY r.division, r.is_champion DESC, r.rank_position, r.id`,
-    );
-  } catch (error) {
-    // La tabla `rankings` puede no estar migrada/poblada todavía (backend en curso).
-    // Degradamos a vacío en vez de romper la página.
-    console.error("getRankings: la tabla rankings aún no está lista:", error);
-    return { snapshotDate: null, divisions: [] };
-  }
+  );
 
   if (rows.length === 0) {
     return { snapshotDate: null, divisions: [] };
@@ -134,6 +126,24 @@ export async function getRankings(): Promise<RankingsResult> {
   }
 
   return { snapshotDate, divisions };
+}
+
+// Cacheada 1 h (la ventana del ISR anterior de /clasificacion). El try/catch va FUERA
+// de unstable_cache a propósito: si Neon falla, se degrada a vacío SIN cachear el fallo
+// (un error transitorio no dejaría la clasificación vacía una hora entera).
+const getRankingsCached = unstable_cache(getRankingsUncached, ["rankings"], {
+  revalidate: 3600,
+  tags: ["rankings"],
+});
+
+export async function getRankings(): Promise<RankingsResult> {
+  try {
+    return await getRankingsCached();
+  } catch (error) {
+    // La tabla `rankings` puede no estar migrada/poblada todavía (backend en curso).
+    console.error("getRankings: la tabla rankings aún no está lista:", error);
+    return { snapshotDate: null, divisions: [] };
+  }
 }
 
 type RankingHistoryRow = {

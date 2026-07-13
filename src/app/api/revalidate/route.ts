@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -45,6 +45,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Refresca la portada: invalida los tags de los datos cacheados con unstable_cache
+  // que la alimentan ("home") y las noticias ("news", también en /tendencias), más el
+  // path (Router Cache). Así "portada fresca en segundos" sigue funcionando pese a que
+  // las queries pasaron de ISR a unstable_cache (que el path por sí solo no invalida).
+  // { expire: 0 } = expiración inmediata (el caso "webhook" del doc de Next 16: la
+  // ingesta llama a este endpoint y la próxima visita debe ver datos frescos ya).
+  revalidateTag("home", { expire: 0 });
+  revalidateTag("news", { expire: 0 });
   revalidatePath("/");
-  return NextResponse.json({ revalidated: true, path: "/" });
+  return NextResponse.json({
+    revalidated: true,
+    path: "/",
+    tags: ["home", "news"],
+  });
 }

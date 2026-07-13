@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { sql } from "@/lib/db";
 
 export type HofWing = "modern" | "pioneer" | "contributor" | "fight";
@@ -65,21 +67,17 @@ function hallOfFameQuery(bioExpr: string): string {
        ORDER BY h.wing, h.sort_order`;
 }
 
-export async function getHallOfFame(): Promise<HallOfFameData> {
+async function getHallOfFameUncached(): Promise<HallOfFameData> {
   let rows: Row[];
+  // El try/catch interno (columna bio ausente, migración 014) es un fallback de
+  // ESQUEMA, no un error: va DENTRO de la caché. El try/catch de "tabla no migrada"
+  // va FUERA (en getHallOfFame) para no cachear un fallo transitorio de Neon.
   try {
-    try {
-      rows = await sql<Row>(hallOfFameQuery("h.bio"));
-    } catch {
-      // La columna bio puede no existir todavía (migración 014 pendiente):
-      // reintenta con bio=NULL para no dejar el Salón en blanco.
-      rows = await sql<Row>(hallOfFameQuery("NULL::text"));
-    }
-  } catch (error) {
-    // La tabla hall_of_fame puede no estar migrada todavía: degradamos a vacío
-    // en vez de romper la página.
-    console.error("getHallOfFame: la tabla hall_of_fame aún no está lista:", error);
-    return emptyData();
+    rows = await sql<Row>(hallOfFameQuery("h.bio"));
+  } catch {
+    // La columna bio puede no existir todavía (migración 014 pendiente):
+    // reintenta con bio=NULL para no dejar el Salón en blanco.
+    rows = await sql<Row>(hallOfFameQuery("NULL::text"));
   }
 
   const data = emptyData();
@@ -105,4 +103,23 @@ export async function getHallOfFame(): Promise<HallOfFameData> {
     });
   }
   return data;
+}
+
+// Cacheada 1 día (la ventana del ISR anterior de /salon-de-la-fama). El try/catch de
+// "tabla no migrada" va FUERA de unstable_cache: un fallo de Neon se degrada a vacío
+// SIN cachear el fallo (no queremos el Salón vacío un día entero por un error transitorio).
+const getHallOfFameCached = unstable_cache(getHallOfFameUncached, ["hall-of-fame"], {
+  revalidate: 86400,
+  tags: ["hall-of-fame"],
+});
+
+export async function getHallOfFame(): Promise<HallOfFameData> {
+  try {
+    return await getHallOfFameCached();
+  } catch (error) {
+    // La tabla hall_of_fame puede no estar migrada todavía: degradamos a vacío
+    // en vez de romper la página.
+    console.error("getHallOfFame: la tabla hall_of_fame aún no está lista:", error);
+    return emptyData();
+  }
 }
