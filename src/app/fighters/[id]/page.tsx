@@ -383,18 +383,28 @@ export default async function FighterDetailPage({
                     {lastFightResultLabel}
                   </span>
                 </div>
-                <p className="mt-3 font-display text-xl font-bold uppercase leading-tight tracking-tight text-foreground">
-                  {lastFight.opponentId ? (
-                    <Link
-                      href={`/fighters/${lastFight.opponentId}`}
-                      className="transition-colors hover:text-primary"
-                    >
-                      {lastFight.opponentName ?? "Oponente desconocido"}
-                    </Link>
-                  ) : (
-                    (lastFight.opponentName ?? "Oponente desconocido")
-                  )}
-                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <FighterHeadshot
+                    name={lastFight.opponentName ?? "Oponente desconocido"}
+                    headshotUrl={lastFight.opponentHeadshotUrl ?? null}
+                    // El rival de la última pelea comparte división (y por tanto
+                    // género para la silueta de fallback) con el luchador.
+                    division={detail.latestWeightClass}
+                    size="sm"
+                  />
+                  <p className="min-w-0 font-display text-xl font-bold uppercase leading-tight tracking-tight text-foreground">
+                    {lastFight.opponentId ? (
+                      <Link
+                        href={`/fighters/${lastFight.opponentId}`}
+                        className="transition-colors hover:text-primary"
+                      >
+                        {lastFight.opponentName ?? "Oponente desconocido"}
+                      </Link>
+                    ) : (
+                      (lastFight.opponentName ?? "Oponente desconocido")
+                    )}
+                  </p>
+                </div>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {formatMethod(lastFight.method)}
                   {lastFight.endRound != null ? ` · R${lastFight.endRound}` : ""}

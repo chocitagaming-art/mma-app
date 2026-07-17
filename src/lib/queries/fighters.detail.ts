@@ -122,6 +122,10 @@ export const getFighterDetail = cache(async (
           else red.name
         end as opponent_name,
         case
+          when fi.fighter_red_id = $1 then blue.headshot_url
+          else red.headshot_url
+        end as opponent_headshot,
+        case
           when fi.fighter_red_id = $1 then 'red'
           else 'blue'
         end as corner,
@@ -337,6 +341,7 @@ export const getFighterDetail = cache(async (
     eventDate: row.event_date,
     opponentId: row.opponent_id,
     opponentName: row.opponent_name,
+    opponentHeadshotUrl: row.opponent_headshot,
     corner: row.corner,
     result: row.result,
     method: row.method,
@@ -360,6 +365,7 @@ export const getFighterDetail = cache(async (
     eventDate: row.event_date,
     opponentId: row.opponent_fighter_id,
     opponentName: row.opponent_name,
+    opponentHeadshotUrl: null,
     result: row.result,
     method: row.method,
     endRound: row.end_round,

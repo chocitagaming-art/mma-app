@@ -55,6 +55,7 @@ export type HistoryRow = {
   event_date: string | null;
   opponent_id: number | null;
   opponent_name: string | null;
+  opponent_headshot: string | null;
   corner: "red" | "blue";
   result: "win" | "loss" | "draw" | "nc";
   method: string | null;

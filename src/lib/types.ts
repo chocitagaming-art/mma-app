@@ -78,6 +78,10 @@ export type FighterHistoryItem = {
   eventDate: string | null;
   opponentId: number | null;
   opponentName: string | null;
+  // Foto del rival (headshot_url). En filas UFC viene del JOIN a fighters; en
+  // las de ESPN es null (no hay headshot). Opcional para no romper las
+  // factorías de test que construyen FighterHistoryItem parcial.
+  opponentHeadshotUrl?: string | null;
   // Las filas espn (S3-G) no traen esquina: ESPN lista la carrera desde la
   // perspectiva del propio luchador.
   corner?: "red" | "blue";

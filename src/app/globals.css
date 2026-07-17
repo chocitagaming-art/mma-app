@@ -206,8 +206,8 @@
       );
   }
   /* Marca de agua del logo MMA STATUS (sustituye al octágono soso). Sutil,
-     theme-aware, con flotación lenta y bordes difuminados (máscara radial) para
-     que se funda con el fondo y no recorte en seco. */
+     theme-aware y estática (dueño 17-jul: sin flotación), con bordes difuminados
+     (máscara radial) para que se funda con el fondo y no recorte en seco. */
   body::after {
     content: "";
     position: fixed;
@@ -230,19 +230,9 @@
       transparent 76%
     );
     opacity: 0.07;
-    animation: octagon-drift 22s ease-in-out infinite;
   }
   .dark body::after {
     opacity: 0.08;
-  }
-  @keyframes octagon-drift {
-    0%,
-    100% {
-      transform: translateX(-50%) translateY(0) rotate(0deg);
-    }
-    50% {
-      transform: translateX(-50%) translateY(-14px) rotate(3deg);
-    }
   }
   html {
     @apply font-sans;
@@ -334,27 +324,6 @@
 /* Punto "en vivo" que late. */
 .live-dot {
   animation: pulse-dot 1.8s ease-in-out infinite;
-}
-
-/* ---------- Marquee de noticias (Inicio) ---------- */
-/* El contenido se duplica en el DOM; animar 0 → -50% da un bucle sin costuras. */
-@keyframes marquee-rtl {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.animate-marquee {
-  animation: marquee-rtl var(--marquee-duration, 48s) linear infinite;
-  will-change: transform;
-}
-/* Pausa al pasar el ratón o al enfocar con teclado un titular del reel
-   (el contenedor lleva .marquee-host) — WCAG 2.2.2 (pausar contenido en movimiento). */
-.marquee-host:hover .animate-marquee,
-.marquee-host:focus-within .animate-marquee {
-  animation-play-state: paused;
 }
 
 /* ---------- Bordes difuminados (feather) del reel de vídeo del hero ---------- */

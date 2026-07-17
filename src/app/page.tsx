@@ -5,7 +5,6 @@ import { FighterCard } from "@/components/fighter-card";
 import { LastEventSection } from "@/components/home/last-event-section";
 import { LiveBanner } from "@/components/live/live-banner";
 import { UpNextHero } from "@/components/home/up-next-hero";
-import { NewsMarquee } from "@/components/news-marquee";
 import { RecentNewsGrid } from "@/components/recent-news-grid";
 import { SearchHero } from "@/components/search-hero";
 import { SectionHeading } from "@/components/section-heading";
@@ -30,9 +29,9 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // Noticias para el marquee (12 recientes, con o sin foto). La rejilla pide
-  // aparte sus 6 con foto (paridad visual exacta); con ISR ambas consultas solo
-  // corren al revalidar, así que el coste extra es irrelevante (#68/#33).
+  // Noticias recientes (12; RecentNewsGrid escoge de ese conjunto sus 6 con
+  // foto, paridad visual exacta). Con ISR la consulta solo corre al revalidar,
+  // así que el coste es irrelevante (#68/#33).
   const [stats, featuredFighters, recentNews, nextEvent, lastEvent] =
     await Promise.all([
       getHomeStats(),
@@ -92,7 +91,14 @@ export default async function HomePage() {
               style={{ animationDelay: "320ms" }}
             >
               <Link href="/maestro">
-                <Button variant="outline" size="lg" className="h-10">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  // Borde rojo de marca (dueño 17-jul): mismo patrón que el CTA
+                  // "Ver historial completo" de la ficha. Los prefijos dark::
+                  // hacen falta porque outline trae dark:border-input/dark:bg-input.
+                  className="h-10 border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+                >
                   Pregunta al Maestro de la UFC
                 </Button>
               </Link>
@@ -136,12 +142,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Marquee de noticias (se desplaza derecha→izquierda, clicable) */}
-      <NewsMarquee articles={recentNews} />
-
       {/* Acaba de pasar (FE10): resultados del último evento completado. Va
-          tras la pareja de franjas full-bleed (stats + marquee) para no
-          separarlas y encadenar con el bloque de noticias. */}
+          tras la franja de stats para encadenar con el bloque de noticias. */}
       {lastEvent && lastEvent.bouts.length > 0 ? (
         <LastEventSection event={lastEvent} />
       ) : null}
