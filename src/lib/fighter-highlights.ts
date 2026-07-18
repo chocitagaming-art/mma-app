@@ -73,6 +73,33 @@ export function countFirstRoundFinishes(history: FighterHistoryItem[]): number {
   ).length;
 }
 
+// 1A: el desglose de acabados del hero (KO / sumisión / finalizaciones en 1er
+// asalto) usa los totales de CARRERA de ufc.com (guardados, migración 021)
+// cuando existen — consistentes con el record W-L-D total del hero. Si el
+// luchador no tiene ficha ufc.com (prospecto), cae al cálculo UFC-only. Se
+// resuelve por campo con `?? computed`; como el scraper escribe los 3 juntos,
+// en la práctica es todo-o-nada.
+export type FinishHighlights = {
+  winsByKo: number;
+  winsBySubmission: number;
+  firstRoundFinishes: number;
+};
+
+export function resolveFinishHighlights(
+  stored: {
+    winsByKo?: number | null;
+    winsBySubmission?: number | null;
+    firstRoundFinishes?: number | null;
+  },
+  computed: { koTko: number; submission: number; firstRoundFinishes: number },
+): FinishHighlights {
+  return {
+    winsByKo: stored.winsByKo ?? computed.koTko,
+    winsBySubmission: stored.winsBySubmission ?? computed.submission,
+    firstRoundFinishes: stored.firstRoundFinishes ?? computed.firstRoundFinishes,
+  };
+}
+
 // El historial llega ordenado del más reciente al más antiguo e incluye
 // combates futuros como placeholder (result 'draw' + method null, ver
 // fighter-form.ts). La "última pelea" es el primer combate ya disputado.

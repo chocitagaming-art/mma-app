@@ -60,6 +60,7 @@ import {
   computeAge,
   countFirstRoundFinishes,
   lastCompletedFight,
+  resolveFinishHighlights,
 } from "@/lib/fighter-highlights";
 import { resolveFightVideoUrl } from "@/lib/video";
 import {
@@ -179,11 +180,26 @@ export default async function FighterDetailPage({
   // Enlaces externos (FE9): perfiles reales del luchador en la fuente de origen.
   const externalLinks = fighterExternalLinks(fighter);
 
+  // 1A: preferimos los totales de CARRERA de ufc.com (guardados) — como el
+  // record del hero; sin ficha ufc.com caemos al cálculo UFC-only (winMethods).
+  const finishHighlights = resolveFinishHighlights(
+    {
+      winsByKo: fighter.winsByKo,
+      winsBySubmission: fighter.winsBySubmission,
+      firstRoundFinishes: fighter.firstRoundFinishes,
+    },
+    {
+      koTko: winMethods.koTko,
+      submission: winMethods.submission,
+      firstRoundFinishes,
+    },
+  );
+
   const heroHighlights = [
     // Sin "por": los labels contiguos se amontonaban visualmente (dueño, 11-jul).
-    { value: winMethods.koTko, label: "Victorias KO" },
-    { value: winMethods.submission, label: "Victorias sumisión" },
-    { value: firstRoundFinishes, label: "Finalizaciones en 1er asalto" },
+    { value: finishHighlights.winsByKo, label: "Victorias KO" },
+    { value: finishHighlights.winsBySubmission, label: "Victorias sumisión" },
+    { value: finishHighlights.firstRoundFinishes, label: "Finalizaciones en 1er asalto" },
   ];
 
   const lastFightResultLabel =

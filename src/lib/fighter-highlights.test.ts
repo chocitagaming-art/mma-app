@@ -5,6 +5,7 @@ import {
   computeAge,
   countFirstRoundFinishes,
   lastCompletedFight,
+  resolveFinishHighlights,
 } from "@/lib/fighter-highlights";
 import type { FighterHistoryItem } from "@/lib/types";
 
@@ -154,5 +155,45 @@ describe("lastCompletedFight", () => {
     expect(
       lastCompletedFight([fight({ result: "draw", method: null })]),
     ).toBeNull();
+  });
+});
+
+describe("resolveFinishHighlights", () => {
+  const computed = { koTko: 0, submission: 0, firstRoundFinishes: 0 };
+
+  it("prefers the stored ufc.com career totals when present", () => {
+    expect(
+      resolveFinishHighlights(
+        { winsByKo: 2, winsBySubmission: 1, firstRoundFinishes: 2 },
+        computed,
+      ),
+    ).toEqual({ winsByKo: 2, winsBySubmission: 1, firstRoundFinishes: 2 });
+  });
+
+  it("falls back to the UFC-only computation when stored is null/undefined", () => {
+    const computedReal = { koTko: 5, submission: 3, firstRoundFinishes: 4 };
+    expect(
+      resolveFinishHighlights(
+        { winsByKo: null, winsBySubmission: undefined },
+        computedReal,
+      ),
+    ).toEqual({ winsByKo: 5, winsBySubmission: 3, firstRoundFinishes: 4 });
+  });
+
+  it("resolves each field independently (stored one, computed the rest)", () => {
+    const computedReal = { koTko: 5, submission: 3, firstRoundFinishes: 4 };
+    expect(
+      resolveFinishHighlights({ winsByKo: 9 }, computedReal),
+    ).toEqual({ winsByKo: 9, winsBySubmission: 3, firstRoundFinishes: 4 });
+  });
+
+  it("respects a stored 0 (pure-decision fighter), not treating it as missing", () => {
+    const computedReal = { koTko: 5, submission: 3, firstRoundFinishes: 4 };
+    expect(
+      resolveFinishHighlights(
+        { winsByKo: 0, winsBySubmission: 0, firstRoundFinishes: 0 },
+        computedReal,
+      ),
+    ).toEqual({ winsByKo: 0, winsBySubmission: 0, firstRoundFinishes: 0 });
   });
 });

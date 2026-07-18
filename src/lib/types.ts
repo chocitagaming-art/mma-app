@@ -34,6 +34,12 @@ export type Fighter = {
   // (DATE casteado a ::text en las queries de detalle).
   birthPlace?: string | null;
   octagonDebut?: string | null;
+  // 1A (migración 021): desglose de acabados de CARRERA desde ufc.com. NULL/
+  // undefined = sin dato ufc.com -> la ficha usa el cálculo UFC-only (winMethods).
+  // Son totales de carrera, consistentes con el record W-L-D del hero.
+  winsByKo?: number | null;
+  winsBySubmission?: number | null;
+  firstRoundFinishes?: number | null;
 };
 
 export type FighterCardData = Fighter & {

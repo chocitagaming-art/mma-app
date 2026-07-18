@@ -46,6 +46,12 @@ export type FighterRow = {
   // JSON automáticamente; `unknown` porque la forma se valida en el mapper.
   fighter_facts?: unknown;
   fighter_qa?: unknown;
+  // 1A (migración 021): desglose de acabados de CARRERA desde ufc.com. Llegan
+  // vía f.* pero son NULL si el luchador no tiene ficha ufc.com o aún sin
+  // scrapear -> la ficha cae al cálculo UFC-only.
+  wins_by_ko?: number | null;
+  wins_by_submission?: number | null;
+  first_round_finishes?: number | null;
 };
 
 export type HistoryRow = {

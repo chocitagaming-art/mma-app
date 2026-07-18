@@ -46,6 +46,9 @@ export function mapFighter(row: FighterRow): FighterCardData {
     octagonDebut: row.octagon_debut ?? null,
     fightCount: Number(row.fight_count ?? 0),
     latestWeightClass: row.latest_weight_class ?? null,
+    winsByKo: row.wins_by_ko ?? null,
+    winsBySubmission: row.wins_by_submission ?? null,
+    firstRoundFinishes: row.first_round_finishes ?? null,
   };
 }
 
