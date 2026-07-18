@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  clientIpFromHeaders,
+  isAllowedOrigin,
+  rateLimit,
+} from "@/lib/maestro/security";
 import { generatePredictionExplanation, type PredictionResponse } from "@/lib/prediction";
 
 export const runtime = "nodejs";
@@ -101,7 +106,60 @@ async function fetchPrediction(
   );
 }
 
+// Caché en memoria de predicciones por par (red, blue). Una predicción es
+// determinista para los mismos dos peleadores, así que repetir la MISMA pareja
+// no debe re-llamar a Render ni a Anthropic (denial-of-wallet). Best-effort (por
+// instancia en serverless) y con TTL corto para no servir datos rancios.
+type PredictionCacheEntry = { value: PredictionResponse; expires: number };
+const PREDICTION_CACHE_TTL_MS = 30 * 60_000;
+const PREDICTION_CACHE_MAX = 500;
+const predictionCache = new Map<string, PredictionCacheEntry>();
+
+function getCachedPrediction(key: string): PredictionResponse | null {
+  const hit = predictionCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expires) {
+    predictionCache.delete(key);
+    return null;
+  }
+  // LRU: al leer, refresca el orden de inserción (se evicta el más viejo).
+  predictionCache.delete(key);
+  predictionCache.set(key, hit);
+  return hit.value;
+}
+
+function setCachedPrediction(key: string, value: PredictionResponse): void {
+  if (predictionCache.size >= PREDICTION_CACHE_MAX) {
+    const oldest = predictionCache.keys().next().value;
+    if (oldest !== undefined) predictionCache.delete(oldest);
+  }
+  predictionCache.set(key, {
+    value,
+    expires: Date.now() + PREDICTION_CACHE_TTL_MS,
+  });
+}
+
 export async function POST(request: Request) {
+  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking), igual
+  //    que el Maestro. Un cliente no-navegador sin Origin se rechaza aquí.
+  const origin = request.headers.get("origin") ?? request.headers.get("referer");
+  const allowLoopback = process.env.NODE_ENV !== "production";
+  if (!isAllowedOrigin(origin, request.headers.get("host"), allowLoopback)) {
+    return NextResponse.json({ error: "Origen no permitido." }, { status: 403 });
+  }
+
+  // 2) Rate-limit por IP: /api/predict es el endpoint MÁS caro (microservicio
+  //    Render + explicación con Anthropic por request). Antes de parsear el body
+  //    para que un flood de peticiones también quede limitado.
+  const ip = clientIpFromHeaders(request.headers);
+  const limit = rateLimit(`predict:${ip}`);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Vas demasiado rápido. Espera unos segundos e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = requestSchema.safeParse(body);
@@ -120,16 +178,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // 3) Caché por par: evita re-llamar a Render + Anthropic en repeticiones.
+    const cacheKey = `${parsed.data.redFighterId}-${parsed.data.blueFighterId}`;
+    const cached = getCachedPrediction(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const prediction = await fetchPrediction(
       parsed.data.redFighterId,
       parsed.data.blueFighterId,
     );
     const explanation = await generatePredictionExplanation(prediction);
-
-    return NextResponse.json({
+    const payload = {
       ...prediction,
       ...explanation,
-    } satisfies PredictionResponse);
+    } satisfies PredictionResponse;
+    setCachedPrediction(cacheKey, payload);
+
+    return NextResponse.json(payload);
   } catch (error) {
     // Service not configured / unreachable → 503 so the UI degrades gracefully.
     if (error instanceof PredictionUnavailableError) {
