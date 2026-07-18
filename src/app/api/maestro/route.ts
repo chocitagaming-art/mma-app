@@ -7,9 +7,9 @@ import {
   clientIpFromHeaders,
   isAllowedOrigin,
   normalizeConversation,
-  rateLimit,
 } from "@/lib/maestro/security";
 import { runMaestroTool } from "@/lib/maestro/tools";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // pg necesita Node, no Edge.
 export const runtime = "nodejs";
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   // 2) Rate-limit por IP (best-effort en memoria). Antes de parsear el body
   // para que un flood de peticiones inválidas también quede limitado.
   const ip = clientIpFromHeaders(request.headers);
-  const limit = rateLimit(`maestro:${ip}`);
+  const limit = await checkRateLimit(`maestro:${ip}`);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Vas demasiado rápido. Espera unos segundos e inténtalo de nuevo." },

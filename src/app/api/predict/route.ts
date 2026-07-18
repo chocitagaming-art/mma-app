@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import {
-  clientIpFromHeaders,
-  isAllowedOrigin,
-  rateLimit,
-} from "@/lib/maestro/security";
+import { clientIpFromHeaders, isAllowedOrigin } from "@/lib/maestro/security";
 import { generatePredictionExplanation, type PredictionResponse } from "@/lib/prediction";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 // El microservicio (Render free) se duerme a los 15 min: el primer request lo
@@ -152,7 +149,7 @@ export async function POST(request: Request) {
   //    Render + explicación con Anthropic por request). Antes de parsear el body
   //    para que un flood de peticiones también quede limitado.
   const ip = clientIpFromHeaders(request.headers);
-  const limit = rateLimit(`predict:${ip}`);
+  const limit = await checkRateLimit(`predict:${ip}`);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Vas demasiado rápido. Espera unos segundos e inténtalo de nuevo." },
