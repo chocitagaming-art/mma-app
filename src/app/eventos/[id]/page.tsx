@@ -8,6 +8,7 @@ import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule
 import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
+import { FightVideoPlayer } from "@/components/fight-video-player";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate } from "@/lib/format";
 import { isMainEventFinished, resolveLivePhase } from "@/lib/live-event";
@@ -118,21 +119,44 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       </Link>
 
       <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6">
-        {event.imageUrl ? (
-          // Póster hero (Fase 5): grande y centrado, también en eventos pasados.
-          // aspect-[16/9] + width/height explícitos reservan el alto antes de que
-          // cargue la imagen remota (anti-CLS); eager + fetchPriority alta porque
-          // es el elemento above-the-fold más pesado de la página (LCP).
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={event.imageUrl}
-            alt={`Póster de ${event.name}`}
-            width={1280}
-            height={720}
-            loading="eager"
-            fetchPriority="high"
-            className="mx-auto aspect-[16/9] w-full max-w-3xl rounded-lg border border-border object-cover"
-          />
+        {event.imageUrl || event.faceoffVideoId ? (
+          // Careo (face-off) AL LADO del póster: grid de 2 columnas en escritorio
+          // cuando existen ambos; en móvil el careo cae debajo. Con solo uno, se
+          // muestra centrado (max-w-3xl) como el póster hero de siempre.
+          <div
+            className={
+              event.imageUrl && event.faceoffVideoId
+                ? "grid gap-4 lg:grid-cols-2 lg:items-start"
+                : "mx-auto w-full max-w-3xl"
+            }
+          >
+            {event.imageUrl ? (
+              // Póster hero (Fase 5): aspect-[16/9] + width/height explícitos
+              // reservan el alto antes de cargar (anti-CLS); eager + fetchPriority
+              // alta porque es el elemento above-the-fold más pesado (LCP).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={event.imageUrl}
+                alt={`Póster de ${event.name}`}
+                width={1280}
+                height={720}
+                loading="eager"
+                fetchPriority="high"
+                className="aspect-[16/9] w-full rounded-lg border border-border object-cover"
+              />
+            ) : null}
+            {event.faceoffVideoId ? (
+              <div>
+                <p className="mb-2 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
+                  Careo oficial
+                </p>
+                <FightVideoPlayer
+                  videoId={event.faceoffVideoId}
+                  title={`Careo · ${event.name}`}
+                />
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="min-w-0">

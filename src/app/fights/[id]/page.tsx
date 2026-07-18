@@ -140,7 +140,7 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
               rel="noreferrer"
               aria-label={`Ver el combate ${fight.red.name} vs ${fight.blue.name}`}
             >
-              <Button variant="secondary" size="lg" className="h-11">
+              <Button variant="default" size="lg" className="h-11 font-semibold">
                 <Play className="size-4" />
                 {fight.videoUrl ? "Ver combate" : "Buscar combate en YouTube"}
               </Button>

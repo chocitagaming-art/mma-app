@@ -346,6 +346,7 @@ export type EventListItem = {
   name: string;
   eventDate: string | null;
   location: string | null;
+  imageUrl?: string | null;
   fightCount: number;
 };
 
@@ -411,6 +412,8 @@ export type EventDetail = {
   status: string | null;
   startTime: string | null;
   imageUrl: string | null;
+  // Careo oficial de UFC (face-off) en YouTube: solo el video id (migración 022).
+  faceoffVideoId: string | null;
   broadcast: string | null;
   ticketUrl: string | null;
   tagline: string | null;

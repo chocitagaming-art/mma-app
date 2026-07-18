@@ -53,6 +53,7 @@ type EventListRow = {
   name: string;
   event_date: string | null;
   location: string | null;
+  image_url: string | null;
   fight_count: string;
 };
 
@@ -84,14 +85,14 @@ export async function getPastEvents(
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const rows = await sql<EventListRow>(
-    `SELECT e.id, e.name, e.event_date::text AS event_date, e.location,
+    `SELECT e.id, e.name, e.event_date::text AS event_date, e.location, e.image_url,
             count(f.id)::text AS fight_count
      FROM events e
      -- BE7: las peleas canceladas no cuentan en el "N peleas" del listado.
      LEFT JOIN fights f
        ON f.event_id = e.id AND f.status IS DISTINCT FROM 'cancelled'
      ${whereClause}
-     GROUP BY e.id, e.name, e.event_date, e.location
+     GROUP BY e.id, e.name, e.event_date, e.location, e.image_url
      ORDER BY e.event_date DESC NULLS LAST, e.id DESC
      LIMIT $${whereParams.length + 1} OFFSET $${whereParams.length + 2}`,
     [...whereParams, PAGE_SIZE, offset],
@@ -102,6 +103,7 @@ export async function getPastEvents(
     name: row.name,
     eventDate: row.event_date,
     location: row.location,
+    imageUrl: absolutePoster(row.image_url),
     fightCount: Number(row.fight_count),
   }));
 
@@ -220,6 +222,7 @@ type EventRow = {
   status: string | null;
   start_time: string | null;
   image_url: string | null;
+  faceoff_video_id: string | null;
   broadcast: string | null;
   ticket_url: string | null;
   tagline: string | null;
@@ -442,7 +445,7 @@ export const getEventDetail = cache(async (
 ): Promise<EventDetail | null> => {
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
-            status, start_time::text AS start_time, image_url,
+            status, start_time::text AS start_time, image_url, faceoff_video_id,
             broadcast, ticket_url, tagline, headliner, source, source_id,
             early_prelims_time::text AS early_prelims_time,
             prelims_time::text AS prelims_time
@@ -505,6 +508,7 @@ export const getEventDetail = cache(async (
     status: event.status,
     startTime: event.start_time,
     imageUrl: absolutePoster(event.image_url),
+    faceoffVideoId: event.faceoff_video_id,
     broadcast: event.broadcast,
     ticketUrl: event.ticket_url,
     tagline: event.tagline,

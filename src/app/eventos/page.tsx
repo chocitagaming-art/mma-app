@@ -210,23 +210,38 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
                   key={event.id}
                   href={`/eventos/${event.id}`}
                   style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
-                  className="animate-rise group flex flex-col gap-3 rounded-lg border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
+                  className="animate-rise group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-foreground/5"
                 >
-                  <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
-                    {event.name}
-                  </p>
-                  <div className="mt-auto space-y-1 font-mono text-xs text-muted-foreground">
-                    <p className="flex items-center gap-1.5">
-                      <CalendarDays className="size-3.5 shrink-0" />
-                      {formatDate(event.eventDate)}
+                  {event.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={event.imageUrl}
+                      alt={`Póster de ${event.name}`}
+                      loading="lazy"
+                      className="aspect-[16/9] w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-[16/9] w-full items-center justify-center bg-muted">
+                      <CalendarDays className="size-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col gap-3 p-5">
+                    <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
+                      {event.name}
                     </p>
-                    {event.location ? (
+                    <div className="mt-auto space-y-1 font-mono text-xs text-muted-foreground">
                       <p className="flex items-center gap-1.5">
-                        <MapPin className="size-3.5 shrink-0" />
-                        <span className="truncate">{event.location}</span>
+                        <CalendarDays className="size-3.5 shrink-0" />
+                        {formatDate(event.eventDate)}
                       </p>
-                    ) : null}
-                    <p className="tabular">{event.fightCount} peleas</p>
+                      {event.location ? (
+                        <p className="flex items-center gap-1.5">
+                          <MapPin className="size-3.5 shrink-0" />
+                          <span className="truncate">{event.location}</span>
+                        </p>
+                      ) : null}
+                      <p className="tabular">{event.fightCount} peleas</p>
+                    </div>
                   </div>
                 </Link>
               ))}
