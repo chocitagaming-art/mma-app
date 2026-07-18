@@ -13,23 +13,11 @@ type SourceRef = {
   sourceId?: string | null;
 };
 
-// Luchadores: solo 'espn' expone enlace (id numérico de espn.com). 'ufcstats'
-// se omite a propósito (decisión de producto: no mostrarlo en la ficha). Otros
-// sources ('manual'...) tampoco tienen enlace. Sin source/sourceId → sin enlace.
-export function fighterExternalLinks({ source, sourceId }: SourceRef): ExternalLink[] {
-  if (!source || !sourceId) {
-    return [];
-  }
-
-  switch (source) {
-    case "espn":
-      return [
-        {
-          label: "ESPN",
-          url: `https://www.espn.com/mma/fighter/_/id/${encodeURIComponent(sourceId)}`,
-        },
-      ];
-    default:
-      return [];
-  }
+// Luchadores: decisión del dueño (18-jul) — NO mostrar enlaces externos en la
+// ficha (ni ESPN ni ufcstats). Antes 'espn' exponía un enlace a espn.com; se
+// retiró a petición del dueño. La función se conserva (mismo contrato) por si se
+// quisiera reactivar alguna fuente en el futuro, pero hoy no devuelve ninguno, así
+// que la fila "Enlaces" del perfil no llega a renderizarse (guardada por length>0).
+export function fighterExternalLinks(_ref: SourceRef): ExternalLink[] {
+  return [];
 }
