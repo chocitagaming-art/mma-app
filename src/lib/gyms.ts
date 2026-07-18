@@ -18,6 +18,13 @@ export type Gym = {
   distanceKm: number;
 };
 
+// Item del DIRECTORIO completo (/gimnasios, sección bajo el mapa). Como no
+// depende de un centro de búsqueda, no lleva distanceKm; a cambio expone
+// `province` para el subtítulo de ubicación.
+export type GymDirectoryItem = Omit<Gym, "distanceKm"> & {
+  province: string | null;
+};
+
 // Token OSM del tag `sport` → etiqueta en español para los chips. Incluye
 // sinónimos y tokens en español muy usados en OSM España (boxeo, mma, k1…) y las
 // variantes reales de BJJ (jiu-jitsu con guion / jiu_jitsu). Varios tokens pueden

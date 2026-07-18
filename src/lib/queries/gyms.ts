@@ -4,6 +4,7 @@ import {
   haversineKm,
   sportLabels,
   type Gym,
+  type GymDirectoryItem,
 } from "@/lib/gyms";
 
 // Fila cruda de la tabla `gyms` (migración 023, poblada por gyms_osm.py). Las
@@ -60,4 +61,35 @@ export async function getGymsNearby(lat: number, lon: number): Promise<Gym[]> {
   }
   gyms.sort((a, b) => a.distanceKm - b.distanceKm);
   return gyms.slice(0, MAX_RESULTS);
+}
+
+// Fila del directorio: como GymRow pero con la provincia (para el subtítulo).
+type GymDirectoryRow = GymRow & { province: string | null };
+
+// TODOS los gimnasios registrados (directorio bajo el mapa), ordenados por
+// nombre. Sin bounding-box ni distancia: son ≤250 filas en toda España, así que
+// una lectura completa es barata. La página lo sirve con ISR (revalidate diario).
+export async function getAllGyms(): Promise<GymDirectoryItem[]> {
+  const rows = await sql<GymDirectoryRow>(
+    `SELECT osm_id, name, lat, lon, sports, address, city, province, website, phone
+       FROM gyms
+      ORDER BY name ASC`,
+  );
+
+  return rows.map((row) => {
+    const sports = sportLabels(row.sports.join(";"));
+    return {
+      id: row.osm_id,
+      lat: row.lat,
+      lon: row.lon,
+      name: row.name,
+      sports,
+      address: row.address,
+      city: row.city,
+      province: row.province,
+      description: gymDescription(sports, row.city),
+      website: row.website,
+      phone: row.phone,
+    };
+  });
 }
