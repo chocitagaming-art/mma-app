@@ -58,7 +58,7 @@ export default function LeafletMap({
                 {marker.name}
               </strong>
               {marker.sports.length > 0 ? (
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#f5333a]">
+                <div className="text-xs font-semibold uppercase tracking-wide text-primary">
                   {marker.sports.join(" · ")}
                 </div>
               ) : null}

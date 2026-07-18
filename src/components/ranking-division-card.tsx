@@ -104,7 +104,7 @@ export function RankingDivisionCard({
             className="size-[4.5rem] shrink-0 border-2 border-amber-400/70 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
           />
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-amber-400">
+            <p className="flex items-center gap-1 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
               <Trophy className="size-3" aria-hidden />
               Campeón
             </p>

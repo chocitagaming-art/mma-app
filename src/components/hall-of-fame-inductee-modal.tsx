@@ -77,7 +77,7 @@ export function HallOfFameInducteeModal({
 function ClassLine({ prefix, year }: { prefix?: string; year: number | null }) {
   return (
     <p className="mt-1 flex items-center justify-center gap-1.5 font-mono text-xs text-muted-foreground">
-      <Trophy className="size-3 text-amber-400" aria-hidden />
+      <Trophy className="size-3 text-amber-600 dark:text-amber-400" aria-hidden />
       {prefix ? `${prefix} · ` : ""}
       {year ? `Clase de ${year}` : "Salón de la Fama"}
     </p>
@@ -109,7 +109,7 @@ function PersonBody({
           {inductee.displayName}
         </h2>
         {inductee.subtitle ? (
-          <p className="mt-1 text-sm font-semibold text-amber-400">{inductee.subtitle}</p>
+          <p className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-400">{inductee.subtitle}</p>
         ) : null}
         <ClassLine year={inductee.inducteeYear} />
       </div>
