@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.ytimg.com",
       },
+      // Avatares de canal de YouTube (channels.list) para el directorio de vídeos.
+      {
+        protocol: "https",
+        hostname: "yt3.ggpht.com",
+      },
     ],
   },
   turbopack: {

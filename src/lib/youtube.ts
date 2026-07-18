@@ -84,6 +84,44 @@ export const YOUTUBE_CATEGORIES: { key: YouTubeCategory; label: string }[] = [
   { key: "entrevistas", label: "Entrevistas y previas" },
 ];
 
+// ── Directorio de CANALES (página /videos) ───────────────────────────────────
+// A diferencia de CHANNELS (feed por categoría que consumen Tendencias y la
+// columna del inicio), esto lista canales de MMA en español como TARJETAS. El
+// avatar/título/suscriptores se piden en vivo a channels.list (logos automáticos,
+// decisión del dueño) y las subidas se filtran igual (Shorts/región/embed).
+export type DirectoryChannel = {
+  handle: string; // @handle (enlace "Ver canal")
+  channelId: string; // UC…
+  uploads: string; // UU… (playlist de subidas)
+  query?: string; // filtra por título (Eurosport multideporte → solo "UFC")
+};
+
+// 12 canales verificados contra channels.list (channelId → uploads confirmados).
+export const CHANNEL_DIRECTORY: DirectoryChannel[] = [
+  { handle: "@IQFight", channelId: "UCecCKyD4-ABQK76dTHmsZ2Q", uploads: "UUecCKyD4-ABQK76dTHmsZ2Q" },
+  { handle: "@NextMMA", channelId: "UC3v8OQyx4D_WP3RDiQ9I9_A", uploads: "UU3v8OQyx4D_WP3RDiQ9I9_A" },
+  { handle: "@GreenFits", channelId: "UCvOoVW1ghB0Nxt2duEBGJKw", uploads: "UUvOoVW1ghB0Nxt2duEBGJKw" },
+  { handle: "@GeneracionMMA", channelId: "UCbInCoZGXwjtmyE-qe6KAvw", uploads: "UUbInCoZGXwjtmyE-qe6KAvw" },
+  { handle: "@ImpactoMMA", channelId: "UCsOqRu-Y0vUS5tt8jJhud4A", uploads: "UUsOqRu-Y0vUS5tt8jJhud4A" },
+  { handle: "@ufc_latino", channelId: "UC9d4-iitZZ-PPud1B7JqJRg", uploads: "UU9d4-iitZZ-PPud1B7JqJRg" },
+  { handle: "@MMAconCarlosSantacruz", channelId: "UC9J4wJP73kIu00qvnhNSdFQ", uploads: "UU9J4wJP73kIu00qvnhNSdFQ" },
+  { handle: "@octagondoctor", channelId: "UCaLU-asYQlqBm9Ntv9eRXKw", uploads: "UUaLU-asYQlqBm9Ntv9eRXKw" },
+  { handle: "@NoticiasdeMMA", channelId: "UCnwLCAqDt7bpsvlknmq_Ksw", uploads: "UUnwLCAqDt7bpsvlknmq_Ksw" },
+  { handle: "@EurosportEspana", channelId: "UCcDVs7ZH1I3Z1vKqjQuSBBg", uploads: "UUcDVs7ZH1I3Z1vKqjQuSBBg", query: "UFC" },
+  { handle: "@Las8esquinas", channelId: "UCgh6J7Mh7doIP4eSGmAyW7w", uploads: "UUgh6J7Mh7doIP4eSGmAyW7w" },
+  { handle: "@MARC_MMA", channelId: "UCHv-5z-zz3ks_tb3z_7-Heg", uploads: "UUHv-5z-zz3ks_tb3z_7-Heg" },
+];
+
+export type ChannelWithVideos = {
+  handle: string;
+  channelId: string;
+  title: string;
+  avatar: string | null;
+  subscriberCount: number | null;
+  channelUrl: string;
+  videos: YouTubeVideo[];
+};
+
 const REVALIDATE_SECONDS = 1800; // 30 min: fresco sin quemar cuota.
 const MIN_DURATION_SECONDS = 75; // descarta Shorts / clips muy cortos.
 const CANDIDATES_PER_CHANNEL = 25; // cuántos pedir antes de filtrar.
@@ -154,6 +192,85 @@ export async function getUfcVideos(
   // Más reciente primero (las fechas ISO 8601 ordenan lexicográficamente).
   all.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
   return all.slice(0, limit);
+}
+
+type ChannelMeta = {
+  title: string;
+  avatar: string | null;
+  subscriberCount: number | null;
+};
+
+// Título + avatar + suscriptores de varios canales en UNA llamada (1 unidad de
+// cuota, ≤50 ids). Cacheado como el resto.
+async function fetchChannelMeta(
+  ids: string[],
+  key: string,
+): Promise<Map<string, ChannelMeta>> {
+  const map = new Map<string, ChannelMeta>();
+  if (!ids.length) return map;
+  const url =
+    `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics` +
+    `&id=${ids.slice(0, 50).join(",")}&key=${key}`;
+  const res = await fetch(url, { next: { revalidate: REVALIDATE_SECONDS } });
+  if (!res.ok) throw new Error(`YouTube API ${res.status}`);
+  const data = (await res.json()) as ChannelsResponse;
+  for (const it of data.items ?? []) {
+    if (!it.id) continue;
+    const t = it.snippet?.thumbnails;
+    const subs = it.statistics?.hiddenSubscriberCount
+      ? null
+      : Number(it.statistics?.subscriberCount ?? "") || null;
+    map.set(it.id, {
+      title: decodeEntities(it.snippet?.title ?? ""),
+      avatar: t?.high?.url ?? t?.medium?.url ?? t?.default?.url ?? null,
+      subscriberCount: subs,
+    });
+  }
+  return map;
+}
+
+// Directorio de canales de MMA para /videos: cada canal con su avatar/título/subs
+// (channels.list, logos automáticos) + sus últimos `perChannel` vídeos ya filtrados
+// (mismo motor que getUfcVideos). Degrada con gracia: sin key o con error de API,
+// las tarjetas muestran el canal + enlace aunque falten avatar/vídeos.
+export async function getChannelDirectory(
+  perChannel = 6,
+): Promise<ChannelWithVideos[]> {
+  const key = process.env.YOUTUBE_API_KEY;
+  let meta = new Map<string, ChannelMeta>();
+  if (key) {
+    try {
+      meta = await fetchChannelMeta(
+        CHANNEL_DIRECTORY.map((c) => c.channelId),
+        key,
+      );
+    } catch {
+      meta = new Map();
+    }
+  }
+  return Promise.all(
+    CHANNEL_DIRECTORY.map(async (c) => {
+      const def: ChannelDef = {
+        id: c.channelId,
+        uploads: c.uploads,
+        label: c.handle.replace(/^@/, ""),
+        category: "resumenes", // etiqueta interna; el directorio no usa category
+        query: c.query,
+        candidates: c.query ? 50 : undefined,
+      };
+      const videos = await fetchChannelVideos(def, perChannel);
+      const m = meta.get(c.channelId);
+      return {
+        handle: c.handle,
+        channelId: c.channelId,
+        title: m?.title ?? c.handle.replace(/^@/, ""),
+        avatar: m?.avatar ?? null,
+        subscriberCount: m?.subscriberCount ?? null,
+        channelUrl: `https://www.youtube.com/${c.handle}`,
+        videos,
+      };
+    }),
+  );
 }
 
 // Futuro (#42): el combate concreto por nombres. Requiere la Data API (search).
@@ -300,6 +417,14 @@ type PlaylistSnippet = {
 };
 
 type PlaylistResponse = { items?: { snippet?: PlaylistSnippet }[] };
+
+type ChannelsResponse = {
+  items?: {
+    id?: string;
+    snippet?: { title?: string; thumbnails?: Thumbnails };
+    statistics?: { subscriberCount?: string; hiddenSubscriberCount?: boolean };
+  }[];
+};
 
 type SearchResponse = {
   items?: {

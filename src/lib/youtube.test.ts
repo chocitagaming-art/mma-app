@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CHANNEL_DIRECTORY,
+  getChannelDirectory,
   getUfcVideos,
   parseIsoDuration,
   regionAllows,
@@ -237,5 +239,88 @@ describe("getUfcVideos (con API key)", () => {
 
     const videos = await getUfcVideos({ category: "resumenes", limit: 6 });
     expect(videos.map((v) => v.videoId).sort()).toEqual(["e2", "n2"]);
+  });
+});
+
+// ── Directorio de canales (Cajón D) ──────────────────────────────────────────
+describe("CHANNEL_DIRECTORY", () => {
+  it("tiene 12 canales con channelId único y uploads derivado de UC→UU", () => {
+    expect(CHANNEL_DIRECTORY).toHaveLength(12);
+    const ids = new Set(CHANNEL_DIRECTORY.map((c) => c.channelId));
+    expect(ids.size).toBe(12);
+    for (const c of CHANNEL_DIRECTORY) {
+      expect(c.handle.startsWith("@")).toBe(true);
+      expect(c.channelId.startsWith("UC")).toBe(true);
+      expect(c.uploads).toBe("UU" + c.channelId.slice(2));
+    }
+    // Eurosport es el único con filtro por título (multideporte → solo UFC).
+    expect(CHANNEL_DIRECTORY.filter((c) => c.query).map((c) => c.handle)).toEqual([
+      "@EurosportEspana",
+    ]);
+  });
+});
+
+describe("getChannelDirectory (con API key)", () => {
+  beforeEach(() => {
+    process.env.YOUTUBE_API_KEY = "test-key";
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.YOUTUBE_API_KEY;
+  });
+
+  it("enriquece cada canal con título/avatar/subs + vídeos filtrados", async () => {
+    // Mock por URL: channels.list (meta de los 12) / playlistItems (candidatos) /
+    // videos.list (detalles válidos). El título lleva 'UFC' para que Eurosport
+    // (query 'UFC') no filtre a 0.
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes("/channels?")) {
+        return Promise.resolve(
+          json({
+            items: CHANNEL_DIRECTORY.map((c) => ({
+              id: c.channelId,
+              snippet: {
+                title: `Canal ${c.handle}`,
+                thumbnails: { high: { url: `https://yt3.ggpht.com/${c.channelId}` } },
+              },
+              statistics: { subscriberCount: "1234" },
+            })),
+          }),
+        );
+      }
+      if (url.includes("/playlistItems?")) {
+        return Promise.resolve(
+          json({ items: [snippet("vid1", "UFC resumen largo", "2026-07-01T00:00:00Z")] }),
+        );
+      }
+      if (url.includes("/videos?")) {
+        return Promise.resolve(
+          json({ items: [{ id: "vid1", contentDetails: { duration: "PT9M" }, status: { embeddable: true } }] }),
+        );
+      }
+      return Promise.resolve(json({ items: [] }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const dir = await getChannelDirectory(6);
+    expect(dir).toHaveLength(12);
+    for (const ch of dir) {
+      expect(ch.title).toContain("Canal @");
+      expect(ch.avatar).toContain("yt3.ggpht.com");
+      expect(ch.subscriberCount).toBe(1234);
+      expect(ch.channelUrl).toBe(`https://www.youtube.com/${ch.handle}`);
+      expect(ch.videos.map((v) => v.videoId)).toEqual(["vid1"]);
+    }
+  });
+
+  it("sin key ni red, degrada a canales sin avatar (no lanza)", async () => {
+    delete process.env.YOUTUBE_API_KEY;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    const dir = await getChannelDirectory(6);
+    expect(dir).toHaveLength(12);
+    expect(dir.every((c) => c.avatar === null && c.videos.length === 0)).toBe(true);
   });
 });
