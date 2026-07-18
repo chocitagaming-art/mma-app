@@ -19,6 +19,14 @@ const MODEL = "claude-sonnet-4-6";
 // sin permitir que el modelo dispare llamadas a Anthropic en bucle (coste/abuso).
 const MAX_TOOL_ITERATIONS = 6;
 
+// El prefijo estable (tools + system) se reenvía en CADA vuelta de tools (hasta 6)
+// y en cada turno de la conversación. Con cache_control en el último bloque de
+// system, Anthropic cachea tools+system juntos: la 1ª petición los escribe (~1.25x)
+// y las siguientes los leen (~0.1x), recortando el coste del Maestro.
+const MAESTRO_SYSTEM: Anthropic.TextBlockParam[] = [
+  { type: "text", text: MAESTRO_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+];
+
 function extractText(content: Anthropic.ContentBlock[]): string {
   return content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
@@ -84,7 +92,7 @@ export async function POST(request: Request) {
         {
           model: MODEL,
           max_tokens: 2048,
-          system: MAESTRO_SYSTEM_PROMPT,
+          system: MAESTRO_SYSTEM,
           tools: MAESTRO_TOOLS,
           messages,
         },
