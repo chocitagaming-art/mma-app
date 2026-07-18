@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin, Ticket, Tv } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clapperboard, MapPin, Ticket, Tv } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
@@ -119,43 +119,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       </Link>
 
       <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6">
-        {event.imageUrl || event.faceoffVideoId ? (
-          // Careo (face-off) AL LADO del póster: grid de 2 columnas en escritorio
-          // cuando existen ambos; en móvil el careo cae debajo. Con solo uno, se
-          // muestra centrado (max-w-3xl) como el póster hero de siempre.
-          <div
-            className={
-              event.imageUrl && event.faceoffVideoId
-                ? "grid gap-4 lg:grid-cols-2 lg:items-start"
-                : "mx-auto w-full max-w-3xl"
-            }
-          >
-            {event.imageUrl ? (
-              // Póster hero (Fase 5): aspect-[16/9] + width/height explícitos
-              // reservan el alto antes de cargar (anti-CLS); eager + fetchPriority
-              // alta porque es el elemento above-the-fold más pesado (LCP).
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={event.imageUrl}
-                alt={`Póster de ${event.name}`}
-                width={1280}
-                height={720}
-                loading="eager"
-                fetchPriority="high"
-                className="aspect-[16/9] w-full rounded-lg border border-border object-cover"
-              />
-            ) : null}
-            {event.faceoffVideoId ? (
-              <div>
-                <p className="mb-2 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
-                  Careo oficial
-                </p>
-                <FightVideoPlayer
-                  videoId={event.faceoffVideoId}
-                  title={`Careo · ${event.name}`}
-                />
-              </div>
-            ) : null}
+        {event.imageUrl ? (
+          // Póster hero centrado y grande (decisión del dueño: la cartelera vuelve
+          // a mandar; el careo baja a su propia sección más abajo). aspect-[16/9] +
+          // width/height explícitos reservan el alto antes de cargar (anti-CLS);
+          // eager + fetchPriority alta porque es el above-the-fold más pesado (LCP).
+          <div className="mx-auto w-full max-w-3xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={event.imageUrl}
+              alt={`Póster de ${event.name}`}
+              width={1280}
+              height={720}
+              loading="eager"
+              fetchPriority="high"
+              className="aspect-[16/9] w-full rounded-lg border border-border object-cover"
+            />
           </div>
         ) : null}
 
@@ -294,6 +273,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             ))}
           </div>
         </details>
+      ) : null}
+
+      {/* Careo oficial (face-off): su propia sección, debajo de las peleas
+          canceladas y justo antes del pesaje. El video id lo casa match_faceoffs
+          (mma-ingesta) desde el RSS del canal de UFC y se rellena solo por cron
+          para los eventos futuros. */}
+      {event.faceoffVideoId ? (
+        <section className="mt-8">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            <Clapperboard className="size-4" />
+            Careo oficial
+          </h2>
+          <div className="w-full max-w-3xl">
+            <FightVideoPlayer
+              videoId={event.faceoffVideoId}
+              title={`Careo · ${event.name}`}
+            />
+          </div>
+        </section>
       ) : null}
 
       {/* BE2: pesaje oficial (solo pinta si hay filas). */}

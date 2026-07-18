@@ -10,6 +10,7 @@ import {
   hasLiveStatsContent,
 } from "@/components/live/live-bout-stats";
 import { EventCountdown } from "@/components/home/event-countdown";
+import { FightVideoPlayer } from "@/components/fight-video-player";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate, formatMethod } from "@/lib/format";
 import {
@@ -239,7 +240,21 @@ export default async function LivePage() {
             </p>
           </>
         ) : (
-          <div className="flex w-full flex-col items-center gap-3 py-2">
+          <div className="flex w-full flex-col items-center gap-4 py-2">
+            {/* Careo oficial ENCIMA del cronómetro (pedido del dueño): el ritual
+                previo tiene más sentido justo antes de la cuenta atrás. Mismo
+                video id que la ficha del evento (getEventDetail). */}
+            {event.faceoffVideoId ? (
+              <div className="w-full max-w-2xl">
+                <p className="mb-2 text-center font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
+                  Careo oficial
+                </p>
+                <FightVideoPlayer
+                  videoId={event.faceoffVideoId}
+                  title={`Careo · ${event.name}`}
+                />
+              </div>
+            ) : null}
             <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Empiezan {countdownLabel} en
             </p>
