@@ -225,7 +225,9 @@ export default async function LivePage() {
           </p>
         ) : live ? (
           <>
-            <AutoRefresh intervalSeconds={45} />
+            {/* 20s en fase live: el bucle de ventana refresca la BD cada ~20s
+                (interval-seconds), asi el directo se siente en vivo (antes 45s). */}
+            <AutoRefresh intervalSeconds={20} />
             {/* aria-live: los lectores de pantalla se enteran cuando cae un
                 resultado sin re-explorar la lista (revisión adversarial). */}
             <p
