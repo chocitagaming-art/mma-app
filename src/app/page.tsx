@@ -186,7 +186,14 @@ export default async function HomePage() {
             description="Los mejores peleadores del ranking oficial de UFC, sin distinción de categoría."
           />
           <Link href="/clasificacion" className="hidden shrink-0 sm:inline-flex">
-            <Button variant="ghost" size="lg" className="h-10">
+            <Button
+              variant="outline"
+              size="lg"
+              // Borde rojo de marca (mismo patrón que "Pregunta al Maestro"): era
+              // variant="ghost" (sin borde ni fondo) y no se veía. Los prefijos
+              // dark:: hacen falta porque outline trae dark:border-input/dark:bg-input.
+              className="h-10 border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"
+            >
               Ver clasificación →
             </Button>
           </Link>
