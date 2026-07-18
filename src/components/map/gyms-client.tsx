@@ -156,8 +156,16 @@ export function GymsClient() {
                         ))}
                       </div>
                     ) : null}
+                    {gym.description ? (
+                      <p className="mt-1.5 text-xs leading-5 text-foreground/80">
+                        {gym.description}
+                      </p>
+                    ) : null}
                     {gym.address ? (
-                      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{gym.address}</p>
+                      <p className="mt-1 flex items-start gap-1 text-xs leading-5 text-muted-foreground">
+                        <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />
+                        {gym.address}
+                      </p>
                     ) : null}
                     <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                       {gym.website ? (

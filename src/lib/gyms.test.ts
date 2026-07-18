@@ -7,6 +7,7 @@ import {
   dedupeGyms,
   firstOsmValue,
   formatDistance,
+  gymDescription,
   haversineKm,
   isExcludedGym,
   normalizeWebsite,
@@ -31,15 +32,23 @@ describe("parseSportTokens", () => {
 });
 
 describe("isExcludedGym", () => {
-  it("descarta si sport contiene el token fitness", () => {
-    expect(isExcludedGym("Club de Boxeo Norte", "fitness;boxing")).toBe(true);
+  it("MANTIENE un gimnasio de lucha aunque también lleve 'fitness' (fix sobre-exclusión)", () => {
+    expect(isExcludedGym("Club de Boxeo Norte", "fitness;boxing")).toBe(false);
+    expect(isExcludedGym("Club X", "fitness boxing")).toBe(false);
+    expect(isExcludedGym("Total Fight", "fitness;boxing;mma;bjj")).toBe(false);
+  });
+
+  it("descarta si NO hay ninguna disciplina de lucha (solo fitness/yoga/pilates)", () => {
+    expect(isExcludedGym("Gimnasio Solo Fitness", "fitness")).toBe(true);
+    expect(isExcludedGym("Estudio Zen", "yoga;pilates")).toBe(true);
+    expect(isExcludedGym("Sin Deporte", undefined)).toBe(true);
   });
 
   it("no descarta kickboxing aunque contenga 'boxing' como substring", () => {
     expect(isExcludedGym("Kickboxing Vallecas", "kickboxing")).toBe(false);
   });
 
-  it("descarta cadenas fitness conocidas por nombre", () => {
+  it("descarta cadenas fitness conocidas por nombre (aunque tengan disciplina)", () => {
     expect(isExcludedGym("Basic-Fit Madrid Centro", "boxing")).toBe(true);
     expect(isExcludedGym("McFIT Barcelona", "martial_arts")).toBe(true);
     expect(isExcludedGym("Anytime Fitness Getafe", "boxing")).toBe(true);
@@ -47,14 +56,16 @@ describe("isExcludedGym", () => {
     expect(isExcludedGym("Brooklyn Fitboxing Chamberí", "boxing")).toBe(true);
   });
 
-  it("mantiene gimnasios de lucha normales", () => {
+  it("mantiene gimnasios de lucha normales y no penaliza 'Metropolitano'", () => {
     expect(isExcludedGym("Climent Club", "boxing;muay_thai")).toBe(false);
-  });
-
-  it("descarta sport=fitness con separador espacio y no penaliza 'Metropolitano'", () => {
-    expect(isExcludedGym("Club X", "fitness boxing")).toBe(true);
     expect(isExcludedGym("Club de Lucha Metropolitano", "wrestling")).toBe(false);
     expect(isExcludedGym("Metropolitan Sagrada Familia", "boxing")).toBe(true);
+  });
+
+  it("acepta tokens en español y variantes de BJJ", () => {
+    expect(isExcludedGym("Escuela de Boxeo", "boxeo")).toBe(false);
+    expect(isExcludedGym("Academia BJJ", "jiu-jitsu")).toBe(false);
+    expect(isExcludedGym("MMA Team", "artes_marciales_mixtas")).toBe(false);
   });
 });
 
@@ -78,6 +89,8 @@ describe("dedupeGyms", () => {
     name: "Dojo",
     sports: [],
     address: null,
+    city: null,
+    description: null,
     website: null,
     phone: null,
     distanceKm: 1,
@@ -106,8 +119,41 @@ describe("sportLabels", () => {
     expect(sportLabels("boxing;muay_thai;yoga")).toEqual(["Boxeo", "Muay Thai"]);
   });
 
-  it("deduplica etiquetas", () => {
+  it("deduplica etiquetas (sinónimos mapean a la misma)", () => {
     expect(sportLabels("boxing;boxing")).toEqual(["Boxeo"]);
+    expect(sportLabels("boxing;boxeo")).toEqual(["Boxeo"]);
+    expect(sportLabels("mma;mixed_martial_arts;artes_marciales_mixtas")).toEqual(["MMA"]);
+    expect(sportLabels("jiu-jitsu;bjj;brazilian_jiu_jitsu")).toEqual(["BJJ"]);
+  });
+
+  it("traduce tokens en español y k1", () => {
+    expect(sportLabels("boxeo;k1;defensa_personal")).toEqual([
+      "Boxeo",
+      "K-1",
+      "Defensa personal",
+    ]);
+  });
+});
+
+describe("gymDescription", () => {
+  it("compone la frase por plantilla con ciudad", () => {
+    expect(gymDescription(["Boxeo", "Muay Thai"], "Madrid")).toBe(
+      "Gimnasio de boxeo y muay thai en Madrid.",
+    );
+  });
+
+  it("mantiene acrónimos en mayúsculas (MMA, BJJ, K-1)", () => {
+    expect(gymDescription(["MMA", "BJJ", "K-1"], "Barcelona")).toBe(
+      "Gimnasio de MMA, BJJ y K-1 en Barcelona.",
+    );
+  });
+
+  it("una sola disciplina y sin ciudad", () => {
+    expect(gymDescription(["Boxeo"], null)).toBe("Gimnasio de boxeo.");
+  });
+
+  it("sin disciplinas devuelve null (no inventa)", () => {
+    expect(gymDescription([], "Madrid")).toBeNull();
   });
 });
 
@@ -173,6 +219,13 @@ describe("OVERPASS_SPORT_REGEX", () => {
     expect(re.test("judo; karate")).toBe(true);
   });
 
+  it("matchea tokens en español y variantes de BJJ (jiu-jitsu con guion)", () => {
+    expect(re.test("boxeo")).toBe(true);
+    expect(re.test("fitness;jiu-jitsu")).toBe(true);
+    expect(re.test("artes_marciales_mixtas")).toBe(true);
+    expect(re.test("k1")).toBe(true);
+  });
+
   it("no matchea substrings dentro de otros tokens", () => {
     expect(re.test("shadowboxing_club")).toBe(false);
     expect(re.test("judoteca")).toBe(false);
@@ -205,6 +258,8 @@ describe("buildGym", () => {
     expect(gym?.id).toBe("node/123");
     expect(gym?.sports).toEqual(["Boxeo", "Muay Thai"]);
     expect(gym?.address).toBe("Calle Mayor, 5, Madrid");
+    expect(gym?.city).toBe("Madrid");
+    expect(gym?.description).toBe("Gimnasio de boxeo y muay thai en Madrid.");
     expect(gym?.website).toBe("https://www.clublucha.es");
     expect(gym?.phone).toBe("+34 600 000 000");
     expect(gym?.distanceKm).toBeGreaterThan(0);

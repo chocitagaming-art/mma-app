@@ -20,30 +20,49 @@ export type Gym = {
   name: string;
   sports: string[];
   address: string | null;
+  city: string | null;
+  description: string | null;
   website: string | null;
   phone: string | null;
   distanceKm: number;
 };
 
-// Token OSM del tag `sport` → etiqueta en español para los chips.
+// Token OSM del tag `sport` → etiqueta en español para los chips. Incluye
+// sinónimos y tokens en español muy usados en OSM España (boxeo, mma, k1…) y las
+// variantes reales de BJJ (jiu-jitsu con guion / jiu_jitsu), que antes se perdían.
+// Varios tokens pueden mapear a la misma etiqueta (sportLabels deduplica).
 const SPORT_LABELS: Record<string, string> = {
   martial_arts: "Artes marciales",
   boxing: "Boxeo",
+  boxeo: "Boxeo",
   mixed_martial_arts: "MMA",
+  mma: "MMA",
+  artes_marciales_mixtas: "MMA",
   muay_thai: "Muay Thai",
+  thai_boxing: "Muay Thai",
   brazilian_jiu_jitsu: "BJJ",
+  "jiu-jitsu": "BJJ",
+  jiu_jitsu: "BJJ",
+  bjj: "BJJ",
   kickboxing: "Kickboxing",
+  kick_boxing: "Kickboxing",
+  k1: "K-1",
   judo: "Judo",
   karate: "Kárate",
   taekwondo: "Taekwondo",
   wrestling: "Lucha",
   sambo: "Sambo",
   grappling: "Grappling",
+  kung_fu: "Kung-fu",
   aikido: "Aikido",
   krav_maga: "Krav Magá",
+  defensa_personal: "Defensa personal",
 };
 
 const MARTIAL_SPORT_TOKENS = Object.keys(SPORT_LABELS);
+
+// Conjunto para comprobar rápido si un gimnasio tiene alguna disciplina de lucha.
+const COMBAT_TOKENS = new Set(MARTIAL_SPORT_TOKENS);
 
 // Regex Overpass anclada por token: `sport` es una lista separada por `;`
 // (a veces con espacios), y sin anclas `boxing` matchearía dentro de otros
@@ -69,9 +88,39 @@ export function parseSportTokens(sport: string | undefined): string[] {
     .filter(Boolean);
 }
 
+// True si alguno de los tokens `sport` es una disciplina de lucha.
+export function hasCombatDiscipline(sport: string | undefined): boolean {
+  return parseSportTokens(sport).some((token) => COMBAT_TOKENS.has(token));
+}
+
 export function isExcludedGym(name: string, sport: string | undefined): boolean {
-  if (parseSportTokens(sport).includes("fitness")) return true;
-  return FITNESS_CHAIN_RE.test(name);
+  // Cadenas de fitness conocidas por nombre → fuera siempre.
+  if (FITNESS_CHAIN_RE.test(name)) return true;
+  // Sobre-exclusión CORREGIDA: antes bastaba el token 'fitness' para descartar,
+  // lo que mataba gimnasios de lucha legítimos etiquetados `fitness;boxing;mma`.
+  // Ahora solo se excluye si NO hay ninguna disciplina de lucha (p. ej. `fitness`
+  // a secas, o yoga/pilates como único contenido).
+  if (!hasCombatDiscipline(sport)) return true;
+  return false;
+}
+
+// Para la frase de descripción: los acrónimos (MMA, BJJ, K-1) se mantienen en
+// mayúsculas; el resto va en minúscula ("Boxeo" → "boxeo", "Muay Thai" → "muay thai").
+function descriptionLabel(label: string): string {
+  return /^[A-Z0-9-]+$/.test(label) ? label : label.toLowerCase();
+}
+
+// Descripción DETERMINISTA por plantilla (decisión del dueño: OSM apenas trae
+// `description`, ~6%). Ej.: ["Boxeo","Muay Thai"] + "Madrid" → "Gimnasio de boxeo
+// y muay thai en Madrid." Sin disciplinas devuelve null (no se inventa nada).
+export function gymDescription(sports: string[], city: string | null): string | null {
+  if (!sports.length) return null;
+  const parts = sports.map(descriptionLabel);
+  const joined =
+    parts.length === 1
+      ? parts[0]
+      : `${parts.slice(0, -1).join(", ")} y ${parts[parts.length - 1]}`;
+  return `Gimnasio de ${joined}${city ? ` en ${city}` : ""}.`;
 }
 
 export function sportLabels(sport: string | undefined): string[] {
@@ -135,13 +184,17 @@ export function buildGym(element: OverpassElement, center: [number, number]): Gy
   const name = tags.name;
   if (lat == null || lon == null || !name) return null;
   if (isExcludedGym(name, tags.sport)) return null;
+  const sports = sportLabels(tags.sport);
+  const city = tags["addr:city"] ?? null;
   return {
     id: `${element.type}/${element.id}`,
     lat,
     lon,
     name,
-    sports: sportLabels(tags.sport),
+    sports,
     address: composeAddress(tags),
+    city,
+    description: gymDescription(sports, city),
     website: normalizeWebsite(tags.website ?? tags["contact:website"]),
     phone: firstOsmValue(tags.phone) ?? firstOsmValue(tags["contact:phone"]),
     distanceKm: Math.round(haversineKm(center[0], center[1], lat, lon) * 100) / 100,
