@@ -205,20 +205,21 @@
         transparent 72%
       );
   }
-  /* Marca de agua del logo MMA STATUS (sustituye al octágono soso). Sutil,
-     theme-aware y estática (dueño 17-jul: sin flotación), con bordes difuminados
-     (máscara radial) para que se funda con el fondo y no recorte en seco. */
+  /* Marca de agua del logo MMA STATUS (ilustración del luchador, transparente).
+     Sutil, theme-aware y estática (dueño 17-jul: sin flotación), con bordes
+     difuminados (máscara radial) para que se funda con el fondo y no recorte en
+     seco. Asset cuadrado (1:1), por eso el ratio y el ancho difieren del badge. */
   body::after {
     content: "";
     position: fixed;
-    top: 5%;
+    top: 4%;
     left: 50%;
-    width: min(82vw, 760px);
-    aspect-ratio: 1024 / 696;
+    width: min(72vw, 620px);
+    aspect-ratio: 1 / 1;
     transform: translateX(-50%);
     z-index: -1;
     pointer-events: none;
-    background: url("/brand/badge-circular.png") center / contain no-repeat;
+    background: url("/brand/hero-watermark.webp") center / contain no-repeat;
     -webkit-mask-image: radial-gradient(
       ellipse 72% 72% at 50% 44%,
       #000 32%,
@@ -229,7 +230,7 @@
       #000 32%,
       transparent 76%
     );
-    opacity: 0.07;
+    opacity: 0.06;
   }
   .dark body::after {
     opacity: 0.08;
