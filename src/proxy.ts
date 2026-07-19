@@ -37,7 +37,7 @@ export const config = {
     // en cada prefetch.
     {
       source:
-        "/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image.png|sitemap.xml|robots.txt).*)",
+        "/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image.png|sitemap.xml|robots.txt|manifest.webmanifest).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

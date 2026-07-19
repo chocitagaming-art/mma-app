@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
 import { headers } from "next/headers";
 
@@ -34,6 +34,22 @@ export const metadata: Metadata = {
   },
   description:
     "Perfiles profesionales de peleadores de MMA, historial de peleas y comparaciones de estadísticas impulsadas por una base de datos Neon PostgreSQL en vivo.",
+  // PWA: nombre de la app instalada y modo standalone en iOS (Android/desktop
+  // leen el manifest; iOS ignora sus iconos y usa apple-icon.png).
+  applicationName: "MMA STATUS",
+  appleWebApp: {
+    capable: true,
+    title: "MMA STATUS",
+    statusBarStyle: "default",
+  },
+};
+
+// En Next 16 themeColor va en viewport, no en metadata (aviso de deprecación).
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf7f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0d" },
+  ],
 };
 
 export default async function RootLayout({
