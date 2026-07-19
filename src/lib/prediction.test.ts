@@ -15,6 +15,8 @@ vi.mock("@anthropic-ai/sdk", () => ({
   }),
 }));
 
+import { Anthropic } from "@anthropic-ai/sdk";
+
 import { generatePredictionExplanation } from "./prediction";
 
 type RawPrediction = Omit<PredictionResponse, "explanation" | "explanationSource">;
@@ -97,6 +99,7 @@ function buildRawPrediction(): RawPrediction {
 describe("generatePredictionExplanation", () => {
   beforeEach(() => {
     createMock.mockReset();
+    vi.mocked(Anthropic).mockClear();
     process.env.ANTHROPIC_API_KEY = "test-key";
   });
 
@@ -135,6 +138,61 @@ describe("generatePredictionExplanation", () => {
     const result = await generatePredictionExplanation(buildRawPrediction());
 
     expect(result.explanationSource).toBe("fallback");
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  // El presupuesto de la explicación depende del maxDuration de /api/predict:
+  // tras un arranque en frío de Render (~50s) la ruta pasa aquí solo el tiempo
+  // que le queda. Estos tests fijan ese contrato.
+  it("usa 10s de timeout por defecto cuando la ruta no pasa presupuesto", async () => {
+    createMock.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Análisis IA del combate." }],
+    });
+
+    await generatePredictionExplanation(buildRawPrediction());
+
+    expect(vi.mocked(Anthropic)).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 10_000, maxRetries: 0 }),
+    );
+  });
+
+  it("acota el timeout de Anthropic al presupuesto restante que pasa la ruta", async () => {
+    createMock.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Análisis IA del combate." }],
+    });
+
+    const result = await generatePredictionExplanation(buildRawPrediction(), {
+      timeoutMs: 6_000,
+    });
+
+    expect(result.explanationSource).toBe("anthropic");
+    expect(vi.mocked(Anthropic)).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 6_000, maxRetries: 0 }),
+    );
+  });
+
+  it("no deja que un presupuesto holgado supere el timeout por defecto de 10s", async () => {
+    createMock.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Análisis IA del combate." }],
+    });
+
+    await generatePredictionExplanation(buildRawPrediction(), { timeoutMs: 55_000 });
+
+    expect(vi.mocked(Anthropic)).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 10_000 }),
+    );
+  });
+
+  it("salta directo al fallback si el presupuesto restante es demasiado pequeño", async () => {
+    const data = buildRawPrediction();
+
+    const result = await generatePredictionExplanation(data, { timeoutMs: 1_000 });
+
+    // Con <1,5s no merece la pena llamar a Anthropic: fallback local inmediato
+    // y sin tocar la red (evita apurar el maxDuration y comerse un 504).
+    expect(result.explanationSource).toBe("fallback");
+    expect(result.explanation).toContain(data.fighters.red.name);
+    expect(vi.mocked(Anthropic)).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
   });
 });

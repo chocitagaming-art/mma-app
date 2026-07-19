@@ -6,10 +6,17 @@ import { generatePredictionExplanation, type PredictionResponse } from "@/lib/pr
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
-// El microservicio (Render free) se duerme a los 15 min: el primer request lo
-// despierta y puede tardar ~50s. Presupuesto amplio + reintento (abajo) para
-// que el usuario nunca vea el fallo de arranque en frío (dueño, 11-jul).
+// El microservicio (Render free) se duerme a los 15 min y su arranque en frío
+// MEDIDO ronda los ~50s (el keepalive de GitHub Actions no lo sostiene siempre
+// caliente). 60s es el TOPE de maxDuration en el plan Hobby de Vercel para
+// funciones serverless clásicas: no subir sin pasar a Pro o Fluid compute.
 export const maxDuration = 60;
+
+// Presupuesto total del handler en ms, derivado de maxDuration para que ambos
+// no se desincronicen si algún día cambia el tope.
+const MAX_DURATION_MS = maxDuration * 1000;
+// Reserva para serializar y enviar la respuesta tras la explicación IA.
+const RESPONSE_RESERVE_MS = 2_000;
 
 const requestSchema = z.object({
   redFighterId: z.number().int().positive(),
@@ -40,11 +47,14 @@ async function fetchPrediction(
   const apiKey = process.env.PREDICTION_SERVICE_API_KEY;
 
   // Hasta 2 intentos: el 1º puede morir por el arranque en frío de Render
-  // (~50s); ese mismo intento ya ha despertado el servicio, así que el 2º
-  // responde en caliente. 20s + 1s + 25s ≈ 46s: el resto del maxDuration de 60
-  // queda reservado para la explicación IA (que tiene su propio timeout corto
-  // y cae al resumen local si no llega — ver prediction.ts).
-  const ATTEMPT_TIMEOUTS_MS = [20_000, 25_000];
+  // (~50s MEDIDO); ese mismo intento ya ha despertado el servicio, así que el
+  // 2º responde en cuanto termina de arrancar. 25s + 1s + 30s = 56s: cubre el
+  // frío de ~50s con margen y deja ~4s de holgura hasta maxDuration=60. El
+  // presupuesto anterior (20s+1s+25s ≈ 46s) se quedaba CORTO y la primera
+  // predicción en frío fallaba con 503 aunque el servicio estuviera sano. La
+  // explicación IA ya no tiene timeout fijo: recibe solo el presupuesto
+  // restante del handler (ver POST) y cae al resumen local si no le llega.
+  const ATTEMPT_TIMEOUTS_MS = [25_000, 30_000];
   for (let attempt = 0; attempt < ATTEMPT_TIMEOUTS_MS.length; attempt += 1) {
     const isLastAttempt = attempt === ATTEMPT_TIMEOUTS_MS.length - 1;
     try {
@@ -109,6 +119,10 @@ async function fetchPrediction(
 // instancia en serverless) y con TTL corto para no servir datos rancios.
 type PredictionCacheEntry = { value: PredictionResponse; expires: number };
 const PREDICTION_CACHE_TTL_MS = 30 * 60_000;
+// Una explicación de respaldo (sin IA: presupuesto agotado tras el arranque en
+// frío de Render, o Anthropic caído) caduca pronto para que la siguiente
+// petición de la misma pareja regenere la explicación IA en cuanto se pueda.
+const PREDICTION_FALLBACK_TTL_MS = 2 * 60_000;
 const PREDICTION_CACHE_MAX = 500;
 const predictionCache = new Map<string, PredictionCacheEntry>();
 
@@ -130,13 +144,18 @@ function setCachedPrediction(key: string, value: PredictionResponse): void {
     const oldest = predictionCache.keys().next().value;
     if (oldest !== undefined) predictionCache.delete(oldest);
   }
-  predictionCache.set(key, {
-    value,
-    expires: Date.now() + PREDICTION_CACHE_TTL_MS,
-  });
+  const ttl =
+    value.explanationSource === "fallback"
+      ? PREDICTION_FALLBACK_TTL_MS
+      : PREDICTION_CACHE_TTL_MS;
+  predictionCache.set(key, { value, expires: Date.now() + ttl });
 }
 
 export async function POST(request: Request) {
+  // Ancla del presupuesto total: la explicación IA solo recibirá lo que quede
+  // de maxDuration tras los reintentos contra Render (ver más abajo).
+  const startedAt = Date.now();
+
   // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking), igual
   //    que el Maestro. Un cliente no-navegador sin Origin se rechaza aquí.
   const origin = request.headers.get("origin") ?? request.headers.get("referer");
@@ -186,7 +205,14 @@ export async function POST(request: Request) {
       parsed.data.redFighterId,
       parsed.data.blueFighterId,
     );
-    const explanation = await generatePredictionExplanation(prediction);
+    // Tras un arranque en frío los reintentos contra Render pueden haber
+    // consumido ~56s de los 60 disponibles: la explicación IA recibe SOLO el
+    // presupuesto restante (menos la reserva de respuesta). Si es demasiado
+    // pequeño, prediction.ts salta directo al resumen local en vez de arriesgar
+    // un 504 de Vercel; en caliente conserva sus 10s habituales.
+    const explanation = await generatePredictionExplanation(prediction, {
+      timeoutMs: MAX_DURATION_MS - (Date.now() - startedAt) - RESPONSE_RESERVE_MS,
+    });
     const payload = {
       ...prediction,
       ...explanation,

@@ -88,15 +88,23 @@ export type PredictionResponse = {
   explanationSource: "anthropic" | "fallback";
 };
 
-function getAnthropicClient() {
+// Timeout por defecto de la explicación (camino caliente) y suelo por debajo
+// del cual ni se intenta la llamada: con menos de 1,5s es casi seguro que el
+// timeout gana a la respuesta y solo retrasaría el fallback local.
+const DEFAULT_EXPLANATION_TIMEOUT_MS = 10_000;
+const MIN_EXPLANATION_TIMEOUT_MS = 1_500;
+
+function getAnthropicClient(timeoutMs: number) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return null;
   }
-  // Presupuesto corto y sin reintentos: /api/predict tiene maxDuration=60 y los
-  // reintentos contra Render pueden consumir ~46s; si la explicación no llega
-  // en 10s, el catch degrada al resumen local (mejor que un 504 de Vercel).
-  return new Anthropic({ apiKey, timeout: 10_000, maxRetries: 0 });
+  // Sin reintentos y con timeout acotado por el llamante: /api/predict tiene
+  // maxDuration=60 (tope Hobby de Vercel) y, tras un arranque en frío de
+  // Render (~50s medido), sus reintentos pueden haber consumido ~56s, así que
+  // la ruta pasa aquí solo el presupuesto que le queda. Si la explicación no
+  // llega a tiempo, el catch degrada al resumen local (mejor que un 504).
+  return new Anthropic({ apiKey, timeout: timeoutMs, maxRetries: 0 });
 }
 
 function formatPercent(value: number) {
@@ -135,8 +143,26 @@ function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" |
 
 export async function generatePredictionExplanation(
   data: Omit<PredictionResponse, "explanation" | "explanationSource">,
+  // timeoutMs: presupuesto máximo que el llamante puede permitirse esperar
+  // (p.ej. lo que le queda a /api/predict de su maxDuration). Se acota al
+  // timeout por defecto para que un presupuesto holgado no alargue la espera.
+  options?: { timeoutMs?: number },
 ) {
-  const anthropic = getAnthropicClient();
+  const timeoutMs = Math.min(
+    DEFAULT_EXPLANATION_TIMEOUT_MS,
+    options?.timeoutMs ?? DEFAULT_EXPLANATION_TIMEOUT_MS,
+  );
+
+  // Presupuesto restante demasiado pequeño (arranque en frío que apuró los
+  // reintentos): ir directo al resumen local en vez de arriesgar el 504.
+  if (timeoutMs < MIN_EXPLANATION_TIMEOUT_MS) {
+    return {
+      explanation: buildFallbackExplanation(data),
+      explanationSource: "fallback" as const,
+    };
+  }
+
+  const anthropic = getAnthropicClient(timeoutMs);
 
   if (!anthropic) {
     return {
