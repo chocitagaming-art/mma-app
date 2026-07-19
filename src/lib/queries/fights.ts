@@ -74,6 +74,15 @@ type LastFightRow = {
   method: string | null;
 };
 
+// Fallback regional: fila de fight_history_espn (Bellator/regionales vía ESPN),
+// sin fight_id porque esas peleas no viven en `fights`.
+type LastFightEspnRow = {
+  event_name: string | null;
+  event_date: string | null;
+  result: "win" | "loss" | "draw";
+  method: string | null;
+};
+
 type FightStatsRow = {
   fighter_id: number;
   sig_strikes_landed: number | null;
@@ -160,6 +169,35 @@ function mapLastFight(row?: LastFightRow): FightLastResult | null {
   };
 }
 
+// Última pelea REGIONAL (fallback): para un debutante sin combate UFC previo,
+// su "última pelea" es el más reciente de fight_history_espn. Solo desenlaces
+// win/loss/draw (una 'nc' no encaja en el label de la fila del cara a cara).
+// fightId = null: no vive en `fights`, no hay ficha de combate a la que enlazar.
+const LAST_FIGHT_ESPN_SQL = `select
+    event_name,
+    event_date,
+    result,
+    method
+  from fight_history_espn
+  where fighter_id = $1
+    and result in ('win', 'loss', 'draw')
+  order by event_date desc nulls last, id desc
+  limit 1`;
+
+function mapLastFightEspn(row?: LastFightEspnRow): FightLastResult | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    fightId: null,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    result: row.result,
+    method: row.method,
+  };
+}
+
 // cache(): la página de detalle ejecuta esta misma query dos veces por request
 // (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
 export const getFightDetail = cache(async (
@@ -235,10 +273,19 @@ export const getFightDetail = cache(async (
     return null;
   }
 
-  // Stats del combate + tarjetas de los jueces + última pelea de cada esquina:
-  // independientes entre sí, una sola pasada en paralelo (espeja
-  // getFighterDetail). Esquina TBD (id null) no tiene historial que consultar.
-  const [statsRows, scorecardRows, redLastRows, blueLastRows] = await Promise.all([
+  // Stats del combate + tarjetas de los jueces + última pelea de cada esquina
+  // (UFC y su fallback regional): independientes entre sí, una sola pasada en
+  // paralelo (espeja getFighterDetail). El fallback regional se resuelve solo si
+  // la esquina no tiene pelea UFC previa (debutante). Esquina TBD (id null) no
+  // tiene historial que consultar.
+  const [
+    statsRows,
+    scorecardRows,
+    redLastRows,
+    blueLastRows,
+    redEspnLastRows,
+    blueEspnLastRows,
+  ] = await Promise.all([
     sql<FightStatsRow>(
       `select
         fighter_id,
@@ -271,6 +318,12 @@ export const getFightDetail = cache(async (
     fight.blue_id != null
       ? sql<LastFightRow>(LAST_FIGHT_SQL, [fight.blue_id, id])
       : Promise.resolve<LastFightRow[]>([]),
+    fight.red_id != null
+      ? sql<LastFightEspnRow>(LAST_FIGHT_ESPN_SQL, [fight.red_id])
+      : Promise.resolve<LastFightEspnRow[]>([]),
+    fight.blue_id != null
+      ? sql<LastFightEspnRow>(LAST_FIGHT_ESPN_SQL, [fight.blue_id])
+      : Promise.resolve<LastFightEspnRow[]>([]),
   ]);
 
   const redStats = mapStats(statsRows.find((row) => row.fighter_id === fight.red_id));
@@ -315,7 +368,8 @@ export const getFightDetail = cache(async (
       wins: fight.red_wins ?? 0,
       losses: fight.red_losses ?? 0,
       draws: fight.red_draws ?? 0,
-      lastFight: mapLastFight(redLastRows[0]),
+      lastFight:
+        mapLastFight(redLastRows[0]) ?? mapLastFightEspn(redEspnLastRows[0]),
     },
     blue: {
       id: fight.blue_id,
@@ -338,7 +392,8 @@ export const getFightDetail = cache(async (
       wins: fight.blue_wins ?? 0,
       losses: fight.blue_losses ?? 0,
       draws: fight.blue_draws ?? 0,
-      lastFight: mapLastFight(blueLastRows[0]),
+      lastFight:
+        mapLastFight(blueLastRows[0]) ?? mapLastFightEspn(blueEspnLastRows[0]),
     },
     redStats,
     blueStats,

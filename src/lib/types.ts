@@ -506,7 +506,9 @@ export type LastEventResults = {
 // del tale-of-the-tape, Fase 4). Sigue el criterio de FighterHistoryItem:
 // winner_id NULL con method registrado = empate/no contest.
 export type FightLastResult = {
-  fightId: number;
+  // null cuando la última pelea es regional (fight_history_espn): esa pelea no
+  // vive en la tabla `fights`, así que no hay ficha de combate a la que enlazar.
+  fightId: number | null;
   eventName: string | null;
   eventDate: string | null;
   result: "win" | "loss" | "draw";
