@@ -1,5 +1,9 @@
 import { sql } from "@/lib/db";
 
+import {
+  mapFightTimelineSample,
+  type FightTimelineSample,
+} from "@/lib/fight-timeline";
 import type { LiveEventTimes } from "@/lib/live-event";
 import { mapLiveFightStatsRow, type LiveFightStats } from "@/lib/live-stats";
 import { MAIN_EVENT_FINISHED_SQL } from "@/lib/queries/events";
@@ -111,6 +115,54 @@ export async function getLiveFightStats(
     return map;
   } catch (error) {
     console.error("getLiveFightStats degraded to empty map:", error);
+    return new Map();
+  }
+}
+
+type FightSampleRow = {
+  fight_id: number;
+  state: string | null;
+  status_name: string | null;
+  period: number | null;
+  display_clock: string | null;
+  stats: unknown;
+  sampled_at: string | null;
+};
+
+// Timeline del directo (migración 024): la serie de muestras append-only de
+// cada pelea, en orden de captura (1 SELECT batcheado por el índice
+// (fight_id, sampled_at)). El escritor del bucle añade una muestra por pasada
+// y el backfill de UFC 329 rellenó las históricas. DEGRADA a mapa vacío ante
+// cualquier error: la película es un extra, nunca tumba la página (mismo
+// criterio que getLiveFightStats).
+export async function getFightSampleSeries(
+  fightIds: number[],
+): Promise<Map<number, FightTimelineSample[]>> {
+  if (fightIds.length === 0) {
+    return new Map();
+  }
+  try {
+    const rows = await sql<FightSampleRow>(
+      `SELECT fight_id, state, status_name, period, display_clock, stats,
+              sampled_at::text AS sampled_at
+       FROM live_fight_stat_samples
+       WHERE fight_id = ANY($1)
+       ORDER BY fight_id ASC, sampled_at ASC, id ASC`,
+      [fightIds],
+    );
+    const map = new Map<number, FightTimelineSample[]>();
+    for (const row of rows) {
+      const mapped = mapFightTimelineSample(row);
+      if (!mapped) {
+        continue;
+      }
+      const series = map.get(row.fight_id) ?? [];
+      series.push(mapped);
+      map.set(row.fight_id, series);
+    }
+    return map;
+  } catch (error) {
+    console.error("getFightSampleSeries degraded to empty map:", error);
     return new Map();
   }
 }

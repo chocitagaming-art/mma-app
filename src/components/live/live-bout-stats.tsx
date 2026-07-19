@@ -1,4 +1,6 @@
+import { FightTimeline } from "@/components/fight/fight-timeline";
 import { cn } from "@/lib/utils";
+import type { FightTimelineSample } from "@/lib/fight-timeline";
 import {
   buildLiveStatRows,
   isCancelledLiveStatus,
@@ -41,9 +43,14 @@ export function hasLiveStatsContent(bout: EventBout, stats: LiveFightStats): boo
 export function LiveBoutStatsPanel({
   bout,
   stats,
+  timelineSamples,
 }: {
   bout: EventBout;
   stats: LiveFightStats;
+  // Timeline del directo (mig. 024): serie de muestras de esta pelea para el
+  // mini-gráfico "la película" dentro del panel. Opcional: sin serie el panel
+  // queda exactamente como antes.
+  timelineSamples?: FightTimelineSample[];
 }) {
   const rows = buildLiveStatRows(
     sideFor(stats, bout.red.id),
@@ -108,6 +115,20 @@ export function LiveBoutStatsPanel({
           </div>
         );
       })}
+
+      {/* Mini "película" del combate: evolución de los golpes significativos
+          con las muestras del bucle (viaja gratis en cada refresh de 20 s).
+          FightTimeline devuelve null hasta que hay 2+ puntos de historia. */}
+      {timelineSamples && timelineSamples.length > 0 ? (
+        <FightTimeline
+          compact
+          samples={timelineSamples}
+          redId={bout.red.id}
+          blueId={bout.blue.id}
+          redName={bout.red.name}
+          blueName={bout.blue.name}
+        />
+      ) : null}
 
       {/* Sin /70: a 0.55rem el /70 caía por debajo de 4.5:1 en ambos temas
           (hallazgo 7b). A opacidad completa pasa AA (~7:1). */}

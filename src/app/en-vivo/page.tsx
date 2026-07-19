@@ -20,7 +20,11 @@ import {
   type BoutLiveState,
 } from "@/lib/live-event";
 import { getEventDetail } from "@/lib/queries/events";
-import { getLiveEventCandidate, getLiveFightStats } from "@/lib/queries/live";
+import {
+  getFightSampleSeries,
+  getLiveEventCandidate,
+  getLiveFightStats,
+} from "@/lib/queries/live";
 import { isCancelledLiveStatus, type LiveFightStats } from "@/lib/live-stats";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
@@ -98,10 +102,17 @@ export default async function LivePage() {
   // ANTES de decidir "terminado": la señal ESPN state='post' (liveFinishedIds)
   // es la ÚNICA que marca un estelar en empate/NC — que el pipeline no escribe
   // en fights hasta el backfill tardío de ufcstats (re-revisión adversarial).
-  const liveStats =
+  // Timeline del directo (mig. 024): las series de muestras del evento para
+  // el mini-gráfico del panel viajan junto a las filas vivas. Ambas queries
+  // son independientes -> en paralelo (mismo patrón que /fights/[id]); cada
+  // una degrada a mapa vacío sola.
+  const [liveStats, sampleSeries] =
     event && phase === "live"
-      ? await getLiveFightStats(event.bouts.map((bout) => bout.fightId))
-      : new Map<number, LiveFightStats>();
+      ? await Promise.all([
+          getLiveFightStats(event.bouts.map((bout) => bout.fightId)),
+          getFightSampleSeries(event.bouts.map((bout) => bout.fightId)),
+        ])
+      : [new Map<number, LiveFightStats>(), new Map<number, never[]>()];
   const liveFinishedIds = new Set(
     [...liveStats.values()]
       .filter(
@@ -295,7 +306,11 @@ export default async function LivePage() {
                   const boutStats = liveStats.get(bout.fightId);
                   const statsPanel =
                     boutStats && hasLiveStatsContent(bout, boutStats) ? (
-                      <LiveBoutStatsPanel bout={bout} stats={boutStats} />
+                      <LiveBoutStatsPanel
+                        bout={bout}
+                        stats={boutStats}
+                        timelineSamples={sampleSeries.get(bout.fightId)}
+                      />
                     ) : undefined;
                   return (
                     <div

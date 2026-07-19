@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Play, Sparkles } from "lucide-react";
 
 import { FightVideoPlayer } from "@/components/fight-video-player";
+import { FightTimeline } from "@/components/fight/fight-timeline";
 import { RoundByRound } from "@/components/fight/round-by-round";
 import { MarketOnlyCard } from "@/components/market-corner-tile";
 import { MarketModelComparison } from "@/components/market-model-comparison";
@@ -12,6 +13,7 @@ import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
 import { marketFavorite } from "@/lib/odds";
 import { getFightDetail, getFightRoundStats } from "@/lib/queries/fights";
+import { getFightSampleSeries } from "@/lib/queries/live";
 import { getSkillRadarEntries } from "@/lib/queries/skill-radar";
 import { parseId } from "@/lib/route-params";
 import { buildFightRadar } from "@/lib/skill-radar";
@@ -48,13 +50,15 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
     notFound();
   }
 
-  // Detalle + desglose por asaltos (BE4) + percentiles del radar en paralelo:
-  // independientes entre sí; el detalle ya está deduplicado con cache() frente
-  // a generateMetadata y los percentiles vienen de unstable_cache (24 h).
-  const [fight, roundStats, radarEntries] = await Promise.all([
+  // Detalle + desglose por asaltos (BE4) + percentiles del radar + muestras
+  // del directo (timeline, mig. 024) en paralelo: independientes entre sí; el
+  // detalle ya está deduplicado con cache() frente a generateMetadata y los
+  // percentiles vienen de unstable_cache (24 h).
+  const [fight, roundStats, radarEntries, sampleSeries] = await Promise.all([
     getFightDetail(fightId),
     getFightRoundStats(fightId),
     getSkillRadarEntries(),
+    getFightSampleSeries([fightId]),
   ]);
 
   if (!fight) {
@@ -157,6 +161,21 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
       ) : null}
 
       <TaleOfTheTape fight={fight} radar={radar} />
+
+      {/* Timeline del directo (mig. 024): la "película" del combate con las
+          muestras capturadas en vivo. Solo pinta si hay serie (eventos desde
+          jul-2026 + backfill UFC 329); sin muestras devuelve null. Una
+          cancelada JAMÁS pinta película aunque queden muestras huérfanas
+          (el bucle pudo morir antes de observar la cancelación). */}
+      {!isCancelled ? (
+        <FightTimeline
+          samples={sampleSeries.get(fightId) ?? []}
+          redId={fight.red.id}
+          blueId={fight.blue.id}
+          redName={fight.red.name}
+          blueName={fight.blue.name}
+        />
+      ) : null}
 
       {/* BE4: desglose por asaltos, bajo las estadísticas del combate (última
           sección del tale-of-the-tape). No pinta nada sin filas por asalto. */}
