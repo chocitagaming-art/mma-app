@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FightOfficials } from "@/components/fight/officials";
+import { SkillRadarChart } from "@/components/fight/skill-radar";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { VsGlove } from "@/components/vs-glove";
 import { countryNameEs } from "@/lib/flags";
@@ -19,6 +20,7 @@ import {
   formatWeightClass,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { SKILL_AXES, type FightSkillRadar } from "@/lib/skill-radar";
 import type { FightCompetitor, FightDetail, FightLastResult } from "@/lib/types";
 
 type Row = {
@@ -193,7 +195,14 @@ function FaceOffCorner({
   );
 }
 
-export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
+export function TaleOfTheTape({
+  fight,
+  radar,
+}: {
+  fight: FightDetail;
+  // Percentiles del radar de habilidades; opcional para no romper otros usos.
+  radar?: FightSkillRadar | null;
+}) {
   const { red, blue, redStats, blueStats } = fight;
   // Cancelado: sin resultado que pintar; su banner ocupa el hueco de la barra.
   const isCancelled = fight.status === "cancelled";
@@ -420,6 +429,55 @@ export function TaleOfTheTape({ fight }: { fight: FightDetail }) {
               <TaleRow key={row.label} row={row} />
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {/* Radar de habilidades (percentiles por división, maqueta 19-jul). No
+          se pinta si NINGÚN lado tiene datos (debutantes puros o TBD); con un
+          solo lado, radar de un polígono + aviso en el lado vacío. */}
+      {radar && (radar.red || radar.blue) ? (
+        <div className="border-t border-border p-6 sm:p-8">
+          <p className="mb-1 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Radar de habilidades
+          </p>
+          <p className="mb-4 text-center text-xs text-muted-foreground">
+            Percentil 0–100 respecto a{" "}
+            {radar.divisionLabel ?? "su división"} (peleas UFC con estadísticas)
+          </p>
+          <SkillRadarChart radar={radar} redName={red.name} blueName={blue.name} />
+          <div className="mx-auto mt-4 max-w-xl">
+            {SKILL_AXES.map((axis) => (
+              <TaleRow
+                key={axis.key}
+                row={{
+                  label: axis.label,
+                  red: radar.red ? String(radar.red[axis.key]) : "—",
+                  blue: radar.blue ? String(radar.blue[axis.key]) : "—",
+                  redNum: radar.red?.[axis.key] ?? null,
+                  blueNum: radar.blue?.[axis.key] ?? null,
+                }}
+              />
+            ))}
+          </div>
+          {!radar.red || !radar.blue ? (
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              {/* Un TBD (id null) no es un debutante: no atribuirle peleas. */}
+              {[
+                !radar.red
+                  ? red.id != null
+                    ? `${red.name}: sin datos suficientes (menos de 3 peleas UFC con estadísticas registradas).`
+                    : "Esquina roja: rival por confirmar."
+                  : null,
+                !radar.blue
+                  ? blue.id != null
+                    ? `${blue.name}: sin datos suficientes (menos de 3 peleas UFC con estadísticas registradas).`
+                    : "Esquina azul: rival por confirmar."
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

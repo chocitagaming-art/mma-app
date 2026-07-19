@@ -12,7 +12,9 @@ import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
 import { marketFavorite } from "@/lib/odds";
 import { getFightDetail, getFightRoundStats } from "@/lib/queries/fights";
+import { getSkillRadarEntries } from "@/lib/queries/skill-radar";
 import { parseId } from "@/lib/route-params";
+import { buildFightRadar } from "@/lib/skill-radar";
 import { parseYouTubeId, resolveFightVideoUrl } from "@/lib/video";
 
 type FightDetailPageProps = {
@@ -46,16 +48,21 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
     notFound();
   }
 
-  // Detalle + desglose por asaltos (BE4) en paralelo: son independientes y el
-  // detalle ya está deduplicado con cache() frente a generateMetadata.
-  const [fight, roundStats] = await Promise.all([
+  // Detalle + desglose por asaltos (BE4) + percentiles del radar en paralelo:
+  // independientes entre sí; el detalle ya está deduplicado con cache() frente
+  // a generateMetadata y los percentiles vienen de unstable_cache (24 h).
+  const [fight, roundStats, radarEntries] = await Promise.all([
     getFightDetail(fightId),
     getFightRoundStats(fightId),
+    getSkillRadarEntries(),
   ]);
 
   if (!fight) {
     notFound();
   }
+
+  // Radar de habilidades: percentiles de cada esquina (null si TBD o debutante).
+  const radar = buildFightRadar(radarEntries, fight.red.id, fight.blue.id);
 
   // Cancelado: comparte firma con los pendientes (winner/method NULL) pero no
   // debe ofrecer predicción ni vídeo; el aviso lo pinta TaleOfTheTape.
@@ -149,7 +156,7 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         )
       ) : null}
 
-      <TaleOfTheTape fight={fight} />
+      <TaleOfTheTape fight={fight} radar={radar} />
 
       {/* BE4: desglose por asaltos, bajo las estadísticas del combate (última
           sección del tale-of-the-tape). No pinta nada sin filas por asalto. */}
