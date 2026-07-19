@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { FavoritesStrip } from "@/components/home/favorites-strip";
 import { FighterCard } from "@/components/fighter-card";
 import { LastEventSection } from "@/components/home/last-event-section";
 import { LiveBanner } from "@/components/live/live-banner";
@@ -141,6 +142,10 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Tus favoritos (isla client): solo se pinta si el navegador tiene
+          favoritos guardados; no toca el ISR/caché de datos de la home. */}
+      <FavoritesStrip />
 
       {/* Acaba de pasar (FE10): resultados del último evento completado. Va
           tras la franja de stats para encadenar con el bloque de noticias. */}

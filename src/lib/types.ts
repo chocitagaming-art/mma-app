@@ -632,6 +632,18 @@ export type FighterStrikeProfile = {
   defense: FighterStrikeBreakdown;
 };
 
+// Próximo combate de un favorito (franja "Tus favoritos" de la home): versión
+// compacta multi-luchador de FighterUpcomingBout.
+export type FavoriteUpcomingBout = {
+  fighterId: number;
+  fightId: number;
+  eventId: number | null;
+  eventName: string | null;
+  eventDate: string | null;
+  opponentId: number | null;
+  opponentName: string | null;
+};
+
 // --- Próximos combates del luchador (#48) ---
 export type FighterUpcomingBout = {
   fightId: number;

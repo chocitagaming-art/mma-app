@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Newspaper, Search, Swords } from "lucide-react";
+import { Calendar, Newspaper, Search, Star, Swords } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { useFavorites } from "@/components/favorites/use-favorites";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/format";
@@ -25,6 +26,9 @@ const EMPTY_RESULTS: GlobalSearchResults = {
 
 export function SearchHero() {
   const router = useRouter();
+  // Estrella junto al nombre de los luchadores guardados como favoritos. No se
+  // reordena la lista: flatItems (teclado/ARIA) depende del orden de render.
+  const { isFavorite } = useFavorites();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -313,8 +317,17 @@ export function SearchHero() {
                         className="size-10 shrink-0"
                       />
                       <div className="min-w-0">
-                        <p className="truncate font-display text-sm font-bold uppercase tracking-tight text-foreground">
-                          {fighter.name}
+                        {/* La elipsis vive en un span interno: text-overflow no
+                            aplica sobre un contenedor flex y la estrella debe
+                            seguir visible con nombres largos. */}
+                        <p className="flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-tight text-foreground">
+                          <span className="min-w-0 truncate">{fighter.name}</span>
+                          {isFavorite(fighter.id) ? (
+                            <Star
+                              className="size-3.5 shrink-0 fill-current text-amber-600 dark:text-amber-400"
+                              aria-label="Favorito"
+                            />
+                          ) : null}
                         </p>
                         <p className="truncate text-sm text-muted-foreground">
                           {fighter.nationality ?? "Nacionalidad no disponible"}

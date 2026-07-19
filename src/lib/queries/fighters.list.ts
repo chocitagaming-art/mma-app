@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
 import type {
+  FavoriteUpcomingBout,
   FighterCardData,
   FighterFilters,
   FighterListResult,
@@ -11,6 +12,7 @@ import type {
 } from "@/lib/types";
 import type {
   CountRow,
+  FavoriteUpcomingRow,
   FighterFilterOptions,
   FighterRow,
   SearchRow,
@@ -358,6 +360,7 @@ export async function getFighterUpcomingBouts(
     left join fighters red on red.id = fi.fighter_red_id
     left join fighters blue on blue.id = fi.fighter_blue_id
     where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)
+      and fi.status is distinct from 'cancelled'
       and e.status = 'upcoming'
       and (e.event_date >= current_date or e.event_date is null)
     order by e.event_date asc nulls last, fi.id asc`,
@@ -376,5 +379,53 @@ export async function getFighterUpcomingBouts(
     opponentLosses: row.opponent_losses,
     opponentDraws: row.opponent_draws,
     corner: row.corner,
+  }));
+}
+
+// Próximo combate de VARIOS luchadores a la vez (franja "Tus favoritos" de la
+// home): una sola query con unnest en vez de N consultas. DISTINCT ON se queda
+// con el combate más cercano de cada luchador.
+export async function getUpcomingBoutsForFighters(
+  ids: number[],
+): Promise<FavoriteUpcomingBout[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const rows = await sql<FavoriteUpcomingRow>(
+    `select distinct on (f.id)
+      f.id as fighter_id,
+      fi.id as fight_id,
+      fi.event_id,
+      e.name as event_name,
+      e.event_date::text as event_date,
+      case
+        when fi.fighter_red_id = f.id then fi.fighter_blue_id
+        else fi.fighter_red_id
+      end as opponent_id,
+      case
+        when fi.fighter_red_id = f.id then coalesce(blue.name, fi.fighter_blue_name)
+        else coalesce(red.name, fi.fighter_red_name)
+      end as opponent_name
+    from unnest($1::int[]) as f(id)
+    join fights fi on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+    left join events e on e.id = fi.event_id
+    left join fighters red on red.id = fi.fighter_red_id
+    left join fighters blue on blue.id = fi.fighter_blue_id
+    where fi.status is distinct from 'cancelled'
+      and e.status = 'upcoming'
+      and (e.event_date >= current_date or e.event_date is null)
+    order by f.id, e.event_date asc nulls last, fi.id asc`,
+    [ids],
+  );
+
+  return rows.map((row) => ({
+    fighterId: row.fighter_id,
+    fightId: row.fight_id,
+    eventId: row.event_id,
+    eventName: row.event_name,
+    eventDate: row.event_date,
+    opponentId: row.opponent_id,
+    opponentName: row.opponent_name,
   }));
 }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
+import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
 import { PerFightBars } from "@/components/fighter/per-fight-bars";
@@ -341,9 +342,19 @@ export default async function FighterDetailPage({
               <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                 Perfil del luchador
               </p>
-              <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl xl:text-6xl">
-                {fighter.name}
-              </h1>
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl xl:text-6xl">
+                  {fighter.name}
+                </h1>
+                {/* Estrella de favoritos (client): solo recibe props serializables. */}
+                <FavoriteToggle
+                  fighter={{
+                    id: fighter.id,
+                    name: fighter.name,
+                    headshotUrl: fighter.headshotUrl ?? null,
+                  }}
+                />
+              </div>
               {fighter.nickname ? (
                 <p className="text-lg text-muted-foreground">
                   “{fighter.nickname}”

@@ -181,4 +181,14 @@ export type UpcomingBoutRow = {
   corner: "red" | "blue";
 };
 
+export type FavoriteUpcomingRow = {
+  fighter_id: number;
+  fight_id: number;
+  event_id: number | null;
+  event_name: string | null;
+  event_date: string | null;
+  opponent_id: number | null;
+  opponent_name: string | null;
+};
+
 export type FighterFilterOptions = FighterListResult["filterOptions"];
