@@ -112,3 +112,15 @@ export function lastCompletedFight(
     ) ?? null
   );
 }
+
+// Fallback regional del tile "Última pelea" (S3-G): para un fichaje sin combate
+// UFC disputado, la última pelea es la más reciente de fight_history_espn.
+// Mismo criterio que LAST_FIGHT_ESPN_SQL (queries/fights.ts): solo desenlaces
+// win/loss/draw — una 'nc' no encaja en el label del tile. La lista ya llega
+// ordenada por fecha desc desde getFighterDetail, así que basta con la primera
+// fila decisiva (las espn no traen placeholders futuros que saltar).
+export function latestRegionalFight(
+  espnHistory: FighterHistoryItem[],
+): FighterHistoryItem | null {
+  return espnHistory.find((fight) => fight.result !== "nc") ?? null;
+}

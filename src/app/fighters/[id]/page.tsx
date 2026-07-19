@@ -60,8 +60,10 @@ import {
   computeAge,
   countFirstRoundFinishes,
   lastCompletedFight,
+  latestRegionalFight,
   resolveFinishHighlights,
 } from "@/lib/fighter-highlights";
+import { promotionBadge } from "@/lib/promotion-badge";
 import { resolveFightVideoUrl } from "@/lib/video";
 import {
   getFighterDetail,
@@ -128,9 +130,11 @@ export default async function FighterDetailPage({
   } = detail;
 
   // S3-G: la TABLA del historial muestra la carrera completa (UFC +
-  // Bellator/regionales vía ESPN). Todo lo demás (racha, forma, divisiones,
-  // finalizaciones, última pelea) sigue calculándose SOLO sobre `history`
-  // (peleas UFC): las espn no tienen stats y mezclarían promociones.
+  // Bellator/regionales vía ESPN), y el tile "Última pelea" del hero cae al
+  // historial espn cuando el luchador aún no tiene combate UFC disputado
+  // (fichaje nuevo). Todo lo demás (racha, forma, divisiones, finalizaciones)
+  // sigue calculándose SOLO sobre `history` (peleas UFC): las espn no tienen
+  // stats y mezclarían promociones.
   const fullHistory = mergeFightHistories(history, detail.espnHistory);
 
   const recentForm = computeRecentForm(history);
@@ -152,10 +156,13 @@ export default async function FighterDetailPage({
     `${recentForm.lastFive.wins}-${recentForm.lastFive.losses}` +
     (formOther > 0 ? `-${formOther}` : "");
 
-  // Destacados del hero estilo ufc.com (fase 3).
+  // Destacados del hero estilo ufc.com (fase 3). "Última pelea" con fallback
+  // regional (S3-G): sin combate UFC disputado, la fila más reciente de espn.
   const age = computeAge(fighter.birthDate);
   const firstRoundFinishes = countFirstRoundFinishes(history);
-  const lastFight = lastCompletedFight(history);
+  const lastFight =
+    lastCompletedFight(history) ?? latestRegionalFight(detail.espnHistory);
+  const isRegionalLastFight = lastFight?.origin === "espn";
   const nextBout = upcomingBouts[0] ?? null;
   const division = detail.latestWeightClass
     ? formatWeightClass(detail.latestWeightClass)
@@ -216,6 +223,10 @@ export default async function FighterDetailPage({
       : lastFight?.result === "loss"
         ? "bg-loss/10 text-loss"
         : "bg-muted text-muted-foreground";
+  // Badge de promoción del tile, solo en modo regional (una pelea UFC no lo
+  // necesita: toda la ficha ya es contexto UFC). Mismo mapping que la tabla.
+  const lastFightPromotion =
+    isRegionalLastFight && lastFight ? promotionBadge(lastFight) : null;
 
   // Fila bio "sin huecos": los campos opcionales (alcance de pierna, edad,
   // gimnasio) se ocultan cuando faltan en vez de mostrar un guion.
@@ -393,10 +404,22 @@ export default async function FighterDetailPage({
                   <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     Última pelea
                   </p>
-                  <span
-                    className={`inline-flex items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide ${lastFightResultClass}`}
-                  >
-                    {lastFightResultLabel}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {lastFightPromotion ? (
+                      // Modo regional: promoción junto al resultado (mismas
+                      // clases que el badge de la tabla del historial).
+                      <span
+                        title={lastFightPromotion.label}
+                        className={`inline-flex max-w-36 items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${lastFightPromotion.className}`}
+                      >
+                        <span className="truncate">{lastFightPromotion.label}</span>
+                      </span>
+                    ) : null}
+                    <span
+                      className={`inline-flex items-center rounded-sm px-2 py-0.5 font-display text-xs font-semibold uppercase tracking-wide ${lastFightResultClass}`}
+                    >
+                      {lastFightResultLabel}
+                    </span>
                   </span>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
@@ -442,12 +465,25 @@ export default async function FighterDetailPage({
                   {formatDate(lastFight.eventDate)}
                 </p>
                 <div className="mt-4 border-t border-border pt-3">
-                  <Link
-                    href={`/fights/${lastFight.fightId}`}
-                    className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                  >
-                    Ver detalles de la pelea →
-                  </Link>
+                  {isRegionalLastFight ? (
+                    // El fightId de las filas espn es el id de
+                    // fight_history_espn, NO de `fights`: /fights/{id} abriría
+                    // una pelea equivocada. Ancla a la tabla del historial,
+                    // donde la fila sí aparece con su badge de promoción.
+                    <Link
+                      href="#historial"
+                      className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      Ver en historial →
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/fights/${lastFight.fightId}`}
+                      className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                    >
+                      Ver detalles de la pelea →
+                    </Link>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -745,18 +781,10 @@ export default async function FighterDetailPage({
                           ? "bg-loss/10 text-loss"
                           : "bg-muted text-muted-foreground";
                     // Badge de promoción (S3-G): UFC rojo, Bellator ámbar,
-                    // resto (regionales) gris con su nombre corto.
-                    const isEspnRow = fight.origin === "espn";
-                    const promotionLabel = isEspnRow
-                      ? (fight.promotion ?? "Otra")
-                      : "UFC";
-                    // amber-800 en claro: amber-600 daba 2.84:1 sobre la card
-                    // blanca, bajo el 4.5:1 de WCAG AA (revisión adversarial).
-                    const promotionClass = !isEspnRow
-                      ? "bg-primary/10 text-primary"
-                      : fight.promotion === "Bellator"
-                        ? "bg-amber-500/15 text-amber-800 dark:bg-amber-400/15 dark:text-amber-400"
-                        : "bg-muted text-muted-foreground";
+                    // resto (regionales) gris con su nombre corto. Mapping
+                    // compartido con el tile "Última pelea" del hero.
+                    const { label: promotionLabel, className: promotionClass } =
+                      promotionBadge(fight);
 
                     return (
                       <TableRow

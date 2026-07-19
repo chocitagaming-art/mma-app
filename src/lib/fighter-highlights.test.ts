@@ -5,6 +5,7 @@ import {
   computeAge,
   countFirstRoundFinishes,
   lastCompletedFight,
+  latestRegionalFight,
   resolveFinishHighlights,
 } from "@/lib/fighter-highlights";
 import type { FighterHistoryItem } from "@/lib/types";
@@ -155,6 +156,59 @@ describe("lastCompletedFight", () => {
     expect(
       lastCompletedFight([fight({ result: "draw", method: null })]),
     ).toBeNull();
+  });
+});
+
+describe("latestRegionalFight", () => {
+  // Filas espn: la factoría sirve igual; solo cambia origin/promotion.
+  function espnFight(overrides: FightOverrides): FighterHistoryItem {
+    return fight({ origin: "espn", promotion: "Bellator", ...overrides });
+  }
+
+  it("returns null for an empty espn history", () => {
+    expect(latestRegionalFight([])).toBeNull();
+  });
+
+  it("returns the first row (the list already arrives newest-first)", () => {
+    const latest = espnFight({ result: "win" });
+    const older = espnFight({ result: "loss" });
+
+    expect(latestRegionalFight([latest, older])).toBe(latest);
+  });
+
+  it("skips 'nc' rows (same criterion as LAST_FIGHT_ESPN_SQL)", () => {
+    const nc = espnFight({ result: "nc" });
+    const decisive = espnFight({ result: "loss" });
+
+    expect(latestRegionalFight([nc, decisive])).toBe(decisive);
+  });
+
+  it("accepts win, loss and draw as decisive outcomes", () => {
+    const draw = espnFight({ result: "draw", method: "Draw" });
+
+    expect(latestRegionalFight([draw])).toBe(draw);
+  });
+
+  it("returns null when every row is 'nc'", () => {
+    expect(latestRegionalFight([espnFight({ result: "nc" })])).toBeNull();
+  });
+
+  it("composition: a contested UFC fight wins over the espn fallback", () => {
+    // Mismo patrón que la página: lastCompletedFight(history) ?? latestRegionalFight(espn).
+    const ufcLast = fight({ result: "win" });
+    const espnHistory = [espnFight({ result: "loss" })];
+
+    expect(
+      lastCompletedFight([ufcLast]) ?? latestRegionalFight(espnHistory),
+    ).toBe(ufcLast);
+  });
+
+  it("composition: falls back to espn when the UFC history is empty", () => {
+    const regional = espnFight({ result: "win" });
+
+    expect(lastCompletedFight([]) ?? latestRegionalFight([regional])).toBe(
+      regional,
+    );
   });
 });
 
