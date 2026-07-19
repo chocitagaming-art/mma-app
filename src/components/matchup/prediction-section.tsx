@@ -9,12 +9,9 @@ import type { PredictionResponse } from "@/lib/prediction";
 import { cn } from "@/lib/utils";
 
 import { CornerSignals } from "./corner-cards";
-import {
-  featureLabel,
-  formatFeatureValue,
-  MODEL_ACCURACY_LABEL,
-} from "./helpers";
+import { MODEL_ACCURACY_LABEL } from "./helpers";
 import { ProbabilityBar } from "./probability-bar";
+import { ShapBarsChart } from "./shap-bars";
 
 type PredictionSectionProps = {
   loading: boolean;
@@ -279,51 +276,28 @@ export function PredictionSection({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {prediction.topFeatures.map((feature) => {
-                  const favoursRed = feature.direction === "red";
-                  const favouredName = favoursRed
-                    ? prediction.fighters.red.name
-                    : prediction.fighters.blue.name;
-                  return (
-                    <div
-                      key={feature.name}
-                      className="rounded-2xl border border-border bg-muted p-4"
-                    >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {featureLabel(feature.name)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Favorece a{" "}
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                favoursRed
-                                  ? "text-corner-red"
-                                  : "text-corner-blue",
-                              )}
-                            >
-                              {favouredName}
-                            </span>{" "}
-                            · valor {formatFeatureValue(feature.value)}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            favoursRed
-                              ? "bg-corner-red/10 text-corner-red"
-                              : "bg-corner-blue/10 text-corner-blue",
-                          )}
-                        >
-                          {favoursRed ? "Roja" : "Azul"} +
-                          {Math.abs(feature.contribution).toFixed(2)}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
+                <p className="text-sm text-muted-foreground">
+                  Qué inclina la predicción y hacia quién · el largo de cada
+                  barra es cuánto empuja (unidades del modelo)
+                </p>
+                <ShapBarsChart
+                  topFeatures={prediction.topFeatures}
+                  featureContributions={prediction.featureContributions}
+                  redName={prediction.fighters.red.name}
+                  blueName={prediction.fighters.blue.name}
+                />
+                <p className="border-t border-border pt-3 text-sm text-muted-foreground">
+                  En conjunto:{" "}
+                  <span className="font-semibold text-foreground">
+                    {prediction.redProbability >= prediction.blueProbability
+                      ? `${Math.round(prediction.redProbability * 100)}% ${prediction.fighters.red.name}`
+                      : `${Math.round(prediction.blueProbability * 100)}% ${prediction.fighters.blue.name}`}
+                  </span>{" "}
+                  ·{" "}
+                  {prediction.redProbability >= prediction.blueProbability
+                    ? `${Math.round(prediction.blueProbability * 100)}% ${prediction.fighters.blue.name}`
+                    : `${Math.round(prediction.redProbability * 100)}% ${prediction.fighters.red.name}`}
+                </p>
               </CardContent>
             </Card>
 

@@ -83,6 +83,14 @@ function buildRawPrediction(): RawPrediction {
       { name: "takedowns_diff", value: 2, contribution: 0.1, direction: "red" },
       { name: "reach_diff", value: 5, contribution: -0.05, direction: "blue" },
     ],
+    // Mapa completo simetrizado que añade el microservicio desde f898944;
+    // OPCIONAL en el contrato (respuestas cacheadas antiguas no lo traen).
+    featureContributions: {
+      sig_strikes_diff: 0.2,
+      takedowns_diff: 0.1,
+      reach_diff: -0.05,
+      age_diff: -0.03,
+    },
     featureValues: { sig_strikes_diff: 12 },
     context: {
       matchupDate: "2026-06-25",

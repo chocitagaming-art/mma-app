@@ -68,6 +68,11 @@ export type PredictionResponse = {
   // probabilities are a ~50/50 baseline rather than a confident pick.
   lowConfidence: boolean;
   topFeatures: PredictionFeature[];
+  // Full symmetrized SHAP map (feature -> log-odds contribution) the
+  // microservice adds since mma-ingesta f898944. OPTIONAL: older cached
+  // responses / an older service omit it — render the factor bars without the
+  // aggregated "rest" row in that case, never crash.
+  featureContributions?: Record<string, number> | null;
   featureValues: Record<string, number | null>;
   context: {
     matchupDate: string;
