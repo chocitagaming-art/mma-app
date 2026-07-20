@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
 import { headers } from "next/headers";
 
+import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -70,6 +71,8 @@ export default async function RootLayout({
       className={`${saira.variable} ${archivo.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
+        {/* No renderiza nada: registra el service worker de /offline. */}
+        <ServiceWorkerRegistrar />
         <ThemeProvider
           nonce={nonce}
           attribute="class"

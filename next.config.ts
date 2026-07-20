@@ -70,6 +70,24 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: buildSecurityHeaders(),
       },
+      // El service worker NUNCA se sirve de caché: es la mitad del interruptor
+      // de emergencia. Si algún día hay que desinstalarlo (un worker defectuoso
+      // deja la web rota para quien ya la visitó, y arreglar el servidor no
+      // basta), el navegador tiene que ver el fichero nuevo en la visita
+      // siguiente. Recomendación explícita de la guía de PWA de Next.
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+        ],
+      },
     ];
   },
 };
