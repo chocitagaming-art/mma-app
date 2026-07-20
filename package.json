@@ -12,7 +12,8 @@
     "e2e": "playwright test",
     "e2e:report": "playwright show-report",
     "megatest": "node scripts/megatest.mjs",
-    "commit:deploy": "git commit --author=\"chocitagaming-art <285652576+chocitagaming-art@users.noreply.github.com>\""
+    "commit:deploy": "git commit --author=\"chocitagaming-art <285652576+chocitagaming-art@users.noreply.github.com>\"",
+    "test:coverage": "vitest run --coverage --coverage.all --coverage.include='src/lib/**'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -44,6 +45,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "playwright": "^1.61.0",
