@@ -36,13 +36,23 @@ function createPool() {
 
 // Reuse the pool across warm serverless invocations of the same instance (and
 // across HMR reloads in dev) instead of opening a new pool every time.
-export const pool = global.__mmaPool ?? createPool();
-global.__mmaPool = pool;
+//
+// Created on FIRST QUERY, not on import. Building it at module scope made the
+// missing-DATABASE_URL error fire while the module was being evaluated, which is
+// before any caller's try/catch exists: sitemap.ts degrades to its static routes
+// when the database is unreachable, but it never got the chance, so `next build`
+// died on a machine without credentials. Laziness moves the throw inside the
+// call, where callers can actually handle it. Runtime behaviour is unchanged —
+// the first query still opens exactly one pool per instance.
+export function getPool(): Pool {
+  global.__mmaPool ??= createPool();
+  return global.__mmaPool;
+}
 
 export async function sql<T extends QueryResultRow>(
   query: string,
   values: unknown[] = [],
 ) {
-  const result = await pool.query<T>(query, values);
+  const result = await getPool().query<T>(query, values);
   return result.rows;
 }
