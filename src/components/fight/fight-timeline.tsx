@@ -8,6 +8,7 @@ import {
   type CornerSeries,
   type FightTimelineSample,
 } from "@/lib/fight-timeline";
+import { selectMarkerIndices } from "@/lib/fight-timeline-markers";
 import { cn } from "@/lib/utils";
 
 // Timeline del directo (migración 024): la "película" del combate. Line chart
@@ -89,6 +90,8 @@ function CornerPoints({
   if (laidOut.length === 0) {
     return null;
   }
+  // La polilínea usa TODOS los puntos; solo los marcadores se adelgazan.
+  const markerIndices = selectMarkerIndices(laidOut);
   return (
     <g>
       {laidOut.length > 1 ? (
@@ -102,6 +105,9 @@ function CornerPoints({
         />
       ) : null}
       {laidOut.map((p, idx) => {
+        if (!markerIndices.has(idx)) {
+          return null;
+        }
         const title = `${name}: ${p.value} golpes sig. (${p.label})${
           p.kdDelta > 0 ? " · ¡KD!" : ""
         }${p.tdDelta > 0 ? " · derribo" : ""}`;
