@@ -36,9 +36,9 @@ jobs:
     env:
       PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://mma-app-ruby.vercel.app' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
