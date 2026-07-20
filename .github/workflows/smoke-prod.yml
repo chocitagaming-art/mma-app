@@ -1,0 +1,80 @@
+name: Smoke contra produccion
+
+# Lo único que vigilaba producción era monitor.yml (en mma-ingesta), y toca 6
+# URLs de las 16 rutas de la app. Todo lo demás se comprueba contra el portátil
+# o contra un build de CI: verde en local no es lo mismo que verde desplegado.
+#
+# Esto reutiliza la suite E2E de API que ya existe apuntándola a la web real con
+# PLAYWRIGHT_BASE_URL (la config ya lo soporta y en ese modo NO levanta servidor
+# propio). Comprueba que las rutas responden, que /api/health ve la base de datos
+# y que los contratos de las APIs se sostienen sobre lo REALMENTE desplegado.
+#
+# Se ejecuta tras cada despliegue (push a main) y una vez al día, porque
+# producción también se rompe sola: un cambio en Neon, una variable caducada o
+# una fuente externa caída no necesitan que nadie haga push.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 08:30 UTC, lejos del racimo de crons de datos de mma-ingesta.
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "URL a comprobar (por defecto, producción)"
+        default: "https://mma-app-ruby.vercel.app"
+
+concurrency:
+  group: smoke-prod
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://mma-app-ruby.vercel.app' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Solo chromium: esto comprueba contratos de API y códigos de respuesta,
+      # no renderizado, así que instalar los tres navegadores sería tiempo tirado.
+      - run: npx playwright install --with-deps chromium
+
+      # Vercel despliega en paralelo a este job cuando el disparo es un push, así
+      # que se espera a que la web sirva algo antes de empezar. Sin esto, el
+      # smoke correría contra la versión ANTERIOR y daría un verde que no
+      # significa nada.
+      - name: Esperar a que producción responda
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$PLAYWRIGHT_BASE_URL/" || echo "000")
+            echo "[$attempt] $PLAYWRIGHT_BASE_URL -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::error::Producción no responde 200 tras 5 minutos."
+          exit 1
+
+      # Un solo proyecto: los proyectos de playwright.config son combinaciones de
+      # viewport y tema, y estas pruebas son de contrato de API, no de
+      # renderizado. Correr los seis repetiría las mismas 10 llamadas seis veces.
+      - name: Smoke de las APIs desplegadas
+        run: npx playwright test e2e/api.spec.ts --project=escritorio-light
+
+      - name: Guardar el informe si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-prod
+          path: playwright-report/
+          retention-days: 7
