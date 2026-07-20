@@ -31,3 +31,11 @@ jobs:
       - run: npx tsc --noEmit
 
       - run: npm test
+
+      # Un import roto en un Server Component o un fallo de generación de
+      # metadata NO lo ve ninguno de los pasos anteriores: pasan en verde y el
+      # fallo aparece en el deploy de Vercel. Corre sin secretos a propósito:
+      # todas las rutas con datos son dinámicas (server-rendered on demand), así
+      # que el build no consulta Neon, y sitemap.ts degrada a las rutas
+      # estáticas por su try/catch cuando la BD no responde.
+      - run: npm run build
