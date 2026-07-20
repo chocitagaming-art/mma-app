@@ -12,6 +12,11 @@
 // Uso:  DATABASE_URL=... node scripts/megatest.mjs
 //       (o PLAYWRIGHT_BASE_URL=http://localhost:3400 para reusar un server vivo)
 //
+// Modo rápido:  node scripts/megatest.mjs --rapido
+//       Salta la puerta E2E, que es la que se lleva ~90% del tiempo. Pensado
+//       para iterar mientras trabajas; la corrida COMPLETA sigue siendo la que
+//       manda antes de commitear.
+//
 // Silueta / foto externa que no carga = WARNING (no tumban la puerta); ver los
 // specs. Sale con código !=0 si alguna puerta DURA falla.
 
@@ -25,24 +30,43 @@ const ING = resolve(APP, "..", "mma-ingesta");
 const PY = resolve(ING, ".venv", "Scripts", "python.exe");
 const PYTHON = existsSync(PY) ? PY : "python";
 
+const RAPIDO = process.argv.includes("--rapido") || process.argv.includes("--fast");
+
 const steps = [
   { name: "app · tsc --noEmit", cwd: APP, cmd: "npx tsc --noEmit" },
   { name: "app · eslint", cwd: APP, cmd: "npm run lint" },
   { name: "app · vitest", cwd: APP, cmd: "npm test" },
   { name: "ingesta · pytest", cwd: ING, cmd: `"${PYTHON}" -m pytest tests/ -q` },
   { name: "ingesta · ruff (bugs F)", cwd: ING, cmd: `"${PYTHON}" -m ruff check --select F src/ tests/` },
-  { name: "app · e2e (build + playwright)", cwd: APP, cmd: "npx playwright test" },
+  // Única puerta que necesita base de datos, y la que se lleva casi todo el reloj.
+  { name: "app · e2e (build + playwright)", cwd: APP, cmd: "npx playwright test", necesitaDb: true },
 ];
 
-if (!process.env.DATABASE_URL && !process.env.PLAYWRIGHT_BASE_URL) {
-  console.warn(
-    "\n⚠️  Ni DATABASE_URL ni PLAYWRIGHT_BASE_URL están puestos: el server del E2E " +
-      "no podrá servir datos de Neon y el barrido fallará. Exporta DATABASE_URL.\n",
+const pendientes = RAPIDO ? steps.filter((step) => !step.necesitaDb) : steps;
+
+// Abortar ANTES de empezar, no a los diez minutos. La puerta E2E levanta un
+// servidor que pega a Neon en runtime: sin credenciales falla igual, pero lo
+// hacía al final y con un error confuso, después de haberte hecho esperar.
+if (!RAPIDO && !process.env.DATABASE_URL && !process.env.PLAYWRIGHT_BASE_URL) {
+  console.error(
+    "\n\x1b[31m✗ Falta DATABASE_URL.\x1b[0m La puerta E2E levanta un server que lee de Neon.\n" +
+      "\n  Arréglalo con una de estas:\n" +
+      "    DATABASE_URL=<el de mma-ingesta/.env> npm run megatest\n" +
+      "    PLAYWRIGHT_BASE_URL=http://localhost:3400 npm run megatest   (reusa un server ya vivo)\n" +
+      "    npm run megatest -- --rapido                                 (salta el E2E)\n",
+  );
+  process.exit(1);
+}
+
+if (RAPIDO) {
+  console.log(
+    "\n\x1b[33m⚡ Modo rápido: sin la puerta E2E.\x1b[0m Un fallo de renderizado o de " +
+      "`next build` NO se detecta aquí — pasa la corrida completa antes de commitear.\n",
   );
 }
 
 const results = [];
-for (const step of steps) {
+for (const step of pendientes) {
   console.log(`\n\x1b[1m▶ ${step.name}\x1b[0m  (${step.cwd})`);
   const started = Date.now();
   const proc = spawnSync(step.cmd, {
@@ -66,4 +90,10 @@ if (failed.length) {
   console.log(`\n\x1b[31m${failed.length} puerta(s) fallaron.\x1b[0m`);
   process.exit(1);
 }
-console.log("\n\x1b[32mTodas las puertas verdes. ✅\x1b[0m");
+if (RAPIDO) {
+  console.log(
+    "\n\x1b[33mPuertas rápidas verdes ⚡ — falta el E2E: `npm run megatest` antes de commitear.\x1b[0m",
+  );
+} else {
+  console.log("\n\x1b[32mTodas las puertas verdes. ✅\x1b[0m");
+}
