@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { clientIpFromHeaders, isAllowedOrigin } from "@/lib/maestro/security";
 import { generatePredictionExplanation, type PredictionResponse } from "@/lib/prediction";
+import { parsePredictionPayload, type RawPrediction } from "@/lib/prediction-schema";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -23,7 +24,22 @@ const requestSchema = z.object({
   blueFighterId: z.number().int().positive(),
 });
 
-type RawPrediction = Omit<PredictionResponse, "explanation" | "explanationSource">;
+// Valida en runtime la respuesta del microservicio; un núcleo inválido corta con
+// 503 (la UI ya sabe degradar) y un methodPrediction roto se descarta solo él.
+function parsePrediction(payload: unknown): RawPrediction {
+  const result = parsePredictionPayload(payload);
+  if (!result.ok) {
+    console.error(
+      "[predict] respuesta del microservicio con forma inesperada:",
+      result.error,
+    );
+    throw new PredictionUnavailableError(
+      "El servicio de predicción devolvió una respuesta inesperada.",
+    );
+  }
+  if (result.warning) console.error("[predict]", result.warning);
+  return result.data;
+}
 
 // Thrown when the prediction microservice is not configured or unreachable, so
 // the UI can degrade gracefully (503) instead of showing a hard error.
@@ -89,7 +105,7 @@ async function fetchPrediction(
       // La lectura del body va DENTRO del try: el AbortSignal del intento
       // también puede abortar json() (cabeceras a tiempo, body tardío) y ese
       // timeout debe contar como reintentable, no como 500 genérico.
-      return (await response.json()) as RawPrediction;
+      return parsePrediction(await response.json());
     } catch (error) {
       if (
         error instanceof InvalidPredictionRequestError ||
