@@ -61,6 +61,20 @@ export type FighterHistorySummary = {
   latest_prior_fight_date: string | null;
 };
 
+// Cómo acaba la pelea según el modelo de método (3 clases). Simetrizado por
+// esquinas en el microservicio: probabilities(A, B) == probabilities(B, A).
+export type MethodPrediction = {
+  probabilities: {
+    decision: number;
+    ko: number;
+    submission: number;
+  };
+  predicted: "decision" | "ko" | "submission";
+  // ISO date del entrenamiento del modelo de método (clave method_trained_at
+  // del bundle); null/ausente en bundles antiguos.
+  trainedAt?: string | null;
+};
+
 export type PredictionResponse = {
   redProbability: number;
   blueProbability: number;
@@ -68,6 +82,10 @@ export type PredictionResponse = {
   // probabilities are a ~50/50 baseline rather than a confident pick.
   lowConfidence: boolean;
   topFeatures: PredictionFeature[];
+  // Predicción de MÉTODO de victoria. OPTIONAL: respuestas cacheadas antiguas
+  // o un servicio con bundle pre-método la omiten (o null) — la UI no renderiza
+  // la sección en ese caso, nunca crashea (mismo patrón que featureContributions).
+  methodPrediction?: MethodPrediction | null;
   // Full symmetrized SHAP map (feature -> log-odds contribution) the
   // microservice adds since mma-ingesta f898944. OPTIONAL: older cached
   // responses / an older service omit it — render the factor bars without the
@@ -123,6 +141,25 @@ function humanizeFeatureName(name: string) {
     .replace(/\b\w/gu, (char) => char.toUpperCase());
 }
 
+const METHOD_LABELS_TEXT: Record<MethodPrediction["predicted"], string> = {
+  ko: "KO/TKO",
+  submission: "sumisión",
+  decision: "decisión",
+};
+
+// Frase corta "cómo acaba" para la explicación local; null si no hay datos de
+// método (respuesta antigua) para que el resto del párrafo no cambie.
+function describeMethodOutcome(method: MethodPrediction | null | undefined) {
+  if (!method?.probabilities || !method.predicted) {
+    return null;
+  }
+  const probability = method.probabilities[method.predicted];
+  if (typeof probability !== "number" || !Number.isFinite(probability)) {
+    return null;
+  }
+  return `El desenlace más probable según el modelo es ${METHOD_LABELS_TEXT[method.predicted]} (${formatPercent(probability)}).`;
+}
+
 function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" | "explanationSource">) {
   // Un único párrafo corto (3-4 frases): el dueño pidió explicaciones
   // resumidas y claras (11-jul).
@@ -141,9 +178,12 @@ function buildFallbackExplanation(data: Omit<PredictionResponse, "explanation" |
     .map((feature) => humanizeFeatureName(feature.name))
     .join(" y ");
 
+  const methodSentence = describeMethodOutcome(data.methodPrediction);
   return `${favorite} parte como favorito con un ${formatPercent(
     Math.max(data.redProbability, data.blueProbability),
-  )} de probabilidad frente a ${underdog}. Las ventajas que más pesan son ${topFactors}. Recuerda que es una estimación basada en patrones históricos: no garantiza el resultado real.`;
+  )} de probabilidad frente a ${underdog}. Las ventajas que más pesan son ${topFactors}.${
+    methodSentence ? ` ${methodSentence}` : ""
+  } Recuerda que es una estimación basada en patrones históricos: no garantiza el resultado real.`;
 }
 
 export async function generatePredictionExplanation(
@@ -189,6 +229,13 @@ export async function generatePredictionExplanation(
     `Probabilidad roja: ${formatPercent(data.redProbability)}`,
     `Probabilidad azul: ${formatPercent(data.blueProbability)}`,
     `Categoría: ${data.context.weightClass ?? "No disponible"}`,
+    data.methodPrediction
+      ? `Probabilidades de método (cómo acaba): decisión ${formatPercent(
+          data.methodPrediction.probabilities.decision,
+        )}, KO/TKO ${formatPercent(data.methodPrediction.probabilities.ko)}, sumisión ${formatPercent(
+          data.methodPrediction.probabilities.submission,
+        )}. Si alguna destaca sobre su base histórica, menciónala en una frase.`
+      : "",
     `Factores clave: ${data.topFeatures
       .map((feature) => `${humanizeFeatureName(feature.name)}=${feature.value}`)
       .join(", ")}`,

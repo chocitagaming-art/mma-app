@@ -5,6 +5,7 @@ import { ArrowRight, Brain, Info, Loader2, Scale, TrendingUp } from "lucide-reac
 import { useState } from "react";
 
 import { MarketCornerTile, isPickEm } from "@/components/market-corner-tile";
+import { MethodBars } from "@/components/matchup/method-bars";
 import { ShapBarsChart } from "@/components/matchup/shap-bars";
 import { Button } from "@/components/ui/button";
 import { compareModelVsMarket, type MarketFavorite } from "@/lib/odds";
@@ -186,6 +187,18 @@ export function MarketModelComparison({
                     featureContributions={prediction.featureContributions}
                     redName={redName}
                     blueName={blueName}
+                  />
+                </div>
+              ) : null}
+              {prediction.methodPrediction ? (
+                <div className="border-t border-border pt-4">
+                  <p className="mb-3 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    ¿Cómo acaba?
+                  </p>
+                  <MethodBars
+                    compact
+                    method={prediction.methodPrediction}
+                    lowConfidence={lowConfidence}
                   />
                 </div>
               ) : null}

@@ -4,6 +4,11 @@ import { formatPercentage } from "@/lib/format";
 // of truth so the pre/post-prediction copy never drifts.
 export const MODEL_ACCURACY_LABEL = "~63%";
 
+// Production-equivalent accuracy of the method model (0.540 en test,
+// simetrizado + calibrado; el baseline "siempre decisión" da 0.533). El valor
+// del modelo está en las probabilidades por método, no en la etiqueta.
+export const METHOD_ACCURACY_LABEL = "~54%";
+
 export type TaleRow = {
   label: string;
   red: string;

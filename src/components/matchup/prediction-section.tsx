@@ -1,4 +1,4 @@
-import { Brain, Info, Loader2, Sparkles, TrendingUp } from "lucide-react";
+import { Brain, Info, Loader2, Sparkles, Swords, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import type { PredictionResponse } from "@/lib/prediction";
 import { cn } from "@/lib/utils";
 
 import { CornerSignals } from "./corner-cards";
-import { MODEL_ACCURACY_LABEL } from "./helpers";
+import { METHOD_ACCURACY_LABEL, MODEL_ACCURACY_LABEL } from "./helpers";
+import { MethodBars } from "./method-bars";
 import { ProbabilityBar } from "./probability-bar";
 import { ShapBarsChart } from "./shap-bars";
 
@@ -231,6 +232,34 @@ export function PredictionSection({
               </CardContent>
             </Card>
           </div>
+
+          {prediction.methodPrediction ? (
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Swords className="size-5 text-primary" />
+                  ¿Cómo acaba la pelea?
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Probabilidad de cada método de victoria, gane quien gane.
+                  Base histórica UFC: decisión ~50%, KO/TKO ~31%, sumisión
+                  ~19% — lo interesante es cuánto se desvía este cruce de esa
+                  base.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <MethodBars
+                  method={prediction.methodPrediction}
+                  lowConfidence={prediction.lowConfidence}
+                />
+                <p className="border-t border-border pt-3 text-sm text-muted-foreground">
+                  El método es lo más difícil de anticipar: el modelo acierta
+                  la etiqueta exacta {METHOD_ACCURACY_LABEL} de las veces en
+                  test. Lee las probabilidades como tendencia, no como certeza.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
 
           {prediction.context.redHistory &&
           prediction.context.blueHistory ? (
