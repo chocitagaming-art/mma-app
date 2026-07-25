@@ -232,6 +232,71 @@ describe("computeBoutStates", () => {
     expect(conSenal.get(2)).toBe("live");
   });
 
+  it("liveInProgressIds manda sobre la deducción: pelea CAÍDA en mitad del evento (1062, 25-jul)", () => {
+    // Caso real. ESPN retiró Dulatov-Turman (#3) de su cartelera DURANTE la
+    // velada; no se reordenó, desapareció. Quedó con status NULL y sin winner,
+    // así que la deducción por bout_order la eligió como "en curso" mientras
+    // Erceg (#2) se estaba peleando de verdad, con sus stats en pantalla.
+    const card = [
+      bout(12863, 1, "main"), // Ankalaev, aún por pelear
+      bout(12864, 2, "main"), // Erceg: EN CURSO de verdad (ESPN state='in', asalto 1)
+      bout(12866, 3, "main"), // Dulatov: caída de la cartelera, nunca se disputó
+      bout(12870, 4, "main", true), // Zaynukov, ya cerrada
+    ];
+    const now = new Date("2026-07-12T01:05:00Z");
+
+    // Sin la señal se reproduce el bug que vio el dueño: la caída sale "live".
+    const sinSenal = computeBoutStates(card, "live", TIMES, now);
+    expect(sinSenal.get(12866)).toBe("live");
+    expect(sinSenal.get(12864)).toBe("pending");
+
+    // Con la señal se mira el DATO: la que ESPN da por empezada es la 12864.
+    const conSenal = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      now,
+      undefined,
+      new Set([12864]),
+    );
+    expect(conSenal.get(12864)).toBe("live");
+    expect(conSenal.get(12866)).toBe("pending");
+    expect(conSenal.get(12863)).toBe("pending");
+    expect(conSenal.get(12870)).toBe("finished");
+  });
+
+  it("sin señal de 'en curso' se sigue deduciendo por bout_order (respaldo intacto)", () => {
+    // Entre combate y combate ESPN no marca ninguno 'in'. Un Set vacío NO debe
+    // dejar la cartelera entera en "pending": la deducción es el respaldo para
+    // el que se escribió.
+    const card = [bout(1, 1, "main"), bout(2, 2, "main"), bout(3, 3, "prelims", true)];
+    const states = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      new Date("2026-07-12T01:05:00Z"),
+      undefined,
+      new Set<number>(),
+    );
+    expect(states.get(2)).toBe("live");
+  });
+
+  it("una pelea ya terminada no se marca 'live' aunque llegue en liveInProgressIds", () => {
+    // Snapshot rancio: ESPN dejó la fila en 'in' y el resultado entró por otra
+    // vía. El resultado manda sobre el estado.
+    const card = [bout(1, 1, "main"), bout(2, 2, "main", true)];
+    const states = computeBoutStates(
+      card,
+      "live",
+      TIMES,
+      new Date("2026-07-12T01:05:00Z"),
+      undefined,
+      new Set([2]),
+    );
+    expect(states.get(2)).toBe("finished");
+    expect(states.get(1)).toBe("live");
+  });
+
   it("la siguiente es 'next' si su tramo aún no ha empezado", () => {
     // Prelims terminados a las 00:40; el main card no abre hasta la 01:00.
     const card = [

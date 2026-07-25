@@ -192,8 +192,16 @@ export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
      -- status='upcoming' marca la intención, pero un evento puede quedarse en
      -- 'upcoming' hasta que el scraper lo complete. El guard de fecha lo saca de
      -- "Próximos" en cuanto pasa su día (la lista de "Pasados" lo recoge por fecha).
+     -- Pero el guard de fecha NO basta el día del evento: el 25-jul-2026 esta lista
+     -- seguía encabezada por una velada terminada a las 18:55 UTC, porque
+     -- event_date = CURRENT_DATE la mantiene dentro y el ORDER BY ascendente la pone
+     -- primera. Miramos el DATO (¿cayó el estelar?) en vez de deducirlo de la fecha.
+     -- El alias \`f\` de MAIN_EVENT_FINISHED_SQL es el de su propia subconsulta y
+     -- sombrea al del LEFT JOIN de arriba: es lo que queremos (la subconsulta se
+     -- basta sola y solo correlaciona por e.id).
      WHERE e.status = 'upcoming'
        AND (e.event_date >= CURRENT_DATE OR e.event_date IS NULL)
+       AND NOT ${MAIN_EVENT_FINISHED_SQL}
      GROUP BY e.id, e.name, e.headliner, e.event_date, e.start_time,
               e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline
      ORDER BY e.event_date ASC, e.id ASC`,

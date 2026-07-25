@@ -195,6 +195,42 @@ function FaceOffCorner({
   );
 }
 
+// Aviso del radar cuando falta algún lado. Un TBD (id null) NO es un debutante:
+// no atribuirle peleas. Y "sin datos suficientes" no dice "debuta en UFC" a
+// propósito — muchos son veteranos regionales con historial fuera de la UFC.
+// Con los DOS lados vacíos se dice una sola vez: repetir la misma frase con dos
+// nombres es lo que salía al levantar el guard, y se lee fatal.
+function skillRadarNotice(
+  radar: FightSkillRadar,
+  red: FightCompetitor,
+  blue: FightCompetitor,
+): string {
+  const MOTIVO = "menos de 3 peleas UFC con estadísticas registradas";
+  const SIN_DATOS = `sin datos suficientes (${MOTIVO})`;
+
+  if (!radar.red && !radar.blue) {
+    if (red.id == null && blue.id == null) return "Rivales por confirmar.";
+    if (red.id != null && blue.id != null) {
+      return `Ninguno de los dos tiene datos suficientes (${MOTIVO}).`;
+    }
+  }
+
+  return [
+    !radar.red
+      ? red.id != null
+        ? `${red.name}: ${SIN_DATOS}.`
+        : "Esquina roja: rival por confirmar."
+      : null,
+    !radar.blue
+      ? blue.id != null
+        ? `${blue.name}: ${SIN_DATOS}.`
+        : "Esquina azul: rival por confirmar."
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function TaleOfTheTape({
   fight,
   radar,
@@ -432,50 +468,55 @@ export function TaleOfTheTape({
         </div>
       ) : null}
 
-      {/* Radar de habilidades (percentiles por división, maqueta 19-jul). No
-          se pinta si NINGÚN lado tiene datos (debutantes puros o TBD); con un
-          solo lado, radar de un polígono + aviso en el lado vacío. */}
-      {radar && (radar.red || radar.blue) ? (
+      {/* Radar de habilidades (percentiles por división, maqueta 19-jul). Con un
+          solo lado se pinta el polígono de ese lado y se avisa del vacío. Cuando
+          NINGUNO tiene datos no hay nada que dibujar, pero la sección sigue
+          apareciendo con la explicación: hasta el 25-jul el bloque entero
+          desaparecía sin decir nada, y el lector no podía distinguir "falta el
+          dato" de "esta web está rota". */}
+      {radar ? (
         <div className="border-t border-border p-6 sm:p-8">
           <p className="mb-1 text-center font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
             Radar de habilidades
           </p>
-          <p className="mb-4 text-center text-xs text-muted-foreground">
-            Percentil 0–100 respecto a{" "}
-            {radar.divisionLabel ?? "su división"} (peleas UFC con estadísticas)
-          </p>
-          <SkillRadarChart radar={radar} redName={red.name} blueName={blue.name} />
-          <div className="mx-auto mt-4 max-w-xl">
-            {SKILL_AXES.map((axis) => (
-              <TaleRow
-                key={axis.key}
-                row={{
-                  label: axis.label,
-                  red: radar.red ? String(radar.red[axis.key]) : "—",
-                  blue: radar.blue ? String(radar.blue[axis.key]) : "—",
-                  redNum: radar.red?.[axis.key] ?? null,
-                  blueNum: radar.blue?.[axis.key] ?? null,
-                }}
+          {radar.red || radar.blue ? (
+            <>
+              <p className="mb-4 text-center text-xs text-muted-foreground">
+                Percentil 0–100 respecto a{" "}
+                {radar.divisionLabel ?? "su división"} (peleas UFC con
+                estadísticas)
+              </p>
+              <SkillRadarChart
+                radar={radar}
+                redName={red.name}
+                blueName={blue.name}
               />
-            ))}
-          </div>
+              <div className="mx-auto mt-4 max-w-xl">
+                {SKILL_AXES.map((axis) => (
+                  <TaleRow
+                    key={axis.key}
+                    row={{
+                      label: axis.label,
+                      red: radar.red ? String(radar.red[axis.key]) : "—",
+                      blue: radar.blue ? String(radar.blue[axis.key]) : "—",
+                      redNum: radar.red?.[axis.key] ?? null,
+                      blueNum: radar.blue?.[axis.key] ?? null,
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          ) : null}
           {!radar.red || !radar.blue ? (
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              {/* Un TBD (id null) no es un debutante: no atribuirle peleas. */}
-              {[
-                !radar.red
-                  ? red.id != null
-                    ? `${red.name}: sin datos suficientes (menos de 3 peleas UFC con estadísticas registradas).`
-                    : "Esquina roja: rival por confirmar."
-                  : null,
-                !radar.blue
-                  ? blue.id != null
-                    ? `${blue.name}: sin datos suficientes (menos de 3 peleas UFC con estadísticas registradas).`
-                    : "Esquina azul: rival por confirmar."
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" ")}
+            <p
+              className={cn(
+                "text-center text-xs text-muted-foreground",
+                // Sin gráfico encima el aviso es lo único que hay: no necesita
+                // separarse de nada.
+                radar.red || radar.blue ? "mt-3" : "mt-1",
+              )}
+            >
+              {skillRadarNotice(radar, red, blue)}
             </p>
           ) : null}
         </div>

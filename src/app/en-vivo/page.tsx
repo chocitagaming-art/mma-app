@@ -121,6 +121,21 @@ export default async function LivePage() {
       )
       .map((stats) => stats.fightId),
   );
+  // Qué combate se está disputando SEGÚN ESPN, para no tener que deducirlo del
+  // orden de cartelera (ver el aviso de computeBoutStates: el 25-jul una pelea
+  // retirada en mitad de la velada se quedó con la etiqueta "EN CURSO" mientras
+  // la de al lado peleaba de verdad). Exigimos asalto >= 1 a propósito: ESPN
+  // pone state='in' ya en los paseíllos, con todas las stats a 0.
+  const liveInProgressIds = new Set(
+    [...liveStats.values()]
+      .filter(
+        (stats) =>
+          stats.state === "in" &&
+          (stats.period ?? 0) >= 1 &&
+          !isCancelledLiveStatus(stats.statusName),
+      )
+      .map((stats) => stats.fightId),
+  );
   // Evento recién terminado: el estelar ya cayó (por resultado en fights O por
   // ESPN 'post', que cubre empates/NC). Aunque la ventana 'live' (main+8h) siga
   // abierta NO es "En directo": mostramos resultados en modo "Finalizado" y no
@@ -173,6 +188,7 @@ export default async function LivePage() {
     candidate,
     new Date(),
     liveFinishedIds,
+    liveInProgressIds,
   );
   const finishedCount = event.bouts.filter(
     (bout) => states.get(bout.fightId) === "finished",

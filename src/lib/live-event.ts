@@ -111,10 +111,13 @@ function segmentStart(
 //   cubre empates/NC, que el pipeline de resultados deja sin escribir en
 //   `fights` hasta ufcstats — sin la señal, la pelea acabada seguía saliendo
 //   "En curso" con punto rojo mientras su panel decía "Final" (hallazgo 6).
-// - "live"/"next": la CRONOLÓGICAMENTE siguiente sin resultado. El cartel corre
-//   en bout_order DESCENDENTE (1 = estelar cierra la noche), así que la próxima
-//   es la de MAYOR bout_order sin terminar. Si su tramo aún no ha empezado
-//   (huecos entre prelims y estelares) es "next"; si ya empezó, "live".
+// - "live": si ESPN dice qué combate se está disputando (liveInProgressIds:
+//   state='in' Y asalto >= 1), ESE es, y no hay nada que deducir. Es el DATO.
+// - "live"/"next" (respaldo, sin esa señal): la CRONOLÓGICAMENTE siguiente sin
+//   resultado. El cartel corre en bout_order DESCENDENTE (1 = estelar cierra la
+//   noche), así que la próxima es la de MAYOR bout_order sin terminar. Si su
+//   tramo aún no ha empezado (huecos entre prelims y estelares) es "next"; si ya
+//   empezó, "live".
 // - "pending": el resto. Con fase != "live" nadie está en curso.
 // Vía de escape (revisión adversarial): si una pelea con bout_order MENOR que
 // la candidata ya terminó, la cronología demuestra que la candidata fue SALTADA
@@ -123,12 +126,27 @@ function segmentStart(
 // Las saltadas quedan "pending" y el puntero avanza a la siguiente real.
 // Las peleas con bout_order NULL (no debería pasar en eventos upcoming) nunca
 // se marcan live: no hay forma fiable de ordenarlas en la cronología.
+//
+// ⚠️ POR QUÉ LA DEDUCCIÓN NO BASTA (evento 1062, 25-jul, visto en producción):
+// ESPN retiró Dulatov-Turman (#3) de la cartelera EN MITAD de la velada. Se
+// quedó sin resultado y sin marcar cancelada, así que era la de mayor
+// bout_order sin terminar por debajo de la #4 → la web la pintó "EN CURSO" con
+// punto rojo mientras Erceg (#2) peleaba de verdad con sus stats en pantalla.
+// La vía de escape de arriba no salta porque exige que una pelea POSTERIOR haya
+// terminado, y la #2 aún no había acabado. La lección, que en esa jornada
+// apareció cinco veces en sitios distintos: mirar el dato, no deducirlo del
+// orden, y no dar por hecho que lo programado se celebra.
+//
+// ⚠️ Y state='in' NO basta por sí solo: ESPN lo marca ya en los paseíllos
+// (STATUS_FIGHTERS_WALKING, con todas las stats a 0). Por eso quien construye
+// liveInProgressIds debe exigir además asalto >= 1.
 export function computeBoutStates(
   bouts: LiveBoutInput[],
   phase: LivePhase,
   times: LiveEventTimes,
   now: Date,
   liveFinishedIds?: ReadonlySet<number>,
+  liveInProgressIds?: ReadonlySet<number>,
 ): Map<number, BoutLiveState> {
   const states = new Map<number, BoutLiveState>();
 
@@ -141,6 +159,20 @@ export function computeBoutStates(
   }
 
   if (phase !== "live") {
+    return states;
+  }
+
+  // El dato manda sobre la deducción. Un resultado ya escrito gana igualmente:
+  // un snapshot 'in' rancio no debe resucitar una pelea cerrada.
+  const enCurso = bouts.filter(
+    (bout) =>
+      (liveInProgressIds?.has(bout.fightId) ?? false) &&
+      states.get(bout.fightId) !== "finished",
+  );
+  if (enCurso.length > 0) {
+    for (const bout of enCurso) {
+      states.set(bout.fightId, "live");
+    }
     return states;
   }
 
