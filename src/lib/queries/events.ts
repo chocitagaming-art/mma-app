@@ -61,6 +61,14 @@ type EventListRow = {
 // El filtro por fecha excluye los futuros automáticamente cuando el backend añada upcoming.
 // `year` (FE7) restringe a un año concreto; los eventos sin fecha quedan fuera
 // del filtro anual porque no tienen año que comparar.
+//
+// ⚠️ SIMÉTRICO CON getUpcomingEvents, Y TIENE QUE SEGUIR SIÉNDOLO. Las dos
+// pestañas parten del MISMO criterio: ¿ya cayó el estelar? Si solo una lo usa
+// aparece un agujero — el 25-jul-2026 la velada terminó a las 18:55 y, con el
+// arreglo puesto únicamente en "próximos", el evento desapareció de allí y
+// tampoco entraba aquí (su event_date es HOY, no < hoy): no salía en NINGUNA
+// pestaña hasta medianoche. Quien toque una de las dos condiciones tiene que
+// mirar la otra.
 export async function getPastEvents(
   page: number,
   year?: number,
@@ -70,9 +78,10 @@ export async function getPastEvents(
 
   const whereClause =
     year != null
-      ? `WHERE e.event_date < CURRENT_DATE
+      ? `WHERE (e.event_date < CURRENT_DATE OR ${MAIN_EVENT_FINISHED_SQL})
            AND extract(year FROM e.event_date) = $1`
-      : `WHERE e.event_date < CURRENT_DATE OR e.event_date IS NULL`;
+      : `WHERE e.event_date < CURRENT_DATE OR e.event_date IS NULL
+           OR ${MAIN_EVENT_FINISHED_SQL}`;
   const whereParams = year != null ? [year] : [];
 
   const countRows = await sql<{ total: string }>(
