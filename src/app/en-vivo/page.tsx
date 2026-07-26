@@ -19,7 +19,8 @@ import {
   resolveLivePhase,
   type BoutLiveState,
 } from "@/lib/live-event";
-import { getEventDetail } from "@/lib/queries/events";
+import { EventWeighInsSection } from "@/components/event-weigh-ins";
+import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import {
   getFightSampleSeries,
   getLiveEventCandidate,
@@ -95,7 +96,16 @@ function mobileResultLine(bout: EventBout): string | null {
 export default async function LivePage() {
   const candidate = await getLiveEventCandidate();
   const phase = candidate ? resolveLivePhase(candidate, new Date()) : "none";
-  const event = candidate ? await getEventDetail(candidate.id) : null;
+  // Los pesajes viajan con la ficha del evento porque el dueño los quiere
+  // TAMBIÉN aquí: hasta ahora solo salían en /eventos/[id], y esta es la página
+  // donde está la gente la noche de la velada. La sección se oculta sola si no
+  // hay filas, así que no estorba en un evento sin pesaje publicado.
+  const [event, weighIns] = candidate
+    ? await Promise.all([
+        getEventDetail(candidate.id),
+        getEventWeighIns(candidate.id),
+      ])
+    : [null, []];
   // Filas vivas (estado fino + stats por pelea) que el bucle de mma-ingesta
   // escribe cada ~2 min. Solo en fase 'live': en 'pre' la tabla no tiene filas
   // de este evento todavía (SELECT vacío garantizado, hallazgo 7a). Se piden
@@ -193,6 +203,22 @@ export default async function LivePage() {
   const finishedCount = event.bouts.filter(
     (bout) => states.get(bout.fightId) === "finished",
   ).length;
+  // El careo vivía DENTRO de la rama previa al evento, así que desaparecía en
+  // cuanto la página entraba en fase directo — o sea a las 12:30 UTC, justo
+  // cuando llega la gente. Ahora se define una vez y se usa en las tres fases;
+  // lo que cambia es dónde: antes del evento preside, y una vez arrancado pasa
+  // debajo de la cartelera, porque en directo manda el resultado.
+  const faceoff = event.faceoffVideoId ? (
+    <div className="w-full max-w-2xl">
+      <p className="mb-2 text-center font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
+        Careo oficial
+      </p>
+      <FightVideoPlayer
+        videoId={event.faceoffVideoId}
+        title={`Careo · ${event.name}`}
+      />
+    </div>
+  ) : null;
   // Revisión adversarial: la cuenta atrás apunta al PRIMER tramo (23:00) pero
   // la meta-línea muestra la hora del main card (03:00) — sin etiqueta parecen
   // contradictorias. Etiquetamos a qué tramo cuenta.
@@ -271,17 +297,7 @@ export default async function LivePage() {
             {/* Careo oficial ENCIMA del cronómetro (pedido del dueño): el ritual
                 previo tiene más sentido justo antes de la cuenta atrás. Mismo
                 video id que la ficha del evento (getEventDetail). */}
-            {event.faceoffVideoId ? (
-              <div className="w-full max-w-2xl">
-                <p className="mb-2 text-center font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
-                  Careo oficial
-                </p>
-                <FightVideoPlayer
-                  videoId={event.faceoffVideoId}
-                  title={`Careo · ${event.name}`}
-                />
-              </div>
-            ) : null}
+            {faceoff}
             <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Empiezan {countdownLabel} en
             </p>
@@ -375,6 +391,18 @@ export default async function LivePage() {
           Cartelera por confirmar.
         </p>
       )}
+
+      {/* Con la velada ya arrancada el careo baja aquí en vez de desaparecer:
+          sigue siendo el ritual previo, pero por debajo de lo que la gente
+          viene a ver. En la fase previa se pinta arriba, presidiendo. */}
+      {!live && !over ? null : faceoff ? (
+        <div className="mt-8 flex justify-center">{faceoff}</div>
+      ) : null}
+
+      {/* Pesaje oficial, encargo del dueño: existía solo en la ficha del evento
+          y esta es la página donde está la gente la noche de la velada. La
+          sección se oculta sola si no hay filas. */}
+      <EventWeighInsSection weighIns={weighIns} />
 
       <p className="mt-8 font-mono text-xs text-muted-foreground">
         Los resultados en directo son provisionales (fuente ESPN) y se
