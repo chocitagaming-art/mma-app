@@ -9,6 +9,7 @@ import type {
   StrikeZoneStat,
   NewsArticle,
 } from "@/lib/types";
+import { decodeHtmlEntitiesOrNull } from "@/lib/html-entities";
 import type {
   AggregateRow,
   DefenseRow,
@@ -39,10 +40,14 @@ export function mapFighter(row: FighterRow): FighterCardData {
     standingBodyUrlL: row.standing_body_url_l ?? null,
     standingBodyUrlR: row.standing_body_url_r ?? null,
     legReachCm: row.leg_reach_cm ? Number(row.leg_reach_cm) : null,
-    trainsAt: row.trains_at ?? null,
+    // Estas dos columnas llegan del scraper con entidades HTML sin resolver, y
+    // se veían tal cual en la ficha: "Bronx&#039;s Gold Team". Son 54 de las
+    // 1.127 filas con gimnasio y 2 de las 1.515 con lugar de nacimiento, una
+    // doblemente codificada. El resto de columnas de texto están limpias.
+    trainsAt: decodeHtmlEntitiesOrNull(row.trains_at),
     source: row.source ?? null,
     sourceId: row.source_id ?? null,
-    birthPlace: row.birth_place ?? null,
+    birthPlace: decodeHtmlEntitiesOrNull(row.birth_place),
     octagonDebut: row.octagon_debut ?? null,
     fightCount: Number(row.fight_count ?? 0),
     latestWeightClass: row.latest_weight_class ?? null,

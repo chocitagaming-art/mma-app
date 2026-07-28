@@ -94,8 +94,12 @@ test("las páginas de no encontrado NO llevan canónica", async ({ request }) =>
     const html = await (await request.get(ruta)).text();
 
     expect(extraerCanonica(html), `${ruta} no debería tener canónica`).toBeNull();
-    // Y Next debe seguir marcándolas noindex por su cuenta.
-    expect(html, `${ruta} perdió el noindex`).toContain('name="robots"');
+    // Y Next debe seguir marcándolas noindex por su cuenta. Se comprueba el
+    // VALOR, no solo que exista la etiqueta: un `content="index,follow"` también
+    // contendría `name="robots"` y sería exactamente lo contrario.
+    const robots = html.match(/<meta name="robots"[^>]*content="([^"]*)"/i)?.[1];
+    expect(robots, `${ruta} perdió la etiqueta robots`).toBeTruthy();
+    expect(robots, `${ruta} ya no está en noindex: "${robots}"`).toContain("noindex");
   }
 });
 
@@ -173,7 +177,17 @@ test("el JSON-LD no puede cerrar su propia etiqueta", async ({ request }) => {
 test("las páginas con datos estructurados no generan ni una violación de CSP", async ({
   page,
   baseURL,
+  request,
 }) => {
+  // Primero, que HAYA política. "Cero violaciones" es verdad trivialmente en una
+  // página sin CSP: sin esta comprobación, borrar la cabecera dejaría el test en
+  // verde y sin nada que vigilar.
+  const cabeceras = (await request.get("/fighters/6493")).headers();
+  expect(
+    cabeceras["content-security-policy"],
+    "la respuesta no trae Content-Security-Policy: no hay nada que comprobar",
+  ).toContain("script-src");
+
   const violaciones: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error" && /Content Security Policy/i.test(msg.text())) {

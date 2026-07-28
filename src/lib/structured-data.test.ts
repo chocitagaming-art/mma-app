@@ -5,7 +5,6 @@ import {
   absoluteUrl,
   buildEventJsonLd,
   buildFighterJsonLd,
-  decodeHtmlEntities,
   resolveEventStartDate,
   serializeJsonLd,
   toIsoDateOnly,
@@ -103,36 +102,6 @@ describe("toIsoDateOnly", () => {
     expect(toIsoDateOnly("")).toBeNull();
     expect(toIsoDateOnly("no es una fecha")).toBeNull();
     expect(toIsoDateOnly(new Date("fecha inválida"))).toBeNull();
-  });
-});
-
-describe("decodeHtmlEntities", () => {
-  // Casos REALES sacados de la BD de producción el 28-jul-2026.
-  it("decodifica las entidades que los scrapers dejan crudas", () => {
-    expect(decodeHtmlEntities("Bronx&#039;s Gold Team")).toBe("Bronx's Gold Team");
-    expect(decodeHtmlEntities("Glory MMA &amp; Fitness")).toBe("Glory MMA & Fitness");
-    expect(decodeHtmlEntities("Mick Doyle&#039;s Kickboxing - Omaha, NE")).toBe(
-      "Mick Doyle's Kickboxing - Omaha, NE",
-    );
-  });
-
-  it("resuelve el doble codificado que hay en birth_place", () => {
-    expect(decodeHtmlEntities("Ponte dell&amp;#039;Olio, Italy")).toBe(
-      "Ponte dell'Olio, Italy",
-    );
-    expect(decodeHtmlEntities("St. Pierre &amp;amp; Miquelon, France")).toBe(
-      "St. Pierre & Miquelon, France",
-    );
-  });
-
-  it("se detiene a las dos pasadas y no se deja arrastrar", () => {
-    // Triple codificado: se desenrolla dos veces y para. Que quede una entidad a
-    // medias es MEJOR que un bucle sin tope gobernado por el dato de entrada.
-    expect(decodeHtmlEntities("&amp;amp;amp;lt;")).toBe("&amp;lt;");
-  });
-
-  it("no toca un texto limpio", () => {
-    expect(decodeHtmlEntities("Chute Boxe Diego Lima")).toBe("Chute Boxe Diego Lima");
   });
 });
 
