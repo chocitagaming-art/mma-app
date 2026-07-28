@@ -6,7 +6,7 @@
 
 Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuotas del mercado frente al modelo, un asistente con IA y vídeos de combates, todo sobre datos reales.
 
-[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-22c55e?style=flat-square)](https://mma-app-ruby.vercel.app)
+[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-22c55e?style=flat-square)](https://mmastatus.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)

@@ -13,9 +13,11 @@
 // Si algún día hiciera falta la dirección en el navegador, se añade ADEMÁS una
 // NEXT_PUBLIC_ solo para ese uso; no se convierte esta.
 
-// Dominio de reserva: el de Vercel, que sigue respondiendo. Es la ÚNICA línea
-// del código de src donde aparece una dirección literal.
-const FALLBACK_SITE_URL = "https://mma-app-ruby.vercel.app";
+// Dominio de reserva. Es la ÚNICA línea del código de src donde aparece una
+// dirección literal. Desde el 28-jul-2026 es el dominio propio y no el de
+// Vercel: si alguien borra SITE_URL por error, el sitemap y las canónicas siguen
+// siendo correctos en vez de mandar a Google al dominio antiguo.
+const FALLBACK_SITE_URL = "https://mmastatus.app";
 
 /**
  * Deja el valor en forma canónica: sin espacios, sin BOM y sin barra final.

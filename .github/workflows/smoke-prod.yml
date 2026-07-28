@@ -23,7 +23,7 @@ on:
     inputs:
       base_url:
         description: "URL a comprobar (por defecto, producción)"
-        default: "https://mma-app-ruby.vercel.app"
+        default: "https://mmastatus.app"
 
 concurrency:
   group: smoke-prod
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://mma-app-ruby.vercel.app' }}
+      PLAYWRIGHT_BASE_URL: ${{ inputs.base_url || 'https://mmastatus.app' }}
     steps:
       - uses: actions/checkout@v5
 

@@ -6,7 +6,7 @@
 
 Fighter profiles, official rankings, head to head comparisons, market odds against the model, an AI assistant, and fight videos, all on real scraped data.
 
-[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mma-app-ruby.vercel.app)
+[![Live demo](https://img.shields.io/badge/demo-live-22c55e?style=flat-square)](https://mmastatus.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)

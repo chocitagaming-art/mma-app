@@ -1,7 +1,7 @@
 # 🥊 MMA STATUS — Manual del producto
 
 > Guía de **MMA STATUS**: para quien usa la web y para quien quiera entender cómo funciona por dentro.
-> Web en producción: **https://mma-app-ruby.vercel.app**
+> Web en producción: **https://mmastatus.app**
 >
 > Está en español; el código y los identificadores van en inglés (estándar de la industria).
 
