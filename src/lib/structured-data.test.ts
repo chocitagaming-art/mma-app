@@ -70,13 +70,20 @@ describe("toIsoDateOnly", () => {
   // EL BUG QUE ESTO ARREGLA: `fighters.birth_date` es DATE y getFighterDetail la
   // trae con `select f.*` sin castear, así que node-postgres devuelve un objeto
   // Date construido a MEDIANOCHE LOCAL — no el string que promete el tipo.
-  it("recupera el día natural de un Date de Postgres al este de Greenwich", () => {
-    // Lo que devuelve pg para el 17-oct-1989 en Europa/Madrid: su toISOString()
-    // dice "1989-10-16T23:00:00.000Z", un día MENOS.
+  it("recupera el día natural del Date que entrega Postgres, en cualquier huso", () => {
+    // Así lo construye pg a partir de una columna DATE: MEDIANOCHE LOCAL.
     const dePostgres = new Date(1989, 9, 17, 0, 0, 0);
 
-    expect(dePostgres.toISOString().slice(0, 10)).toBe("1989-10-16"); // el bug
-    expect(toIsoDateOnly(dePostgres)).toBe("1989-10-17"); // el arreglo
+    // El arreglo vale en todos los husos, incluido el UTC de los runners de CI.
+    expect(toIsoDateOnly(dePostgres)).toBe("1989-10-17");
+
+    // Y esta es la trampa que evita: al este de Greenwich (Europe/Madrid, donde
+    // se desarrolla) toISOString() retrocede al día 16. Va bajo condición porque
+    // en UTC no hay desplazamiento que enseñar y el aserto no significaría nada
+    // — este mismo test, sin la condición, tumbó el CI en su primer intento.
+    if (dePostgres.getTimezoneOffset() < 0) {
+      expect(dePostgres.toISOString().slice(0, 10)).toBe("1989-10-16");
+    }
   });
 
   it("también acierta al oeste de Greenwich", () => {
