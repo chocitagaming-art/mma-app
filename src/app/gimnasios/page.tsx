@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Gimnasio en tu zona",
   description:
     "Encuentra gimnasios de MMA, boxeo, muay thai y BJJ cerca de ti sobre el mapa. Datos de OpenStreetMap.",
+  alternates: { canonical: "/gimnasios" },
 };
 
 // El directorio completo se lee de Neon; los gimnasios se refrescan por cron

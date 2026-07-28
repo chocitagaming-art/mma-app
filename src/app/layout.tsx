@@ -6,6 +6,7 @@ import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registra
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SITE_URL } from "@/lib/site-url";
 
 import "./globals.css";
 
@@ -28,7 +29,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mma-app-ruby.vercel.app"),
+  // Con metadataBase puesto aquí, cada página declara su canónica como ruta
+  // relativa ("/eventos") y Next compone la absoluta. Así el dominio vive en un
+  // único sitio (src/lib/site-url.ts) y no hay 12 sitios que actualizar.
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "MMA STATUS",
     template: "%s | MMA STATUS",

@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Eventos",
   description: "Cartelera de eventos UFC: próximos y resultados de eventos pasados.",
+  alternates: { canonical: "/eventos" },
 };
 
 function getSingleValue(value: string | string[] | undefined) {

@@ -40,6 +40,7 @@ export const metadata: Metadata = {
   title: "En vivo",
   description:
     "Sigue el evento de UFC en directo: estado de cada combate y resultados provisionales al momento.",
+  alternates: { canonical: "/en-vivo" },
 };
 
 // Chip de estado por pelea. Paletas ya usadas por la cartelera: primary (rojo

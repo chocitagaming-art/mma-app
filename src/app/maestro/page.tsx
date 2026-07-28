@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Maestro de UFC",
   description:
     "Pregúntale al Maestro: una IA experta en UFC con acceso en vivo a récords, estadísticas, rankings, eventos y noticias del proyecto.",
+  alternates: { canonical: "/maestro" },
 };
 
 export default function MaestroPage() {

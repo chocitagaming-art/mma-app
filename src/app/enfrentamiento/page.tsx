@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   title: "Enfrentamiento",
   description:
     "Arma cualquier enfrentamiento UFC: compara récords, físico, golpeo y grappling lado a lado, y dispara una predicción de IA con probabilidades por esquina.",
+  alternates: { canonical: "/enfrentamiento" },
 };
 
 function getSingleValue(value: string | string[] | undefined) {

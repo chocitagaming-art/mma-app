@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE = "https://mma-app-ruby.vercel.app";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
   return {

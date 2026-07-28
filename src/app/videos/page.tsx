@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "Vídeos",
   description:
     "Directorio de canales de MMA en español en YouTube: historias, resúmenes de eventos, análisis, entrevistas y noticias de UFC.",
+  alternates: { canonical: "/videos" },
 };
 
 export default async function VideosPage() {

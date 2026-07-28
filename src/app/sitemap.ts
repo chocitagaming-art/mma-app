@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { sql } from "@/lib/db";
-
-const SITE = "https://mma-app-ruby.vercel.app";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 // Páginas estáticas + un nodo por cada perfil de luchador y cada evento (leídos en vivo
 // de Neon). Si la BD no responde, degradamos a solo las rutas estáticas para que

@@ -51,6 +51,7 @@ function DivisionGroup({
 export const metadata: Metadata = {
   title: "Clasificación",
   description: "Rankings oficiales de UFC: libra por libra y clasificación por cada división.",
+  alternates: { canonical: "/clasificacion" },
 };
 
 export default async function ClasificacionPage() {

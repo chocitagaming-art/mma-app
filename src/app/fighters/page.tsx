@@ -19,6 +19,10 @@ type FightersPageProps = {
 export const metadata: Metadata = {
   title: "Luchadores",
   description: "Busca, filtra y ordena perfiles de peleadores desde la base de datos de MMA en vivo.",
+  // Canónica sin parámetros a propósito: esta ruta acepta búsqueda, filtros y
+  // orden, y cada combinación es la MISMA página. Sin esto, Google indexaría
+  // decenas de variantes compitiendo entre sí.
+  alternates: { canonical: "/fighters" },
 };
 
 function getSingleValue(value: string | string[] | undefined) {

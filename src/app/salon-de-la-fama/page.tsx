@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "Salón de la Fama",
   description:
     "El UFC Hall of Fame: las leyendas del octágono por alas (Moderna, Pionera, Contribuidora y de Combate).",
+  alternates: { canonical: "/salon-de-la-fama" },
 };
 
 export default async function SalonDeLaFamaPage() {

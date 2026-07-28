@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   title: { absolute: "MMA STATUS · Perfiles de peleadores UFC y análisis de peleas" },
   description:
     "Explora perfiles reales de peleadores, historial de peleas y estadísticas de rendimiento desde una base de datos de MMA en vivo.",
+  alternates: { canonical: "/" },
 };
 
 export default async function HomePage() {

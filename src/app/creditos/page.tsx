@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Créditos de imágenes",
   description:
     "Autores y licencias de las fotografías de Wikimedia Commons usadas en MMA STATUS.",
+  alternates: { canonical: "/creditos" },
 };
 
 type Credit = {

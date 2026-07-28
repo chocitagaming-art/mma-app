@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: "Tendencias",
   description:
     "Lo último de UFC/MMA en un solo sitio: noticias y vídeos en español ordenados por fecha, estilo tarjetas.",
+  alternates: { canonical: "/tendencias" },
 };
 
 type TendenciasPageProps = {
