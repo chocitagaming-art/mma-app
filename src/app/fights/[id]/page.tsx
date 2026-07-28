@@ -30,6 +30,9 @@ export async function generateMetadata({
   const fightId = parseId(id);
   const fight = fightId != null ? await getFightDetail(fightId) : null;
 
+  // Sin combate la página es un "no encontrado" que Next ya marca con noindex:
+  // ponerle canónica sería decirle a Google que ESA es la versión buena de algo
+  // que no existe.
   if (!fight) {
     return {
       title: "Pelea no encontrada",
@@ -39,6 +42,11 @@ export async function generateMetadata({
   return {
     title: `${fight.red.name} vs ${fight.blue.name}`,
     description: `Resultado de la pelea y comparación de estadísticas para ${fight.red.name} vs ${fight.blue.name}.`,
+    // Canónica con el id NUMÉRICO ya parseado, no con el texto de la ruta:
+    // /fights/03821 sirve el mismo combate con un 200. Estas fichas NO llevan
+    // datos estructurados todavía (son 8.800 páginas y ni siquiera están en el
+    // sitemap): eso es un sprint propio.
+    alternates: { canonical: `/fights/${fightId}` },
   };
 }
 

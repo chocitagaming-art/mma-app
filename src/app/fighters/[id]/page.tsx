@@ -73,6 +73,7 @@ import {
 } from "@/lib/queries/fighters";
 import { getFighterRankingHistory } from "@/lib/queries/rankings";
 import { parseId } from "@/lib/route-params";
+import { buildFighterJsonLd, serializeJsonLd } from "@/lib/structured-data";
 
 type FighterDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -85,6 +86,9 @@ export async function generateMetadata({
   const fighterId = parseId(id);
   const detail = fighterId != null ? await getFighterDetail(fighterId) : null;
 
+  // Sin ficha la página es un "no encontrado" que Next ya marca con noindex:
+  // ponerle canónica sería decirle a Google que ESA es la versión buena de algo
+  // que no existe.
   if (!detail) {
     return {
       title: "Luchador no encontrado",
@@ -94,6 +98,12 @@ export async function generateMetadata({
   return {
     title: `${detail.fighter.name}`,
     description: `Historial de peleas y estadísticas agregadas de rendimiento de ${detail.fighter.name}.`,
+    // Canónica con el id NUMÉRICO ya parseado, no con el texto de la ruta:
+    // /fighters/06493 y /fighters/006493 sirven la MISMA ficha con un 200
+    // (comprobado en producción el 28-jul-2026), y sin esto Google ve varias
+    // páginas idénticas compitiendo entre sí. Relativa a propósito: el
+    // metadataBase del layout compone la absoluta a partir de SITE_URL.
+    alternates: { canonical: `/fighters/${fighterId}` },
   };
 }
 
@@ -293,8 +303,29 @@ export default async function FighterDetailPage({
   // Cuando no hay noticias, el hueco se rellena con los próximos combates (#48).
   const showUpcoming = news.length === 0 && upcomingBouts.length > 0;
 
+  // Datos estructurados: describe la ficha como una PERSONA con récord,
+  // nacionalidad y equipo, en vez de como texto suelto. Va sin nonce a
+  // propósito (ver el encabezado de structured-data.ts).
+  const jsonLd = serializeJsonLd(
+    buildFighterJsonLd({
+      id: fighter.id,
+      name: fighter.name,
+      nickname: fighter.nickname,
+      headshotUrl: fighter.headshotUrl,
+      nationality: cleanNationality(fighter.nationality),
+      birthDate: fighter.birthDate,
+      birthPlace: fighter.birthPlace,
+      heightCm: fighter.heightCm,
+      trainsAt: fighter.trainsAt,
+      wins: fighter.wins,
+      losses: fighter.losses,
+      draws: fighter.draws,
+    }),
+  );
+
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       {/* HERO estilo ufc.com/athlete: 3 zonas en escritorio (identidad+tiles /
           atleta de cuerpo entero / última pelea y próximo combate); en móvil
           apila badges+nombre → foto → tiles → tarjetas. */}

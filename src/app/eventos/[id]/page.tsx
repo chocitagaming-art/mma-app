@@ -16,6 +16,7 @@ import { isCancelledLiveStatus, type LiveFightStats } from "@/lib/live-stats";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { getLiveFightStats } from "@/lib/queries/live";
 import { parseId } from "@/lib/route-params";
+import { buildEventJsonLd, serializeJsonLd } from "@/lib/structured-data";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -25,8 +26,22 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { id } = await params;
   const eventId = parseId(id);
   const event = eventId != null ? await getEventDetail(eventId) : null;
+
+  // Sin evento la página es un "no encontrado" que Next ya marca con noindex:
+  // ponerle canónica sería decirle a Google que ESA es la versión buena de algo
+  // que no existe.
+  if (!event) {
+    return { title: "Evento" };
+  }
+
   return {
-    title: event ? `${event.name}` : "Evento",
+    title: `${event.name}`,
+    description: `Cartelera, resultados y horarios de ${event.name}.`,
+    // Canónica con el id NUMÉRICO ya parseado, no con el texto de la ruta:
+    // /eventos/0357 sirve el mismo evento con un 200, y sin esto Google ve dos
+    // páginas idénticas compitiendo. Relativa a propósito: el metadataBase del
+    // layout compone la absoluta a partir de SITE_URL.
+    alternates: { canonical: `/eventos/${eventId}` },
   };
 }
 
@@ -108,8 +123,33 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const weighIns =
     !isUpcoming || isEventWeek ? await getEventWeighIns(event.id) : [];
 
+  // Datos estructurados: el único marcado de la fase 6 que Google puede
+  // convertir en resultado enriquecido. Va sin nonce a propósito (ver el
+  // encabezado de structured-data.ts). Las canceladas quedan fuera del cartel a
+  // propósito: `bouts` ya las excluye.
+  const jsonLd = serializeJsonLd(
+    buildEventJsonLd({
+      id: event.id,
+      name: event.name,
+      eventDate: event.eventDate,
+      location: event.location,
+      status: event.status,
+      startTime: event.startTime,
+      prelimsTime: event.prelimsTime,
+      earlyPrelimsTime: event.earlyPrelimsTime,
+      imageUrl: event.imageUrl,
+      tagline: event.tagline,
+      bouts: event.bouts.map((bout) => ({
+        fightId: bout.fightId,
+        red: { id: bout.red.id, name: bout.red.name },
+        blue: { id: bout.blue.id, name: bout.blue.name },
+      })),
+    }),
+  );
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <Link
         href={isUpcoming ? "/eventos?view=proximos" : "/eventos"}
         className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground transition-colors hover:text-primary"

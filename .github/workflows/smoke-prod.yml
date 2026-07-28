@@ -71,6 +71,17 @@ jobs:
       - name: Smoke de las APIs desplegadas
         run: npx playwright test e2e/api.spec.ts --project=escritorio-light
 
+      # SEO (fase 6): canónicas y datos estructurados de las rutas dinámicas.
+      # Está aquí y no en ci.yml porque su modo de fallo es SILENCIOSO: si
+      # alguien borra una canónica o un bloque JSON-LD, la página sigue
+      # devolviendo 200 y el build, el tsc, el eslint y los 508 vitest siguen
+      # verdes — ningún test de unidad importa una page.tsx. Sin este paso, la
+      # única red era el megatest, que solo se ejecuta a mano en el portátil.
+      # Cabe aquí sin coste: 12 de sus 13 pruebas son peticiones HTTP sin
+      # navegador, y el chromium que necesita la restante ya está instalado.
+      - name: Comprobar canónicas y datos estructurados en producción
+        run: npx playwright test e2e/seo.spec.ts --project=escritorio-light
+
       - name: Guardar el informe si algo falla
         if: failure()
         uses: actions/upload-artifact@v4
