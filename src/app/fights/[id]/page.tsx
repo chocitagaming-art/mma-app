@@ -185,14 +185,19 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         />
       ) : null}
 
-      {/* BE4: desglose por asaltos, bajo las estadísticas del combate (última
-          sección del tale-of-the-tape). No pinta nada sin filas por asalto. */}
+      {/* BE4 + fase 9: desglose por asaltos, bajo las estadísticas del combate
+          (última sección del tale-of-the-tape). El método y el final se pasan
+          para marcar el asalto en el que se acabó; en un combate futuro no hay
+          método y entonces la sección no se pinta. */}
       <RoundByRound
         rounds={roundStats}
         redId={fight.red.id}
         blueId={fight.blue.id}
         redName={fight.red.name}
         blueName={fight.blue.name}
+        method={fight.method}
+        endRound={fight.endRound}
+        endTime={fight.endTime}
       />
 
       {/* CTA de predicción para combates futuros SIN cuotas (con cuotas, la
