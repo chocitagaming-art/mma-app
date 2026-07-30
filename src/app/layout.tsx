@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
 import { headers } from "next/headers";
@@ -77,6 +78,15 @@ export default async function RootLayout({
       <body className="min-h-full bg-background text-foreground">
         {/* No renderiza nada: registra el service worker de /offline. */}
         <ServiceWorkerRegistrar />
+        {/*
+          Analítica sin cookies. No lleva nonce a propósito y NO le hace falta: el
+          componente no emite ningún <script> en el HTML, sino que lo inserta con
+          document.createElement desde su bundle de cliente — que sí va firmado con
+          el nonce. 'strict-dynamic' propaga esa confianza al script insertado.
+          El script y su endpoint son del propio dominio (/_vercel/insights/*), así
+          que connect-src 'self' basta y la CSP no se toca.
+        */}
+        <Analytics />
         <ThemeProvider
           nonce={nonce}
           attribute="class"

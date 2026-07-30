@@ -51,6 +51,52 @@ export async function expectNoHorizontalOverflow(page: Page, label: string): Pro
   ).toBeLessThanOrEqual(clientWidth + 1);
 }
 
+export type ObservadorCsp = {
+  // Array VIVO: se llena según van llegando los mensajes de consola.
+  readonly violaciones: string[];
+  // Falla si hubo alguna, y enseña el texto exacto del navegador.
+  expectCero(contexto: string): void;
+};
+
+// Escucha las violaciones de Content-Security-Policy que el navegador escupe por
+// consola. Hay que llamarlo ANTES de navegar: lo que pase antes de suscribirse no
+// se ve.
+//
+// Vivía suelto dentro de un test de seo.spec.ts. Se saca aquí porque la fase 7
+// necesita vigilar lo mismo en sitios donde aquel test no llega: la analítica es
+// JavaScript de verdad, y un script bloqueado no cambia el código de estado, ni
+// dispara el error boundary, ni desborda — o sea, las 6 puertas del megatest
+// saldrían verdes con la analítica muerta.
+//
+// No hay `report-uri` en la política, así que la consola es el único canal.
+export function observarViolacionesCsp(page: Page): ObservadorCsp {
+  const violaciones: string[] = [];
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && /Content Security Policy/i.test(msg.text())) {
+      violaciones.push(msg.text());
+    }
+  });
+  return {
+    violaciones,
+    expectCero(contexto: string) {
+      expect(violaciones, `violaciones de CSP en ${contexto}:\n${violaciones.join("\n")}`).toHaveLength(
+        0,
+      );
+    },
+  };
+}
+
+// Corta todo lo que no sea nuestro origen. Sin esto, un test que mire la CSP
+// depende de a.espncdn.com, ufc.com o ytimg: son 11 peticiones ajenas solo en
+// /eventos/357. Las imágenes no ejecutan scripts, así que no se pierde señal, y
+// un bloqueo de CSP se registra igual porque ocurre ANTES de salir a la red.
+export async function aislarDeTerceros(page: Page, baseURL: string | undefined): Promise<void> {
+  await page.route("**/*", (route) => {
+    const url = route.request().url();
+    return url.startsWith(baseURL ?? "http://127.0.0.1") ? route.continue() : route.abort();
+  });
+}
+
 export type HeadshotReport = {
   photos: number; // "Foto de …" con naturalWidth>0 (resuelve de verdad)
   silhouettes: number; // silueta oficial (WARNING, intencional)
