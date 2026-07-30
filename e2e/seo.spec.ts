@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { aislarDeTerceros, observarViolacionesCsp } from "./helpers";
+
 // PUERTA DE LA FASE 6. Existe porque el megatest NO basta para validarla: una
 // página cuya canónica o cuyo JSON-LD hayan desaparecido sigue devolviendo 200,
 // sin error boundary y sin desbordarse, así que las 6 puertas saldrían VERDES
@@ -188,22 +190,8 @@ test("las páginas con datos estructurados no generan ni una violación de CSP",
     "la respuesta no trae Content-Security-Policy: no hay nada que comprobar",
   ).toContain("script-src");
 
-  const violaciones: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.type() === "error" && /Content Security Policy/i.test(msg.text())) {
-      violaciones.push(msg.text());
-    }
-  });
-
-  // Se cortan las peticiones a terceros (a.espncdn.com, ufc.com, ytimg…): son
-  // 11 solo en /eventos/357, y esperar a que la red quede en silencio con ellas
-  // dentro haría depender de servidores ajenos un test que solo mira NUESTRA
-  // política de seguridad. Este proyecto ya perdió tiempo con un flaky de red;
-  // no se estrena otro. Las imágenes no ejecutan scripts: no se pierde señal.
-  await page.route("**/*", (route) => {
-    const url = route.request().url();
-    return url.startsWith(baseURL ?? "http://127.0.0.1") ? route.continue() : route.abort();
-  });
+  const csp = observarViolacionesCsp(page);
+  await aislarDeTerceros(page, baseURL);
 
   for (const ruta of ["/eventos/357", "/fighters/6493", "/fights/3821"]) {
     await page.goto(ruta, { waitUntil: "load" });
@@ -213,5 +201,47 @@ test("las páginas con datos estructurados no generan ni una violación de CSP",
     await page.waitForLoadState("networkidle");
   }
 
-  expect(violaciones, `violaciones de CSP:\n${violaciones.join("\n")}`).toHaveLength(0);
+  csp.expectCero("las tres rutas con datos estructurados");
+});
+
+// PUERTA DE LA FASE 7. El test de arriba solo hace `page.goto`, o sea: solo mira
+// la PRIMERA carga de tres rutas fijas. La analítica se inserta desde el cliente
+// y sigue viva mientras el usuario navega por enlaces, que en App Router NO
+// recargan el documento. Este test cubre ese camino, que no cubría nadie.
+//
+// Y assertar "cero violaciones" a secas no valdría: sería verde también si la
+// analítica no estuviera montada. Por eso comprueba antes que el script EXISTE.
+test("la analítica se inserta y navegar por enlaces no genera violaciones de CSP", async ({
+  page,
+  baseURL,
+}) => {
+  const csp = observarViolacionesCsp(page);
+  await aislarDeTerceros(page, baseURL);
+
+  await page.goto("/", { waitUntil: "load" });
+  await page.waitForLoadState("networkidle");
+
+  // El <script> de la analítica no viaja en el HTML: lo crea su bundle de cliente
+  // con document.createElement. Que aparezca aquí demuestra dos cosas a la vez:
+  // que <Analytics /> sigue montado en el layout, y que 'strict-dynamic' propaga
+  // la confianza del bundle (que sí lleva nonce) al script que este inserta.
+  //
+  // OJO: en local ese script devuelve 404 — lo sirve la plataforma, no la app —
+  // así que aquí NO se comprueba que cargue ni que cuente. Eso solo se puede
+  // verificar en producción, con el navegador.
+  await expect(
+    page.locator('head script[src*="/_vercel/insights/script.js"]'),
+    "no hay script de analítica en el head: ¿se cayó <Analytics /> del layout?",
+  ).toHaveCount(1);
+
+  csp.expectCero("la carga inicial de /");
+
+  // Navegación BLANDA: el documento no se reemplaza, así que un script que se
+  // insertara aquí no tendría el nonce del HTML inicial. Es el punto ciego que
+  // tenía la suite.
+  await page.getByRole("link", { name: "Eventos", exact: true }).first().click();
+  await page.waitForURL("**/eventos");
+  await page.waitForLoadState("networkidle");
+
+  csp.expectCero("la navegación blanda de / a /eventos");
 });
