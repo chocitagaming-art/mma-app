@@ -5,6 +5,7 @@ const explore = [
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
+  { href: "/ufc-hoy", label: "¿Hay UFC hoy?" },
 ];
 
 const tools = [

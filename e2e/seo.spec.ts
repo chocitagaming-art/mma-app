@@ -47,6 +47,8 @@ const RUTAS_CON_CANONICA = [
   { ruta: "/fights/3821", esperada: "/fights/3821" },
   // Regresión de la fase 5a: las estáticas ya la tenían y deben conservarla.
   { ruta: "/fighters", esperada: "/fighters" },
+  // Fase 7.
+  { ruta: "/ufc-hoy", esperada: "/ufc-hoy" },
 ];
 
 for (const { ruta, esperada } of RUTAS_CON_CANONICA) {
@@ -204,6 +206,52 @@ test("las páginas con datos estructurados no generan ni una violación de CSP",
   csp.expectCero("las tres rutas con datos estructurados");
 });
 
+// FASE 7 — invariantes de /ufc-hoy.
+//
+// Lo que NO se puede probar aquí: "aparece SÍ". La respuesta depende del día, y
+// un test así sería verde un día de cada siete y rojo los otros seis. La lógica
+// del veredicto se prueba en src/lib/ufc-today.test.ts con la hora inyectada;
+// aquí solo se comprueba lo que debe ser cierto SIEMPRE.
+test("/ufc-hoy responde con un veredicto, sea cual sea el día", async ({ request }) => {
+  const respuesta = await request.get("/ufc-hoy");
+  const html = await respuesta.text();
+
+  // El código de estado no dice nada: notFound() también devuelve 200 en esta
+  // versión de Next. Lo que demuestra que la página está viva es su contenido.
+  expect(html, "no está el H1: ¿está sirviéndose una página de 'no encontrado'?").toContain(
+    "¿Hay UFC hoy?",
+  );
+
+  // Exactamente UN veredicto. Ni cero (la página no responde a lo que promete)
+  // ni dos (habría dos respuestas contradictorias en la misma pantalla).
+  const veredictos = html.match(/>(Sí|No)<\/p>/g) ?? [];
+  expect(veredictos, `veredictos encontrados: ${veredictos.join(", ") || "ninguno"}`).toHaveLength(
+    1,
+  );
+
+  // Y la frase que lo explica, que es lo que de verdad lee la gente.
+  expect(html).toMatch(
+    /(Hay UFC ahora mismo|Hoy hay UFC|Hoy ha habido UFC|Esta madrugada hay UFC|Hoy no hay UFC)/,
+  );
+
+  // El título NO puede llevar el veredicto: el snippet de Google es el de su
+  // última pasada y diría "no" seis días de cada siete.
+  const titulo = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
+  expect(titulo).toContain("¿Hay UFC hoy?");
+  expect(titulo, `el título lleva el veredicto dentro: ${titulo}`).not.toMatch(/\b(Sí|No)\b/);
+
+  // Con velada en el calendario tiene que haber una hora peninsular. Si algún
+  // día no hubiera ninguna anunciada, la página lo dice y no se exige hora.
+  if (!html.includes("no hay ninguna velada anunciada")) {
+    expect(html, "hay velada anunciada pero ninguna hora en pantalla").toMatch(
+      /\b([01]\d|2[0-3]):[0-5]\d\b/,
+    );
+    expect(html, "falta el aviso de que las horas son peninsulares").toContain(
+      "Horarios de España",
+    );
+  }
+});
+
 // PUERTA DE LA FASE 7. El test de arriba solo hace `page.goto`, o sea: solo mira
 // la PRIMERA carga de tres rutas fijas. La analítica se inserta desde el cliente
 // y sigue viva mientras el usuario navega por enlaces, que en App Router NO
@@ -221,18 +269,40 @@ test("la analítica se inserta y navegar por enlaces no genera violaciones de CS
   await page.goto("/", { waitUntil: "load" });
   await page.waitForLoadState("networkidle");
 
-  // El <script> de la analítica no viaja en el HTML: lo crea su bundle de cliente
-  // con document.createElement. Que aparezca aquí demuestra dos cosas a la vez:
-  // que <Analytics /> sigue montado en el layout, y que 'strict-dynamic' propaga
-  // la confianza del bundle (que sí lleva nonce) al script que este inserta.
+  // El <script> de la analítica no viaja en el HTML: lo crea su bundle de
+  // cliente con document.createElement. Que aparezca aquí demuestra dos cosas a
+  // la vez: que <Analytics /> sigue montado en el layout, y que 'strict-dynamic'
+  // propaga la confianza del bundle (que sí lleva nonce) al script insertado.
   //
+  // La ruta NO se fija a propósito: en local es /_vercel/insights/script.js,
+  // pero en producción Vercel lo sirve bajo una ruta con hash
+  // (/<hash>/script.js) para que los bloqueadores no lo tumben por lista.
+  // Comprobado el 30-jul contra mmastatus.app. Un aserto con la ruta de local
+  // dentro habría dado verde vigilando algo que en producción no existe.
+  //
+  // expect.poll porque el script se inserta en un efecto, después de hidratar.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          Array.from(document.head.querySelectorAll("script")).filter(
+            (s) => s.src.startsWith(location.origin) && s.src.endsWith("/script.js"),
+          ).length,
+        ),
+      { message: "no hay script de analítica en el head: ¿se cayó <Analytics /> del layout?" },
+    )
+    .toBe(1);
+
+  // Y que la cola de la analítica quedó inicializada, que es lo que recoge los
+  // eventos hasta que el script termina de cargar.
+  expect(
+    await page.evaluate(() => typeof (window as unknown as { va?: unknown }).va),
+    "window.va no existe: la analítica no llegó a inicializarse",
+  ).toBe("function");
+
   // OJO: en local ese script devuelve 404 — lo sirve la plataforma, no la app —
-  // así que aquí NO se comprueba que cargue ni que cuente. Eso solo se puede
-  // verificar en producción, con el navegador.
-  await expect(
-    page.locator('head script[src*="/_vercel/insights/script.js"]'),
-    "no hay script de analítica en el head: ¿se cayó <Analytics /> del layout?",
-  ).toHaveCount(1);
+  // así que aquí NO se comprueba que cargue ni que cuente. Eso se verifica en
+  // producción con el navegador (30-jul: POST .../view → 200).
 
   csp.expectCero("la carga inicial de /");
 

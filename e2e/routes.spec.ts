@@ -27,6 +27,7 @@ const ROUTES = [
   "/predict",
   "/salon-de-la-fama",
   "/tendencias",
+  "/ufc-hoy",
   "/videos",
 ];
 
