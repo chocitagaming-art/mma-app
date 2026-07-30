@@ -20,6 +20,7 @@ const contentLinks = [
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
+  { href: "/ufc-hoy", label: "UFC hoy" },
   { href: "/tendencias", label: "Tendencias" },
 ];
 
@@ -44,6 +45,7 @@ const mobileLinks: { href: string; label: string; sub?: boolean }[] = [
   { href: "/salon-de-la-fama", label: "Salón de la Fama", sub: true },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
+  { href: "/ufc-hoy", label: "UFC hoy" },
   { href: "/tendencias", label: "Tendencias" },
   ...toolLinks,
 ];

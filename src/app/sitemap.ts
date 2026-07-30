@@ -11,6 +11,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}`, changeFrequency: "daily", priority: 1 },
     { url: `${SITE}/fighters`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE}/eventos`, changeFrequency: "daily", priority: 0.8 },
+    // Su respuesta cambia cada día, así que lleva lastModified: sin él, Google
+    // la rastrea a su ritmo, que es lo contrario de lo que necesita una página
+    // que se llama "hoy".
+    {
+      url: `${SITE}/ufc-hoy`,
+      changeFrequency: "daily",
+      priority: 0.8,
+      lastModified: new Date(),
+    },
     { url: `${SITE}/en-vivo`, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE}/clasificacion`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE}/tendencias`, changeFrequency: "daily", priority: 0.7 },

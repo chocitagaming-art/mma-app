@@ -53,16 +53,40 @@ jobs:
       # que se espera a que la web sirva algo antes de empezar. Sin esto, el
       # smoke correría contra la versión ANTERIOR y daría un verde que no
       # significa nada.
-      - name: Esperar a que producción responda
+      #
+      # 30-jul: esperar un 200 NO bastaba. La versión anterior también responde
+      # 200, así que la carrera seguía viva y el smoke corrió contra el deploy
+      # viejo — con un test nuevo en rojo que en realidad ya estaba arreglado.
+      # Ahora se espera al SHA: /api/health devuelve el commit desplegado
+      # (VERCEL_GIT_COMMIT_SHA), y hasta que no coincida con el que disparó este
+      # job, no se comprueba nada. En los disparos que no son push (cron,
+      # dispatch) no hay SHA que esperar y basta con el 200 de siempre.
+      - name: Esperar a que producción sirva ESTE commit
+        env:
+          SHA_ESPERADO: ${{ github.event_name == 'push' && github.sha || '' }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 30); do
+          esperado="${SHA_ESPERADO:0:7}"
+          # 45 intentos (~7,5 min) y no 30: ahora no se espera un 200 cualquiera
+          # sino el despliegue entero, que tarda más. El job corta a los 15 min.
+          for attempt in $(seq 1 45); do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$PLAYWRIGHT_BASE_URL/" || echo "000")
-            echo "[$attempt] $PLAYWRIGHT_BASE_URL -> $code"
-            [ "$code" = "200" ] && exit 0
+            if [ "$code" != "200" ]; then
+              echo "[$attempt] $PLAYWRIGHT_BASE_URL -> $code"
+              sleep 10
+              continue
+            fi
+            if [ -z "$esperado" ]; then
+              echo "[$attempt] 200 y sin SHA que esperar (disparo $GITHUB_EVENT_NAME): adelante."
+              exit 0
+            fi
+            desplegado=$(curl -sS --max-time 30 "$PLAYWRIGHT_BASE_URL/api/health" \
+              | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || echo "?")
+            echo "[$attempt] 200 · desplegado=$desplegado · esperado=$esperado"
+            [ "$desplegado" = "$esperado" ] && exit 0
             sleep 10
           done
-          echo "::error::Producción no responde 200 tras 5 minutos."
+          echo "::error::Producción no sirve el commit ${esperado:-(cualquiera)} tras 5 minutos."
           exit 1
 
       # Un solo proyecto: los proyectos de playwright.config son combinaciones de
