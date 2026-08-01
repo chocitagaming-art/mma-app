@@ -59,11 +59,13 @@ describe("comprobarVelada", () => {
     );
   });
 
-  it("al día siguiente la película perdida baja a aviso: ya no hay nada que hacer", () => {
+  it("pasadas unas horas la película perdida baja a aviso: ya no hay nada que hacer", () => {
     // Rojo significa "hay algo que hacer", y es lo que despierta al guardián.
     // Dejar esto en rojo para siempre lo pondría a avisar cada hora de un
     // desastre sin remedio, y una alerta que salta siempre se deja de leer.
-    const c = comprobarVelada({ ...VELADA_1063, horasDesdeElFinal: 30 });
+    // A las 6 h del comienzo del estelar la velada lleva rato acabada y ESPN ya
+    // no emite: relanzar el bucle no recuperaria ni una muestra.
+    const c = comprobarVelada({ ...VELADA_1063, horasDesdeElFinal: 6 });
     expect(nivelDe(c, "Película del combate")).toBe("aviso");
     expect(c.find((x) => x.titulo === "Película del combate")?.detalle).toContain(
       "no se recupera",

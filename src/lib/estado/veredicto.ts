@@ -58,6 +58,17 @@ const MUESTRAS_MINIMAS = 50;
 // sino la consolidación posterior contra ufcstats, que puede tardar.
 const HORAS_PARA_EXIGIR_ASALTOS = 20;
 
+// Cuánto tiempo tiene sentido decir que la película "todavía se puede salvar".
+// Se mide desde el comienzo del ESTELAR, y una cartelera completa rara vez pasa
+// de cinco horas desde ahí. Pasado eso, ESPN ya no emite nada en vivo de esa
+// velada y relanzar el bucle no recupera ni una muestra.
+//
+// Empezó valiendo 20 h, reutilizando el umbral de los asaltos, y estaba MAL: a
+// las tres horas de acabar el 1063 ya no había nada que salvar y el panel
+// seguía en rojo, lo que habría tenido al guardián avisando toda la noche de
+// algo sin remedio. Se vio mirando el panel real, no razonándolo.
+const HORAS_PARA_SALVAR_LA_PELICULA = 5;
+
 export function comprobarVelada(d: DatosVelada): Comprobacion[] {
   const out: Comprobacion[] = [];
 
@@ -86,7 +97,7 @@ export function comprobarVelada(d: DatosVelada): Comprobacion[] {
   // tiene remedio, y una alerta que salta siempre es una alerta que se deja de
   // leer — con lo cual tampoco se lee la que sí importa. El dato se sigue
   // enseñando, que es distinto de alarmar por él.
-  const puedeSalvarse = d.horasDesdeElFinal < HORAS_PARA_EXIGIR_ASALTOS;
+  const puedeSalvarse = d.horasDesdeElFinal < HORAS_PARA_SALVAR_LA_PELICULA;
   const peliculaIncompleta = d.muestrasPelicula < MUESTRAS_MINIMAS;
   out.push({
     titulo: "Película del combate",
