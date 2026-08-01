@@ -185,15 +185,31 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
         />
       ) : null}
 
-      {/* BE4: desglose por asaltos, bajo las estadísticas del combate (última
-          sección del tale-of-the-tape). No pinta nada sin filas por asalto. */}
-      <RoundByRound
-        rounds={roundStats}
-        redId={fight.red.id}
-        blueId={fight.blue.id}
-        redName={fight.red.name}
-        blueName={fight.blue.name}
-      />
+      {/* BE4 + fase 9: desglose por asaltos, bajo las estadísticas del combate
+          (última sección del tale-of-the-tape). El método y el final se pasan
+          para marcar el asalto en el que se acabó; en un combate futuro no hay
+          método y entonces la sección no se pinta. `eventDate` decide el estado
+          vacío: sin ella, un combate recién terminado —con método de ESPN pero
+          todavía sin el desglose de ufcstats— diría que es tan antiguo que no
+          se registraban asaltos. Ver `estadoDesglose`.
+          Y el mismo guard que la película justo encima: una cancelada no pinta
+          desglose aunque le queden filas de asaltos. Hoy no hay ninguna
+          cancelada con método, así que no se dispara — pero el día que la haya,
+          el sitio no va a contar el asalto a asalto de un combate que no se
+          celebró. */}
+      {!isCancelled ? (
+        <RoundByRound
+          rounds={roundStats}
+          redId={fight.red.id}
+          blueId={fight.blue.id}
+          redName={fight.red.name}
+          blueName={fight.blue.name}
+          method={fight.method}
+          endRound={fight.endRound}
+          endTime={fight.endTime}
+          eventDate={fight.eventDate}
+        />
+      ) : null}
 
       {/* CTA de predicción para combates futuros SIN cuotas (con cuotas, la
           comparación Mercado vs Modelo de arriba ya es el CTA primario). Vive

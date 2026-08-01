@@ -83,6 +83,33 @@ test("/compare sin parámetros lleva a /enfrentamiento limpio", async ({ page })
   expect(new URL(page.url()).pathname).toBe("/enfrentamiento");
 });
 
+// FASE 9. El desglose por asaltos existe para 8.738 combates, pero si un día se
+// cayera de la ficha (un cambio en la query, un `return null` de más) la página
+// seguiría dando 200, sin error boundary y sin desbordarse: las tres cosas que
+// mira el bucle de rutas de arriba. Este test comprueba que la sección está y
+// que trae sus totales, que es lo que la distingue de la tabla que había antes.
+test("la ficha de combate trae el asalto a asalto con sus totales", async ({ page }) => {
+  // 3821 es uno de los ids estables que ya usa toda la suite: 5 asaltos, a
+  // decisión unánime.
+  await page.goto("/fights/3821", { waitUntil: "load" });
+
+  const seccion = page.locator("section").filter({ hasText: "Asalto a asalto" });
+  await expect(seccion, "no está la sección del asalto a asalto").toHaveCount(1);
+
+  // Los cinco asaltos y la fila de totales.
+  await expect(seccion.getByText(/^Asalto 5$/)).toHaveCount(1);
+  await expect(
+    seccion.getByText(/Total del combate/i),
+    "faltan los totales: son lo que permite cuadrar con las estadísticas del combate",
+  ).toHaveCount(1);
+
+  // Y que NO se confunda con la función estrella, que va justo encima.
+  await expect(
+    seccion.getByText(/La película del combate/i),
+    "el asalto a asalto se ha comido a la película del combate",
+  ).toHaveCount(0);
+});
+
 test("/eventos lista al menos un evento (no solo el estado vacío)", async ({ page }) => {
   await page.goto("/eventos", { waitUntil: "load" });
   // La vista por defecto es "Próximos". Debe haber ≥1 enlace a una ficha de
