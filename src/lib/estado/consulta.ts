@@ -120,6 +120,7 @@ type FilaCatalogo = {
   sin_foto_cuerpo: string;
   sin_foto_cabeza: string;
   sin_ninguna_foto_y_compiten: string;
+  dias_hasta_el_primero_sin_foto: string | null;
   eventos_pasados_incompletos: string;
 };
 
@@ -137,6 +138,14 @@ const CATALOGO_SQL = `
             and f.status is distinct from 'cancelled'
             and e.start_time >= now()
         )) as sin_ninguna_foto_y_compiten,
+    (select extract(epoch from (min(e.start_time) - now())) / 86400
+      from fighters fi
+      join fights f on (f.fighter_red_id = fi.id or f.fighter_blue_id = fi.id)
+      join events e on e.id = f.event_id
+      where fi.headshot_url is null and fi.full_body_url is null
+        and fi.standing_body_url is null
+        and f.status is distinct from 'cancelled'
+        and e.start_time >= now()) as dias_hasta_el_primero_sin_foto,
     (select count(*) from events e
       where e.start_time is not null
         and e.start_time < now() - interval '3 days'
@@ -324,6 +333,9 @@ export async function obtenerEstado(): Promise<Estado> {
         sinFotoCuerpo: num(catalogo.sin_foto_cuerpo),
         sinFotoCabeza: num(catalogo.sin_foto_cabeza),
         sinNingunaFotoYCompiten: num(catalogo.sin_ninguna_foto_y_compiten),
+        diasHastaElPrimeroSinFoto: catalogo.dias_hasta_el_primero_sin_foto
+          ? num(catalogo.dias_hasta_el_primero_sin_foto)
+          : null,
         eventosPasadosIncompletos: num(catalogo.eventos_pasados_incompletos),
       }),
     });

@@ -50,10 +50,23 @@ describe("comprobarVelada", () => {
   it("LA NOCHE DEL 1063: los resultados están, pero la película no", () => {
     const c = comprobarVelada(VELADA_1063);
     expect(nivelDe(c, "Resultados")).toBe("ok");
-    // 14 muestras cuando se esperan ~300 es el dato que grita.
+    // 14 muestras cuando se esperan ~300 es el dato que grita. Y con la velada
+    // recién terminada todavía se puede relanzar el bucle, así que es ROJO:
+    // hay algo que hacer AHORA.
     expect(nivelDe(c, "Película del combate")).toBe("mal");
     expect(c.find((x) => x.titulo === "Película del combate")?.detalle).toContain(
-      "NO se recupera",
+      "Aún se puede salvar",
+    );
+  });
+
+  it("al día siguiente la película perdida baja a aviso: ya no hay nada que hacer", () => {
+    // Rojo significa "hay algo que hacer", y es lo que despierta al guardián.
+    // Dejar esto en rojo para siempre lo pondría a avisar cada hora de un
+    // desastre sin remedio, y una alerta que salta siempre se deja de leer.
+    const c = comprobarVelada({ ...VELADA_1063, horasDesdeElFinal: 30 });
+    expect(nivelDe(c, "Película del combate")).toBe("aviso");
+    expect(c.find((x) => x.titulo === "Película del combate")?.detalle).toContain(
+      "no se recupera",
     );
   });
 
@@ -198,6 +211,7 @@ describe("comprobarCatalogo", () => {
     sinFotoCuerpo: 938,
     sinFotoCabeza: 576,
     sinNingunaFotoYCompiten: 0,
+    diasHastaElPrimeroSinFoto: null,
     eventosPasadosIncompletos: 0,
   };
 
@@ -208,14 +222,30 @@ describe("comprobarCatalogo", () => {
     expect(comprobarCatalogo(BASE).every((x) => x.nivel === "ok")).toBe(true);
   });
 
-  it("un luchador que compite pronto y no tiene ni una foto SÍ es rojo", () => {
-    // Ce Liu (29-ago) y Salahdine Parnasse (5-sep, da nombre al evento) están
-    // así: ningún cron los va a arreglar porque las fuentes no tienen ficha
-    // suya. Hay que meterlas a mano, y para eso primero hay que enterarse.
-    const c = comprobarCatalogo({ ...BASE, sinNingunaFotoYCompiten: 2 });
+  it("un luchador sin ninguna foto que pelea YA es rojo", () => {
+    // Ningún cron lo va a arreglar si las fuentes no tienen ficha suya: hay que
+    // meter la foto a mano, y para eso primero hay que enterarse.
+    const c = comprobarCatalogo({
+      ...BASE,
+      sinNingunaFotoYCompiten: 1,
+      diasHastaElPrimeroSinFoto: 4,
+    });
     const x = c.find((y) => y.titulo.includes("NINGUNA foto"));
     expect(x?.nivel).toBe("mal");
     expect(x?.detalle).toContain("add_manual_fighter");
+    expect(x?.detalle).toContain("4 días");
+  });
+
+  it("pero si pelea dentro de un mes, solo se avisa", () => {
+    // El caso real del 1-ago: Ce Liu (29-ago) y Salahdine Parnasse (5-sep).
+    // Poner esto en rojo tendría al guardián avisando cada hora durante un mes
+    // entero, y entonces el aviso que sí importa pasaría desapercibido.
+    const c = comprobarCatalogo({
+      ...BASE,
+      sinNingunaFotoYCompiten: 2,
+      diasHastaElPrimeroSinFoto: 27,
+    });
+    expect(c.find((y) => y.titulo.includes("NINGUNA foto"))?.nivel).toBe("aviso");
   });
 
   it("si las fotos se degradaran mucho, avisa", () => {

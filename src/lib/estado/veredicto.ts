@@ -76,22 +76,34 @@ export function comprobarVelada(d: DatosVelada): Comprobacion[] {
   });
 
   // 2. La película. Es el único dato IRRECUPERABLE: se capta durante el combate
-  // o no existe. Por eso es el que manda en este bloque.
+  // o no existe.
+  //
+  // Y POR ESO MISMO DEJA DE SER ROJO PASADAS UNAS HORAS. Rojo significa "hay
+  // algo que hacer", y es lo que despierta al guardián: mientras la velada
+  // acaba de terminar todavía se puede relanzar el bucle y salvar lo que queda,
+  // pero al día siguiente ya no hay nada que salvar. Dejarlo en rojo para
+  // siempre pondría al guardián a avisar cada hora de un desastre que ya no
+  // tiene remedio, y una alerta que salta siempre es una alerta que se deja de
+  // leer — con lo cual tampoco se lee la que sí importa. El dato se sigue
+  // enseñando, que es distinto de alarmar por él.
+  const puedeSalvarse = d.horasDesdeElFinal < HORAS_PARA_EXIGIR_ASALTOS;
+  const peliculaIncompleta = d.muestrasPelicula < MUESTRAS_MINIMAS;
   out.push({
     titulo: "Película del combate",
     valor: `${d.muestrasPelicula} muestras`,
     nivel:
       d.muestrasPelicula >= MUESTRAS_ESPERADAS
         ? "ok"
-        : d.muestrasPelicula >= MUESTRAS_MINIMAS
-          ? "aviso"
-          : "mal",
-    detalle:
-      d.muestrasPelicula < MUESTRAS_MINIMAS
-        ? `Esperadas ~${MUESTRAS_ESPERADAS}. Esto NO se recupera: la serie se capta en directo o se pierde.`
-        : d.muestrasPelicula < MUESTRAS_ESPERADAS
-          ? `Por debajo de las ~${MUESTRAS_ESPERADAS} habituales: el bucle no estuvo vivo toda la velada.`
-          : undefined,
+        : peliculaIncompleta && puedeSalvarse
+          ? "mal"
+          : "aviso",
+    detalle: peliculaIncompleta
+      ? puedeSalvarse
+        ? `Esperadas ~${MUESTRAS_ESPERADAS}. Aún se puede salvar lo que queda: relanzar «Live event loop» ahora.`
+        : `Esperadas ~${MUESTRAS_ESPERADAS}. Se perdió y no se recupera: la serie se capta en directo o no existe.`
+      : d.muestrasPelicula < MUESTRAS_ESPERADAS
+        ? `Por debajo de las ~${MUESTRAS_ESPERADAS} habituales: el bucle no estuvo vivo toda la velada.`
+        : undefined,
   });
 
   // 3. Estadísticas por asalto. Llegan tarde por diseño, así que solo se exigen
@@ -388,9 +400,16 @@ export type DatosCatalogo = {
   sinFotoCabeza: number;
   /** Con combate futuro y CERO fotos: ningún cron los va a arreglar. */
   sinNingunaFotoYCompiten: number;
+  /** Días hasta el combate del más inminente de esos. Decide si urge. */
+  diasHastaElPrimeroSinFoto: number | null;
   /** Eventos ya celebrados a los que les falta algún resultado. */
   eventosPasadosIncompletos: number;
 };
+
+// A partir de aqui, una ficha sin foto ya no se arregla sola: los pases de
+// enriquecimiento son diarios, y si en diez dias no la han encontrado es que la
+// fuente no la tiene.
+const DIAS_PARA_URGIR_FOTOS = 10;
 
 export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
   const pct = (n: number) =>
@@ -413,13 +432,26 @@ export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
     {
       titulo: "Compiten pronto y no tienen NINGUNA foto",
       valor: `${d.sinNingunaFotoYCompiten}`,
-      // Este sí es rojo: sale en la web con un hueco, y ningún automatismo lo
-      // va a resolver si las fuentes no tienen ficha suya. Hay que meterlas a
-      // mano, y para eso primero hay que saberlo.
-      nivel: d.sinNingunaFotoYCompiten === 0 ? "ok" : "mal",
+      // Ningún automatismo va a resolver esto si las fuentes no tienen ficha
+      // suya: hay que meter las fotos a mano. Pero solo se pone en ROJO cuando
+      // ya urge (a menos de 10 días de su combate). Alertar durante el mes
+      // entero que falta convertiría al guardián en ruido de fondo, y entonces
+      // el aviso que sí importa pasaría desapercibido. Mientras tanto se ve en
+      // el panel, que es donde se mira cuando hay tiempo de arreglarlo.
+      nivel:
+        d.sinNingunaFotoYCompiten === 0
+          ? "ok"
+          : d.diasHastaElPrimeroSinFoto != null &&
+              d.diasHastaElPrimeroSinFoto <= DIAS_PARA_URGIR_FOTOS
+            ? "mal"
+            : "aviso",
       detalle:
         d.sinNingunaFotoYCompiten > 0
-          ? "Ni ESPN ni ufc.com tienen sus fotos. Se meten a mano con `add_manual_fighter`."
+          ? `Ni ESPN ni ufc.com tienen sus fotos. Se meten a mano con \`add_manual_fighter\`.${
+              d.diasHastaElPrimeroSinFoto != null
+                ? ` El primero pelea en ${Math.max(0, Math.round(d.diasHastaElPrimeroSinFoto))} días.`
+                : ""
+            }`
           : undefined,
     },
     {
