@@ -25,6 +25,13 @@ on:
         description: "URL a comprobar (por defecto, producción)"
         default: "https://mmastatus.app"
 
+# Necesario para que el paso de aviso pueda abrir el Issue. `contents: read` se
+# declara explicitamente porque en cuanto se nombra un permiso, los demas pasan
+# a "none".
+permissions:
+  contents: read
+  issues: write
+
 concurrency:
   group: smoke-prod
   cancel-in-progress: true
@@ -113,3 +120,33 @@ jobs:
           name: playwright-report-prod
           path: playwright-report/
           retention-days: 7
+
+      # AVISO AL DUEÑO. Añadido el 1-ago-2026 despues de que un cambio en la
+      # configuracion del pool tumbara produccion: este smoke SI lo detecto (run
+      # en rojo sobre el commit 2b1afbd) pero no habia nada que avisara, asi que
+      # de no haber estado alguien mirando GitHub en ese momento, la web se
+      # habria quedado caida con un ✗ que nadie lee.
+      #
+      # Un Issue nuevo hace que GitHub mande el email; comentar en uno abierto,
+      # no. Por eso se busca por TITULO y no por etiqueta: un Issue viejo sin
+      # cerrar solo debe silenciar su propio hilo, nunca el canal entero (esa
+      # fue exactamente la averia del Issue 16 en mma-ingesta).
+      - name: Avisar si produccion esta rota
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          TITULO="🔴 Produccion rota — el smoke ha fallado"
+          BODY=$(printf '⛔ **%s** — el smoke contra produccion ha fallado sobre el commit `%s`.\n\n[Ver el run](%s)\n\nQue comprobar primero:\n- `curl -s https://mmastatus.app/api/health` — si dice `db: down`, es la conexion a Neon (variable de entorno o endpoint pooler).\n- Que la version que sirve `/api/health` sea la esperada.\n\n_Cierra este Issue al arreglarlo: mientras siga abierto, los siguientes fallos seran comentarios y no te llegara un email nuevo._' \
+            "$(date -u +'%Y-%m-%d %H:%M UTC')" "${SHA:0:7}" "$RUN_URL")
+          ISSUE=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
+            | jq -r --arg t "$TITULO" '[.[] | select(.title == $t)] | .[0].number // empty')
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "$BODY"
+          else
+            gh label create produccion-rota --repo "$REPO" --color B60205 --description "El smoke contra produccion ha fallado" --force || true
+            gh issue create --repo "$REPO" --title "$TITULO" --label produccion-rota --body "$BODY"
+          fi
