@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
+import {
+  motivoDeCorte,
+  PRESUPUESTO_POR_DEFECTO,
+  sumarUso,
+} from "@/lib/maestro/presupuesto";
 import { MAESTRO_SYSTEM_PROMPT, MAESTRO_TOOLS } from "@/lib/maestro/prompt";
 import {
   chatRequestSchema,
@@ -13,6 +18,14 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 // pg necesita Node, no Edge.
 export const runtime = "nodejs";
+
+// Techo de la función. Sin esto se quedaba en el de la plataforma, que es más
+// corto que lo que esta ruta puede tardar: hasta 7 llamadas al modelo con
+// timeout de 30 s cada una son 210 s teóricos. La función moría en el límite
+// DESPUÉS de haber pagado las llamadas — se gastaba y no se entregaba nada.
+// El corte de verdad lo pone el presupuesto de `presupuesto.ts`, que para a los
+// 45 s y devuelve lo que haya; esto es solo el margen que lo hace posible.
+export const maxDuration = 60;
 
 const MODEL = "claude-sonnet-4-6";
 // 6 vueltas de tools cubren los flujos multi-paso (buscar -> ficha -> historial)
@@ -86,8 +99,31 @@ export async function POST(request: Request) {
   }));
   const toolsUsed: string[] = [];
 
+  // Presupuesto de la petición. `MAX_TOOL_ITERATIONS` acota las VUELTAS, que no
+  // es lo mismo que el gasto: seis vueltas baratas y seis carísimas cuentan
+  // igual. Esto mide lo que de verdad se consume, en tokens y en segundos.
+  const inicio = Date.now();
+  let tokensGastados = 0;
+
   try {
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+      // Se comprueba ANTES de llamar: hacerlo después serviría para el informe,
+      // no para evitar el gasto, que es de lo que se trata.
+      const corte = motivoDeCorte(
+        { tokens: tokensGastados, msTranscurridos: Date.now() - inicio },
+        PRESUPUESTO_POR_DEFECTO,
+      );
+      if (corte) {
+        console.warn(
+          `[maestro] corte por ${corte}: ${tokensGastados} tokens, ${Date.now() - inicio} ms, ${i} vueltas`,
+        );
+        return NextResponse.json({
+          reply:
+            "La consulta se ha alargado más de la cuenta y he tenido que parar. Prueba a preguntarme algo más concreto.",
+          toolsUsed: [...new Set(toolsUsed)],
+        });
+      }
+
       const response = await client.messages.create(
         {
           model: MODEL,
@@ -98,6 +134,7 @@ export async function POST(request: Request) {
         },
         { timeout: 30_000 },
       );
+      tokensGastados = sumarUso(tokensGastados, response.usage);
 
       if (response.stop_reason !== "tool_use") {
         return NextResponse.json({
@@ -148,6 +185,10 @@ export async function POST(request: Request) {
         messages,
       },
       { timeout: 30_000 },
+    );
+    tokensGastados = sumarUso(tokensGastados, finalResponse.usage);
+    console.info(
+      `[maestro] ${tokensGastados} tokens, ${Date.now() - inicio} ms, herramientas: ${[...new Set(toolsUsed)].join(",") || "ninguna"}`,
     );
 
     return NextResponse.json({

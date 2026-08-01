@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
+import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   EventBout,
   EventDetail,
@@ -162,7 +163,9 @@ export async function searchEvents(
        e.event_date DESC NULLS LAST,
        e.id DESC
      LIMIT $4`,
-    [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
+    // Escapados: un "%" del visitante casaría todos los eventos. El $2 se
+    // compara con "=", no con LIKE, así que va literal.
+    [containsPattern(trimmedQuery), trimmedQuery, startsWithPattern(trimmedQuery), limit],
   );
 
   return rows.map((row) => ({

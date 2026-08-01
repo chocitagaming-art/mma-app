@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
+import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { searchEvents } from "@/lib/queries/events";
 import { searchFighters } from "@/lib/queries/fighters";
 import { searchNews } from "@/lib/queries/news";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizeSearchQuery } from "@/lib/search-input";
 import type { GlobalSearchResults } from "@/lib/types";
 
@@ -23,8 +25,26 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const normalized = normalizeSearchQuery(searchParams.get("q"));
 
+    // La validación va PRIMERO porque es gratis: una query corta o vacía se
+    // descarta sin gastar ni la comprobación del límite. Se responde con la
+    // lista vacía, no con un 400, porque el buscador consulta según se teclea y
+    // las dos primeras letras son un estado normal, no un error.
     if (!normalized.ok) {
       return NextResponse.json(EMPTY_RESULTS);
+    }
+
+    // Rate-limit por IP, después de la validación barata y antes de tocar la
+    // BD. Esta ruta es la más cara de las tres búsquedas: lanza TRES consultas
+    // en paralelo contra un pool de 3 conexiones, así que una sola ráfaga puede
+    // dejar sin conexiones al resto de la instancia. `clientIpFromHeaders`
+    // prefiere `x-real-ip`, que Vercel reescribe y el cliente no puede falsear.
+    const ip = clientIpFromHeaders(request.headers);
+    const limit = await checkRateLimit(`search:${ip}`);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Vas demasiado rápido. Espera unos segundos e inténtalo de nuevo." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+      );
     }
 
     const [fighters, events, news] = await Promise.all([

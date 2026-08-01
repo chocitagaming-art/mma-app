@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
+import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   NewsArticle,
   NewsListResult,
@@ -142,7 +143,10 @@ export async function searchNews(
         n.relevance desc nulls last,
         n.id desc
       limit $3`,
-    [`%${trimmedQuery}%`, `${trimmedQuery}%`, limit],
+    // Escapados. `news` es la más expuesta de las tres: no tiene índice
+    // trigram, así que aquí un comodín obliga siempre a escanear la tabla
+    // entera.
+    [containsPattern(trimmedQuery), startsWithPattern(trimmedQuery), limit],
   );
 
   return rows.map((row) => ({

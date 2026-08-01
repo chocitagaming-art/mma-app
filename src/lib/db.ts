@@ -31,6 +31,23 @@ function createPool() {
     max: 3,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
+    // Corta en Postgres cualquier consulta que pase de 8 s. Sin esto no había
+    // tope en NINGUNA capa: una consulta lenta retiene 1 de las 3 conexiones de
+    // la instancia hasta que Postgres se canse, y con tres así la instancia se
+    // queda sin pool y deja de servir. `connectionTimeoutMillis` no cubre este
+    // caso: limita lo que se tarda en CONSEGUIR una conexión, no lo que dura la
+    // consulta una vez conseguida.
+    //
+    // 8 s y no menos: la web sirve todo dinámico y hay páginas que hacen ~9
+    // consultas por render, así que un corte agresivo rompería vistas legítimas
+    // en un arranque en frío de Neon. 8 s y no más: el límite de Vercel Hobby es
+    // 10 s, de modo que la consulta muere ANTES que la función y el error se
+    // puede registrar y devolver en condiciones, en vez de perderse en un 504.
+    //
+    // Va en `options` (parámetro de arranque de libpq) y no en un `SET` por
+    // consulta: así se aplica también a las conexiones que el pool reabre solo,
+    // sin depender de que nadie se acuerde de ejecutarlo.
+    options: "-c statement_timeout=8000",
   });
 }
 

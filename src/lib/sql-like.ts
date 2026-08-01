@@ -11,3 +11,10 @@ export function escapeLikePattern(value: string): string {
 export function containsPattern(value: string): string {
   return `%${escapeLikePattern(value.trim())}%`;
 }
+
+// Patrón "empieza por" ('valor%'), para ordenar poniendo delante las
+// coincidencias por prefijo. Mismo escapado que `containsPattern`: sin él, un
+// usuario que teclea "%" convierte el criterio de orden en "casa con todo".
+export function startsWithPattern(value: string): string {
+  return `${escapeLikePattern(value.trim())}%`;
+}
