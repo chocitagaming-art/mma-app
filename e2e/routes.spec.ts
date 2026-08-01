@@ -119,3 +119,43 @@ test("/eventos lista al menos un evento (no solo el estado vacío)", async ({ pa
   const [links, isEmpty] = await Promise.all([eventLinks.count(), empty.count()]);
   expect(links > 0 || isEmpty > 0, "ni eventos ni estado vacío en /eventos").toBeTruthy();
 });
+
+// EL PANEL DE ESTADO TIENE QUE SER INVISIBLE, no solo inaccesible. El dueño lo
+// pidió así: "que nadie tenga acceso a eso ni que sepan que en la web está eso".
+//
+// Este test existe porque el primer intento NO cumplía: llamar a `notFound()`
+// dentro de la página devolvía HTTP 200 (en esta versión de Next la página de
+// "no encontrado" responde 200), mientras que una URL inexistente devolvía 404.
+// Bastaba comparar los dos códigos para descubrir que /estado existía. Se
+// arregló en el proxy, y esto lo deja clavado: si alguien quita ese guard, aquí
+// salta.
+test("/estado es indistinguible de una URL que no existe", async ({ request }) => {
+  const inventada = await request.get("/una-ruta-que-no-existe-98765", {
+    maxRedirects: 0,
+  });
+  const sinClave = await request.get("/estado", { maxRedirects: 0 });
+  const claveMala = await request.get("/estado?k=esta-clave-no-vale", {
+    maxRedirects: 0,
+  });
+
+  expect(inventada.status(), "una URL inventada debería dar 404").toBe(404);
+  expect(
+    sinClave.status(),
+    "/estado sin clave delata que la ruta existe: debe responder igual que una URL inventada",
+  ).toBe(inventada.status());
+  expect(
+    claveMala.status(),
+    "/estado con clave incorrecta delata que la ruta existe",
+  ).toBe(inventada.status());
+
+  // Y que no se cuele ni un rastro del panel en el cuerpo.
+  const cuerpo = await sinClave.text();
+  expect(cuerpo).not.toContain("Estado del sistema");
+  expect(cuerpo).not.toContain("El turno de guardia");
+});
+
+// El JSON del panel es lo que lee el guardián, así que su puerta importa igual.
+test("/api/estado no contesta sin la clave", async ({ request }) => {
+  const r = await request.get("/api/estado", { maxRedirects: 0 });
+  expect(r.status(), "el JSON del panel debe esconderse igual que la página").toBe(404);
+});

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { claveValidaEdge } from "@/lib/estado/clave";
 import { buildContentSecurityPolicy } from "@/lib/security-headers";
 
 // Proxy (convención de Next 16; antes se llamaba "middleware"). Genera un nonce único
@@ -10,6 +11,30 @@ import { buildContentSecurityPolicy } from "@/lib/security-headers";
 //
 // Nota: usar nonce obliga a render dinámico (cada petición genera HTML fresco con un
 // nonce nuevo); por eso el layout raíz lee headers() y todo el árbol se vuelve dinámico.
+// El panel de estado (/estado) tiene que ser INVISIBLE, no solo inaccesible.
+//
+// El primer intento fue llamar a `notFound()` dentro de la página, y NO bastaba:
+// en esta versión de Next eso devuelve HTTP 200 con la página de "no
+// encontrado", mientras que una URL que de verdad no existe devuelve 404. Basta
+// comparar los dos códigos para descubrir que /estado existe — que es
+// exactamente lo que había que evitar. Se vio probándolo, no leyéndolo.
+//
+// Aquí, en cambio, se reescribe a una ruta inexistente: Next sirve su 404 de
+// verdad, con el mismo cuerpo y el mismo código que cualquier URL inventada.
+// Indistinguible.
+//
+// Y por eso /estado NO va en robots.txt: el robots es público, así que un
+// `Disallow: /estado` sería un cartel anunciando la ruta.
+function panelOculto(request: NextRequest): boolean {
+  if (request.nextUrl.pathname !== "/estado") {
+    return false;
+  }
+  const clave =
+    request.nextUrl.searchParams.get("k") ?? request.headers.get("x-estado-key");
+  // Falla cerrado: sin ESTADO_KEY configurada, el panel no existe para nadie.
+  return !claveValidaEdge(clave, process.env.ESTADO_KEY);
+}
+
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV !== "production";
@@ -22,7 +47,17 @@ export function proxy(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  // El 404 falso del panel se genera AQUÍ, con el mismo nonce y la misma CSP
+  // que cualquier otra página. Devolverlo antes (que fue el primer intento)
+  // producía un HTML sin los atributos `nonce`, y eso son 2,5 KB menos de
+  // respuesta: /estado medía 78 KB y cualquier ruta inexistente 80,6 KB, de
+  // forma constante. La ruta quedaba delatada por el tamaño aunque el código y
+  // el cuerpo fueran los mismos. Se vio midiéndolo, no razonándolo.
+  const response = panelOculto(request)
+    ? NextResponse.rewrite(new URL("/_ruta-que-no-existe", request.url), {
+        request: { headers: requestHeaders },
+      })
+    : NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
   return response;
 }
