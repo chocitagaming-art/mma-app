@@ -3,6 +3,7 @@ import { formatControlTime } from "@/lib/format";
 import {
   anchoBarra,
   buildRoundByRound,
+  estadoDesglose,
   etiquetaFinal,
   type CornerTotals,
 } from "@/lib/round-by-round";
@@ -34,6 +35,10 @@ type RoundByRoundProps = {
   method?: string | null;
   endRound?: number | null;
   endTime?: string | null;
+  // De qué época es el combate. Sin esto, el estado vacío miente durante las
+  // horas que van del resultado provisional de ESPN al desglose de ufcstats:
+  // ver `estadoDesglose`.
+  eventDate?: string | null;
 };
 
 const CELL_BASE = "tabular whitespace-nowrap px-3 py-2 text-right font-mono text-sm";
@@ -105,16 +110,18 @@ export function RoundByRound({
   method = null,
   endRound = null,
   endTime = null,
+  eventDate = null,
 }: RoundByRoundProps) {
   const datos = buildRoundByRound(rounds, redId, blueId);
+  const estado = estadoDesglose(datos != null, method, eventDate);
+
+  if (estado === "nada") {
+    return null;
+  }
 
   if (!datos) {
-    // En un combate futuro no hay nada que explicar: aún no se ha peleado.
-    // Pero en uno ya disputado el hueco sí merece una frase — son 19 peleas,
-    // todas de los torneos de 1995-1998, donde no se registraban asaltos.
-    if (!method) {
-      return null;
-    }
+    // Solo llega aquí un combate de antes de 1999, cuando de verdad no se
+    // registraban los asaltos: son 19 peleas de los torneos de 1995-1998.
     return (
       <section className={cn(PREMIUM_TILE, "p-5 text-center sm:p-6")}>
         <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
