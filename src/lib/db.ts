@@ -14,6 +14,12 @@ function getDatabaseUrl() {
   return databaseUrl;
 }
 
+// Tope de la consulta más lenta que se tolera, en milisegundos. 8 s deja margen
+// a un arranque en frío de Neon y muere ANTES que la función (el límite de la
+// plataforma), de modo que el error se puede registrar y devolver en vez de
+// perderse en un 504.
+const STATEMENT_TIMEOUT_MS = 8_000;
+
 function createPool() {
   return new Pool({
     connectionString: getDatabaseUrl(),
@@ -44,10 +50,17 @@ function createPool() {
     // 10 s, de modo que la consulta muere ANTES que la función y el error se
     // puede registrar y devolver en condiciones, en vez de perderse en un 504.
     //
-    // Va en `options` (parámetro de arranque de libpq) y no en un `SET` por
-    // consulta: así se aplica también a las conexiones que el pool reabre solo,
-    // sin depender de que nadie se acuerde de ejecutarlo.
-    options: "-c statement_timeout=8000",
+    // NO SE PUEDE PONER EN `options`. Se intentó (`options: "-c
+    // statement_timeout=8000"`), pasó el megatest 6/6 y TUMBÓ PRODUCCIÓN: el
+    // `select 1` de /api/health devolvía 503 y las fichas dejaban de servir
+    // contenido. En local el DSN apunta al endpoint DIRECTO de Neon, que acepta
+    // parámetros de arranque de libpq; producción va por el endpoint pooler
+    // (PgBouncer), que los rechaza y tira la conexión. Ninguna prueba local
+    // podía verlo, porque la diferencia está en la cadena de conexión.
+    //
+    // Se aplica por conexión, en cuanto el pool abre una: `connect` salta una
+    // sola vez por conexión física, no en cada consulta, así que el coste es
+    // despreciable y cubre también las que el pool reabre solo.
   });
 }
 
@@ -62,7 +75,24 @@ function createPool() {
 // call, where callers can actually handle it. Runtime behaviour is unchanged —
 // the first query still opens exactly one pool per instance.
 export function getPool(): Pool {
-  global.__mmaPool ??= createPool();
+  if (!global.__mmaPool) {
+    const pool = createPool();
+    // `SET` normal, que PgBouncer sí admite dentro de la sesión (a diferencia
+    // de los parámetros de arranque, ver la nota en createPool). Se ejecuta una
+    // vez por conexión física, no por consulta.
+    //
+    // Si el SET falla no se tira la conexión: se pierde el tope, que es peor
+    // que tenerlo pero mucho mejor que quedarse sin base de datos. El aviso
+    // queda en los logs, que es donde se mira cuando algo va lento.
+    pool.on("connect", (client) => {
+      client
+        .query(`SET statement_timeout = ${STATEMENT_TIMEOUT_MS}`)
+        .catch((error) => {
+          console.error("[db] no se pudo fijar statement_timeout", error);
+        });
+    });
+    global.__mmaPool = pool;
+  }
   return global.__mmaPool;
 }
 
