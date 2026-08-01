@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { containsPattern, escapeLikePattern } from "@/lib/sql-like";
+import {
+  containsPattern,
+  escapeLikePattern,
+  startsWithPattern,
+} from "@/lib/sql-like";
 
 describe("escapeLikePattern", () => {
   it("returns plain text unchanged", () => {
@@ -35,5 +39,22 @@ describe("containsPattern", () => {
 
   it("escapes LIKE metacharacters inside the value", () => {
     expect(containsPattern("50%_off\\")).toBe("%50\\%\\_off\\\\%");
+  });
+});
+
+describe("startsWithPattern", () => {
+  it("ancla al principio y deja el resto abierto", () => {
+    expect(startsWithPattern("Conor")).toBe("Conor%");
+  });
+
+  it("escapa los comodines del usuario", () => {
+    // Sin esto, teclear "%" en el buscador convertía el criterio de ORDEN en
+    // "casa con todo", y el orden dejaba de significar nada.
+    expect(startsWithPattern("%")).toBe("\\%%");
+    expect(startsWithPattern("a_b")).toBe("a\\_b%");
+  });
+
+  it("recorta los espacios antes de anclar", () => {
+    expect(startsWithPattern("  Jon  ")).toBe("Jon%");
   });
 });

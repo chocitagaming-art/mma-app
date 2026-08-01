@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
+import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   FavoriteUpcomingBout,
   FighterCardData,
@@ -289,7 +290,11 @@ export async function searchFighters(
        case when lower(f_unaccent(name)) like lower(f_unaccent($3)) then 0 else 1 end,
        id asc
      limit $4`,
-    [`%${trimmedQuery}%`, trimmedQuery, `${trimmedQuery}%`, limit],
+    // Escapados: sin esto, un "%" tecleado por el visitante se convierte en
+    // comodín y casa las 2.852 filas de la tabla. Comprobado en producción con
+    // /api/search?q=%25, que devolvía resultados arbitrarios. El $2 va sin
+    // escapar a propósito: se compara con "=", no con LIKE.
+    [containsPattern(trimmedQuery), trimmedQuery, startsWithPattern(trimmedQuery), limit],
   );
 
   return rows.map((row) => ({
