@@ -92,6 +92,7 @@ export function SiteFooter() {
               Su sitio lo ocupan ahora los dos enlaces legales. */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
             {[
+              { href: "/contacto", label: "Contacto" },
               { href: "/aviso-legal", label: "Aviso legal" },
               { href: "/privacidad", label: "Privacidad" },
               { href: "/creditos", label: "Créditos de imágenes" },

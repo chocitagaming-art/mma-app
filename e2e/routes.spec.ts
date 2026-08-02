@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { collectHeadshots, expectNoHorizontalOverflow } from "./helpers";
 
-// Las 18 rutas de página (16 + las dos legales del 2-ago). Las dinámicas usan IDs ESTABLES que existen en prod:
+// Las 19 rutas de página (16 + las dos legales y /contacto del 2-ago). Las dinámicas usan IDs ESTABLES que existen en prod:
 // evento 357 (UFC 306), luchador 6493 (ya lo vigila monitor.yml), combate 3821
 // (Merab vs O'Malley, de UFC 306). Si alguno desapareciera, su test fallaría con
 // un 404 claro en vez de un falso verde.
@@ -16,6 +16,7 @@ const ROUTES = [
   "/",
   "/aviso-legal",
   "/clasificacion",
+  "/contacto",
   "/en-vivo",
   "/enfrentamiento",
   "/eventos",
@@ -287,3 +288,46 @@ test("las páginas legales dicen algo, no solo responden 200", async ({ page }) 
   await expect(page.getByRole("heading", { name: /Privacidad/i, level: 1 })).toBeVisible();
   await expect(page.locator("body")).toContainText(/no usa cookies/i);
 });
+
+// ── /contacto (bloque 4, 2-ago) ────────────────────────────────────────────
+// La ÚNICA ruta de toda la web que escribe en la base de datos. Va contra un
+// pool aparte con un rol que solo puede INSERT sobre contact_messages.
+//
+// A propósito NO se prueba aquí el envío bueno: el megatest corre contra la
+// Neon REAL y dejaría basura en la tabla del dueño. Ese camino se verifica a
+// mano. Lo que sí se prueba es todo lo que puede fallar sin escribir nada.
+
+test("/contacto pinta el formulario, no solo responde 200", async ({ page }) => {
+  await page.goto("/contacto");
+  await expect(page.getByRole("heading", { name: /^Contacto$/i, level: 1 })).toBeVisible();
+  await expect(page.locator("#email")).toBeVisible();
+  await expect(page.locator("#mensaje")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Enviar mensaje/i })).toBeVisible();
+});
+
+test("el campo trampa está fuera del alcance de una persona", async ({ page }) => {
+  await page.goto("/contacto");
+  const trampa = page.locator("#web");
+
+  // OJO CON `toBeHidden()` AQUÍ: no vale. El campo va fuera de pantalla a
+  // propósito y NO con `display:none`, porque ese es el patrón que los robots
+  // buenos detectan y se saltan. Playwright llama "visible" a todo lo que tenga
+  // caja, así que se comprueba lo que de verdad importa: que ninguna persona
+  // pueda llegar a él ni enterarse de que existe.
+  const caja = await trampa.boundingBox();
+  expect(caja, "el campo trampa debe existir en el HTML").not.toBeNull();
+  expect(caja!.x + caja!.width, "debe quedar fuera de la pantalla").toBeLessThan(0);
+
+  // Ni con el teclado ni con un lector de pantalla.
+  await expect(trampa).toHaveAttribute("tabindex", "-1");
+  await expect(trampa).toHaveAttribute("autocomplete", "off");
+  await expect(
+    page.locator('[aria-hidden="true"]').locator("#web"),
+    "debe estar fuera del árbol de accesibilidad",
+  ).toHaveCount(1);
+});
+
+// Los tests de contrato de /api/contacto viven en `api.spec.ts`, no aqui: el
+// limite de peticiones es POR IP y se comparte entre los SEIS proyectos de
+// Playwright, asi que repetir los POST en todos agotaba la rafaga de 5/10 s y
+// el sexto recibia un 429. api.spec.ts ya corre en un solo proyecto.

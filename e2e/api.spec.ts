@@ -71,3 +71,45 @@ for (const path of ["/api/predict", "/api/maestro"]) {
     expect(res.status(), `5xx en ${path} (¿crash?)`).toBeLessThan(500);
   });
 }
+
+// ── /contacto: la unica ruta que escribe en la base de datos (2-ago) ───────
+// Se prueba a nivel de CONTRATO y con la trampa de robots, que NO llega a
+// tocar la base: un envio bueno dejaria basura en la tabla real del dueno.
+test("/api/contacto rechaza lo que no vale, sin escribir nada", async ({ request }) => {
+  // TRES casos y no cuatro a proposito: el limite de rafaga es de 5
+  // peticiones cada 10 s por IP y en este fichero hay otro POST (el del
+  // robot). Con cuatro se rozaba el tope y el ultimo salia 429 a veces.
+  const malos = [
+    { caso: "sin correo", cuerpo: { mensaje: "Un mensaje suficientemente largo." } },
+    { caso: "correo inválido", cuerpo: { email: "ana", mensaje: "Un mensaje suficientemente largo." } },
+    { caso: "mensaje corto", cuerpo: { email: "a@b.co", mensaje: "corto" } },
+  ];
+  for (const { caso, cuerpo } of malos) {
+    const r = await request.post("/api/contacto", { data: cuerpo });
+    expect(r.status(), `deberia rechazar: ${caso}`).toBe(400);
+    const json = (await r.json()) as { error?: string; ok?: boolean };
+    expect(json.ok, caso).toBeUndefined();
+    expect(json.error, caso).toBeTruthy();
+  }
+});
+
+test("un robot que cae en la trampa recibe un OK falso y no escribe", async ({ request }) => {
+  // Contestar 400 le enseñaría cuál es el campo que le delata y volvería
+  // mañana sabiendo saltárselo. Este camino NO llega a tocar la base de datos.
+  const r = await request.post("/api/contacto", {
+    data: {
+      email: "robot@spam.example",
+      mensaje: "Compre seguidores baratos ahora mismo aqui.",
+      web: "http://spam.example",
+    },
+  });
+  expect(r.status()).toBe(200);
+  expect((await r.json()).ok).toBe(true);
+});
+
+test("/api/contacto no acepta GET", async ({ request }) => {
+  const r = await request.get("/api/contacto");
+  expect(r.status(), "solo POST: un GET no debe llegar al pool de escritura").toBeGreaterThanOrEqual(
+    400,
+  );
+});

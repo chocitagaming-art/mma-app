@@ -44,7 +44,11 @@ export function LegalPage({
       <div className="mt-10 flex flex-col gap-8">{children}</div>
 
       <p className="mt-12 border-t border-border pt-6 text-xs leading-5 text-muted-foreground">
-        ¿Dudas sobre este texto? Escribe a{" "}
+        ¿Dudas sobre este texto? Escribe desde{" "}
+        <Link href="/contacto" className="text-primary underline-offset-2 hover:underline">
+          /contacto
+        </Link>{" "}
+        o a{" "}
         <a
           href={`mailto:${CONTACTO_EMAIL}`}
           className="text-primary underline-offset-2 hover:underline"
