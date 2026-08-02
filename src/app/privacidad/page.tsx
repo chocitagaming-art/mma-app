@@ -36,8 +36,12 @@ export default function PrivacidadPage() {
             <strong>No usa cookies</strong>, ni propias ni de terceros. Por eso no
             verás ningún banner pidiéndote permiso: no hay nada que consentir.
           </li>
-          <li>No hay publicidad ni redes de rastreo publicitario.</li>
-          <li>No se venden, ceden ni comparten datos con fines comerciales.</li>
+          <li>
+            <strong>Hoy no hay publicidad</strong> ni redes de rastreo
+            publicitario. Si alguna vez las hubiera, se actualizaría esta página{" "}
+            <em>antes</em> y se te pediría consentimiento cuando la ley lo exija.
+          </li>
+          <li>No se venden tus datos. A nadie, ni ahora ni con publicidad.</li>
           <li>No se elabora ningún perfil tuyo ni se te sigue entre sitios web.</li>
         </ul>
       </LegalSection>

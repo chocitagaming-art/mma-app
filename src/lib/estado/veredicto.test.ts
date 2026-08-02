@@ -129,6 +129,7 @@ describe("comprobarProxima", () => {
     tieneHorarioDeLosPrelims: false,
     tieneHoraDeEstelar: true,
     sinFoto: 0,
+    sinFicha: 0,
     luchadores: 24,
     diasQueFaltan: 7,
   };
@@ -253,5 +254,48 @@ describe("comprobarCatalogo", () => {
   it("si las fotos se degradaran mucho, avisa", () => {
     const c = comprobarCatalogo({ ...BASE, sinFotoCuerpo: 2000 });
     expect(c[0].nivel).toBe("aviso");
+  });
+});
+
+// ── El punto ciego del panel (2-ago) ────────────────────────────────────────
+// El contador de fotos filtraba `fighter_id is not null`, así que un combate al
+// que le falta media pareja era INVISIBLE: el 1087 salía como 16/17 cuando la
+// cartelera son 18 personas.
+
+describe("comprobarProxima y el luchador sin ficha", () => {
+  const PROXIMA_1087: DatosProxima = {
+    combatesActivos: 9,
+    tieneHorarioDeLosPrelims: true,
+    tieneHoraDeEstelar: true,
+    sinFoto: 1, // Billy Ray Goff, sin foto de cuerpo entero
+    sinFicha: 1, // Jose Montanha da Silva, sin fila en `fighters`
+    luchadores: 18, // 9 combates x 2 esquinas, con ficha o sin ella
+    diasQueFaltan: 6,
+  };
+
+  it("cuenta las 18 esquinas, no las 17 que tienen ficha", () => {
+    const c = comprobarProxima(PROXIMA_1087);
+    // El numerador descuenta los dos: el que no tiene ficha tampoco tiene foto.
+    expect(c.find((x) => x.titulo === "Fotos de los que pelean")?.valor).toBe("16/18");
+  });
+
+  it("el que no tiene ficha sale en su PROPIA línea, no escondido en las fotos", () => {
+    const c = comprobarProxima(PROXIMA_1087);
+    const ficha = c.find((x) => x.titulo === "Luchadores con ficha");
+    expect(ficha?.valor).toBe("17/18");
+    expect(ficha?.nivel).toBe("aviso");
+    // Lo que de verdad importa: su combate no se graba, y en verde.
+    expect(ficha?.detalle).toMatch(/no se registrara en directo/i);
+  });
+
+  it("a dos días, un luchador sin ficha ya es rojo", () => {
+    const c = comprobarProxima({ ...PROXIMA_1087, diasQueFaltan: 2 });
+    expect(c.find((x) => x.titulo === "Luchadores con ficha")?.nivel).toBe("mal");
+  });
+
+  it("con la cartelera completa, las dos líneas están en verde", () => {
+    const c = comprobarProxima({ ...PROXIMA_1087, sinFoto: 0, sinFicha: 0 });
+    expect(c.find((x) => x.titulo === "Luchadores con ficha")?.nivel).toBe("ok");
+    expect(c.find((x) => x.titulo === "Fotos de los que pelean")?.valor).toBe("18/18");
   });
 });

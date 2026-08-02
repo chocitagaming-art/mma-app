@@ -169,6 +169,9 @@ export type DatosProxima = {
   tieneHoraDeEstelar: boolean;
   /** Luchadores de la cartelera sin foto de cuerpo entero. */
   sinFoto: number;
+  /** Esquinas de la cartelera SIN ficha en `fighters`: ni foto, ni historial. */
+  sinFicha: number;
+  /** Esquinas totales de la cartelera activa (2 por combate). */
   luchadores: number;
   /** Días que faltan. Lo que es tolerable a diez días no lo es a dos. */
   diasQueFaltan: number;
@@ -211,13 +214,31 @@ export function comprobarProxima(d: DatosProxima): Comprobacion[] {
       : "Sin dato, el arranque se calcula como «estelar − 4 h». Suele acertar.",
   });
 
+  // Una esquina sin ficha en `fighters` NO es solo una foto que falta: el bucle
+  // en vivo resuelve los luchadores contra esa tabla, asi que ese combate NO SE
+  // ESCRIBE durante la velada — y el job termina en VERDE, sin error. Por eso
+  // va en su propia linea y no escondido dentro del contador de fotos, que es
+  // justo donde estuvo invisible hasta el 2-ago.
+  out.push({
+    titulo: "Luchadores con ficha",
+    valor: `${d.luchadores - d.sinFicha}/${d.luchadores}`,
+    nivel: d.sinFicha === 0 ? "ok" : inminente ? "mal" : "aviso",
+    detalle:
+      d.sinFicha > 0
+        ? `${d.sinFicha} sin ficha. Su combate no se registrara en directo (el bucle empareja por nombre contra la tabla de luchadores) y ademas sale en verde. Se crean con 'add_manual_fighter'.`
+        : undefined,
+  });
+
+  // El que no tiene ficha tampoco tiene foto: cuenta en los dos sitios a
+  // proposito, para que el numero no mienta por defecto.
+  const sinFotoTotal = d.sinFoto + d.sinFicha;
   out.push({
     titulo: "Fotos de los que pelean",
-    valor: `${d.luchadores - d.sinFoto}/${d.luchadores}`,
-    nivel: d.sinFoto === 0 ? "ok" : inminente ? "mal" : "aviso",
+    valor: `${d.luchadores - sinFotoTotal}/${d.luchadores}`,
+    nivel: sinFotoTotal === 0 ? "ok" : inminente ? "mal" : "aviso",
     detalle:
-      d.sinFoto > 0
-        ? `${d.sinFoto} sin foto de cuerpo entero. Si ufc.com no tiene ficha suya, hay que meterla a mano.`
+      sinFotoTotal > 0
+        ? `${sinFotoTotal} sin foto de cuerpo entero. Si ufc.com no tiene ficha suya, hay que meterla a mano.`
         : undefined,
   });
 
@@ -458,7 +479,7 @@ export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
             : "aviso",
       detalle:
         d.sinNingunaFotoYCompiten > 0
-          ? `Ni ESPN ni ufc.com tienen sus fotos. Se meten a mano con \`add_manual_fighter\`.${
+          ? `Ni ESPN ni ufc.com tienen sus fotos. Se meten a mano con 'add_manual_fighter'.${
               d.diasHastaElPrimeroSinFoto != null
                 ? ` El primero pelea en ${Math.max(0, Math.round(d.diasHastaElPrimeroSinFoto))} días.`
                 : ""
