@@ -285,6 +285,56 @@ function comoHace(horas: number): string {
   return `hace ${Math.round(horas / 24)} días`;
 }
 
+// El microservicio de predicción vive FUERA de esta base (Render), así que su
+// salud no se puede consultar: se mira cuándo fue la última vez que contestó.
+//
+// Lo escribe `keepalive-prediction.yml` después de un /health con 200, y solo
+// entonces; si el servicio se cae, ese workflow falla, no escribe, y el latido
+// envejece. Ese envejecimiento ES la señal.
+//
+// UMBRALES, MEDIDOS. GitHub Actions NO respeta la cadencia programada: el
+// keep-alive pide un ping cada 10 min y entrega uno cada ~1,79 h de media, con
+// el PEOR hueco observado en 3,62 h (40 ejecuciones, 69,7 h). Por eso 6 h de
+// margen para el «ok»: por debajo habría falsos rojos por retrasos del
+// planificador, no por el servicio. A las 12 h ya no hay excusa de cadencia.
+const HORAS_PREDICCION = { aviso: 6, mal: 12 };
+
+export type DatosPrediccion = {
+  /** Horas desde el último /health con 200, o null si no ha latido nunca. */
+  horasDesdeElUltimoLatido: number | null;
+};
+
+export function comprobarPrediccion(d: DatosPrediccion): Comprobacion[] {
+  // Nunca ha latido: o la tabla acaba de nacer y el keep-alive aún no ha
+  // corrido, o lleva caído desde el principio. Aviso, no rojo: no se puede
+  // distinguir, y estrenar una comprobación en rojo enseña a ignorarla.
+  if (d.horasDesdeElUltimoLatido == null) {
+    return [
+      {
+        titulo: "Servicio de predicción",
+        valor: "sin noticias todavía",
+        nivel: "aviso",
+        detalle:
+          "Aún no consta ningún /health correcto. Si acaba de instalarse, el keep-alive lo anotará en menos de dos horas.",
+      },
+    ];
+  }
+  const nivel = porFrescura(d.horasDesdeElUltimoLatido, HORAS_PREDICCION);
+  return [
+    {
+      titulo: "Servicio de predicción",
+      valor: comoHace(d.horasDesdeElUltimoLatido),
+      nivel,
+      detalle:
+        nivel === "mal"
+          ? "La predicción con IA de la web está caída. Mirar por qué con «Diagnostico de Render», y levantarlo con «Sincronizar la conexion del servicio de prediccion» o «Deploy prediction service»."
+          : nivel === "aviso"
+            ? "Puede ser solo un retraso del planificador de GitHub, que se salta pings a menudo."
+            : undefined,
+    },
+  ];
+}
+
 export function comprobarFrescura(d: DatosFrescura): Comprobacion[] {
   return [
     {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   comprobarCatalogo,
   comprobarFrescura,
+  comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
   peorNivel,
@@ -325,5 +326,56 @@ describe("comprobarProxima y el luchador sin ficha", () => {
     const c = comprobarProxima({ ...PROXIMA_1087, sinFoto: 0, sinFicha: 0 });
     expect(c.find((x) => x.titulo === "Luchadores con ficha")?.nivel).toBe("ok");
     expect(c.find((x) => x.titulo === "Fotos de los que pelean")?.valor).toBe("18/18");
+  });
+});
+
+// ── El punto ciego que costó nueve horas (2-ago) ────────────────────────────
+// El microservicio de predicción entró en bucle de caída el 1-ago a las 23:12Z
+// y el panel salió en verde toda la noche: de sus 22 comprobaciones, ninguna lo
+// miraba. El aviso llegó solo por los Issues de GitHub, que es el canal que el
+// propio proyecto ya documentó como frágil.
+//
+// No se sondea Render desde el panel a propósito: el servicio responde en 0,17 s
+// caliente pero un arranque en frío tarda ~43 s, así que una sonda con
+// presupuesto corto no distingue "dormido" de "muerto" — o miente o cuelga
+// /api/estado, que es lo que lee el guardián cada hora. Se mira el DATO: cuándo
+// contestó por última vez, que es lo que anota el keep-alive.
+
+describe("comprobarPrediccion", () => {
+  it("un latido reciente es lo normal y no dice nada", () => {
+    const c = comprobarPrediccion({ horasDesdeElUltimoLatido: 0.5 });
+    expect(c[0].nivel).toBe("ok");
+    expect(c[0].valor).toBe("hace minutos");
+    expect(c[0].detalle).toBeUndefined();
+  });
+
+  it("🪤 tres horas y media sin latido NO es alarma: es el planificador de GitHub", () => {
+    // Medido el 2-ago sobre 40 ejecuciones reales: el keep-alive pide un ping
+    // cada 10 min y GitHub entrega uno cada ~1,79 h, con el PEOR hueco en
+    // 3,62 h. Con el umbral por debajo de eso, el panel se pondría en rojo por
+    // los retrasos del planificador y no por el servicio.
+    expect(comprobarPrediccion({ horasDesdeElUltimoLatido: 3.62 })[0].nivel).toBe("ok");
+  });
+
+  it("a las seis horas ya avisa, pero sin gritar", () => {
+    const c = comprobarPrediccion({ horasDesdeElUltimoLatido: 7 });
+    expect(c[0].nivel).toBe("aviso");
+    expect(c[0].detalle).toContain("planificador");
+  });
+
+  it("a las doce horas es rojo, y dice qué hacer", () => {
+    // El caso real: entre las 23:12Z del 1-ago y que alguien se diera cuenta
+    // pasaron nueve horas. Con esto, a las doce el guardián manda el correo.
+    const c = comprobarPrediccion({ horasDesdeElUltimoLatido: 12 });
+    expect(c[0].nivel).toBe("mal");
+    expect(c[0].detalle).toContain("Diagnostico de Render");
+  });
+
+  it("si no ha latido nunca, avisa pero no grita", () => {
+    // Estrenar una comprobación en rojo enseña a ignorarla: al instalarla, la
+    // tabla está vacía hasta que el keep-alive corra por primera vez.
+    const c = comprobarPrediccion({ horasDesdeElUltimoLatido: null });
+    expect(c[0].nivel).toBe("aviso");
+    expect(c[0].valor).toBe("sin noticias todavía");
   });
 });
