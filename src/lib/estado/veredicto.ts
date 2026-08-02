@@ -438,10 +438,29 @@ export type DatosCatalogo = {
   eventosPasadosIncompletos: number;
 };
 
-// A partir de aqui, una ficha sin foto ya no se arregla sola: los pases de
-// enriquecimiento son diarios, y si en diez dias no la han encontrado es que la
-// fuente no la tiene.
-const DIAS_PARA_URGIR_FOTOS = 10;
+// Cuándo una foto que falta pasa de "ya llegará" a "hay que ir a por ella".
+//
+// 🪤 ESTE UMBRAL ERA 10 DÍAS, Y ESO ERA RUIDO SEMANAL. La premisa escrita
+// («ningún cron lo va a arreglar si las fuentes no tienen ficha suya») resultó
+// FALSA al medirla el 2-ago-2026 contra la base:
+//
+//   · Las 8 veladas de los últimos 90 días (1063, 1062, 1061, 1060, 1059,
+//     1058, 1084, 1083) llegaron con **CERO** luchadores sin ninguna foto.
+//   · Todos los debutantes de las últimas 8 semanas acabaron con las dos
+//     fotos: 8 de 8 el 1-ago, 5 de 5 el 25-jul, 4 de 4 el 18-jul, 2 de 2 el
+//     11-jul, 4 de 4 el 20-jun.
+//
+// O sea que un luchador recién añadido a una cartelera SIEMPRE entra sin foto y
+// SIEMPRE acaba teniéndola, unos días antes de pelear. Con el umbral en 10 días
+// el panel se ponía rojo cada semana por algo que se resuelve solo, y el
+// guardián mandaba un correo cada hora durante toda la semana de velada. Eso
+// entrena a no mirar los correos, que es justo lo contrario de para lo que
+// existe el panel.
+//
+// A tres días sigue habiendo margen para meterlas a mano (`add_manual_fighter`)
+// y ya no es lo normal que sigan faltando. Antes de eso se ve en el panel, que
+// es donde se mira cuando hay tiempo de arreglarlo.
+const DIAS_PARA_URGIR_FOTOS = 3;
 
 export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
   const pct = (n: number) =>
@@ -464,12 +483,10 @@ export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
     {
       titulo: "Compiten pronto y no tienen NINGUNA foto",
       valor: `${d.sinNingunaFotoYCompiten}`,
-      // Ningún automatismo va a resolver esto si las fuentes no tienen ficha
-      // suya: hay que meter las fotos a mano. Pero solo se pone en ROJO cuando
-      // ya urge (a menos de 10 días de su combate). Alertar durante el mes
-      // entero que falta convertiría al guardián en ruido de fondo, y entonces
-      // el aviso que sí importa pasaría desapercibido. Mientras tanto se ve en
-      // el panel, que es donde se mira cuando hay tiempo de arreglarlo.
+      // Rojo SOLO cuando ya urge de verdad: a menos de DIAS_PARA_URGIR_FOTOS
+      // del combate. Lo normal es que un luchador recién añadido a la cartelera
+      // entre sin foto y la reciba días después; ver la medición junto a la
+      // constante. Alertar antes convierte al guardián en ruido de fondo.
       nivel:
         d.sinNingunaFotoYCompiten === 0
           ? "ok"
