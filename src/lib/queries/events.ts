@@ -547,6 +547,8 @@ type NextEventRow = {
   name: string;
   event_date: string | null;
   start_time: string | null;
+  prelims_time: string | null;
+  early_prelims_time: string | null;
   location: string | null;
   image_url: string | null;
   broadcast: string | null;
@@ -659,7 +661,13 @@ function toHeroFighter(cols: HeroCornerCols): NextEventHeroFighter {
 async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
   const eventRows = await sql<NextEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date,
-            e.start_time::text AS start_time, e.location, e.image_url, e.broadcast
+            e.start_time::text AS start_time,
+            -- Los dos tramos previos: sin ellos el hero no sabe CUANDO empieza
+            -- de verdad la velada, y fechaba con event_date (el dia local de la
+            -- sede), que para el 1087 iba 24 h por delante de su cuenta atras.
+            e.prelims_time::text AS prelims_time,
+            e.early_prelims_time::text AS early_prelims_time,
+            e.location, e.image_url, e.broadcast
      FROM events e
      WHERE COALESCE(
              e.start_time,
@@ -736,6 +744,8 @@ async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
     name: event.name,
     eventDate: event.event_date,
     startTime: event.start_time,
+    prelimsTime: event.prelims_time,
+    earlyPrelimsTime: event.early_prelims_time,
     location: event.location,
     imageUrl: absolutePoster(event.image_url),
     broadcast: event.broadcast,

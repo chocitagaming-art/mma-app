@@ -66,6 +66,56 @@ function diasEntreClaves(desde: string, hasta: string): number {
   return Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000);
 }
 
+// ── EL DÍA EN EL QUE UN ESPAÑOL VE LA VELADA ────────────────────────────────
+//
+// Hasta el 2-ago el resto del sitio fechaba los eventos con `events.event_date`,
+// que es el día local DE LA SEDE. Para el 1087 (Las Vegas) eso es el 8-ago,
+// mientras su `start_time` es el 9 a las 00:00Z: la home pintaba "8 ago 2026"
+// pegado a una cuenta atrás que expiraba el 9, y un aficionado español podía
+// plantarse 24 h antes. Le pasaba a TODA velada cuyo `start_time` cruza la
+// medianoche UTC (también al 1064 y al 1086).
+//
+// Estas funciones derivan la fecha del PRIMER TRAMO con horario conocido y del
+// mismo corte de madrugada que /ufc-hoy, para que el sitio deje de
+// contradecirse consigo mismo. Nótese que para el 1087 dan "2026-08-08" por los
+// dos caminos: con prelims (23:00 CEST del sábado) y sin ellos (02:00 CEST del
+// domingo, que el corte devuelve al sábado).
+
+// "YYYY-MM-DD" del día lógico de la velada, o null si no hay ni un dato.
+export function diaLogicoDeVelada(times: LiveEventTimes): string | null {
+  const primero = firstSegmentStart(times);
+  if (primero) {
+    return claveDiaLogico(primero);
+  }
+  // Sin ningún timestamptz solo queda el día civil de la sede. Es peor
+  // aproximación, pero es la única, y solo afecta a eventos sin enriquecer.
+  return times.eventDate ? times.eventDate.slice(0, 10) : null;
+}
+
+// 0 = hoy, 1 = mañana, negativo = ya pasó. null si la velada no tiene fecha.
+// ES LO QUE FALTABA: `phase === "pre"` significa «faltan menos de 24 h», que NO
+// es lo mismo que «hoy» — el viernes a las 23:00 un evento del sábado a las
+// 21:00Z entra en "pre" y el chip decía "Hoy".
+export function diasHastaLaVelada(times: LiveEventTimes, now: Date): number | null {
+  const dia = diaLogicoDeVelada(times);
+  return dia ? diasEntreClaves(claveDiaLogico(now), dia) : null;
+}
+
+// La clave ya es un día civil resuelto, así que se formatea en UTC: fijar la
+// zona es justo lo que impide que se corra otra vez al día anterior.
+const FECHA_VELADA_CORTA = new Intl.DateTimeFormat("es", {
+  timeZone: "UTC",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+// "8 ago 2026" — la fecha que se le enseña al espectador español.
+export function formatFechaVeladaCorta(times: LiveEventTimes): string | null {
+  const dia = diaLogicoDeVelada(times);
+  return dia ? FECHA_VELADA_CORTA.format(new Date(`${dia}T00:00:00Z`)) : null;
+}
+
 export type UfcTodayVerdict =
   | "en-directo" // está ocurriendo ahora mismo
   | "hoy" // hoy, a una hora normal

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ageFromBirthDate,
   cleanNationality,
+  formatDate,
   formatHeight,
   formatMethod,
   formatModelDate,
@@ -189,5 +190,27 @@ describe("cleanNationality", () => {
     expect(cleanNationality("")).toBeNull();
     expect(cleanNationality("Unknown")).toBeNull();
     expect(cleanNationality("unknown")).toBeNull();
+  });
+});
+
+// ── formatDate y el huso del proceso (arreglo del 2-ago) ────────────────────
+describe("formatDate y la zona horaria", () => {
+  it("un día civil NO se corre por el huso del proceso", () => {
+    // Sin `timeZone: "UTC"`, "2026-08-08" se parsea como medianoche UTC y se
+    // formatea con el reloj del proceso: al oeste de Greenwich retrocedía al 7.
+    // El megatest corre en Europe/Madrid y Vercel en UTC, así que el portátil y
+    // producción podían imprimir días distintos para el mismo dato.
+    expect(formatDate("2026-08-08")).toBe("8 ago 2026");
+    expect(formatDate("2026-01-01")).toBe("1 ene 2026");
+    expect(formatDate("2026-12-31")).toBe("31 dic 2026");
+  });
+
+  it("un timestamptz se fecha por su día UTC, no por el del proceso", () => {
+    expect(formatDate("2026-08-09 00:00:00+00")).toBe("9 ago 2026");
+    expect(formatDate("2026-08-08 23:30:00+00")).toBe("8 ago 2026");
+  });
+
+  it("sin fecha lo dice en vez de romper", () => {
+    expect(formatDate(null)).toBe("Por definir");
   });
 });

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   claveDiaLogico,
+  diaLogicoDeVelada,
+  diasHastaLaVelada,
+  formatFechaVeladaCorta,
   formatMadridDate,
   formatMadridTime,
   resolveUfcToday,
@@ -170,5 +173,120 @@ describe("formato peninsular", () => {
   it("sin valor devuelve null en vez de romper", () => {
     expect(formatMadridTime(null)).toBeNull();
     expect(formatMadridDate(null)).toBeNull();
+  });
+});
+
+// ── El día lógico de la velada (arreglo del 2-ago) ──────────────────────────
+// Antes, la home fechaba con `events.event_date`, que es el día local DE LA
+// SEDE, mientras la cuenta atrás usaba `start_time`. Para el 1087 eso pintaba
+// "8 ago 2026" junto a un contador que expiraba el 9: 24 h de diferencia.
+
+describe("diaLogicoDeVelada", () => {
+  it("el 1087 es del SÁBADO 8 aunque su estelar sea el domingo a las 02:00", () => {
+    // start_time 2026-08-09 00:00Z = 02:00 del domingo en Madrid, por debajo
+    // del corte de las 06:00, así que pertenece al sábado. Es como se anuncia.
+    expect(diaLogicoDeVelada(EVENTO_1087)).toBe("2026-08-08");
+  });
+
+  it("sigue siendo el sábado 8 cuando llegan los prelims reales (21:00Z)", () => {
+    // El 2-ago se escribió prelims_time = 2026-08-08 21:00Z (23:00 CEST del
+    // sábado). El día lógico NO debe moverse: los dos caminos dan lo mismo.
+    expect(
+      diaLogicoDeVelada({ ...EVENTO_1087, prelimsTime: "2026-08-08 21:00:00+00" }),
+    ).toBe("2026-08-08");
+  });
+
+  it("una velada europea de tarde es de su propio día", () => {
+    expect(diaLogicoDeVelada(EVENTO_1063)).toBe("2026-08-01");
+  });
+
+  it("sin ningún horario cae al día civil de la sede", () => {
+    expect(
+      diaLogicoDeVelada({
+        eventDate: "2026-09-12",
+        startTime: null,
+        prelimsTime: null,
+        earlyPrelimsTime: null,
+      }),
+    ).toBe("2026-09-12");
+  });
+
+  it("sin nada en absoluto devuelve null en vez de romper", () => {
+    expect(
+      diaLogicoDeVelada({
+        eventDate: null,
+        startTime: null,
+        prelimsTime: null,
+        earlyPrelimsTime: null,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("diasHastaLaVelada", () => {
+  it("el sábado por la tarde, el 1087 es HOY", () => {
+    // 2026-08-08 15:00Z = 17:00 del sábado en Madrid.
+    expect(diasHastaLaVelada(EVENTO_1087, new Date("2026-08-08T15:00:00Z"))).toBe(0);
+  });
+
+  it("EL BUG: el viernes por la noche NO es hoy, aunque falten menos de 24 h", () => {
+    // 2026-08-07 22:00Z = medianoche del sábado en Madrid... no: 00:00 del
+    // sábado. Usamos las 21:00Z del viernes = 23:00 CEST del VIERNES, que está
+    // por encima del corte, así que el día lógico es el viernes 7.
+    // Faltan menos de 24 h para el primer tramo, así que `resolveLivePhase`
+    // dice "pre" — y el chip decía "Hoy". Debe decir "mañana".
+    expect(diasHastaLaVelada(EVENTO_1087, new Date("2026-08-07T21:00:00Z"))).toBe(1);
+  });
+
+  it("de madrugada, con la velada en marcha, sigue siendo HOY", () => {
+    // 2026-08-09 01:00Z = 03:00 del domingo en Madrid: por debajo del corte,
+    // así que para el espectador sigue siendo la noche del sábado.
+    expect(diasHastaLaVelada(EVENTO_1087, new Date("2026-08-09T01:00:00Z"))).toBe(0);
+  });
+
+  it("pasada la velada, el número es negativo", () => {
+    // Domingo 9 por la tarde (14:00 CEST, ya por encima del corte): la velada
+    // del sábado quedó ayer.
+    expect(diasHastaLaVelada(EVENTO_1087, new Date("2026-08-09T12:00:00Z"))).toBe(-1);
+    // Y el lunes 10, dos días atrás.
+    expect(diasHastaLaVelada(EVENTO_1087, new Date("2026-08-10T12:00:00Z"))).toBe(-2);
+  });
+
+  it("sin fecha no inventa un número", () => {
+    expect(
+      diasHastaLaVelada(
+        { eventDate: null, startTime: null, prelimsTime: null, earlyPrelimsTime: null },
+        new Date("2026-08-08T15:00:00Z"),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("formatFechaVeladaCorta", () => {
+  it("el 1087 se fecha el 8, que es cuando el espectador lo ve", () => {
+    // Y NO "9 ago 2026", que es lo que diría un formateo del start_time, ni
+    // algo que dependa del huso del proceso.
+    expect(formatFechaVeladaCorta(EVENTO_1087)).toBe("8 ago 2026");
+  });
+
+  it("no se mueve al añadir los prelims reales", () => {
+    expect(
+      formatFechaVeladaCorta({ ...EVENTO_1087, prelimsTime: "2026-08-08 21:00:00+00" }),
+    ).toBe("8 ago 2026");
+  });
+
+  it("una velada europea de tarde se fecha en su día", () => {
+    expect(formatFechaVeladaCorta(EVENTO_1063)).toBe("1 ago 2026");
+  });
+
+  it("sin fecha devuelve null para que el consumidor decida", () => {
+    expect(
+      formatFechaVeladaCorta({
+        eventDate: null,
+        startTime: null,
+        prelimsTime: null,
+        earlyPrelimsTime: null,
+      }),
+    ).toBeNull();
   });
 });

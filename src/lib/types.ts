@@ -483,6 +483,10 @@ export type NextEventHero = {
   name: string;
   eventDate: string | null;
   startTime: string | null;
+  // Los cuatro campos juntos forman un `LiveEventTimes`, que es lo que piden
+  // `diaLogicoDeVelada` y la cuenta atrás para no contradecirse entre sí.
+  prelimsTime: string | null;
+  earlyPrelimsTime: string | null;
   location: string | null;
   imageUrl: string | null;
   broadcast: string | null;
