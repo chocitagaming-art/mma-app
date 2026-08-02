@@ -32,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/salon-de-la-fama`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/maestro`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/creditos`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/contacto`, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE}/aviso-legal`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/privacidad`, changeFrequency: "yearly", priority: 0.3 },
   ];

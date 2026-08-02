@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 // AVISO PARA QUIEN TOQUE ESTA PÁGINA: cada afirmación de aquí se comprobó
 // contra el código y contra producción el 2-ago-2026 (respuestas sin
 // `set-cookie`, `rate-limit.ts`, `use-favorites.ts`, `use-live-now.ts`,
-// `api/maestro/route.ts`, `api/predict/route.ts`). Si cambias lo que la web
+// `api/maestro/route.ts`, `api/predict/route.ts`, `api/contacto/route.ts`).
+//
+// Y ya ha pasado una vez: el formulario de /contacto entró ese mismo día y
+// dejó FALSAS tres frases de aquí ("no pide datos a nadie", "no existe nada
+// asociado a ti", el punto de menores). Se corrigieron en el mismo cambio. Si cambias lo que la web
 // recoge, ESTA PÁGINA ES PARTE DEL CAMBIO. Una política de privacidad
 // desactualizada es peor que no tenerla: aquí sí se está afirmando algo.
 
@@ -31,7 +35,14 @@ export default function PrivacidadPage() {
     >
       <LegalSection numero={1} titulo="Lo que esta web NO hace">
         <ul className="ml-4 list-disc space-y-1.5">
-          <li>No pide registro ni contraseña: no hay cuentas de usuario.</li>
+          <li>
+            No pide registro ni contraseña: no hay cuentas de usuario. Lo único
+            que puedes darle voluntariamente es lo que escribas en{" "}
+            <Link href="/contacto" className="text-primary underline-offset-2 hover:underline">
+              /contacto
+            </Link>{" "}
+            (punto 2).
+          </li>
           <li>
             <strong>No usa cookies</strong>, ni propias ni de terceros. Por eso no
             verás ningún banner pidiéndote permiso: no hay nada que consentir.
@@ -75,6 +86,26 @@ export default function PrivacidadPage() {
           personales tuyos ni de terceros en ese cuadro:{" "}
           <strong>no hace falta ninguno</strong> para preguntar sobre MMA. Las
           conversaciones no se guardan en la base de datos de esta web.
+        </p>
+        <p>
+          <strong>
+            Si escribes por{" "}
+            <Link
+              href="/contacto"
+              className="text-primary underline-offset-2 hover:underline"
+            >
+              /contacto
+            </Link>
+            .
+          </strong>{" "}
+          Es lo único que esta web te pide, y solo si tú decides escribir. Se
+          guardan <strong>tu correo, tu mensaje y el nombre si lo pones</strong>,
+          en la base de datos, para poder contestarte y para tener constancia de
+          lo que se ha reportado. <strong>No se guarda tu dirección IP</strong>,
+          ni en claro ni con hash. Base legal: tu propio consentimiento al pulsar
+          «enviar». Se conservan mientras tengan sentido como histórico de
+          incidencias, y puedes pedir que se borre el tuyo cuando quieras
+          (punto 6).
         </p>
       </LegalSection>
 
@@ -175,10 +206,15 @@ export default function PrivacidadPage() {
         </p>
         <p>
           Aviso honesto sobre esto: como <strong>no hay cuentas ni cookies</strong>,
-          en la práctica no existe nada asociado a ti que podamos localizar. Los
-          contadores por IP caducan en menos de un minuto y las estadísticas de
-          visita son agregadas y no identificables. Lo único «tuyo» que existe
-          vive en tu navegador, y lo borras tú (punto 3).
+          casi nada de lo que hay se puede asociar a ti. Los contadores por IP
+          caducan en menos de un minuto y las estadísticas de visita son agregadas
+          y no identificables; lo que guardas en el navegador lo borras tú
+          (punto 3).
+        </p>
+        <p>
+          <strong>La excepción es si escribiste por /contacto</strong>: ahí sí hay
+          un mensaje tuyo con tu correo, y ese sí se puede buscar y borrar. Pídelo
+          desde la misma dirección con la que escribiste y se hace.
         </p>
         <p>
           Si crees que tus datos no se están tratando bien, puedes reclamar ante la{" "}
@@ -196,8 +232,9 @@ export default function PrivacidadPage() {
 
       <LegalSection numero={7} titulo="Menores y cambios">
         <p>
-          La web no está dirigida a menores de 14 años ni les pide dato alguno,
-          porque no pide datos a nadie.
+          La web no está dirigida a menores de 14 años. No hay registro, así que
+          lo único que un menor podría enviar es un mensaje por /contacto: si nos
+          damos cuenta de que quien escribe es menor de 14, se borra sin más.
         </p>
         <p>
           Si algún día cambia lo que se recoge, se actualiza esta página y su fecha.
