@@ -24,7 +24,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/clasificacion`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE}/tendencias`, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE}/enfrentamiento`, changeFrequency: "monthly", priority: 0.6 },
+    // Estaban construidas y sin una sola entrada de sitemap: Google no tenía
+    // por dónde llegar. Son las MISMAS que le faltaban al pie de página, por
+    // eso las dos cosas se arreglaron a la vez (ver `site-footer.tsx`).
+    { url: `${SITE}/videos`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${SITE}/gimnasios`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/salon-de-la-fama`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/maestro`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/creditos`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/aviso-legal`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE}/privacidad`, changeFrequency: "yearly", priority: 0.3 },
   ];
+  // ⚠️ NO AÑADIR AQUÍ, y cada exclusión tiene su motivo:
+  //  · `/estado` — está oculto a propósito; meterlo en el sitemap sería
+  //    exactamente el cartel que evita no ponerlo en robots.txt.
+  //  · `/offline` — la sirve el service worker cuando no hay red; indexarla
+  //    pondría "sin conexión" en los resultados de búsqueda.
+  //  · `/compare` y `/predict` — son `permanentRedirect` a `/enfrentamiento`.
+  //  · `/fights/[id]` — serían +8.800 URLs sobre una web que sirve todo con
+  //    `no-store`. Decisión del 28-jul, sprint propio si algún día se hace.
 
   try {
     const [fighters, events] = await Promise.all([

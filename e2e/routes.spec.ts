@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { collectHeadshots, expectNoHorizontalOverflow } from "./helpers";
 
-// Las 16 rutas de página. Las dinámicas usan IDs ESTABLES que existen en prod:
+// Las 18 rutas de página (16 + las dos legales del 2-ago). Las dinámicas usan IDs ESTABLES que existen en prod:
 // evento 357 (UFC 306), luchador 6493 (ya lo vigila monitor.yml), combate 3821
 // (Merab vs O'Malley, de UFC 306). Si alguno desapareciera, su test fallaría con
 // un 404 claro en vez de un falso verde.
@@ -14,6 +14,7 @@ import { collectHeadshots, expectNoHorizontalOverflow } from "./helpers";
 // nadie.
 const ROUTES = [
   "/",
+  "/aviso-legal",
   "/clasificacion",
   "/en-vivo",
   "/enfrentamiento",
@@ -25,6 +26,7 @@ const ROUTES = [
   "/gimnasios",
   "/maestro",
   "/predict",
+  "/privacidad",
   "/salon-de-la-fama",
   "/tendencias",
   "/ufc-hoy",
@@ -158,4 +160,91 @@ test("/estado es indistinguible de una URL que no existe", async ({ request }) =
 test("/api/estado no contesta sin la clave", async ({ request }) => {
   const r = await request.get("/api/estado", { maxRedirects: 0 });
   expect(r.status(), "el JSON del panel debe esconderse igual que la página").toBe(404);
+});
+
+// ── El pie, el sitemap y las páginas legales (bloques 2 y 3, 2-ago) ─────────
+// El pie enseñaba 6 de las 15 rutas públicas y el sitemap 8: media web sin un
+// solo enlace interno. Estos tests dejan clavado lo que debe estar Y, sobre
+// todo, LO QUE NO — que es donde de verdad duele equivocarse.
+
+test("el pie enlaza las rutas que antes no tenían ni un enlace interno", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.locator("footer");
+  for (const href of [
+    "/en-vivo",
+    "/maestro",
+    "/videos",
+    "/gimnasios",
+    "/salon-de-la-fama",
+    "/aviso-legal",
+    "/privacidad",
+    "/creditos",
+  ]) {
+    await expect(
+      footer.locator(`a[href="${href}"]`),
+      `el pie no enlaza ${href}`,
+    ).toHaveCount(1);
+  }
+});
+
+test("el pie ya no anuncia el motor de base de datos", async ({ page }) => {
+  await page.goto("/");
+  // Encargo del dueño del 31-jul: no le dice nada al visitante y le regala la
+  // infraestructura a quien mira con otras intenciones.
+  await expect(page.locator("footer")).not.toContainText(/Neon|PostgreSQL/i);
+});
+
+test("el pie NO enlaza el panel oculto", async ({ page }) => {
+  await page.goto("/");
+  // Enlazarlo sería exactamente el cartel que se evita al no ponerlo en
+  // robots.txt. Si alguien añade /estado al pie, este test lo caza.
+  await expect(page.locator('footer a[href*="estado"]')).toHaveCount(0);
+});
+
+test("el sitemap lista las rutas nuevas y sigue callando las que debe", async ({ request }) => {
+  const response = await request.get("/sitemap.xml");
+  expect(response.status()).toBe(200);
+  const xml = await response.text();
+
+  // La base se saca del PROPIO sitemap y no se fija a mano: `SITE_URL` puede
+  // valer una cosa en el portátil y otra en el CI, y un dominio incrustado aquí
+  // convertiría este test en un falso rojo la primera vez que alguien la cambie.
+  const base = xml.match(/<loc>(https?:\/\/[^/<]+)/u)?.[1];
+  expect(base, "el sitemap no trae ni una URL absoluta").toBeTruthy();
+
+  const rutas = [...xml.matchAll(/<loc>[^<]*?(\/[^<]*)?<\/loc>/gu)].map((m) =>
+    (m[0].replace(/<\/?loc>/gu, "").replace(base!, "") || "/"),
+  );
+
+  for (const ruta of [
+    "/videos",
+    "/gimnasios",
+    "/salon-de-la-fama",
+    "/maestro",
+    "/creditos",
+    "/aviso-legal",
+    "/privacidad",
+  ]) {
+    expect(rutas, `falta ${ruta} en el sitemap`).toContain(ruta);
+  }
+
+  // Lo importante son las EXCLUSIONES: /estado es un panel oculto y meterlo aquí
+  // sería el cartel que se evita al no ponerlo en robots.txt; /offline es la
+  // página de "sin conexión" y no debe salir en Google; /compare y /predict son
+  // redirecciones permanentes a /enfrentamiento.
+  for (const prohibida of ["/estado", "/offline", "/compare", "/predict"]) {
+    expect(rutas, `${prohibida} NO debería estar en el sitemap`).not.toContain(prohibida);
+  }
+});
+
+test("las páginas legales dicen algo, no solo responden 200", async ({ page }) => {
+  // notFound() devuelve HTTP 200 en esta versión de Next: un aserto de status
+  // aprobaría una página de "no encontrado". Se asserta CONTENIDO.
+  await page.goto("/aviso-legal");
+  await expect(page.getByRole("heading", { name: /Aviso legal/i, level: 1 })).toBeVisible();
+  await expect(page.locator("body")).toContainText(/no está afiliada/i);
+
+  await page.goto("/privacidad");
+  await expect(page.getByRole("heading", { name: /Privacidad/i, level: 1 })).toBeVisible();
+  await expect(page.locator("body")).toContainText(/no usa cookies/i);
 });
