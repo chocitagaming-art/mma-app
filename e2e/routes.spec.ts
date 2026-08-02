@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 import { collectHeadshots, expectNoHorizontalOverflow } from "./helpers";
 
-// Las 19 rutas de página (16 + las dos legales y /contacto del 2-ago). Las dinámicas usan IDs ESTABLES que existen en prod:
+// Las 20 rutas de página (16 + las dos legales y /contacto del 2-ago + /creditos
+// de la fase 13). Las dinámicas usan IDs ESTABLES que existen en prod:
 // evento 357 (UFC 306), luchador 6493 (ya lo vigila monitor.yml), combate 3821
 // (Merab vs O'Malley, de UFC 306). Si alguno desapareciera, su test fallaría con
 // un 404 claro en vez de un falso verde.
@@ -17,6 +18,7 @@ const ROUTES = [
   "/aviso-legal",
   "/clasificacion",
   "/contacto",
+  "/creditos",
   "/en-vivo",
   "/enfrentamiento",
   "/eventos",
@@ -287,6 +289,34 @@ test("las páginas legales dicen algo, no solo responden 200", async ({ page }) 
   await page.goto("/privacidad");
   await expect(page.getByRole("heading", { name: /Privacidad/i, level: 1 })).toBeVisible();
   await expect(page.locator("body")).toContainText(/no usa cookies/i);
+});
+
+// ── /creditos (fase 13) ────────────────────────────────────────────────────
+// Era la ÚNICA página real de la web sin ninguna prueba: la palabra "creditos"
+// solo salía en el test del pie y en el del sitemap, y ninguno la CARGABA.
+//
+// Meterla en ROUTES le da los tres asertos duros del bucle, pero uno de ellos es
+// `status < 400` y aquí eso no basta: `notFound()` devuelve HTTP 200 en esta
+// versión de Next, así que el bucle aprobaría una página de "no encontrado".
+// De ahí este test, que asserta CONTENIDO. Y no cualquier contenido: lo que se
+// comprueba es la ATRIBUCIÓN (autor + licencia + fuente), que es la razón legal
+// por la que la página existe. Si la lista se quedara vacía, la ruta seguiría
+// devolviendo 200 y este test sería lo único que se enteraría.
+test("/creditos atribuye de verdad, no solo responde 200", async ({ page }) => {
+  await page.goto("/creditos");
+  await expect(
+    page.getByRole("heading", { name: /Créditos de imágenes/i, level: 1 }),
+  ).toBeVisible();
+
+  // Hoy son 12 atribuciones; el umbral va bajo a propósito para que quitar una
+  // foto no ponga en rojo el test, pero vaciar la lista sí.
+  const atribuciones = page.getByText(/Foto:/);
+  expect(await atribuciones.count(), "la lista de créditos está vacía").toBeGreaterThanOrEqual(5);
+
+  // La licencia y la fuente tienen que estar ENLAZADAS: citar el autor sin
+  // enlazar la licencia no cumple Creative Commons.
+  await expect(page.locator('a[href*="commons.wikimedia.org"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="creativecommons.org"]').first()).toBeVisible();
 });
 
 // ── /contacto (bloque 4, 2-ago) ────────────────────────────────────────────
