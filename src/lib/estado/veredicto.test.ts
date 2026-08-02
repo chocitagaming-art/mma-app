@@ -225,30 +225,58 @@ describe("comprobarCatalogo", () => {
     expect(comprobarCatalogo(BASE).every((x) => x.nivel === "ok")).toBe(true);
   });
 
-  it("un luchador sin ninguna foto que pelea YA es rojo", () => {
-    // Ningún cron lo va a arreglar si las fuentes no tienen ficha suya: hay que
-    // meter la foto a mano, y para eso primero hay que enterarse.
+  it("un luchador sin ninguna foto que pelea pasado mañana es rojo", () => {
+    // Aquí ya no da tiempo a que llegue sola: hay que meterla a mano, y para
+    // eso primero hay que enterarse.
     const c = comprobarCatalogo({
       ...BASE,
       sinNingunaFotoYCompiten: 1,
-      diasHastaElPrimeroSinFoto: 4,
+      diasHastaElPrimeroSinFoto: 2,
     });
     const x = c.find((y) => y.titulo.includes("NINGUNA foto"));
     expect(x?.nivel).toBe("mal");
     expect(x?.detalle).toContain("add_manual_fighter");
-    expect(x?.detalle).toContain("4 días");
+    expect(x?.detalle).toContain("2 días");
   });
 
   it("pero si pelea dentro de un mes, solo se avisa", () => {
     // El caso real del 1-ago: Ce Liu (29-ago) y Salahdine Parnasse (5-sep).
-    // Poner esto en rojo tendría al guardián avisando cada hora durante un mes
-    // entero, y entonces el aviso que sí importa pasaría desapercibido.
     const c = comprobarCatalogo({
       ...BASE,
       sinNingunaFotoYCompiten: 2,
       diasHastaElPrimeroSinFoto: 27,
     });
     expect(c.find((y) => y.titulo.includes("NINGUNA foto"))?.nivel).toBe("aviso");
+  });
+
+  it("🪤 a seis días de la velada NO es rojo: es lo normal y se arregla solo", () => {
+    // El caso REAL del 2-ago-2026, y la razón de bajar el umbral de 10 a 3.
+    // Ese día entraron a la cartelera del 1087 tres luchadores nuevos (Jessie
+    // Rosas, Richie Miranda y el rival de Sutherland) y, como todo debutante,
+    // entraron sin foto. Con el umbral en 10 el panel se puso en ROJO a seis
+    // días vista y el guardián habría mandado un correo cada hora hasta el
+    // sábado por algo que se resuelve solo.
+    //
+    // Medido contra la base ese mismo día: las OCHO veladas de los últimos 90
+    // días llegaron con CERO luchadores sin ninguna foto, y los debutantes de
+    // las últimas ocho semanas acabaron todos con las dos (8/8, 5/5, 4/4, 2/2,
+    // 4/4). Si este test se pone en rojo, alguien ha vuelto a subir el umbral
+    // sin volver a medir.
+    const c = comprobarCatalogo({
+      ...BASE,
+      sinNingunaFotoYCompiten: 3,
+      diasHastaElPrimeroSinFoto: 6,
+    });
+    expect(c.find((y) => y.titulo.includes("NINGUNA foto"))?.nivel).toBe("aviso");
+  });
+
+  it("el día de la velada, si aún falta una foto, es rojo", () => {
+    const c = comprobarCatalogo({
+      ...BASE,
+      sinNingunaFotoYCompiten: 1,
+      diasHastaElPrimeroSinFoto: 0,
+    });
+    expect(c.find((y) => y.titulo.includes("NINGUNA foto"))?.nivel).toBe("mal");
   });
 
   it("si las fotos se degradaran mucho, avisa", () => {
