@@ -3,6 +3,7 @@ import {
   comprobarCatalogo,
   comprobarFrescura,
   comprobarGuardia,
+  comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
   peorNivel,
@@ -126,6 +127,20 @@ const FRESCURA_SQL = `
     extract(epoch from (now() - (select max(published_at) from news))) / 3600 as horas_noticia,
     extract(epoch from (now() - (select max(updated_at) from fighters))) / 3600 as horas_luchador,
     extract(epoch from (now() - (select max(updated_at) from fights))) / 3600 as horas_combate`;
+
+type FilaPrediccion = {
+  horas_desde_el_latido: string | null;
+};
+
+// El microservicio de predicción no vive en esta base, así que aquí no se
+// pregunta si está vivo: se mira cuándo contestó por última vez.
+// `keepalive-prediction.yml` escribe esta fila solo cuando su /health devuelve
+// 200, así que si el servicio cae, el latido envejece y eso se ve.
+// Ver db/migrations/026_service_heartbeats.sql en mma-ingesta.
+const PREDICCION_SQL = `
+  select extract(epoch from (now() - last_ok_at)) / 3600 as horas_desde_el_latido
+    from service_heartbeats
+   where service = 'prediction'`;
 
 type FilaCatalogo = {
   luchadores: string;
@@ -264,14 +279,16 @@ export async function obtenerEstado(): Promise<Estado> {
   // En paralelo, pero son 4 y el pool tiene 3 conexiones: la cuarta espera unos
   // milisegundos. Compensa frente a encadenarlas, y esta ruta la visita una
   // persona cada mucho rato, no un buscador.
-  const [[ultima], [proxima], [frescura], [catalogo], [guardia], registro] = await Promise.all([
-    sql<FilaVelada>(ULTIMA_VELADA_SQL),
-    sql<FilaProxima>(PROXIMA_VELADA_SQL),
-    sql<FilaFrescura>(FRESCURA_SQL),
-    sql<FilaCatalogo>(CATALOGO_SQL),
-    sql<FilaGuardia>(GUARDIA_SQL),
-    sql<FilaApunte>(REGISTRO_SQL),
-  ]);
+  const [[ultima], [proxima], [frescura], [catalogo], [guardia], [prediccion], registro] =
+    await Promise.all([
+      sql<FilaVelada>(ULTIMA_VELADA_SQL),
+      sql<FilaProxima>(PROXIMA_VELADA_SQL),
+      sql<FilaFrescura>(FRESCURA_SQL),
+      sql<FilaCatalogo>(CATALOGO_SQL),
+      sql<FilaGuardia>(GUARDIA_SQL),
+      sql<FilaPrediccion>(PREDICCION_SQL),
+      sql<FilaApunte>(REGISTRO_SQL),
+    ]);
 
   const bloques: Bloque[] = [];
 
@@ -329,11 +346,22 @@ export async function obtenerEstado(): Promise<Estado> {
     bloques.push({
       titulo: "¿Siguen entrando datos?",
       subtitulo: "Se mide el dato, no si el cron dijo que había terminado bien",
-      comprobaciones: comprobarFrescura({
-        horasDesdeNoticia: num(frescura.horas_noticia),
-        horasDesdeLuchador: num(frescura.horas_luchador),
-        horasDesdeCombate: num(frescura.horas_combate),
-      }),
+      comprobaciones: [
+        ...comprobarFrescura({
+          horasDesdeNoticia: num(frescura.horas_noticia),
+          horasDesdeLuchador: num(frescura.horas_luchador),
+          horasDesdeCombate: num(frescura.horas_combate),
+        }),
+        // Va en este bloque a propósito: es la misma pregunta que las otras
+        // tres — «¿sigue llegando el dato?» — solo que el dato viene de un
+        // servicio de fuera. El 1-ago estuvo nueve horas muerto sin que el
+        // panel se enterara.
+        ...comprobarPrediccion({
+          horasDesdeElUltimoLatido: prediccion?.horas_desde_el_latido
+            ? num(prediccion.horas_desde_el_latido)
+            : null,
+        }),
+      ],
     });
   }
 
