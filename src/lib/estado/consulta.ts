@@ -73,6 +73,7 @@ type FilaProxima = {
   tiene_prelims: boolean;
   combates_activos: string;
   luchadores: string;
+  sin_ficha: string;
   sin_foto: string;
   dias_que_faltan: string | null;
 };
@@ -86,15 +87,26 @@ const PROXIMA_VELADA_SQL = `
     where e.start_time is not null and e.start_time >= now()
     order by e.start_time asc
     limit 1
-  ), peleadores as (
-    select distinct unnest(array[f.fighter_red_id, f.fighter_blue_id]) as fighter_id
+  ), esquinas as (
+    -- TODAS las esquinas de la cartelera, con ficha o sin ella. Antes se
+    -- filtraba 'fighter_id is not null' aqui mismo, y por eso el panel era
+    -- CIEGO a media pareja: el 1087 salia como 16/17 cuando la cartelera son
+    -- 18 personas, porque el rival del bout 5 no existe en 'fighters'. Un
+    -- combate al que le falta un luchador no es un combate completo, y ademas
+    -- el bucle en vivo no lo escribe (resuelve por nombre contra esa tabla).
+    -- OJO: los backticks estan PROHIBIDOS en estos comentarios; la consulta va
+    -- dentro de un template literal y uno solo la parte por la mitad.
+    select unnest(array[f.fighter_red_id, f.fighter_blue_id]) as fighter_id
     from fights f join proxima p on p.id = f.event_id
     where f.status is distinct from 'cancelled'
+  ), peleadores as (
+    select distinct fighter_id from esquinas where fighter_id is not null
   )
   select p.*,
     (select count(*) from fights f
       where f.event_id = p.id and f.status is distinct from 'cancelled') as combates_activos,
-    (select count(*) from peleadores where fighter_id is not null) as luchadores,
+    (select count(*) from esquinas) as luchadores,
+    (select count(*) from esquinas where fighter_id is null) as sin_ficha,
     (select count(*) from peleadores pe join fighters fi on fi.id = pe.fighter_id
       where fi.full_body_url is null) as sin_foto
   from proxima p`;
@@ -287,6 +299,7 @@ export async function obtenerEstado(): Promise<Estado> {
       tieneHorarioDeLosPrelims: Boolean(proxima.tiene_prelims),
       tieneHoraDeEstelar: proxima.start_time != null,
       sinFoto: num(proxima.sin_foto),
+      sinFicha: num(proxima.sin_ficha),
       luchadores: num(proxima.luchadores),
       diasQueFaltan: dias,
     };

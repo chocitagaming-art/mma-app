@@ -25,8 +25,17 @@ import { buildContentSecurityPolicy } from "@/lib/security-headers";
 //
 // Y por eso /estado NO va en robots.txt: el robots es público, así que un
 // `Disallow: /estado` sería un cartel anunciando la ruta.
-function panelOculto(request: NextRequest): boolean {
-  if (request.nextUrl.pathname !== "/estado") {
+// EL PANEL SON DOS RUTAS, y hasta el 2-ago solo se escondía una. La página
+// `/estado` era indistinguible de una URL inventada, pero su hermana
+// `/api/estado` —la que consume el guardián— se delataba sola con CINCO
+// señales: 404 con `Content-Length: 0`, SIN `Content-Type`, con
+// `X-Matched-Path: /api/estado` y sin `X-Powered-By` ni `Vary`, mientras
+// cualquier `/api` inexistente devuelve el 404 HTML de ~78 KB con
+// `X-Matched-Path: /_not-found`. Un escaneo de rutas encontraba el panel.
+const RUTAS_DEL_PANEL = new Set(["/estado", "/api/estado"]);
+
+function panelSinClave(request: NextRequest): boolean {
+  if (!RUTAS_DEL_PANEL.has(request.nextUrl.pathname)) {
     return false;
   }
   const clave =
@@ -36,6 +45,17 @@ function panelOculto(request: NextRequest): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  // 🪤 EL ENDPOINT SE ESCONDE DISTINTO QUE LA PÁGINA, y da lo mismo lo que
+  // parezca razonable: lo que decide es CONTRA QUÉ se compara. A `/api/estado`
+  // se la compara con otra ruta `/api` inventada, no con una página, así que
+  // hay que devolver lo que Next devuelve para un endpoint que no existe — y
+  // eso NO lleva CSP, porque el proxy no corre sobre `/api`. Ponerle la
+  // cabecera aquí sería crear una señal nueva justo al tapar la vieja, que es
+  // exactamente el error que se cometió con el tamaño del HTML en julio.
+  if (request.nextUrl.pathname === "/api/estado" && panelSinClave(request)) {
+    return NextResponse.rewrite(new URL("/api/_ruta-que-no-existe", request.url));
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV !== "production";
   const csp = buildContentSecurityPolicy({ nonce, isDev });
@@ -53,7 +73,7 @@ export function proxy(request: NextRequest) {
   // respuesta: /estado medía 78 KB y cualquier ruta inexistente 80,6 KB, de
   // forma constante. La ruta quedaba delatada por el tamaño aunque el código y
   // el cuerpo fueran los mismos. Se vio midiéndolo, no razonándolo.
-  const response = panelOculto(request)
+  const response = panelSinClave(request)
     ? NextResponse.rewrite(new URL("/_ruta-que-no-existe", request.url), {
         request: { headers: requestHeaders },
       })
@@ -70,6 +90,10 @@ export const config = {
     // robots.ts/sitemap.ts. Además se ignoran los prefetch de <Link> (cargan payloads
     // RSC, no documentos): recomendación oficial de Next para no forzar render dinámico
     // en cada prefetch.
+    // `/api/estado` entra a proposito, y SOLO ella: es la unica ruta de API que
+    // el proxy tiene que poder reescribir para esconderla. El resto de `/api`
+    // sigue fuera (no son documentos y no necesitan CSP con nonce).
+    "/api/estado",
     {
       source:
         "/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image.png|sitemap.xml|robots.txt|manifest.webmanifest|sw.js).*)",

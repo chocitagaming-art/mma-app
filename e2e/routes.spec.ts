@@ -162,6 +162,45 @@ test("/api/estado no contesta sin la clave", async ({ request }) => {
   expect(r.status(), "el JSON del panel debe esconderse igual que la página").toBe(404);
 });
 
+// Y esconderse NO es solo devolver 404. Hasta el 2-ago la página estaba bien
+// tapada pero su hermana JSON se identificaba sola: devolvía un 404 VACÍO
+// (`Content-Length: 0`, sin `Content-Type`) mientras cualquier otra ruta /api
+// inexistente devuelve el 404 HTML de ~81 KB. Cinco señales, y un escaneo de
+// rutas encontraba el panel. Se compara contra otra ruta /api DE LA MISMA
+// LONGITUD, porque el HTML de "no encontrado" incrusta el path y un nombre más
+// largo cambia el tamaño por sí solo.
+test("/api/estado es indistinguible de otro endpoint que no existe", async ({ request }) => {
+  const oculta = await request.get("/api/estado", { maxRedirects: 0 });
+  const inventada = await request.get("/api/estadz", { maxRedirects: 0 }); // 6 letras, igual que "estado"
+
+  expect(inventada.status()).toBe(404);
+  expect(oculta.status()).toBe(inventada.status());
+
+  const cabecerasQueDelatan = ["content-type", "x-powered-by", "vary", "cache-control"];
+  for (const nombre of cabecerasQueDelatan) {
+    expect(
+      oculta.headers()[nombre],
+      `la cabecera ${nombre} distingue /api/estado de una ruta inventada`,
+    ).toBe(inventada.headers()[nombre]);
+  }
+
+  // La CSP es la trampa fina: el proxy SÍ corre sobre /api/estado, y ponerle la
+  // cabecera sería crear una señal nueva justo al tapar la vieja — el mismo
+  // error que se cometió en julio con el tamaño del HTML.
+  expect(
+    oculta.headers()["content-security-policy"],
+    "una CSP aquí delataría que el proxy trata esta ruta de forma especial",
+  ).toBe(inventada.headers()["content-security-policy"]);
+
+  const cuerpoOculto = await oculta.body();
+  const cuerpoInventado = await inventada.body();
+  expect(
+    cuerpoOculto.length,
+    "el TAMAÑO del cuerpo por sí solo delataba la ruta",
+  ).toBe(cuerpoInventado.length);
+  expect(cuerpoOculto.toString()).not.toContain("El turno de guardia");
+});
+
 // ── El pie, el sitemap y las páginas legales (bloques 2 y 3, 2-ago) ─────────
 // El pie enseñaba 6 de las 15 rutas públicas y el sitemap 8: media web sin un
 // solo enlace interno. Estos tests dejan clavado lo que debe estar Y, sobre

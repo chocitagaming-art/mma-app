@@ -25,9 +25,23 @@ export default function AvisoLegalPage() {
     >
       <LegalSection numero={1} titulo="Quién está detrás">
         <p>
-          MMA STATUS es un <strong>proyecto personal e independiente</strong>, sin
-          ánimo de lucro: no vende nada, no muestra publicidad y no cobra por
-          ningún contenido. Se mantiene por afición a las artes marciales mixtas.
+          MMA STATUS es un <strong>proyecto personal e independiente</strong>,
+          mantenido por afición a las artes marciales mixtas y sin ninguna
+          relación con las promotoras del deporte.{" "}
+          <strong>Hoy todo el contenido es de acceso gratuito.</strong>
+        </p>
+        <p>
+          Si en el futuro se incorporan publicidad, patrocinios, contenido
+          patrocinado o servicios de pago, se{" "}
+          <strong>identificarán claramente como tales</strong> —como exige la ley
+          para cualquier comunicación comercial— y se actualizarán este aviso y la{" "}
+          <Link
+            href="/privacidad"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            política de privacidad
+          </Link>{" "}
+          <em>antes</em> de ponerlo en marcha, no después.
         </p>
         <p>
           Canal de contacto para cualquier asunto, incluidos los legales:{" "}

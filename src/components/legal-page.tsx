@@ -9,7 +9,16 @@ import Link from "next/link";
 // Único sitio donde vive el canal de contacto. Las dos páginas legales y
 // (cuando exista) /contacto deben decir lo mismo, y una dirección repetida a
 // mano en tres ficheros acaba siendo tres direcciones distintas.
-export const CONTACTO_EMAIL = "gpicomanville@gmail.com";
+//
+// ⚠️ Va una dirección DEL DOMINIO, no la personal del dueño: una página legal
+// es pública, la rastrean los recolectores de spam, y un correo personal ahí no
+// se puede retirar una vez indexado. Además, si algún día hay patrocinios, una
+// dirección del dominio es lo que espera quien escriba.
+//
+// REQUISITO: el dominio necesita registros MX que reenvíen a un buzón real. A
+// 2-ago-2026 `mmastatus.app` está en Vercel DNS y NO tiene MX, así que este
+// alias todavía no entrega. Está documentado en la continuación del 2-ago.
+export const CONTACTO_EMAIL = "contacto@mmastatus.app";
 
 export function LegalPage({
   titulo,
