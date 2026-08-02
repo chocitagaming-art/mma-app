@@ -11,6 +11,7 @@ import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { FightVideoPlayer } from "@/components/fight-video-player";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate } from "@/lib/format";
+import { formatFechaVeladaCorta } from "@/lib/ufc-today";
 import { isMainEventFinished, resolveLivePhase } from "@/lib/live-event";
 import { isCancelledLiveStatus, type LiveFightStats } from "@/lib/live-stats";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
@@ -191,7 +192,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <CalendarDays className="size-3.5" />
-              {formatDate(event.eventDate)}
+              {/* Para una velada FUTURA, la fecha del espectador español (el
+                  1087 dice "8 ago" en la sede y su estelar cae a las 02:00 del
+                  domingo 9). Para una PASADA se deja el día civil de la BD, que
+                  es como está indexado el histórico. */}
+              {(isUpcoming ? formatFechaVeladaCorta(event) : null) ??
+                formatDate(event.eventDate)}
             </span>
             {/* Hora local del main card (FE5a): componente client porque la zona
                 horaria del visitante no existe en SSR (fallback UTC al hidratar). */}
@@ -233,12 +239,27 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   el evento ya terminó (estelar con resultado), aunque la ventana
                   horaria 'live' siga abierta. */}
               {livePhase !== "none" && !eventOver ? (
+                /* El punto pulsante afirma «esto está pasando AHORA», y en fase
+                   `pre` (las 24 h previas) no está pasando nada: durante todo
+                   el sábado 8 esta ficha enseñaba un botón rojo palpitante para
+                   una velada que empieza de madrugada. En `pre` va sin punto y
+                   sin prometer directo. */
                 <Link
                   href="/en-vivo"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                  className={
+                    livePhase === "live"
+                      ? "inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                      : "inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+                  }
                 >
-                  <span className="live-dot inline-block size-1.5 rounded-full bg-primary-foreground" />
-                  Ver en directo
+                  {livePhase === "live" ? (
+                    <>
+                      <span className="live-dot inline-block size-1.5 rounded-full bg-primary-foreground" />
+                      Ver en directo
+                    </>
+                  ) : (
+                    "Seguir la velada"
+                  )}
                 </Link>
               ) : null}
               {isUpcoming && event.ticketUrl ? (

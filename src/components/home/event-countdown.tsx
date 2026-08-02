@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { firstSegmentStart } from "@/lib/live-event";
+
 // Cuenta atrás del módulo "Up Next" (FE1): días/horas/min/seg hasta el inicio
 // de la cartelera. SSR-safe con el mismo patrón useSyncExternalStore que
 // event-start-time.tsx: el reloj del cliente no existe en SSR, así que el
@@ -10,29 +12,27 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 // real cada segundo (sin mismatch de hidratación).
 const emptySubscribe = () => () => {};
 
-// Mismo parser que event-start-time.tsx: events.start_time es timestamptz y
-// llega como texto de Postgres ("2026-08-16 01:00:00+00"), no ISO 8601 estricto.
-function parseStartTime(value: string): Date | null {
-  const iso = value.trim().replace(" ", "T");
-  const normalized = /[+-]\d{2}$/.test(iso) ? `${iso}:00` : iso;
-  const date = new Date(normalized);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-// Objetivo de la cuenta atrás: start_time si existe; si no, medianoche UTC del
-// día del evento (mejor una cuenta aproximada que ninguna).
-function targetTime(
-  startTime: string | null,
-  eventDate: string | null,
-): number | null {
-  if (startTime) {
-    const date = parseStartTime(startTime);
-    if (date) {
-      return date.getTime();
-    }
+// Objetivo de la cuenta atrás: el PRIMER TRAMO con horario conocido (early
+// prelims → prelims → estelar); si no hay ninguno, medianoche UTC del día del
+// evento (mejor una cuenta aproximada que ninguna).
+//
+// ANTES contaba siempre al estelar, y ahí estaba "el desfase de 3 h": la fase
+// del evento se decide sobre el primer tramo (`resolveLivePhase`) mientras el
+// usuario miraba un contador que apuntaba tres horas más tarde. Para el 1087
+// eso son las 21:00Z del sábado frente a las 00:00Z del domingo: el contador
+// seguía corriendo con las preliminares ya empezadas.
+function targetTime(times: {
+  startTime: string | null;
+  eventDate: string | null;
+  prelimsTime: string | null;
+  earlyPrelimsTime: string | null;
+}): number | null {
+  const primero = firstSegmentStart(times);
+  if (primero) {
+    return primero.getTime();
   }
-  if (eventDate) {
-    const date = new Date(`${eventDate.slice(0, 10)}T00:00:00Z`);
+  if (times.eventDate) {
+    const date = new Date(`${times.eventDate.slice(0, 10)}T00:00:00Z`);
     if (!Number.isNaN(date.getTime())) {
       return date.getTime();
     }
@@ -43,9 +43,15 @@ function targetTime(
 export function EventCountdown({
   startTime,
   eventDate,
+  prelimsTime = null,
+  earlyPrelimsTime = null,
 }: {
   startTime: string | null;
   eventDate: string | null;
+  // Opcionales para no romper llamadas antiguas: sin ellos la cuenta cae al
+  // estelar, que es el comportamiento de siempre.
+  prelimsTime?: string | null;
+  earlyPrelimsTime?: string | null;
 }) {
   const mounted = useSyncExternalStore(
     emptySubscribe,
@@ -59,7 +65,7 @@ export function EventCountdown({
     return () => clearInterval(id);
   }, []);
 
-  const target = targetTime(startTime, eventDate);
+  const target = targetTime({ startTime, eventDate, prelimsTime, earlyPrelimsTime });
   if (target == null) {
     return null;
   }

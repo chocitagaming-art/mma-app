@@ -32,6 +32,14 @@ export type LiveNowPayload = {
   live: boolean;
   eventId: number | null;
   eventName: string | null;
+  // Días lógicos (Madrid, con corte de madrugada) hasta la velada: 0 = hoy,
+  // 1 = mañana, null = sin fecha. Lo calcula la ruta con `diasHastaLaVelada`.
+  //
+  // POR QUÉ HACE FALTA: `phase === "pre"` significa «faltan menos de 24 h», que
+  // NO es «hoy». El chip y el CTA lo traducían mal, así que el viernes por la
+  // noche anunciaban "Hoy" un evento del sábado. El cálculo vive en la ruta y
+  // no aquí para no importar `ufc-today.ts`, que ya importa este módulo.
+  daysUntil: number | null;
 };
 
 // La ventana "live" se abre un poco antes del primer combate (la gente llega
@@ -41,6 +49,46 @@ const LIVE_EARLY_MARGIN_MS = 30 * 60_000;
 const LIVE_AFTER_MAIN_MS = 8 * 3_600_000;
 // "pre" = el evento arranca dentro de las próximas 24 h.
 const PRE_WINDOW_MS = 24 * 3_600_000;
+
+// ── Qué dicen el chip del header y el CTA de la home ────────────────────────
+//
+// EL BUG QUE ARREGLAN (31-jul, cazado de nuevo el 2-ago): estos dos rótulos se
+// decidían con `payload.live`, así que TODO lo que no fuera "en directo" se
+// etiquetaba como «hoy» — y "no live" incluye la fase `pre`, que son las 24 h
+// previas. El viernes por la noche el header anunciaba "Hoy" un evento del
+// sábado, mientras /ufc-hoy decía "dentro de 1 día": la web se contradecía a sí
+// misma. Ahora el "cuándo" sale de `daysUntil`, que usa el día lógico de
+// Madrid, el MISMO criterio que /ufc-hoy.
+//
+// `daysUntil` puede ser null (evento sin fecha) o >1 (la fase `pre` no llega
+// tan lejos, pero el chip también se pinta desde caché de sesión): en los dos
+// casos se cae a un rótulo que no afirma ningún día.
+
+export function etiquetaChipDirecto(live: boolean, daysUntil: number | null): string {
+  if (live) {
+    return "En vivo";
+  }
+  if (daysUntil === 0) {
+    return "Hoy";
+  }
+  if (daysUntil === 1) {
+    return "Mañana";
+  }
+  return "Pronto";
+}
+
+export function etiquetaCtaDirecto(live: boolean, daysUntil: number | null): string {
+  if (live) {
+    return "Ver en directo";
+  }
+  if (daysUntil === 0) {
+    return "Ver en directo (hoy)";
+  }
+  if (daysUntil === 1) {
+    return "Ver en directo (mañana)";
+  }
+  return "Ver en directo";
+}
 
 // Primer tramo con horario conocido: early prelims → prelims → main card.
 export function firstSegmentStart(times: LiveEventTimes): Date | null {

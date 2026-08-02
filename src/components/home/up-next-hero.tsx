@@ -10,6 +10,7 @@ import { EventCountdown } from "@/components/home/event-countdown";
 import { LiveCtaButton } from "@/components/live/live-cta-button";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatRecord, formatWeightClass } from "@/lib/format";
+import { formatFechaVeladaCorta } from "@/lib/ufc-today";
 import { cn } from "@/lib/utils";
 import type { NextEventHero, NextEventHeroFighter } from "@/lib/types";
 
@@ -131,10 +132,20 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <CalendarDays className="size-3.5" />
-          {formatDate(event.eventDate)}
+          {/* La fecha del ESPECTADOR, no la de la sede. `event_date` dice
+              "8 ago" para el 1087 porque en Las Vegas es sábado, pero el
+              estelar cae a las 02:00 del domingo en Madrid: la cuenta atrás de
+              abajo expiraba el 9 junto a un "8 ago" — 24 h de contradicción. */}
+          {formatFechaVeladaCorta(event) ?? formatDate(event.eventDate)}
         </span>
-        {/* Hora local del visitante (FE5a): client component, fallback UTC en SSR. */}
-        <EventStartTime startTime={event.startTime} />
+        {/* Hora local del visitante (FE5a): client component, fallback UTC en SSR.
+            Va el PRIMER tramo, no el estelar: la fecha de al lado es el día
+            lógico de la velada, y una hora del día siguiente pegada a ella se
+            lee mal. Sin prelims en la BD cae al estelar, como toda la vida. */}
+        <EventStartTime
+          startTime={event.earlyPrelimsTime ?? event.prelimsTime ?? event.startTime}
+          title="Comienzo de la velada, hora local (el estelar es más tarde)"
+        />
         {event.location ? (
           <span className="flex items-center gap-1.5">
             <MapPin className="size-3.5" />
@@ -163,7 +174,12 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
         </>
       ) : null}
 
-      <EventCountdown startTime={event.startTime} eventDate={event.eventDate} />
+      <EventCountdown
+        startTime={event.startTime}
+        eventDate={event.eventDate}
+        prelimsTime={event.prelimsTime}
+        earlyPrelimsTime={event.earlyPrelimsTime}
+      />
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         {/* T3-A (pedido del dueño): cuando el evento se aproxima o está en

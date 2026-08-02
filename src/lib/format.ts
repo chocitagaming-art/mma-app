@@ -210,16 +210,30 @@ export function formatMethod(method: string | null): string {
   return method;
 }
 
+// `timeZone: "UTC"` NO es un detalle: sin él, un "2026-08-08" se parsea como
+// medianoche UTC y se formatea con el huso del PROCESO, así que al oeste de
+// Greenwich retrocedía un día. El megatest corre en Europe/Madrid y Vercel en
+// UTC, de modo que el portátil y producción podían imprimir fechas distintas
+// para el mismo dato. Es el mismo fallo que publicó mal la fecha de nacimiento
+// de 1.515 luchadores en julio, en otra superficie.
+//
+// ⚠️ Esto fecha un DÍA CIVIL tal cual viene de la BD (`event_date`,
+// `octagon_debut`…). Para saber qué día ve un espectador español una velada que
+// cruza la medianoche, NO uses esto: usa `formatFechaVeladaCorta` de
+// `ufc-today.ts`, que deriva la fecha del primer tramo y del reloj de Madrid.
+const FECHA_CIVIL = new Intl.DateTimeFormat("es", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 export function formatDate(date: string | null) {
   if (!date) {
     return "Por definir";
   }
 
-  return new Intl.DateTimeFormat("es", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(date));
+  return FECHA_CIVIL.format(new Date(date));
 }
 
 // Fecha relativa en español ("hace 6 días", "ayer", "hace 2 semanas"…) para la

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useLiveNow } from "@/components/live/use-live-now";
+import { etiquetaChipDirecto } from "@/lib/live-event";
 
 // T3-A: chip "EN VIVO/HOY" del header. Se pinta en fase "live" y también en
 // "pre" (evento en <24 h) para que /en-vivo se descubra antes de la velada.
@@ -24,7 +25,7 @@ export function LiveNavChip() {
       className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-2.5 py-1 font-display text-xs font-bold uppercase tracking-wide text-primary transition-colors hover:bg-primary/20 lg:hidden xl:inline-flex"
     >
       <span className="live-dot inline-block size-1.5 rounded-full bg-primary shadow-[0_0_8px_1px_var(--primary)]" />
-      {payload.live ? "En vivo" : "Hoy"}
+      {etiquetaChipDirecto(payload.live, payload.daysUntil ?? null)}
     </Link>
   );
 }

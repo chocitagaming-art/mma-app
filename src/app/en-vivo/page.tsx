@@ -13,6 +13,7 @@ import { EventCountdown } from "@/components/home/event-countdown";
 import { FightVideoPlayer } from "@/components/fight-video-player";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate, formatMethod } from "@/lib/format";
+import { diasHastaLaVelada, formatFechaVeladaCorta } from "@/lib/ufc-today";
 import {
   computeBoutStates,
   isMainEventFinished,
@@ -153,6 +154,10 @@ export default async function LivePage() {
   // es estado vacío.
   const over = event ? isMainEventFinished(event.bouts, liveFinishedIds) : false;
 
+  // La fecha que ve el espectador español, no la de la sede: para el 1087,
+  // `event_date` dice 8-ago y su estelar cae a las 02:00 del domingo 9.
+  const fechaProxima = candidate ? formatFechaVeladaCorta(candidate) : null;
+
   // Sin candidato/detalle, o fase 'none' que NO sea un evento recién acabado:
   // estado vacío con el siguiente evento como invitación a actuar.
   if (!candidate || !event || (phase === "none" && !over)) {
@@ -175,7 +180,7 @@ export default async function LivePage() {
               className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
             >
               Próximo evento: {candidate.name}
-              {candidate.eventDate ? ` · ${formatDate(candidate.eventDate)}` : ""}
+              {fechaProxima ? ` · ${fechaProxima}` : ""}
             </Link>
           ) : (
             <Link
@@ -191,6 +196,17 @@ export default async function LivePage() {
   }
 
   const live = phase === "live" && !over;
+  // "Evento de hoy" se pintaba en TODA la fase `pre`, que son las 24 h previas:
+  // el viernes por la noche esta página rotulaba como "de hoy" la velada del
+  // sábado, mientras /ufc-hoy decía "dentro de 1 día". Mismo criterio que el
+  // chip del header y que /ufc-hoy: el día lógico de Madrid.
+  const diasHastaLaProxima = diasHastaLaVelada(candidate, new Date());
+  const rotuloDeFase =
+    diasHastaLaProxima === 0
+      ? "Evento de hoy"
+      : diasHastaLaProxima === 1
+        ? "Evento de mañana"
+        : "Próximo evento";
   const sections = groupBoutsBySegment(event.bouts);
   const states = computeBoutStates(
     // Evento terminado: nadie "En curso" aunque la ventana horaria siga abierta.
@@ -242,7 +258,7 @@ export default async function LivePage() {
         {over ? null : (
           <span className="live-dot inline-block size-2 rounded-full bg-primary shadow-[0_0_12px_2px_var(--primary)]" />
         )}
-        {over ? "Finalizado" : live ? "En directo" : "Evento de hoy"}
+        {over ? "Finalizado" : live ? "En directo" : rotuloDeFase}
       </p>
       <h1 className="mt-1 font-display text-3xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-4xl">
         {event.name}
@@ -251,7 +267,7 @@ export default async function LivePage() {
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <CalendarDays className="size-3.5" />
-          {formatDate(event.eventDate)}
+          {fechaProxima ?? formatDate(event.eventDate)}
         </span>
         <EventStartTime startTime={event.startTime} />
         {event.location ? (

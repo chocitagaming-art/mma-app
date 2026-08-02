@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeBoutStates,
+  etiquetaChipDirecto,
+  etiquetaCtaDirecto,
   firstSegmentStart,
   isMainEventFinished,
   resolveLivePhase,
@@ -433,5 +435,46 @@ describe("isMainEventFinished", () => {
   it("el menor bout_order presente manda (las canceladas ya vienen excluidas)", () => {
     const card = [bout(2, 2, "main", true), bout(3, 3, "prelims")];
     expect(isMainEventFinished(card)).toBe(true);
+  });
+});
+
+// ── Los rótulos del chip y del CTA (arreglo del 2-ago) ──────────────────────
+// Se decidían con `payload.live`, así que TODO lo que no fuera directo se
+// etiquetaba "hoy" — y eso incluye la fase `pre`, que son las 24 h previas.
+
+describe("etiquetaChipDirecto", () => {
+  it("en directo manda sobre cualquier día", () => {
+    expect(etiquetaChipDirecto(true, 0)).toBe("En vivo");
+    expect(etiquetaChipDirecto(true, 1)).toBe("En vivo");
+    expect(etiquetaChipDirecto(true, null)).toBe("En vivo");
+  });
+
+  it("hoy dice Hoy", () => {
+    expect(etiquetaChipDirecto(false, 0)).toBe("Hoy");
+  });
+
+  it("EL BUG: mañana ya no dice Hoy", () => {
+    expect(etiquetaChipDirecto(false, 1)).toBe("Mañana");
+  });
+
+  it("sin día conocido no afirma ninguno", () => {
+    expect(etiquetaChipDirecto(false, null)).toBe("Pronto");
+    expect(etiquetaChipDirecto(false, 3)).toBe("Pronto");
+  });
+});
+
+describe("etiquetaCtaDirecto", () => {
+  it("en directo no lleva coletilla de día", () => {
+    expect(etiquetaCtaDirecto(true, 0)).toBe("Ver en directo");
+  });
+
+  it("hoy y mañana llevan la suya", () => {
+    expect(etiquetaCtaDirecto(false, 0)).toBe("Ver en directo (hoy)");
+    expect(etiquetaCtaDirecto(false, 1)).toBe("Ver en directo (mañana)");
+  });
+
+  it("sin día conocido, ninguna coletilla en vez de una mentira", () => {
+    expect(etiquetaCtaDirecto(false, null)).toBe("Ver en directo");
+    expect(etiquetaCtaDirecto(false, 5)).toBe("Ver en directo");
   });
 });

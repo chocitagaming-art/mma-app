@@ -20,7 +20,17 @@ function parseStartTime(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function EventStartTime({ startTime }: { startTime: string | null }) {
+export function EventStartTime({
+  startTime,
+  title = "Inicio de la cartelera estelar (hora local)",
+}: {
+  startTime: string | null;
+  // Quién pinta esta hora decide a qué tramo corresponde. El hero de la home
+  // pasa el PRIMER tramo, no el estelar: junto a la fecha "8 ago" un "02:00
+  // CEST" (que es del día 9) se lee como "las 2 de la madrugada del 8", y ahí
+  // había 24 h de error para el que se plantara delante de la tele.
+  title?: string;
+}) {
   const mounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -42,10 +52,7 @@ export function EventStartTime({ startTime }: { startTime: string | null }) {
   }).format(date);
 
   return (
-    <span
-      className="flex items-center gap-1.5"
-      title="Inicio de la cartelera estelar (hora local)"
-    >
+    <span className="flex items-center gap-1.5" title={title}>
       <Clock className="size-3.5" />
       {formatted}
     </span>
