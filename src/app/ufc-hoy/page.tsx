@@ -191,7 +191,7 @@ export default async function UfcHoyPage() {
               href="/en-vivo"
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
             >
-              <span className="live-dot inline-block size-1.5 rounded-full bg-primary-foreground" />
+              <span className="live-dot inline-block size-1.5 rounded-full bg-white" />
               Seguirlo en directo
             </Link>
           ) : null}

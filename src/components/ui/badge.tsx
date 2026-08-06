@@ -9,7 +9,10 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        // Mismo motivo que en button.tsx: con la tinta, oscurecer el hover en
+        // modo oscuro tira el contraste por debajo de AA. En oscuro se aclara.
+        default:
+          "bg-primary text-primary-foreground [a]:hover:bg-primary/80 dark:[a]:hover:bg-[color-mix(in_oklab,var(--primary),white_10%)]",
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:

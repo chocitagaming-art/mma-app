@@ -117,7 +117,13 @@
   --popover: #161619;
   --popover-foreground: #fafafa;
   --primary: #f5333a;
-  --primary-foreground: #ffffff;
+  /* Tinta, no blanco, y NO es capricho. MEDIDO: blanco sobre #f5333a da 3,877:1
+     y deja 13 nodos de texto en rojo solo en la home. Y NO se arregla
+     oscureciendo el rojo: blanco encima exige Y <= 0,183333 y `text-primary`
+     sobre #0b0b0d (147 usos) exige Y >= 0,190283. La banda esta VACIA por
+     0,006950 — no es dificil, es imposible. Con tinta el mismo par da 5,073:1.
+     El contrato vive en src/lib/color-contract.ts y su bateria lo vigila. */
+  --primary-foreground: #0b0b0d;
   --secondary: #1f1f23;
   --secondary-foreground: #fafafa;
   --muted: #1f1f23;

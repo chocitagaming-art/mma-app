@@ -8,7 +8,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // En OSCURO el hover ACLARA en vez de oscurecer, y es obligatorio, no
+        // estético: con `--primary-foreground` en tinta, `bg-primary/80` compone
+        // #c62b31 sobre #0b0b0d y ahí la tinta cae a 3,555:1. Mezclando 10% de
+        // blanco da 5,944:1, y ΔE00 4,853 contra el reposo (o sea, se nota).
+        // En CLARO no se toca: /80 compone #da3939 y el blanco da 4,532:1.
+        default:
+          "bg-primary text-primary-foreground hover:bg-primary/80 dark:hover:bg-[color-mix(in_oklab,var(--primary),white_10%)]",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

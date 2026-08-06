@@ -252,7 +252,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 >
                   {livePhase === "live" ? (
                     <>
-                      <span className="live-dot inline-block size-1.5 rounded-full bg-primary-foreground" />
+                      <span className="live-dot inline-block size-1.5 rounded-full bg-white" />
                       Ver en directo
                     </>
                   ) : (

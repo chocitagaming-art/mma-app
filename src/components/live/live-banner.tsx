@@ -19,7 +19,7 @@ export function LiveBanner() {
       href="/en-vivo"
       className="group flex items-center justify-center gap-2.5 border-b border-border bg-primary px-4 py-2.5 text-primary-foreground transition-opacity hover:opacity-95"
     >
-      <span className="live-dot inline-block size-2 rounded-full bg-primary-foreground shadow-[0_0_10px_2px_rgba(255,255,255,0.6)]" />
+      <span className="live-dot inline-block size-2 rounded-full bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.6)]" />
       <span className="font-display text-sm font-extrabold uppercase tracking-wide">
         {payload.eventName ?? "Evento"} · en directo
       </span>
