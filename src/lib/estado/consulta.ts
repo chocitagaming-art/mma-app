@@ -6,6 +6,7 @@ import {
   comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
+  contarSinFotoVisible,
   descontarFotosLocales,
   peorNivel,
   type Bloque,
@@ -13,6 +14,7 @@ import {
   type DatosVelada,
   type Nivel,
 } from "@/lib/estado/veredicto";
+import { localBody } from "@/lib/local-bodies";
 import { localHeadshot } from "@/lib/local-headshots";
 
 // Las consultas del panel de estado. Todo SELECT.
@@ -77,7 +79,12 @@ type FilaProxima = {
   combates_activos: string;
   luchadores: string;
   sin_ficha: string;
-  sin_foto: string;
+  /**
+   * Solo `full_body_url is null`. NO es «se ve un hueco»: la web degrada al
+   * standing y al headshot. Se conserva porque distingue «foto de estudio de
+   * cuerpo entero» de «cualquier foto», pero el panel usa `CARTELERA_SQL`.
+   */
+  sin_foto_cuerpo_en_la_base: string;
   dias_que_faltan: string | null;
 };
 
@@ -111,8 +118,39 @@ const PROXIMA_VELADA_SQL = `
     (select count(*) from esquinas) as luchadores,
     (select count(*) from esquinas where fighter_id is null) as sin_ficha,
     (select count(*) from peleadores pe join fighters fi on fi.id = pe.fighter_id
-      where fi.full_body_url is null) as sin_foto
+      where fi.full_body_url is null) as sin_foto_cuerpo_en_la_base
   from proxima p`;
+
+type FilaCartelera = {
+  name: string | null;
+  tiene_cuerpo: boolean;
+  tiene_cara: boolean;
+};
+
+// Las esquinas de la proxima cartelera, con lo que la BASE sabe de su imagen.
+//
+// Va aparte del contador de arriba a proposito: 'full_body_url is null' NO
+// significa que el visitante vea un hueco. La web degrada al standing y de ahi
+// al headshot antes de rendirse, y encima mira 'local-bodies' y
+// 'local-headshots'. Contar solo esa columna daba 5 rojos el 6-ago con los 24
+// saliendo CON foto en pantalla. Ver 'contarSinFotoVisible'.
+// OJO: los backticks estan PROHIBIDOS en estos comentarios; la consulta va
+// dentro de un template literal y uno solo la parte por la mitad.
+const CARTELERA_SQL = `
+  with proxima as (
+    select id from events
+     where start_time is not null and start_time >= now()
+     order by start_time asc limit 1
+  ), esquinas as (
+    select unnest(array[f.fighter_red_id, f.fighter_blue_id]) as fighter_id
+      from fights f join proxima p on p.id = f.event_id
+     where f.status is distinct from 'cancelled'
+  )
+  select fi.name,
+         (fi.full_body_url is not null or fi.standing_body_url is not null) as tiene_cuerpo,
+         (fi.headshot_url is not null) as tiene_cara
+    from esquinas es
+    left join fighters fi on fi.id = es.fighter_id`;
 
 type FilaFrescura = {
   horas_noticia: string | null;
@@ -297,6 +335,7 @@ export async function obtenerEstado(): Promise<Estado> {
     [prediccion],
     registro,
     sinFoto,
+    cartelera,
   ] = await Promise.all([
     sql<FilaVelada>(ULTIMA_VELADA_SQL),
     sql<FilaProxima>(PROXIMA_VELADA_SQL),
@@ -306,6 +345,7 @@ export async function obtenerEstado(): Promise<Estado> {
     sql<FilaPrediccion>(PREDICCION_SQL),
     sql<FilaApunte>(REGISTRO_SQL),
     sql<FilaSinFoto>(SIN_FOTO_SQL),
+    sql<FilaCartelera>(CARTELERA_SQL),
   ]);
 
   const bloques: Bloque[] = [];
@@ -333,7 +373,16 @@ export async function obtenerEstado(): Promise<Estado> {
       combatesActivos: num(proxima.combates_activos),
       tieneHorarioDeLosPrelims: Boolean(proxima.tiene_prelims),
       tieneHoraDeEstelar: proxima.start_time != null,
-      sinFoto: num(proxima.sin_foto),
+      // NO es `sin_foto_cuerpo_en_la_base`: eso cuenta una columna, no lo que
+      // se ve. Aquí se cuenta a quien la web no puede pintar de NINGUNA manera.
+      sinFoto: contarSinFotoVisible(
+        (cartelera ?? []).map((f) => ({
+          nombre: f.name ?? "",
+          tieneCuerpo: Boolean(f.tiene_cuerpo),
+          tieneCara: Boolean(f.tiene_cara),
+        })),
+        (nombre) => localHeadshot(nombre) !== null || localBody(nombre) !== null,
+      ),
       sinFicha: num(proxima.sin_ficha),
       luchadores: num(proxima.luchadores),
       diasQueFaltan: dias,

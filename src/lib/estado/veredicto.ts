@@ -167,7 +167,11 @@ export type DatosProxima = {
   /** Con `prelims_time` y `early_prelims_time` a NULL, el arranque se deduce. */
   tieneHorarioDeLosPrelims: boolean;
   tieneHoraDeEstelar: boolean;
-  /** Luchadores de la cartelera sin foto de cuerpo entero. */
+  /**
+   * Luchadores de la cartelera a los que la web no puede pintar NINGUNA foto —
+   * ni cuerpo, ni standing, ni cara, ni local. Solo esos salen con silueta.
+   * Lo calcula `contarSinFotoVisible`, no una columna suelta de la base.
+   */
   sinFoto: number;
   /** Esquinas de la cartelera SIN ficha en `fighters`: ni foto, ni historial. */
   sinFicha: number;
@@ -238,7 +242,7 @@ export function comprobarProxima(d: DatosProxima): Comprobacion[] {
     nivel: sinFotoTotal === 0 ? "ok" : inminente ? "mal" : "aviso",
     detalle:
       sinFotoTotal > 0
-        ? `${sinFotoTotal} sin foto de cuerpo entero. Si ufc.com no tiene ficha suya, hay que meterla a mano.`
+        ? `${sinFotoTotal} a los que la web no puede pintar NINGUNA foto: saldrán con silueta. Se arregla con 'add_manual_fighter --photo'.`
         : undefined,
   });
 
@@ -568,6 +572,49 @@ export function descontarFotosLocales(
     sinNingunaFotoYCompiten: pendientes.size,
     diasHastaElPrimeroSinFoto: dias.length > 0 ? Math.min(...dias) : null,
   };
+}
+
+/** Una esquina de la cartelera próxima, con lo que la BASE sabe de su imagen. */
+export type FilaDeCartelera = {
+  nombre: string;
+  /** `full_body_url` o `standing_body_url`. */
+  tieneCuerpo: boolean;
+  /** `headshot_url`. */
+  tieneCara: boolean;
+};
+
+// «Fotos de los que pelean» contaba la columna equivocada.
+//
+// Contaba `full_body_url is null` y decía «N sin foto de cuerpo entero». Pero la
+// web NO deja un hueco cuando falta esa columna: DEGRADA. Lo dice el comentario
+// de `fighter-full-body.tsx`: «si la URL elegida es NULL o falla la carga,
+// degradamos al headshot (que a su vez cae a su silueta/iniciales)», y antes de
+// todo eso mira `local-bodies.ts`. La cadena real es:
+//
+//   localBody → full_body → standing → headshot → localHeadshot → silueta
+//
+// Medido el 6-ago con un navegador sobre `/eventos/1087`: el panel cantaba
+// «19/24, 5 sin foto» y en pantalla salían los 24 CON foto, ninguno con silueta.
+// El dueño lo vio mirando su web; el panel llevaba el día entero en rojo por ello.
+//
+// Así que lo que se cuenta es lo único que le importa a quien mira: **a cuántos
+// no puede pintarles la web ninguna foto**. Solo eso es una silueta de verdad.
+export function contarSinFotoVisible(
+  filas: FilaDeCartelera[],
+  tieneFotoLocal: (nombre: string) => boolean,
+): number {
+  // Por PERSONA, no por fila. Y las esquinas sin nombre cuentan: no se puede
+  // afirmar que tengan foto, y `sinFicha` ya las avisa por su cuenta.
+  const sinNada = new Set<string>();
+
+  for (const [i, f] of filas.entries()) {
+    if (f.tieneCuerpo || f.tieneCara) continue;
+    const clave = f.nombre.trim().toLowerCase();
+    if (clave !== "" && tieneFotoLocal(f.nombre)) continue;
+    sinNada.add(clave === "" ? `__sin-nombre-${i}` : clave);
+  }
+
+  return sinNada.size;
 }
 
 export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {

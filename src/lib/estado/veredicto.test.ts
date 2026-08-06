@@ -6,10 +6,12 @@ import {
   comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
+  contarSinFotoVisible,
   descontarFotosLocales,
   peorNivel,
   type DatosProxima,
   type DatosVelada,
+  type FilaDeCartelera,
   type FilaSinFotoEnLaBase,
 } from "@/lib/estado/veredicto";
 
@@ -400,6 +402,90 @@ describe("descontar las fotos que ya están puestas a mano", () => {
     );
     expect(r.sinNingunaFotoYCompiten).toBe(1);
     expect(r.diasHastaElPrimeroSinFoto).toBeNull();
+  });
+});
+
+// ── «Fotos de los que pelean» medía la columna equivocada (6-ago) ───────────
+//
+// La comprobación contaba `full_body_url is null` y decía «N sin foto de cuerpo
+// entero». Pero la web NO enseña un hueco cuando falta esa columna: degrada.
+// `fighter-full-body.tsx` lo dice en su propio comentario — «si la URL elegida es
+// NULL o falla la carga, degradamos al headshot (que a su vez cae a su
+// silueta/iniciales)» — y antes de eso mira `local-bodies.ts`.
+//
+// La cadena real es:  localBody → full_body → standing → headshot → localHeadshot
+//                     → silueta
+//
+// Medido el 6-ago con un navegador de verdad sobre `/eventos/1087`: el panel
+// cantaba «19/24, 5 sin foto» y en pantalla **los 24 salían con foto**, ninguno
+// con silueta (Canuto, Rosas, Montanha y Miranda por `/fighters/*.jpg`, y Billy
+// Ray Goff por su headshot de ESPN). Otra alarma que no se podía apagar, y esta
+// vez se descubrió mirando la página, no leyendo el código.
+//
+// Lo que hay que contar es: **a cuántos NO puede pintarles la web ninguna foto**.
+describe("contar solo a quien la web no puede pintar de ninguna manera", () => {
+  const conFotoLocal = new Set(["gigi canuto", "richie miranda"]);
+  const tieneFotoLocal = (n: string) => conFotoLocal.has(n.trim().toLowerCase());
+
+  const enCartelera = (
+    nombre: string,
+    cuerpo: boolean,
+    cara: boolean,
+  ): FilaDeCartelera => ({ nombre, tieneCuerpo: cuerpo, tieneCara: cara });
+
+  it("una cartelera entera con foto de cuerpo no cuenta a nadie", () => {
+    const filas = [
+      enCartelera("Mateusz Gamrot", true, true),
+      enCartelera("Quillan Salkilld", true, true),
+    ];
+    expect(contarSinFotoVisible(filas, tieneFotoLocal)).toBe(0);
+  });
+
+  it("🔴 el caso real del 1087: sin cuerpo pero CON cara, la web pinta la cara", () => {
+    // Billy Ray Goff: `full_body_url` a NULL y headshot de ESPN. En pantalla
+    // sale su foto. Contarlo como «sin foto» es cantar un fallo que no existe.
+    expect(contarSinFotoVisible([enCartelera("Billy Ray Goff", false, true)], tieneFotoLocal)).toBe(
+      0,
+    );
+  });
+
+  it("sin cuerpo y sin cara, pero con foto puesta a mano, tampoco cuenta", () => {
+    // Los cuatro debutantes: la BD los ve a cero, y aun así la web los pinta
+    // porque están en `local-headshots.ts`.
+    const filas = [
+      enCartelera("Gigi Canuto", false, false),
+      enCartelera("Richie Miranda", false, false),
+    ];
+    expect(contarSinFotoVisible(filas, tieneFotoLocal)).toBe(0);
+  });
+
+  it("sin nada de nada SÍ cuenta: eso es una silueta de verdad", () => {
+    const filas = [
+      enCartelera("Fulano Sin Nada", false, false),
+      enCartelera("Mengano Sin Nada", false, false),
+      enCartelera("Gigi Canuto", false, false),
+    ];
+    expect(contarSinFotoVisible(filas, tieneFotoLocal)).toBe(2);
+  });
+
+  it("el nombre se normaliza igual que en local-headshots", () => {
+    expect(
+      contarSinFotoVisible([enCartelera("  GIGI CANUTO ", false, false)], tieneFotoLocal),
+    ).toBe(0);
+  });
+
+  it("una esquina sin nombre no se puede resolver: cuenta", () => {
+    // Un hueco de cartelera sin ficha. `sinFicha` ya lo avisa por su lado, pero
+    // aquí no se puede afirmar que tenga foto, así que no se descuenta.
+    expect(contarSinFotoVisible([enCartelera("", false, false)], tieneFotoLocal)).toBe(1);
+  });
+
+  it("cuenta por persona, no por fila", () => {
+    const filas = [
+      enCartelera("Fulano Sin Nada", false, false),
+      enCartelera("Fulano Sin Nada", false, false),
+    ];
+    expect(contarSinFotoVisible(filas, tieneFotoLocal)).toBe(1);
   });
 });
 
