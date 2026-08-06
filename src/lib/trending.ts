@@ -32,30 +32,102 @@ function itemTime(item: TrendingItem): number {
   return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 }
 
+// Ordenar SOLO por fecha dejaba que una tanda de vídeos subidos a la vez
+// (ufcespanol sube cinco de golpe) copara la cabecera: medido en producción,
+// los cinco primeros del feed eran vídeos y la primera noticia caía al 6.º.
+// Dos reglas puras y deterministas sobre el mismo material, sin tocar fechas
+// ni descartar nada (decisión del dueño, 6-ago: «12 h y tope de 2 vídeos»):
+//   1) BONUS: 12 h de plus a las noticias AL PUNTUAR. La fecha que se PINTA no
+//      cambia. Una noticia hasta 12 h más vieja que un vídeo lo adelanta;
+//      pasado ese margen vuelve a mandar la fecha.
+//   2) TOPE: nunca más de 2 vídeos seguidos mientras queden noticias con las
+//      que separar. El feed sigue MEZCLADO —es la misma lista con un separador
+//      forzado—, no dos bloques.
+export const NEWS_BOOST_MS = 12 * 60 * 60 * 1000;
+export const MAX_CONSECUTIVE_VIDEOS = 2;
+
+// El bonus solo mueve la PUNTUACIÓN. -Infinity + bonus sigue siendo -Infinity:
+// una noticia sin fecha (o con fecha rota) NO sube, se queda al fondo igual
+// que antes.
+function itemScore(item: TrendingItem): number {
+  const time = itemTime(item);
+  return item.type === "news" ? time + NEWS_BOOST_MS : time;
+}
+
+// Comparador desc explícito: `b - a` daría NaN con dos -Infinity (dos fechas
+// nulas). El motor trata ese NaN como 0 y el sort estable las deja como
+// estaban, que es justo lo que queremos, pero mejor escribirlo que heredarlo
+// por accidente.
+function compareByScoreDesc(a: TrendingItem, b: TrendingItem): number {
+  const scoreA = itemScore(a);
+  const scoreB = itemScore(b);
+  if (scoreA === scoreB) {
+    return 0;
+  }
+  return scoreB > scoreA ? 1 : -1;
+}
+
 export function mergeTrendingItems(
   news: NewsArticle[],
   videos: YouTubeVideo[],
 ): TrendingItem[] {
-  const items: TrendingItem[] = [
-    ...news.map(
+  // .map() ya devuelve un array nuevo: el .sort() de abajo ordena LA COPIA,
+  // nunca `news` ni `videos` (hay test que lo exige). sort es estable, así que
+  // a puntuación igual se conserva el orden con el que llegó cada fuente.
+  const newsQueue: TrendingItem[] = news
+    .map(
       (article): TrendingItem => ({
         type: "news",
         date: normalizeDateValue(article.publishedAt),
         article,
       }),
-    ),
-    ...videos.map(
+    )
+    .sort(compareByScoreDesc);
+  const videoQueue: TrendingItem[] = videos
+    .map(
       (video): TrendingItem => ({
         type: "video",
         date: normalizeDateValue(video.publishedAt),
         video,
       }),
-    ),
-  ];
-  // sort es estable: a fecha igual se conserva noticia antes que vídeo y el
-  // orden interno que ya traía cada fuente (ambas llegan desc). Fechas
-  // nulas/rotas al fondo.
-  return items.sort((a, b) => itemTime(b) - itemTime(a));
+    )
+    .sort(compareByScoreDesc);
+
+  // Fusión por puntuación con dos punteros. Dentro de cada cola el orden
+  // relativo es intocable, así que la salida es DETERMINISTA: mismas entradas
+  // → mismo orden en cada recarga. Y no se descarta ni se duplica ningún ítem:
+  // «Cargar más» pagina con slice(0, N) sobre esta misma lista.
+  const merged: TrendingItem[] = [];
+  let newsIndex = 0;
+  let videoIndex = 0;
+  let videoRun = 0; // vídeos consecutivos ya emitidos
+
+  while (newsIndex < newsQueue.length || videoIndex < videoQueue.length) {
+    const hasNews = newsIndex < newsQueue.length;
+    const hasVideo = videoIndex < videoQueue.length;
+    // Se coge vídeo cuando queda vídeo y, o bien ya no quedan noticias —sin
+    // noticias NO HAY con qué separar, así que los vídeos sobrantes salen
+    // seguidos al final: es la degradación consciente del tope—, o bien aún no
+    // se ha llegado al tope y su puntuación gana. Empate → noticia.
+    const takeVideo =
+      hasVideo &&
+      (!hasNews ||
+        (videoRun < MAX_CONSECUTIVE_VIDEOS &&
+          itemScore(videoQueue[videoIndex]) > itemScore(newsQueue[newsIndex])));
+
+    if (takeVideo) {
+      merged.push(videoQueue[videoIndex]);
+      videoIndex += 1;
+      videoRun += 1;
+    } else {
+      // Si no queda vídeo, la condición del while garantiza que hay noticia.
+      merged.push(newsQueue[newsIndex]);
+      newsIndex += 1;
+      videoRun = 0;
+    }
+  }
+
+  return merged;
 }
 
 // Cuántos ítems enseña /tendencias: "Cargar más" enlaza a ?mostrar=N+PASO
