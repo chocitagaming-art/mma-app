@@ -4,13 +4,19 @@
 // Corre en orden las puertas de calidad de AMBOS repos y agrega un veredicto:
 //   mma-app     -> tsc --noEmit, eslint, vitest
 //   mma-ingesta -> pytest, ruff --select F (bugs reales)
-//   mma-app     -> playwright E2E (16 rutas x 3 viewports x 2 temas + 9 APIs).
+//   mma-app     -> playwright E2E (20 rutas x 3 viewports x 2 temas + 11 APIs).
+//                  Cifras medidas el 6-ago-2026 sobre 6e377c8: las 20 son el
+//                  array ROUTES de e2e/routes.spec.ts, el 3 x 2 son VIEWPORTS x
+//                  THEMES de playwright.config.ts y las 11 son las rutas /api
+//                  distintas que toca e2e/api.spec.ts.
 //                  El build de producción lo hace el webServer de playwright, así
 //                  que si `next build` fallara, el E2E falla en claro.
 //
 // La suite E2E pega a Neon en runtime -> exporta DATABASE_URL antes de correr.
 // Uso:  DATABASE_URL=... node scripts/megatest.mjs
-//       (o PLAYWRIGHT_BASE_URL=http://localhost:3400 para reusar un server vivo)
+//       (o PLAYWRIGHT_BASE_URL=http://localhost:3100 para reusar un server vivo;
+//        el 3100 es el puerto del webServer de playwright.config.ts, comprobado
+//        el 6-ago-2026 sobre 6e377c8)
 //
 // Modo rápido:  node scripts/megatest.mjs --rapido
 //       Salta la puerta E2E, que es la que se lleva ~90% del tiempo. Pensado
@@ -52,7 +58,7 @@ if (!RAPIDO && !process.env.DATABASE_URL && !process.env.PLAYWRIGHT_BASE_URL) {
     "\n\x1b[31m✗ Falta DATABASE_URL.\x1b[0m La puerta E2E levanta un server que lee de Neon.\n" +
       "\n  Arréglalo con una de estas:\n" +
       "    DATABASE_URL=<el de mma-ingesta/.env> npm run megatest\n" +
-      "    PLAYWRIGHT_BASE_URL=http://localhost:3400 npm run megatest   (reusa un server ya vivo)\n" +
+      "    PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run megatest   (reusa un server ya vivo)\n" +
       "    npm run megatest -- --rapido                                 (salta el E2E)\n",
   );
   process.exit(1);

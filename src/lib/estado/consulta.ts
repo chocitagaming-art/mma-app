@@ -6,12 +6,14 @@ import {
   comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
+  descontarFotosLocales,
   peorNivel,
   type Bloque,
   type DatosProxima,
   type DatosVelada,
   type Nivel,
 } from "@/lib/estado/veredicto";
+import { localHeadshot } from "@/lib/local-headshots";
 
 // Las consultas del panel de estado. Todo SELECT.
 //
@@ -146,8 +148,6 @@ type FilaCatalogo = {
   luchadores: string;
   sin_foto_cuerpo: string;
   sin_foto_cabeza: string;
-  sin_ninguna_foto_y_compiten: string;
-  dias_hasta_el_primero_sin_foto: string | null;
   eventos_pasados_incompletos: string;
 };
 
@@ -156,23 +156,6 @@ const CATALOGO_SQL = `
     (select count(*) from fighters) as luchadores,
     (select count(*) from fighters where full_body_url is null) as sin_foto_cuerpo,
     (select count(*) from fighters where headshot_url is null) as sin_foto_cabeza,
-    (select count(*) from fighters fi
-      where fi.headshot_url is null and fi.full_body_url is null
-        and fi.standing_body_url is null
-        and exists (
-          select 1 from fights f join events e on e.id = f.event_id
-          where (f.fighter_red_id = fi.id or f.fighter_blue_id = fi.id)
-            and f.status is distinct from 'cancelled'
-            and e.start_time >= now()
-        )) as sin_ninguna_foto_y_compiten,
-    (select extract(epoch from (min(e.start_time) - now())) / 86400
-      from fighters fi
-      join fights f on (f.fighter_red_id = fi.id or f.fighter_blue_id = fi.id)
-      join events e on e.id = f.event_id
-      where fi.headshot_url is null and fi.full_body_url is null
-        and fi.standing_body_url is null
-        and f.status is distinct from 'cancelled'
-        and e.start_time >= now()) as dias_hasta_el_primero_sin_foto,
     (select count(*) from events e
       where e.start_time is not null
         and e.start_time < now() - interval '3 days'
@@ -181,6 +164,30 @@ const CATALOGO_SQL = `
           where f.event_id = e.id and f.status is distinct from 'cancelled'
             and f.winner_id is null
         )) as eventos_pasados_incompletos`;
+
+type FilaSinFoto = {
+  name: string | null;
+  start_time: string | Date | null;
+};
+
+// Los que la BASE ve sin ninguna foto y tienen combate anunciado, POR NOMBRE.
+//
+// Antes esto era un `count(*)` más un `min(start_time)` dentro de CATALOGO_SQL,
+// y no valía: la mitad de estos casos se resuelven sin tocar la base, poniendo
+// la foto en `local-headshots.ts` (ver `descontarFotosLocales`). Sin los nombres
+// no se puede saber cuáles ya están resueltos, y la alarma se quedaba encendida
+// para siempre. Se piden las filas y se descuenta en TypeScript, que es donde
+// vive el mapa de fotos locales.
+const SIN_FOTO_SQL = `
+  select fi.name, e.start_time
+    from fighters fi
+    join fights f on (f.fighter_red_id = fi.id or f.fighter_blue_id = fi.id)
+    join events e on e.id = f.event_id
+   where fi.headshot_url is null
+     and fi.full_body_url is null
+     and fi.standing_body_url is null
+     and f.status is distinct from 'cancelled'
+     and e.start_time >= now()`;
 
 type FilaGuardia = {
   arranque_utc: string | Date | null;
@@ -276,19 +283,30 @@ function aIso(v: string | Date | null): string | null {
 const num = (v: string | null | undefined): number => Number(v ?? 0) || 0;
 
 export async function obtenerEstado(): Promise<Estado> {
-  // En paralelo, pero son 4 y el pool tiene 3 conexiones: la cuarta espera unos
+  // En paralelo, pero son 8 y el pool tiene 3 conexiones: las demás esperan unos
   // milisegundos. Compensa frente a encadenarlas, y esta ruta la visita una
   // persona cada mucho rato, no un buscador.
-  const [[ultima], [proxima], [frescura], [catalogo], [guardia], [prediccion], registro] =
-    await Promise.all([
-      sql<FilaVelada>(ULTIMA_VELADA_SQL),
-      sql<FilaProxima>(PROXIMA_VELADA_SQL),
-      sql<FilaFrescura>(FRESCURA_SQL),
-      sql<FilaCatalogo>(CATALOGO_SQL),
-      sql<FilaGuardia>(GUARDIA_SQL),
-      sql<FilaPrediccion>(PREDICCION_SQL),
-      sql<FilaApunte>(REGISTRO_SQL),
-    ]);
+  // 🪤 Este comentario decía «son 4» y ya eran 7 antes de añadir la octava.
+  // Si añades una consulta aquí, actualiza la cuenta o vuelve a mentir.
+  const [
+    [ultima],
+    [proxima],
+    [frescura],
+    [catalogo],
+    [guardia],
+    [prediccion],
+    registro,
+    sinFoto,
+  ] = await Promise.all([
+    sql<FilaVelada>(ULTIMA_VELADA_SQL),
+    sql<FilaProxima>(PROXIMA_VELADA_SQL),
+    sql<FilaFrescura>(FRESCURA_SQL),
+    sql<FilaCatalogo>(CATALOGO_SQL),
+    sql<FilaGuardia>(GUARDIA_SQL),
+    sql<FilaPrediccion>(PREDICCION_SQL),
+    sql<FilaApunte>(REGISTRO_SQL),
+    sql<FilaSinFoto>(SIN_FOTO_SQL),
+  ]);
 
   const bloques: Bloque[] = [];
 
@@ -373,10 +391,17 @@ export async function obtenerEstado(): Promise<Estado> {
         luchadores: num(catalogo.luchadores),
         sinFotoCuerpo: num(catalogo.sin_foto_cuerpo),
         sinFotoCabeza: num(catalogo.sin_foto_cabeza),
-        sinNingunaFotoYCompiten: num(catalogo.sin_ninguna_foto_y_compiten),
-        diasHastaElPrimeroSinFoto: catalogo.dias_hasta_el_primero_sin_foto
-          ? num(catalogo.dias_hasta_el_primero_sin_foto)
-          : null,
+        // Los que ya tienen su foto puesta a mano en `local-headshots.ts` NO
+        // cuentan: la web les pinta la cara aunque la BD siga a NULL, y el
+        // flujo oficial (`add_manual_fighter --photo-only`) nunca escribe ahí.
+        ...descontarFotosLocales(
+          (sinFoto ?? []).map((f) => ({
+            nombre: f.name ?? "",
+            arranqueUtc: aIso(f.start_time) ?? "",
+          })),
+          (nombre) => localHeadshot(nombre) !== null,
+          new Date(),
+        ),
         eventosPasadosIncompletos: num(catalogo.eventos_pasados_incompletos),
       }),
     });

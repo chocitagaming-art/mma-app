@@ -6,9 +6,11 @@ import {
   comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
+  descontarFotosLocales,
   peorNivel,
   type DatosProxima,
   type DatosVelada,
+  type FilaSinFotoEnLaBase,
 } from "@/lib/estado/veredicto";
 
 const nivelDe = (cs: ReturnType<typeof comprobarVelada>, titulo: string) =>
@@ -283,6 +285,121 @@ describe("comprobarCatalogo", () => {
   it("si las fotos se degradaran mucho, avisa", () => {
     const c = comprobarCatalogo({ ...BASE, sinFotoCuerpo: 2000 });
     expect(c[0].nivel).toBe("aviso");
+  });
+});
+
+// ── La alarma que no se puede apagar (6-ago) ────────────────────────────────
+//
+// `sin_ninguna_foto_y_compiten` pregunta a la BASE, pero el flujo oficial para
+// resolverlo NO escribe en la base: `add_manual_fighter --photo-only` copia la
+// foto a `public/fighters/` y la mapea en `local-headshots.ts`, que es el
+// fallback que usa la web cuando la BD no tiene `headshot_url`. Su docstring lo
+// dice: «Tapology blocks hotlinking too, so you download the headshot in your
+// browser».
+//
+// Consecuencia medida el 6-ago: el commit `04d7c01` metió las seis fotos que
+// faltaban, la web las sirve (comprobado en el HTML de producción del evento
+// 1087), y aun así el guardián siguió en ROJO y abrió el Issue #24 — porque
+// mide la base, no lo que ve el visitante. Seis fallos seguidos desde la 01:00Z.
+//
+// Eso es exactamente lo que el comentario de `DIAS_PARA_URGIR_FOTOS` dice que
+// NO puede pasar: una alarma que no se puede apagar entrena a no mirar los
+// correos, y entonces tampoco se lee la que importa.
+//
+// `tieneFotoLocal` se INYECTA en vez de importar `localHeadshot` de verdad: si
+// el test leyera la lista real, añadir una foto rompería estos casos y habría
+// que reescribirlos cada vez. Aquí se prueba la regla, no el contenido.
+describe("descontar las fotos que ya están puestas a mano", () => {
+  const ahora = new Date("2026-08-06T17:00:00Z");
+  const conFotoLocal = new Set(["gigi canuto", "jessie rosas"]);
+  const tieneFotoLocal = (n: string) => conFotoLocal.has(n.trim().toLowerCase());
+
+  const fila = (nombre: string, arranqueUtc: string): FilaSinFotoEnLaBase => ({
+    nombre,
+    arranqueUtc,
+  });
+
+  it("sin filas, no hay nada que contar", () => {
+    expect(descontarFotosLocales([], tieneFotoLocal, ahora)).toEqual({
+      sinNingunaFotoYCompiten: 0,
+      diasHastaElPrimeroSinFoto: null,
+    });
+  });
+
+  it("🔴 el caso del 6-ago: todos tienen su foto a mano, así que el panel calla", () => {
+    const r = descontarFotosLocales(
+      [
+        fila("Gigi Canuto", "2026-08-09T00:00:00Z"),
+        fila("Jessie Rosas", "2026-08-09T00:00:00Z"),
+      ],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+    expect(r.diasHastaElPrimeroSinFoto).toBeNull();
+  });
+
+  it("el que NO tiene foto en ningún sitio sigue contando", () => {
+    const r = descontarFotosLocales(
+      [fila("Alguien Sin Foto", "2026-08-09T00:00:00Z")],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(1);
+    expect(r.diasHastaElPrimeroSinFoto).toBeCloseTo(2.29, 1);
+  });
+
+  it("🪤 la fecha se recalcula sobre los que QUEDAN, no sobre los descontados", () => {
+    // El fallo sutil: descontar solo la CUENTA y dejar el `min()` del SQL diría
+    // «1 luchador, y el primero pelea en 2 días» cuando ese de 2 días ya tiene
+    // su foto puesta. La urgencia sería falsa y el rojo, otra vez inapagable.
+    const r = descontarFotosLocales(
+      [
+        fila("Gigi Canuto", "2026-08-09T00:00:00Z"), // en 2 días, YA tiene foto
+        fila("Alguien Sin Foto", "2026-09-05T19:00:00Z"), // en 30, este es el real
+      ],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(1);
+    expect(r.diasHastaElPrimeroSinFoto).toBeGreaterThan(29);
+  });
+
+  it("el nombre se normaliza igual que en local-headshots (trim + minúsculas)", () => {
+    // `localHeadshot` keyea por `name.trim().toLowerCase()`. Si aquí se
+    // comparara en crudo, un nombre con espacio o mayúscula distinta pasaría por
+    // «sin foto» teniéndola, y el rojo volvería por la puerta de atrás.
+    const r = descontarFotosLocales(
+      [fila("  GIGI CANUTO  ", "2026-08-09T00:00:00Z")],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+  });
+
+  it("un luchador en dos carteleras se cuenta una sola vez, por la más próxima", () => {
+    // La consulta une `fights`, así que quien tenga dos combates anunciados
+    // aparece dos veces. Contar filas en vez de personas inflaría la alarma.
+    const r = descontarFotosLocales(
+      [
+        fila("Alguien Sin Foto", "2026-09-05T19:00:00Z"),
+        fila("Alguien Sin Foto", "2026-08-09T00:00:00Z"),
+      ],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(1);
+    expect(r.diasHastaElPrimeroSinFoto).toBeCloseTo(2.29, 1);
+  });
+
+  it("una fecha ilegible no revienta el panel ni inventa urgencia", () => {
+    const r = descontarFotosLocales(
+      [fila("Alguien Sin Foto", "no-es-una-fecha")],
+      tieneFotoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(1);
+    expect(r.diasHastaElPrimeroSinFoto).toBeNull();
   });
 });
 

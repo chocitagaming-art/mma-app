@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 // F6 (Tanda 4): suite E2E de aceptación. Barre las 16 rutas de página en 3
-// viewports × 2 temas (6 proyectos) + smoke de las 9 rutas API. Asertos DUROS:
+// viewports × 2 temas (6 proyectos) + smoke de las 11 rutas API. Asertos DUROS:
 // la página responde y no hay desbordamiento horizontal. Las fotos externas
 // (headshots ufc.com/espncdn) y las siluetas se cuentan como INFO/WARNING, nunca
 // como fallo (una silueta es intencional; una foto que no carga suele ser red

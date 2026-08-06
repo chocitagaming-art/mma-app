@@ -512,6 +512,64 @@ export type DatosCatalogo = {
 // es donde se mira cuando hay tiempo de arreglarlo.
 const DIAS_PARA_URGIR_FOTOS = 3;
 
+/** Un luchador que la BASE ve sin ninguna foto y que tiene combate anunciado. */
+export type FilaSinFotoEnLaBase = {
+  nombre: string;
+  /** Arranque del evento, en ISO UTC. */
+  arranqueUtc: string;
+};
+
+// La base no es la última palabra sobre si un luchador se ve con foto.
+//
+// El flujo oficial para resolver este aviso NO escribe en la base:
+// `add_manual_fighter --photo-only` copia la foto a `public/fighters/` y la mapea
+// en `local-headshots.ts`, porque Tapology —la única fuente que tiene a los
+// debutantes regionales— bloquea el hotlinking. Así que el luchador sigue con
+// `headshot_url` a NULL para siempre y la web, en cambio, ya le pinta la cara.
+//
+// Sin este descuento la alarma es INAPAGABLE: el 6-ago el commit `04d7c01` puso
+// las seis fotos que faltaban, la web las sirvió, y el guardián siguió en rojo
+// y abrió el Issue #24 igualmente. Eso es justo lo que el comentario de
+// `DIAS_PARA_URGIR_FOTOS` dice que no puede pasar — una alarma que no se puede
+// apagar enseña a no mirar los correos.
+//
+// `tieneFotoLocal` entra por parámetro en vez de importar `localHeadshot` aquí:
+// mantiene este módulo puro (no arrastra el mapa de fotos al panel) y deja que
+// la prueba fije la regla sin depender de qué fotos haya puestas hoy.
+export function descontarFotosLocales(
+  filas: FilaSinFotoEnLaBase[],
+  tieneFotoLocal: (nombre: string) => boolean,
+  ahora: Date,
+): Pick<DatosCatalogo, "sinNingunaFotoYCompiten" | "diasHastaElPrimeroSinFoto"> {
+  // Por PERSONA, no por fila: la consulta une `fights`, así que quien tenga dos
+  // combates anunciados sale dos veces y contar filas inflaría la alarma.
+  // La clave se normaliza igual que en `local-headshots.ts` (trim + minúsculas).
+  const pendientes = new Map<string, number | null>();
+
+  for (const f of filas) {
+    if (tieneFotoLocal(f.nombre)) continue;
+
+    const t = Date.parse(f.arranqueUtc);
+    const dias = Number.isNaN(t) ? null : (t - ahora.getTime()) / 86_400_000;
+
+    const clave = f.nombre.trim().toLowerCase();
+    const previo = pendientes.get(clave);
+    if (previo === undefined || (dias !== null && (previo === null || dias < previo))) {
+      pendientes.set(clave, dias);
+    }
+  }
+
+  // La fecha se recalcula sobre los que QUEDAN. Descontar solo la cuenta y dejar
+  // el `min()` del SQL diría «1 luchador, y el primero pelea en 2 días» cuando
+  // ese de 2 días ya tiene su foto: urgencia falsa y rojo otra vez inapagable.
+  const dias = [...pendientes.values()].filter((d): d is number => d !== null);
+
+  return {
+    sinNingunaFotoYCompiten: pendientes.size,
+    diasHastaElPrimeroSinFoto: dias.length > 0 ? Math.min(...dias) : null,
+  };
+}
+
 export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
   const pct = (n: number) =>
     d.luchadores > 0 ? Math.round((n / d.luchadores) * 100) : 0;
