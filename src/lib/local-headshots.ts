@@ -31,6 +31,12 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   // webp. Al keyear por nombre, también rellenan la ficha /fighters del luchador.
   "chael sonnen": "/fighters/chael-sonnen.webp",
   "frank trigg": "/fighters/frank-trigg.webp",
+  "jessie rosas": "/fighters/jessie-rosas.jpg",
+  "richie miranda": "/fighters/richie-miranda.jpg",
+  "jose montanha da silva": "/fighters/jose-montanha-da-silva.jpg",
+  "gigi canuto": "/fighters/gigi-canuto.jpg",
+  "ce liu": "/fighters/ce-liu.png",
+  "salahdine parnasse": "/fighters/salahdine-parnasse.jpg",
 };
 
 // Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para
