@@ -16,11 +16,16 @@ import { cn } from "@/lib/utils";
 // "Luchadores" ya no es un enlace plano: es un flyout (estilo ufc.com) que
 // contiene "Todos los luchadores" y "Salón de la Fama". Por eso "Salón de la
 // Fama" desaparece de este array como item independiente (vive dentro del flyout).
+// "UFC hoy" tampoco está aquí (decisión del dueño, 6-ago): la tarjeta de próximo
+// evento de la home ya contesta a quien está dentro, y el chip solo gastaba
+// sitio. La página SIGUE EXISTIENDO y se llega por dos caminos: el pie
+// ("¿Hay UFC hoy?") y la línea de horarios de esa tarjeta, que ahora enlaza allí
+// (up-next-hero.tsx). Eso último no es adorno: /ufc-hoy es la única página del
+// sitio que hace y responde la pregunta, y es la que puede ganar esa búsqueda.
 const contentLinks = [
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
-  { href: "/ufc-hoy", label: "UFC hoy" },
   { href: "/tendencias", label: "Tendencias" },
 ];
 
@@ -45,7 +50,6 @@ const mobileLinks: { href: string; label: string; sub?: boolean }[] = [
   { href: "/salon-de-la-fama", label: "Salón de la Fama", sub: true },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
-  { href: "/ufc-hoy", label: "UFC hoy" },
   { href: "/tendencias", label: "Tendencias" },
   ...toolLinks,
 ];

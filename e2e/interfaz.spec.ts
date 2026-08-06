@@ -209,3 +209,93 @@ test("el acordeón de la cartelera despliega la comparativa", async ({ page }, t
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toBeVisible();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PEGAR TAL CUAL AL FINAL DE e2e/interfaz.spec.ts (después de la línea 115, el
+// cierre del test del flyout). No hace falta ningún import nuevo: `test`,
+// `expect` y `esEscritorio` ya están arriba en el fichero.
+// Los dos salen ROJOS contra el HEAD de hoy (be53baa) — medido el 6-ago contra
+// producción: en la tarjeta hay 0 enlaces a /ufc-hoy y en el <header> hay 2.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Encargo del 6-ago: "UFC hoy" sale del menú de arriba y su sitio lo ocupa
+// la línea de horarios de la tarjeta de próximo evento ──────────────────────
+
+test("desde la home se llega a /ufc-hoy sin tocar el menú ni el pie", async ({ page }) => {
+  await page.goto("/");
+
+  // La tarjeta la pinta `src/app/page.tsx:124` SOLO si hay próximo evento en la
+  // BD. Si un día no lo hay no es una regresión de este cambio: se dice y se
+  // salta, en vez de teñir de rojo algo que no se ha tocado.
+  const tarjeta = page.locator("section").filter({ hasText: "PRÓXIMO EVENTO" }).first();
+  const hayTarjeta = await tarjeta
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!hayTarjeta, "no hay próximo evento en la BD: no hay tarjeta que probar");
+
+  // 🪤 Se busca DENTRO de la tarjeta y por NOMBRE ACCESIBLE, no por href: un
+  // `a[href="/ufc-hoy"]` suelto también casaría con el del pie, y entonces el
+  // test seguiría verde con la tarjeta rota, que es justo lo que hay que cazar.
+  const horarios = tarjeta.getByRole("link", { name: /horarios en españa/i });
+  await expect(horarios, "la línea de horarios de la tarjeta no es un enlace").toHaveCount(1);
+  await expect(horarios).toBeVisible();
+  await expect(horarios).toHaveAttribute("href", "/ufc-hoy");
+
+  // El nombre accesible NO puede ser solo la hora: "23:00 CEST" en una lista de
+  // enlaces de un lector de pantalla no dice a dónde lleva.
+  await expect(horarios).toHaveAccessibleName(/horarios en españa/i);
+
+  // Y que SE NOTA que es enlace sin pasar el ratón: el subrayado va puesto
+  // siempre, no en :hover. Tailwind v4 mete los `hover:` dentro de
+  // `@media (hover: hover)`, así que un subrayado solo-hover sería texto muerto
+  // en el móvil, que es donde se lee esta tarjeta.
+  await expect(horarios).toHaveCSS("text-decoration-line", "underline");
+
+  await horarios.click();
+  await expect(page).toHaveURL(/\/ufc-hoy$/);
+});
+
+test("«UFC hoy» ya no está en el nav de arriba pero sigue en el pie", async ({ page }) => {
+  await page.goto("/");
+
+  // 🪤 El nav móvil está SIEMPRE en el DOM (lleva el atributo `hidden`, no se
+  // desmonta), así que aquí se cuenta presencia y no visibilidad: toHaveCount,
+  // nunca toBeVisible. Por eso este test no depende del viewport.
+  await expect(
+    page.locator('header a[href="/ufc-hoy"]'),
+    "sigue habiendo un «UFC hoy» en la cabecera",
+  ).toHaveCount(0);
+  await expect(
+    page.locator('#mobile-nav a[href="/ufc-hoy"]'),
+    "sigue habiendo un «UFC hoy» en el menú móvil",
+  ).toHaveCount(0);
+
+  // 🪤 CONTROLES POSITIVOS. Sin ellos este test se pondría verde si alguien se
+  // cargara la cabecera entera: dos ausencias no prueban nada por sí solas.
+  await expect(page.locator('header a[href="/tendencias"]')).toHaveCount(2);
+  await expect(page.locator('header a[href="/eventos"]')).toHaveCount(2);
+
+  // El pie NO se toca: es el que sostiene el enlace en las 3.659 páginas.
+  await expect(
+    page.locator('footer a[href="/ufc-hoy"]'),
+    "el pie ha perdido el enlace a /ufc-hoy",
+  ).toHaveCount(1);
+});
+
+test("el menú móvil abierto ya no enseña «UFC hoy»", async ({ page }, testInfo) => {
+  test.skip(esEscritorio(testInfo.project.name), "la hamburguesa es lg:hidden");
+
+  await page.goto("/");
+  await esperarHidratacion(page);
+
+  const hamburguesa = page.locator('button[aria-controls="mobile-nav"]');
+  const navMovil = page.locator("#mobile-nav");
+  await hamburguesa.click();
+  await expect(navMovil).toBeVisible();
+
+  await expect(navMovil.getByRole("link", { name: "UFC hoy", exact: true })).toHaveCount(0);
+  // Control positivo: sus dos vecinos de lista siguen ahí y VISIBLES.
+  await expect(navMovil.getByRole("link", { name: "Eventos", exact: true })).toBeVisible();
+  await expect(navMovil.getByRole("link", { name: "Tendencias", exact: true })).toBeVisible();
+});

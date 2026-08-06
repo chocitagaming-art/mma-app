@@ -130,22 +130,43 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
         {event.name}
       </h2>
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <CalendarDays className="size-3.5" />
-          {/* La fecha del ESPECTADOR, no la de la sede. `event_date` dice
-              "8 ago" para el 1087 porque en Las Vegas es sábado, pero el
-              estelar cae a las 02:00 del domingo en Madrid: la cuenta atrás de
-              abajo expiraba el 9 junto a un "8 ago" — 24 h de contradicción. */}
-          {formatFechaVeladaCorta(event) ?? formatDate(event.eventDate)}
-        </span>
-        {/* Hora local del visitante (FE5a): client component, fallback UTC en SSR.
-            Va el PRIMER tramo, no el estelar: la fecha de al lado es el día
-            lógico de la velada, y una hora del día siguiente pegada a ella se
-            lee mal. Sin prelims en la BD cae al estelar, como toda la vida. */}
-        <EventStartTime
-          startTime={event.earlyPrelimsTime ?? event.prelimsTime ?? event.startTime}
-          title="Comienzo de la velada, hora local (el estelar es más tarde)"
-        />
+        {/* Fecha + hora son un ENLACE a /ufc-hoy (encargo del dueño, 6-ago):
+            "UFC hoy" sale del menú de arriba y su sitio en la home lo ocupa este
+            enlace contextual. La sede y la emisión se quedan FUERA del enlace:
+            no son horario, y "toda la línea clicable" es peor que nada clicable.
+            El <a> repite el `gap-x-5 gap-y-1` del padre para que la separación
+            fecha↔hora no cambie ni un píxel — medido de 240 a 900 px de ancho de
+            contenedor: 0 anchuras con reparto de líneas distinto.
+            🪤 El subrayado va SIEMPRE puesto, no en :hover, porque Tailwind v4
+            envuelve los `hover:` en `@media (hover: hover)` y en móvil el enlace
+            se quedaría sin ninguna pista de que lo es. */}
+        <Link
+          href="/ufc-hoy"
+          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 rounded-sm underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {/* Nombre accesible = esta coletilla + el contenido visible. NO se usa
+              aria-label: sustituiría al texto visible y quien navega por voz
+              diría "pulsa 8 ago 2026" sin que casara con nada (WCAG 2.5.3).
+              `sr-only` es position:absolute, o sea fuera de flujo: no ocupa
+              hueco en el flex ni desplaza nada. */}
+          <span className="sr-only">Horarios en España: </span>
+          <span className="flex items-center gap-1.5">
+            <CalendarDays className="size-3.5" />
+            {/* La fecha del ESPECTADOR, no la de la sede. `event_date` dice
+                "8 ago" para el 1087 porque en Las Vegas es sábado, pero el
+                estelar cae a las 02:00 del domingo en Madrid: la cuenta atrás de
+                abajo expiraba el 9 junto a un "8 ago" — 24 h de contradicción. */}
+            {formatFechaVeladaCorta(event) ?? formatDate(event.eventDate)}
+          </span>
+          {/* Hora local del visitante (FE5a): client component, fallback UTC en SSR.
+              Va el PRIMER tramo, no el estelar: la fecha de al lado es el día
+              lógico de la velada, y una hora del día siguiente pegada a ella se
+              lee mal. Sin prelims en la BD cae al estelar, como toda la vida. */}
+          <EventStartTime
+            startTime={event.earlyPrelimsTime ?? event.prelimsTime ?? event.startTime}
+            title="Comienzo de la velada, hora local (el estelar es más tarde)"
+          />
+        </Link>
         {event.location ? (
           <span className="flex items-center gap-1.5">
             <MapPin className="size-3.5" />
