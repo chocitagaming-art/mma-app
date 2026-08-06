@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Play, Sparkles } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { FightVideoPlayer } from "@/components/fight-video-player";
 import { FightTimeline } from "@/components/fight/fight-timeline";
 import { RoundByRound } from "@/components/fight/round-by-round";
@@ -104,6 +105,18 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      {/* El padre útil de un combate es SU VELADA, no el listado de eventos: es
+          de donde viene el navegante y donde están los otros combates de la
+          misma cartelera. Medido antes de tocar nada: esta página tenía 5
+          enlaces de contenido y CERO a /eventos/N — la relación existe en los
+          datos y solo estaba cableada en un sentido (el evento sí enlaza aquí).
+          Se dice "Cartelera" y no el nombre del evento porque el enlace es
+          inline-flex con ancho max-content y un nombre largo en mono a 12px con
+          tracking se come el ancho útil de un móvil de 390 px. */}
+      <BackLink
+        href={fight.eventId != null ? `/eventos/${fight.eventId}` : "/eventos"}
+        label={fight.eventId != null ? "Cartelera" : "Eventos"}
+      />
       <SectionHeading
         eyebrow="Desglose de la pelea"
         title={`${fight.red.name} vs ${fight.blue.name}`}

@@ -12,6 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { CountryFlag } from "@/components/country-flag";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
@@ -325,6 +326,7 @@ export default async function FighterDetailPage({
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
+      <BackLink href="/fighters" label="Luchadores" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       {/* HERO estilo ufc.com/athlete: 3 zonas en escritorio (identidad+tiles /
           atleta de cuerpo entero / última pelea y próximo combate); en móvil

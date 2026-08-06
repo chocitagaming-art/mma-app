@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Clapperboard, MapPin, Ticket, Tv } from "lucide-react";
+import { CalendarDays, Clapperboard, MapPin, Ticket, Tv } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
@@ -151,13 +152,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <Link
+      <BackLink
         href={isUpcoming ? "/eventos?view=proximos" : "/eventos"}
-        className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground transition-colors hover:text-primary"
-      >
-        <ArrowLeft className="size-3.5" />
-        Eventos
-      </Link>
+        label="Eventos"
+      />
 
       <div className="mt-4 flex flex-col gap-6 border-b border-border pb-6">
         {event.imageUrl ? (
