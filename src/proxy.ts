@@ -32,7 +32,15 @@ import { buildContentSecurityPolicy } from "@/lib/security-headers";
 // `X-Matched-Path: /api/estado` y sin `X-Powered-By` ni `Vary`, mientras
 // cualquier `/api` inexistente devuelve el 404 HTML de ~78 KB con
 // `X-Matched-Path: /_not-found`. Un escaneo de rutas encontraba el panel.
-const RUTAS_DEL_PANEL = new Set(["/estado", "/api/estado"]);
+// `/directo` (el control room de la velada) entra aquí el 8-ago-2026 y NO es un
+// añadido de rutina: se montó llamando a `notFound()` en la página, como el
+// primer intento de `/estado`, y volvió a dar HTTP 200 mientras `/estado` daba
+// 404. O sea, la ruta nueva se delataba sola comparando los dos códigos —el
+// mismo agujero que este bloque documenta, reabierto por olvidar el registro.
+// **Una defensa que hay que recordar poner no es una defensa: es una lista.**
+// Lo que la protege es estar AQUÍ, no el `notFound()` de su página, que se
+// conserva sólo como segunda cerradura por si alguien toca este Set.
+const RUTAS_DEL_PANEL = new Set(["/estado", "/api/estado", "/directo"]);
 
 function panelSinClave(request: NextRequest): boolean {
   if (!RUTAS_DEL_PANEL.has(request.nextUrl.pathname)) {
