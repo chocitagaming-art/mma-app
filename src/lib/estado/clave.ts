@@ -50,8 +50,16 @@ export function claveValida(request: Request): boolean {
   return recibida.length > 0 && safeEqual(recibida, esperada);
 }
 
-/** Igual, pero cuando solo se tiene la clave suelta (Server Component). */
-export function claveValidaDirecta(recibida: string | undefined): boolean {
+/**
+ * Igual, pero cuando solo se tiene la clave suelta (Server Component).
+ *
+ * Devuelve un *type predicate* y no un `boolean` a secas: si esto dice que sí,
+ * `recibida` es un `string`, y quien llama puede seguir usándola sin un `!` ni
+ * un cast. No es azúcar — las dos páginas del panel necesitan la clave DESPUÉS
+ * de validarla para enlazarse entre ellas, y la alternativa era silenciar a
+ * TypeScript justo en la línea que decide quién entra.
+ */
+export function claveValidaDirecta(recibida: string | undefined): recibida is string {
   const esperada = process.env.ESTADO_KEY;
   if (!esperada || !recibida) {
     return false;

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { AutoRefresco } from "@/app/estado/auto-refresco";
+import { EnlacePanel } from "@/app/estado/enlace-panel";
 import { claveValidaDirecta } from "@/lib/estado/clave";
 import { obtenerDirecto, type Directo, type NivelDirecto } from "@/lib/directo/consulta";
 import { cn } from "@/lib/utils";
@@ -62,8 +63,38 @@ function desde(segundos: number | null): string {
   return `hace ${Math.floor(segundos / 3600)} h`;
 }
 
-function hhmm(iso: string | null): string {
+/**
+ * La hora COMO LA PIENSA quien mira esto, que es la de Madrid y no UTC.
+ *
+ * 🪤 La primera versión pintaba UTC a secas («21:00Z») y el dueño preguntó, con
+ * razón, por qué decía 21:00 si las preliminares son a las 23:00. El dato era
+ * correcto —España va +2 en verano— pero le obligaba a restar de cabeza, y en un
+ * panel que se mira con prisa la noche de una velada eso no es un defecto
+ * estético: es hacerle creer que va tarde o pronto. Además era incoherente con
+ * el resto del sitio, que ya pinta «Prelims 23:00».
+ *
+ * Se sigue la misma convención que el panel hermano (`estado/veredicto.ts`), que
+ * ya lo tenía resuelto con el comentario «Hora de Madrid, que es la que usa quien
+ * mira esto, no UTC».
+ */
+function hora(iso: string | null): string {
   if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("es-ES", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * El mismo instante en UTC, para la nota de al lado.
+ *
+ * No sobra: GitHub Actions, los logs de los runs y los crons hablan UTC, así que
+ * cuando algo va mal hay que cruzar las dos horas. Tenerlas juntas evita la
+ * resta mental justo en el momento en que uno se equivoca haciéndola.
+ */
+function utc(iso: string | null): string {
+  if (!iso) return "";
   return `${new Date(iso).toISOString().slice(11, 16)}Z`;
 }
 
@@ -129,7 +160,7 @@ function Puesto({
   );
 }
 
-function Cuerpo({ d }: { d: Directo }) {
+function Cuerpo({ d, clave }: { d: Directo; clave: string }) {
   const v = VEREDICTO[d.nivel];
   const g = d.grabacion;
 
@@ -196,8 +227,12 @@ function Cuerpo({ d }: { d: Directo }) {
       {d.evento ? (
         <Puesto n="01" titulo="En antena" sub="qué se está emitiendo">
           <Dato etiqueta="Evento" valor={d.evento.nombre} nota={`id ${d.evento.id}`} />
-          <Dato etiqueta="Primer combate" valor={hhmm(d.evento.primerCombateUtc)} nota={cuenta(d.evento.faltanSegundos)} />
-          <Dato etiqueta="Estelar" valor={hhmm(d.evento.estelarUtc)} />
+          <Dato
+            etiqueta="Primer combate"
+            valor={hora(d.evento.primerCombateUtc)}
+            nota={`${utc(d.evento.primerCombateUtc)} · ${cuenta(d.evento.faltanSegundos)}`}
+          />
+          <Dato etiqueta="Estelar" valor={hora(d.evento.estelarUtc)} nota={utc(d.evento.estelarUtc)} />
           {d.enCurso?.rojo ? (
             <Dato
               etiqueta="Ahora mismo"
@@ -250,6 +285,8 @@ function Cuerpo({ d }: { d: Directo }) {
         </Puesto>
       ) : null}
 
+      <EnlacePanel a="estado" clave={clave} className="mt-6" />
+
       {/* Lo que este panel NO puede ver, dicho aquí para que nadie lo deduzca
           mal: la web sólo tiene DATABASE_URL, no habla con GitHub Actions. */}
       <p className="mt-8 text-xs leading-relaxed text-muted-foreground/70">
@@ -261,7 +298,7 @@ function Cuerpo({ d }: { d: Directo }) {
       </p>
 
       <p className="mt-4 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-muted-foreground/60">
-        medido {d.generadoUtc.slice(11, 19)}Z
+        medido {hora(d.generadoUtc)} · {utc(d.generadoUtc)}
       </p>
     </div>
   );
@@ -281,5 +318,5 @@ export default async function DirectoPage({
     notFound();
   }
 
-  return <Cuerpo d={await obtenerDirecto()} />;
+  return <Cuerpo d={await obtenerDirecto()} clave={clave} />;
 }

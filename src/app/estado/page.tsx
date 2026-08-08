@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { AutoRefresco } from "@/app/estado/auto-refresco";
+import { EnlacePanel } from "@/app/estado/enlace-panel";
 import { claveValidaDirecta } from "@/lib/estado/clave";
 import { obtenerEstado } from "@/lib/estado/consulta";
 import type { Comprobacion, Nivel } from "@/lib/estado/veredicto";
@@ -196,6 +197,8 @@ export default async function EstadoPage({
           </ol>
         </section>
       ) : null}
+
+      <EnlacePanel a="directo" clave={clave} className="mt-6" />
 
       <p className="mt-6 text-center font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
         Consultado {estado.generadoUtc.slice(11, 16)} UTC · {estado.generadoUtc.slice(0, 10)}
