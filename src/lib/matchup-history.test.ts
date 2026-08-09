@@ -64,6 +64,18 @@ describe("classifyDirectMatchup", () => {
     ).toBe("nc");
   });
 
+  // Esta función es la GEMELA en TypeScript del CASE de fight-result.ts, y las
+  // dos tienen que contestar lo mismo a la misma fila. La noche de la velada
+  // hay ganador antes que método (`espn_live_results` escribe winner_id en
+  // cuanto ESPN lo marca), y ahí el SQL llegó a decir 'scheduled' mientras esta
+  // decía "ganó": la ficha ponía "Sin resultado" y el cara a cara "Ganó X"
+  // sobre el mismo combate. Este test fija el lado bueno.
+  it("classifies a winner without a method yet as a win, not as scheduled", () => {
+    expect(
+      classifyDirectMatchup(fight({ winnerId: RED_ID, method: null }), RED_ID, BLUE_ID),
+    ).toBe("redWin");
+  });
+
   it("classifies an Overturned result with detail as nc", () => {
     expect(
       classifyDirectMatchup(

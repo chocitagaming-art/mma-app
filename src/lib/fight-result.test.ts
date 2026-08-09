@@ -69,6 +69,21 @@ describe("fightResultCaseSql", () => {
     expect(sql.indexOf("'scheduled'")).toBeLessThan(sql.indexOf("'nc'"));
   });
 
+  // 🪤 LA NOCHE DE LA VELADA HAY GANADOR ANTES QUE MÉTODO. `espn_live_results`
+  // escribe winner_id en cuanto ESPN marca ganador y deja `method` NULL hasta
+  // que llega el detalle (o hasta el backfill del domingo, si ESPN emite uno
+  // fuera de su mapa de tres claves: "Doctor Stoppage", "DQ"...).
+  //
+  // Con `method is null` a secas, esa fila —una VICTORIA recién ganada— salía
+  // 'scheduled': la ficha pintaba "Sin resultado" en gris sobre el combate que
+  // el luchador acababa de ganar, le rompía la racha, y el chatbot lo llamaba
+  // "aún no disputada". Programado es NO tener ninguna de las dos cosas.
+  it("only calls a bout scheduled when it has neither winner nor method", () => {
+    expect(sql).toContain(
+      "fi.winner_id is null and fi.method is null then 'scheduled'",
+    );
+  });
+
   it("uses a prefix match so Overturned with detail is covered", () => {
     expect(sql).toContain("ilike 'overturn%'");
   });

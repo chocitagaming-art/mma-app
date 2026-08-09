@@ -67,19 +67,27 @@ export function noContestSqlPredicate(alias = "fi"): string {
 /**
  * El mismo criterio, como fragmento SQL para las queries del historial.
  *
- * **El orden de las ramas es la parte frágil** y por eso está fijado con test:
- * - `scheduled` va primero. `method is null` es la única señal fiable de un
- *   combate no disputado: por fecha se escaparían las 7 peleas canceladas de
- *   eventos ya celebrados.
+ * **El orden y la forma de las ramas son la parte frágil** y por eso están
+ * fijados con test:
+ * - `scheduled` va primero, y exige que **falten las dos cosas**: sin ganador y
+ *   sin método. 🪤 Con `method is null` a secas se llevaba por delante las
+ *   victorias de la noche de la velada: `espn_live_results` escribe el ganador
+ *   en cuanto ESPN lo marca y deja el método NULL hasta que llega el detalle,
+ *   así que la ficha pintaba "Sin resultado" sobre un combate recién ganado.
+ *   No se puede usar la fecha en su lugar: hay 7 peleas canceladas en eventos
+ *   ya celebrados que también tienen que caer aquí.
  * - `nc` va ANTES del empate. Todos los no-contests tienen winner_id NULL, así
  *   que con las ramas al revés la de 'nc' es inalcanzable y el bug vuelve.
+ *
+ * Es el mismo orden que sigue `classifyDirectMatchup` (matchup-history.ts), y
+ * tiene que seguir siéndolo: son la misma regla escrita en dos lenguajes.
  *
  * @param fighterParam placeholder del luchador cuya perspectiva se pinta ($1…).
  * @param alias alias de la tabla `fights` en la query que lo consume.
  */
 export function fightResultCaseSql(fighterParam: string, alias = "fi"): string {
   return `case
-          when ${alias}.method is null then 'scheduled'
+          when ${alias}.winner_id is null and ${alias}.method is null then 'scheduled'
           when ${noContestSqlPredicate(alias)} then 'nc'
           when ${alias}.winner_id is null then 'draw'
           when ${alias}.winner_id = ${fighterParam} then 'win'
