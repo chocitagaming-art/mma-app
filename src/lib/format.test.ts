@@ -6,6 +6,7 @@ import {
   formatDate,
   formatHeight,
   formatMethod,
+  isDecisionMethod,
   formatModelDate,
   formatNewsCategory,
   formatReach,
@@ -212,5 +213,38 @@ describe("formatDate y la zona horaria", () => {
 
   it("sin fecha lo dice en vez de romper", () => {
     expect(formatDate(null)).toBe("Por definir");
+  });
+});
+
+describe("isDecisionMethod · qué combate es un empate", () => {
+  // POR QUÉ EXISTE: un combate que llegó a las tarjetas y no tiene ganador es
+  // un EMPATE, y la web no lo decía en ninguna parte. 59 fichas rotulaban
+  // "Decisión mayoritaria", no marcaban ganador en ninguna esquina, y dejaban
+  // al lector deducirlo. Esta función decide qué se rotula "Empate".
+
+  it("las tres decisiones cuentan, en abreviatura y en texto", () => {
+    for (const m of ["U-DEC", "M-DEC", "S-DEC", "u-dec", "Decision - Unanimous", "Decision"]) {
+      expect(isDecisionMethod(m)).toBe(true);
+    }
+  });
+
+  it("un resultado anulado NO es un empate: ya se explica solo", () => {
+    // Los 23 'Overturned' de la base tampoco tienen ganador, pero su método se
+    // traduce a "Resultado anulado", que se entiende sin ayuda. Llamarlos
+    // empate sería inventar un desenlace que no ocurrió.
+    expect(isDecisionMethod("Overturned")).toBe(false);
+    expect(isDecisionMethod("CNC")).toBe(false);
+    expect(isDecisionMethod("NC")).toBe(false);
+  });
+
+  it("un final antes del límite tampoco", () => {
+    for (const m of ["KO/TKO", "SUB - Rear Naked Choke", "DQ", "Could Not Continue"]) {
+      expect(isDecisionMethod(m)).toBe(false);
+    }
+  });
+
+  it("sin método no se afirma nada", () => {
+    expect(isDecisionMethod(null)).toBe(false);
+    expect(isDecisionMethod("")).toBe(false);
   });
 });

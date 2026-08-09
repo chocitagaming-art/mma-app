@@ -160,6 +160,24 @@ const METHOD_ES: Record<string, string> = {
 // free-form (e.g. "Decision - Unanimous", "Submission (Rear-Naked Choke)",
 // "KO/TKO", "DQ"), so after an exact-match lookup we match on keywords the same
 // way the win-method aggregation does, and finally fall back to the raw value.
+/**
+ * Si el método es una decisión de los jueces (unánime, dividida o mayoritaria).
+ *
+ * Sirve para una cosa concreta: **un combate que fue a las tarjetas y no tiene
+ * ganador es un EMPATE**, y hasta ahora la web no lo decía en ninguna parte.
+ * 59 fichas rotulaban «Decisión mayoritaria», no marcaban ganador en ninguna
+ * esquina, y dejaban al lector deducirlo. La traducción `draw: "Empate"` ya
+ * existía en este mismo fichero y no se usaba nunca para estos casos.
+ *
+ * Un resultado anulado (`Overturned`) o un no-contest NO entran aquí: su propio
+ * método ya se traduce a algo que se entiende solo.
+ */
+export function isDecisionMethod(method: string | null): boolean {
+  if (!method) return false;
+  const key = method.trim().toLowerCase();
+  return /^[ums]-dec$/u.test(key) || /\bdecision\b/u.test(key);
+}
+
 export function formatMethod(method: string | null): string {
   if (!method) {
     return "—";

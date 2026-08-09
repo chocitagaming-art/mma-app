@@ -12,6 +12,7 @@ import {
   formatDate,
   formatHeight,
   formatMethod,
+  isDecisionMethod,
   formatPercentage,
   formatRecord,
   formatReach,
@@ -246,6 +247,8 @@ export function TaleOfTheTape({
   const isUpcoming = fight.winnerId == null && fight.method == null;
   const redWins = fight.winnerId != null && fight.winnerId === red.id;
   const blueWins = fight.winnerId != null && fight.winnerId === blue.id;
+  // Fue a las tarjetas y nadie ganó: es un empate, y hay que decirlo.
+  const esEmpate = fight.winnerId == null && isDecisionMethod(fight.method);
 
   const redAge = ageFromBirthDate(red.birthDate);
   const blueAge = ageFromBirthDate(blue.birthDate);
@@ -435,8 +438,21 @@ export function TaleOfTheTape({
       {!isUpcoming ? (
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-border bg-muted/40 px-6 py-4 text-center">
           <span className="font-display text-lg font-bold uppercase tracking-tight text-foreground">
-            {fight.method ? formatMethod(fight.method) : "Resultado no disponible"}
+            {esEmpate
+              ? "Empate"
+              : fight.method
+                ? formatMethod(fight.method)
+                : "Resultado no disponible"}
           </span>
+          {/* En un empate el método baja a segunda línea: primero se dice QUÉ
+              pasó y luego CÓMO. Antes el titular era «Decisión mayoritaria» sin
+              ganador en ninguna esquina, y la palabra «empate» no aparecía en
+              toda la ficha: 59 combates dejando que el lector lo dedujera. */}
+          {esEmpate && fight.method ? (
+            <span className="font-mono text-sm text-muted-foreground">
+              {formatMethod(fight.method)}
+            </span>
+          ) : null}
           <span className="font-mono text-sm text-muted-foreground">
             Asalto {fight.endRound ?? "—"} · {fight.endTime ?? "—"}
           </span>
@@ -451,7 +467,14 @@ export function TaleOfTheTape({
       {/* Árbitro + tarjetas de los jueces (BE8), justo bajo la barra de
           resultado. El componente no pinta nada si no hay datos. */}
       {!isUpcoming ? (
-        <FightOfficials referee={fight.referee} scorecards={fight.scorecards} />
+        <FightOfficials
+          referee={fight.referee}
+          scorecards={fight.scorecards}
+          // Sin ganador oficial (empate o resultado anulado) la fuente no dice
+          // a qué esquina fue cada nota, así que no se pinta ninguna. Son 82
+          // combates, y hasta hoy acertaban la mitad de las veces en color.
+          orientadas={fight.winnerId != null}
+        />
       ) : null}
 
       {/* Estadísticas del combate: golpes/derribos/control (peleas terminadas) */}
