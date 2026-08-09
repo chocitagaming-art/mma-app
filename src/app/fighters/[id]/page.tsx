@@ -234,7 +234,9 @@ export default async function FighterDetailPage({
       ? "bg-win/10 text-win"
       : lastFight?.result === "loss"
         ? "bg-loss/10 text-loss"
-        : "bg-muted text-muted-foreground";
+        : lastFight?.result === "nc"
+          ? "bg-nc/10 text-nc"
+          : "bg-muted text-muted-foreground";
   // Badge de promoción del tile, solo en modo regional (una pelea UFC no lo
   // necesita: toda la ficha ya es contexto UFC). Mismo mapping que la tabla.
   const lastFightPromotion =
@@ -823,7 +825,9 @@ export default async function FighterDetailPage({
                         ? "bg-win/10 text-win"
                         : fight.result === "loss"
                           ? "bg-loss/10 text-loss"
-                          : "bg-muted text-muted-foreground";
+                          : fight.result === "nc"
+                            ? "bg-nc/10 text-nc"
+                            : "bg-muted text-muted-foreground";
                     // Badge de promoción (S3-G): UFC rojo, Bellator ámbar,
                     // resto (regionales) gris con su nombre corto. Mapping
                     // compartido con el tile "Última pelea" del hero.

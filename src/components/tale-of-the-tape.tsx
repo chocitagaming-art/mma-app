@@ -85,8 +85,8 @@ const LAST_RESULT_LABEL: Record<FightLastResult["result"], string> = {
   nc: "Sin resultado",
 };
 
-// Valor + color de la fila "Última pelea" (verde victoria / rojo derrota),
-// mismos tokens win/loss que el historial del luchador.
+// Valor + color de la fila "Última pelea" (verde victoria / rojo derrota / ocre
+// no contest), mismos tokens que el historial del luchador.
 function lastFightValue(last: FightLastResult | null | undefined) {
   if (!last) {
     return { text: "—", className: undefined };
@@ -99,7 +99,9 @@ function lastFightValue(last: FightLastResult | null | undefined) {
         ? "text-win"
         : last.result === "loss"
           ? "text-loss"
-          : "text-muted-foreground",
+          : last.result === "nc"
+            ? "text-nc"
+            : "text-muted-foreground",
   };
 }
 
