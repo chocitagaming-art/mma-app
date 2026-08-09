@@ -40,7 +40,13 @@ export function peorNivel(niveles: Nivel[]): Nivel {
 
 export type DatosVelada = {
   combatesActivos: number;
-  combatesConGanador: number;
+  /**
+   * Combates con desenlace: con ganador O con método. Se llamaba
+   * `combatesConGanador` y contaba solo los primeros, así que una velada con un
+   * empate o un no contest no llegaba nunca al total y el guardián la daba por
+   * incompleta para siempre.
+   */
+  combatesResueltos: number;
   muestrasPelicula: number;
   filasPorAsalto: number;
   pesajes: number;
@@ -73,10 +79,10 @@ export function comprobarVelada(d: DatosVelada): Comprobacion[] {
   const out: Comprobacion[] = [];
 
   // 1. Resultados. Es lo primero que se nota y lo que más molesta si falta.
-  const faltan = d.combatesActivos - d.combatesConGanador;
+  const faltan = d.combatesActivos - d.combatesResueltos;
   out.push({
     titulo: "Resultados",
-    valor: `${d.combatesConGanador}/${d.combatesActivos}`,
+    valor: `${d.combatesResueltos}/${d.combatesActivos}`,
     nivel: d.combatesActivos === 0 ? "aviso" : faltan === 0 ? "ok" : "mal",
     detalle:
       d.combatesActivos === 0

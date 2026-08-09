@@ -23,7 +23,7 @@ const nivelDe = (cs: ReturnType<typeof comprobarVelada>, titulo: string) =>
 // panel existe para no volver a pasar por alto.
 const VELADA_1063: DatosVelada = {
   combatesActivos: 14,
-  combatesConGanador: 14,
+  combatesResueltos: 14,
   muestrasPelicula: 14,
   filasPorAsalto: 0,
   pesajes: 28,
@@ -34,7 +34,7 @@ const VELADA_1063: DatosVelada = {
 // El 1062 del 25-jul, que sí se grabó bien: 345 muestras.
 const VELADA_1062: DatosVelada = {
   combatesActivos: 13,
-  combatesConGanador: 13,
+  combatesResueltos: 13,
   muestrasPelicula: 345,
   filasPorAsalto: 120,
   pesajes: 26,
@@ -94,12 +94,28 @@ describe("comprobarVelada", () => {
     expect(nivelDe(c, "Estadísticas por asalto")).toBe("mal");
   });
 
-  it("un combate sin ganador es fallo, y dice cómo arreglarlo", () => {
-    const c = comprobarVelada({ ...VELADA_1063, combatesConGanador: 9 });
+  it("un combate sin resolver es fallo, y dice cómo arreglarlo", () => {
+    const c = comprobarVelada({ ...VELADA_1063, combatesResueltos: 9 });
     const r = c.find((x) => x.titulo === "Resultados");
     expect(r?.nivel).toBe("mal");
     expect(r?.valor).toBe("9/14");
     expect(r?.detalle).toContain("Live results");
+  });
+
+  // "Resuelto" NO es "con ganador". Un empate y un no contest no tienen ganador
+  // y no se lo va a dar nadie nunca, así que contarlos como pendientes dejaba la
+  // velada incompleta PARA SIEMPRE — y como ULTIMA_VELADA_SQL no tiene ventana,
+  // el guardián mandaba un correo rojo cada hora durante toda la semana
+  // recomendando relanzar la ingesta, que no puede traer un ganador que no
+  // existe. El dato lo calcula resueltoSqlPredicate() (fight-result.ts).
+  it("una velada con un empate o un no contest queda COMPLETA", () => {
+    const c = comprobarVelada({
+      ...VELADA_1063,
+      combatesActivos: 14,
+      combatesResueltos: 14,
+    });
+    expect(nivelDe(c, "Resultados")).toBe("ok");
+    expect(c.find((x) => x.titulo === "Resultados")?.detalle).toBeUndefined();
   });
 
   it("cero pesajes es fallo: ese cron termina en verde sin escribir nada", () => {

@@ -4,6 +4,7 @@ import {
   fightResultCaseSql,
   isNoContestMethod,
   noContestSqlPredicate,
+  resueltoSqlPredicate,
 } from "@/lib/fight-result";
 
 // Los métodos de abajo NO son inventados: son los valores literales que hay en
@@ -90,6 +91,32 @@ describe("fightResultCaseSql", () => {
   // abajo sobre la misma pelea.
   it("is built from the same predicate the record count uses", () => {
     expect(fightResultCaseSql("$1")).toContain(noContestSqlPredicate());
+  });
+});
+
+// El guardián del panel /estado preguntaba "¿cuántos combates tienen ganador?"
+// para saber si una velada quedó completa. Un empate y un no contest no tienen
+// ganador y NO les va a salir uno nunca, así que cualquier velada con uno de
+// los dos se quedaba incompleta para siempre: 143 eventos el 9-ago-2026.
+describe("resueltoSqlPredicate", () => {
+  it("da por resuelto un combate con ganador", () => {
+    expect(resueltoSqlPredicate()).toContain("f.winner_id is not null");
+  });
+
+  it("da por resuelto también un combate sin ganador pero con método", () => {
+    expect(resueltoSqlPredicate()).toContain("f.method is not null");
+  });
+
+  it("los une con un OR, no con un AND: basta con uno de los dos", () => {
+    expect(resueltoSqlPredicate()).toBe(
+      "(f.winner_id is not null or f.method is not null)",
+    );
+  });
+
+  it("honra el alias que se le pasa", () => {
+    expect(resueltoSqlPredicate("fi")).toBe(
+      "(fi.winner_id is not null or fi.method is not null)",
+    );
   });
 });
 

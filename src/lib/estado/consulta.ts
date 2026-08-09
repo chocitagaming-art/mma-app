@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { resueltoSqlPredicate } from "@/lib/fight-result";
 import {
   comprobarCatalogo,
   comprobarFrescura,
@@ -43,7 +44,7 @@ type FilaVelada = {
   name: string | null;
   start_time: string | Date | null;
   combates_activos: string;
-  combates_con_ganador: string;
+  combates_resueltos: string;
   muestras: string;
   filas_por_asalto: string;
   pesajes: string;
@@ -57,7 +58,7 @@ const ULTIMA_VELADA_SQL = `
       where f.event_id = e.id and f.status is distinct from 'cancelled') as combates_activos,
     (select count(*) from fights f
       where f.event_id = e.id and f.status is distinct from 'cancelled'
-        and f.winner_id is not null) as combates_con_ganador,
+        and ${resueltoSqlPredicate("f")}) as combates_resueltos,
     (select count(*) from live_fight_stat_samples s
       join fights sf on sf.id = s.fight_id where sf.event_id = e.id) as muestras,
     (select count(*) from fight_stats_rounds r
@@ -200,7 +201,7 @@ const CATALOGO_SQL = `
         and exists (
           select 1 from fights f
           where f.event_id = e.id and f.status is distinct from 'cancelled'
-            and f.winner_id is null
+            and not ${resueltoSqlPredicate("f")}
         )) as eventos_pasados_incompletos`;
 
 type FilaSinFoto = {
@@ -258,7 +259,7 @@ const GUARDIA_SQL = `
       and exists (
         select 1 from fights f
         where f.event_id = e.id and f.status is distinct from 'cancelled'
-          and f.winner_id is null
+          and not ${resueltoSqlPredicate("f")}
       )
     limit 1
   )
@@ -353,7 +354,7 @@ export async function obtenerEstado(): Promise<Estado> {
   if (ultima) {
     const datos: DatosVelada = {
       combatesActivos: num(ultima.combates_activos),
-      combatesConGanador: num(ultima.combates_con_ganador),
+      combatesResueltos: num(ultima.combates_resueltos),
       muestrasPelicula: num(ultima.muestras),
       filasPorAsalto: num(ultima.filas_por_asalto),
       pesajes: num(ultima.pesajes),

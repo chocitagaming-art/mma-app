@@ -35,6 +35,24 @@ export function isNoContestMethod(method: string | null): boolean {
 }
 
 /**
+ * Si un combate **ya tiene desenlace**, sea el que sea.
+ *
+ * Un empate y un no contest no tienen ganador y no se lo va a dar nadie: para
+ * ellos `method` es la señal de que la pelea se celebró y quedó resuelta. El
+ * panel `/estado` preguntaba solo por `winner_id is not null`, así que toda
+ * velada que contuviera uno de los dos se quedaba incompleta PARA SIEMPRE —
+ * 143 eventos el 9-ago-2026— y el guardián mandaba un correo rojo cada hora
+ * aconsejando relanzar la ingesta, que no podía arreglar nada porque no había
+ * ningún ganador que traer.
+ *
+ * Es el mismo criterio que ya usa el panel `/directo` (`consulta.ts`), donde el
+ * cartel se da por cerrado por el mayor de (con ganador, con método).
+ */
+export function resueltoSqlPredicate(alias = "f"): string {
+  return `(${alias}.winner_id is not null or ${alias}.method is not null)`;
+}
+
+/**
  * El mismo criterio de {@link isNoContestMethod}, como predicado SQL suelto.
  *
  * Lo usan el CASE del historial y el recuento del récord W-L-D. Que salgan de
