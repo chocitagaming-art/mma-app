@@ -720,6 +720,10 @@ export default async function FighterDetailPage({
                     {aggregateStats.takedownsLanded}
                   </p>
                 </div>
+                {/* El tiempo es el TOTAL del luchador; la cuota solo aparece
+                    cuando la muestra cronometrada cubre ese total entero, para
+                    que las dos cifras del tile no se contradigan (ver
+                    computeControlShare). */}
                 <div className={`${PREMIUM_TILE} p-4 text-center`}>
                   <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                     T. control
@@ -727,6 +731,11 @@ export default async function FighterDetailPage({
                   <p className="tabular mt-2 text-2xl font-bold text-foreground">
                     {formatControlTime(aggregateStats.controlTimeSeconds)}
                   </p>
+                  {rateStats.controlShare !== null ? (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {Math.round(rateStats.controlShare * 100)}% del combate
+                    </p>
+                  ) : null}
                 </div>
               </div>
               {/* Un medidor sin denominador no se pinta: decir "0 %" cuando

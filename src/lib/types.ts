@@ -163,6 +163,10 @@ export type FighterRateStats = {
   avgFightSeconds: number;
   // Nº de peleas con duración conocida usadas como denominador de las tasas.
   timedFightsCount: number;
+  // Fracción del combate que pasa controlando (0..1), sobre esa MISMA muestra
+  // cronometrada. null cuando no hay muestra, o cuando el dato es imposible
+  // (más control que combate). Ver computeControlShare.
+  controlShare: number | null;
 };
 
 // Récord derivado SOLO de los combates registrados en la BD (historial UFC),

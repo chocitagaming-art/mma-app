@@ -137,6 +137,52 @@ export function mapDefense(row?: DefenseRow): FighterDefenseStats {
   };
 }
 
+/**
+ * Cuota de control: la fracción del combate que el luchador pasó controlando.
+ *
+ * 🪤 El numerador y el denominador TIENEN que salir de la misma muestra. La
+ * suma global de `control_time_seconds` no lleva el filtro de era (el dato no
+ * existe antes de 1999-07-16) ni el de duración calculable, y el único
+ * denominador del repo sí los lleva. Cruzarlos, medido contra Neon el
+ * 9-ago-2026, da 3 fichas por encima del 100 % —la peor al 363,1 %— y 312 con
+ * denominador cero. Con los dos de la muestra cronometrada: ninguna pasa del
+ * 100 % y el máximo real es 89,7 %.
+ *
+ * Misma definición que `ctrl_share` en skill-radar.ts, que alimenta el eje de
+ * agarre del radar. Si divergen, la app enseñará dos cuotas de control que no
+ * cuadran entre sí.
+ *
+ * 🪤 Y por eso hace falta `controlOverall`: el tile de la ficha enseña el
+ * control TOTAL del luchador, pero la cuota solo puede salir de las peleas
+ * cronometradas. Cuando la muestra no cubre todo ese control, el porcentaje NO
+ * corresponde al tiempo escrito encima — 74 fichas el 9-ago-2026, 20 de ellas
+ * con más de un 10 % de desvío. Ahí no se aproxima: no se publica. Recortar el
+ * tile a la muestra tampoco vale, porque borraría control real de 46 fichas
+ * (31 de ellas más de un minuto).
+ *
+ * @param controlSeconds control DENTRO de la muestra cronometrada (numerador).
+ * @param totalSeconds duración de esa misma muestra (denominador).
+ * @param controlOverall control total del luchador, para comprobar que la
+ *   muestra lo cubre entero.
+ * @returns null cuando no hay combate que repartir, cuando el dato es imposible
+ * (más control que combate), o cuando la muestra no cubre todo el control.
+ */
+export function computeControlShare(
+  controlSeconds: number,
+  totalSeconds: number,
+  controlOverall: number,
+): number | null {
+  if (!(totalSeconds > 0)) {
+    return null;
+  }
+  if (controlSeconds !== controlOverall) {
+    return null;
+  }
+
+  const share = controlSeconds / totalSeconds;
+  return share > 1 ? null : share;
+}
+
 export function mapWinMethods(row?: WinMethodRow): FighterWinMethods {
   const koTko = Number(row?.ko_tko ?? 0);
   const submission = Number(row?.submission ?? 0);

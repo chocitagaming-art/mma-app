@@ -27,6 +27,7 @@ import type {
   WinMethodRow,
 } from "./fighters.types";
 import {
+  computeControlShare,
   mapAggregate,
   mapComparisonAggregate,
   mapDefense,
@@ -43,6 +44,10 @@ import {
 // este módulo: ninguna otra query los consume.
 type PerMinuteRow = {
   total_seconds: string | null;
+  // Numerador de la cuota de control, tomado DENTRO de esta misma muestra: la
+  // suma global de fighter_stats no lleva ni el filtro de era ni el de duración
+  // calculable que sí lleva total_seconds (ver computeControlShare).
+  control_time_seconds: string | null;
   sig_strikes_landed: string | null;
   opp_sig_strikes_landed: string | null;
   takedowns_landed: string | null;
@@ -267,6 +272,7 @@ export const getFighterDetail = cache(async (
           + split_part(fi.end_time, ':', 1)::int * 60
           + split_part(fi.end_time, ':', 2)::int
         )::text as total_seconds,
+        sum(me.control_time_seconds)::text as control_time_seconds,
         sum(me.sig_strikes_landed)::text as sig_strikes_landed,
         sum(opp.sig_strikes_landed)::text as opp_sig_strikes_landed,
         sum(me.takedowns_landed)::text as takedowns_landed,
@@ -420,6 +426,11 @@ export const getFighterDetail = cache(async (
     submissionAttemptsPer15Min: per15Min(perMinuteRow?.submission_attempts),
     avgFightSeconds: timedFights > 0 ? totalSeconds / timedFights : 0,
     timedFightsCount: timedFights,
+    controlShare: computeControlShare(
+      Number(perMinuteRow?.control_time_seconds ?? 0),
+      totalSeconds,
+      aggregateStats.controlTimeSeconds,
+    ),
   };
   const ufcRecordRow = ufcRecordRows[0];
   const ufcRecord: FighterUfcRecord = {
