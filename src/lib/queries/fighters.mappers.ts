@@ -157,30 +157,39 @@ export function mapDefense(row?: DefenseRow): FighterDefenseStats {
  * agarre del radar. Si divergen, la app enseñará dos cuotas de control que no
  * cuadran entre sí.
  *
- * 🪤 Y por eso hace falta `controlOverall`: el tile de la ficha enseña el
- * control TOTAL del luchador, pero la cuota solo puede salir de las peleas
- * cronometradas. Cuando la muestra no cubre todo ese control, el porcentaje NO
- * corresponde al tiempo escrito encima — 74 fichas el 9-ago-2026, 20 de ellas
- * con más de un 10 % de desvío. Ahí no se aproxima: no se publica. Recortar el
- * tile a la muestra tampoco vale, porque borraría control real de 46 fichas
- * (31 de ellas más de un minuto).
+ * 🪤 Y por eso hacen falta las dos cuentas de peleas: el tile enseña el control
+ * TOTAL del luchador, pero la cuota solo puede salir de las peleas
+ * cronometradas. Si la muestra no cubre la carrera registrada entera, el
+ * porcentaje NO corresponde al tiempo escrito encima.
+ *
+ * El primer intento comparaba las SUMAS DE CONTROL, y era ciego justo donde
+ * importaba: en las peleas excluidas el control viene NULL, que suma 0, así que
+ * las dos sumas coincidían y el guard pasaba. Se publicó roto y lo cazó una
+ * revisión posterior — David Abbott (8793) enseñaba «T. control 2:03 · 41 % del
+ * combate» con 3 de sus 18 peleas dentro de la muestra: 2:03 al 41 % implicaría
+ * una carrera de cinco minutos, y lleva 5.123 segundos registrados. Contar
+ * peleas no tiene ese punto ciego. Cuesta 15 fichas de 2.517 (9-ago-2026).
+ *
+ * Recortar el tile a la muestra tampoco valía: borraría control real de 46
+ * fichas, 31 de ellas más de un minuto.
  *
  * @param controlSeconds control DENTRO de la muestra cronometrada (numerador).
  * @param totalSeconds duración de esa misma muestra (denominador).
- * @param controlOverall control total del luchador, para comprobar que la
- *   muestra lo cubre entero.
+ * @param sampledFights peleas que entran en la muestra.
+ * @param recordedFights peleas del luchador con estadística registrada.
  * @returns null cuando no hay combate que repartir, cuando el dato es imposible
- * (más control que combate), o cuando la muestra no cubre todo el control.
+ * (más control que combate), o cuando la muestra no cubre la carrera entera.
  */
 export function computeControlShare(
   controlSeconds: number,
   totalSeconds: number,
-  controlOverall: number,
+  sampledFights: number,
+  recordedFights: number,
 ): number | null {
   if (!(totalSeconds > 0)) {
     return null;
   }
-  if (controlSeconds !== controlOverall) {
+  if (sampledFights !== recordedFights) {
     return null;
   }
 

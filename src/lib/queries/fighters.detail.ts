@@ -203,7 +203,17 @@ export const getFighterDetail = cache(async (
         sum(opp.sig_strikes_attempted)::text as opp_sig_strikes_attempted,
         sum(opp.takedowns_landed)::text as opp_takedowns_landed,
         sum(opp.takedowns_attempted)::text as opp_takedowns_attempted,
-        sum(opp.submission_attempts)::text as opp_submission_attempts,
+        -- 🪤 Los combates ANULADOS quedan fuera del denominador. Al anularse,
+        -- el método se reescribe a 'Overturned - <técnica>' y el ganador pasa a
+        -- NULL, así que la sumisión deja de contar arriba mientras su intento
+        -- seguía contando abajo: una sumisión encajada se convertía en un
+        -- intento "superado". Pasaba en 8 fichas, todas por encima del umbral
+        -- (Dalby publicaba 100 % con una estrangulación en su propia tabla).
+        -- Fuera del numerador y fuera del denominador: los no contest no
+        -- cuentan, igual que en el récord W-L-D.
+        (sum(opp.submission_attempts) filter (
+          where not ${noContestSqlPredicate()}
+        ))::text as opp_submission_attempts,
         -- Sumisiones consumadas: no hay columna, se derivan del método. El
         -- join a fights no multiplica filas (una por combate en \`me\`).
         (count(*) filter (
@@ -439,7 +449,8 @@ export const getFighterDetail = cache(async (
     controlShare: computeControlShare(
       Number(perMinuteRow?.control_time_seconds ?? 0),
       totalSeconds,
-      aggregateStats.controlTimeSeconds,
+      timedFights,
+      aggregateStats.totalFightStats,
     ),
   };
   const ufcRecordRow = ufcRecordRows[0];

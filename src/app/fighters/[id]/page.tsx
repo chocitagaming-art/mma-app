@@ -760,11 +760,17 @@ export default async function FighterDetailPage({
                       helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
                     />
                   ) : null}
+                  {/* 🪤 "en UFC" no es un adorno: los intentos de sumisión solo
+                      existen en `fight_stats`, que es UFC, mientras la tabla de
+                      abajo fusiona el historial de PRIDE, Bellator y WSOF. Sin
+                      declarar el alcance, 385 fichas afirmaban un 100 % encima
+                      de una tabla que lista las sumisiones que sí encajaron
+                      fuera — Jon Fitch entre ellas. */}
                   {defenseStats.submissionDefense !== null ? (
                     <DefenseMeter
                       label="Defensa de sumisión"
                       value={defenseStats.submissionDefense}
-                      helper={`${defenseStats.oppSubmissionAttempts - defenseStats.submissionsLost} de ${defenseStats.oppSubmissionAttempts} superados`}
+                      helper={`${defenseStats.oppSubmissionAttempts - defenseStats.submissionsLost} de ${defenseStats.oppSubmissionAttempts} superados en UFC`}
                     />
                   ) : null}
                 </div>
