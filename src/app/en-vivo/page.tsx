@@ -423,7 +423,7 @@ export default async function LivePage() {
 
       <p className="mt-8 font-mono text-xs text-muted-foreground">
         Los resultados en directo son provisionales (fuente ESPN) y se
-        consolidan con los datos oficiales tras el evento.
+        sustituyen por los oficiales en cuanto se publican.
       </p>
     </div>
   );

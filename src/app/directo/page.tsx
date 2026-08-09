@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { AutoRefresco } from "@/app/estado/auto-refresco";
 import { EnlacePanel } from "@/app/estado/enlace-panel";
 import { claveValidaDirecta } from "@/lib/estado/clave";
-import { obtenerDirecto, type Directo, type NivelDirecto } from "@/lib/directo/consulta";
+import { obtenerDirecto, UMBRALES, type Directo, type NivelDirecto } from "@/lib/directo/consulta";
 import { cn } from "@/lib/utils";
 
 // EL CONTROL ROOM. Hermano de /estado y con su misma puerta, pero contesta a
@@ -33,6 +33,20 @@ const VEREDICTO: Record<NivelDirecto, { texto: string; sub: string; clase: strin
   grabando: {
     texto: "GRABANDO",
     sub: "Está entrando dato. No hay nada que hacer.",
+    clase: "border-win/40 bg-win/10 text-win",
+  },
+  // 🪤 Los dos de abajo nacen de un fallo que cazó el dueño mirando su propia
+  // web: el panel decía GRABANDO —«Está entrando dato»— trece horas después de
+  // acabar la velada, y tres líneas más abajo se desmentía solo. La palabra
+  // grande tiene que ser cierta LEÍDA SOLA: es lo único que se mira de lejos.
+  pausa: {
+    texto: "EN PAUSA",
+    sub: "Nadie está peleando ahora. El contador parado es lo normal aquí.",
+    clase: "border-win/40 bg-win/10 text-win",
+  },
+  grabada: {
+    texto: "GRABADA",
+    sub: "La velada terminó y quedó grabada. Ya no entra dato, y no tiene que entrar.",
     clase: "border-win/40 bg-win/10 text-win",
   },
   atencion: {
@@ -247,26 +261,43 @@ function Cuerpo({ d, clave }: { d: Directo; clave: string }) {
 
       {g ? (
         <Puesto n="02" titulo="La grabación" sub="lo único que prueba que se está grabando">
+          {/* 🪤 LOS TONOS SE APAGAN SIN ASALTO RODANDO, y no es cosmético: entre
+              combates el escritor no graba (`live_stats.py:117`, `period >= 1`),
+              así que estas tres filas se ponían en rojo once veces por velada
+              mientras el veredicto de arriba decía que todo iba bien. Un panel
+              que se contradice a sí mismo no se cree. Los umbrales salen de
+              `UMBRALES` en vez de escribirse a mano por lo mismo: había dos
+              copias del mismo número y sólo se corregía una. */}
           <Dato
             etiqueta="Muestras"
             valor={String(g.muestras)}
-            nota="250+ es éxito"
-            tono={g.muestras >= 250 ? "bien" : g.muestras > 0 ? "ojo" : d.ventanaAbierta ? "mal" : "normal"}
+            nota={`${UMBRALES.MUESTRAS_EXITO}+ es éxito`}
+            tono={
+              g.muestras >= UMBRALES.MUESTRAS_EXITO ? "bien"
+              : g.muestras > 0 ? "ojo"
+              : d.ventanaAbierta && d.asaltoRodando ? "mal" : "normal"
+            }
           />
           {/* EL RITMO ES LA FILA QUE IMPORTA, no el total: un total que no crece
-              es un total muerto, y 200 muestras paradas parecen muchas. */}
+              es un total muerto, y 200 muestras paradas parecen muchas. Pero
+              sólo con alguien peleando: entre combates el cero es lo esperado. */}
           <Dato
             etiqueta="Ritmo"
             valor={`${g.ritmo5min} en 5 min`}
-            tono={g.ritmo5min > 0 ? "bien" : d.ventanaAbierta ? "mal" : "normal"}
+            nota={!d.asaltoRodando && d.ventanaAbierta ? "nadie peleando ahora" : undefined}
+            tono={
+              g.ritmo5min > 0 ? "bien"
+              : d.ventanaAbierta && d.asaltoRodando ? "mal" : "normal"
+            }
           />
           <Dato
             etiqueta="Última escritura"
             valor={desde(g.silencioSegundos)}
             tono={
-              !d.ventanaAbierta ? "normal"
-              : g.silencioSegundos != null && g.silencioSegundos > 180 ? "mal"
-              : g.silencioSegundos != null && g.silencioSegundos > 60 ? "ojo" : "bien"
+              !d.ventanaAbierta || !d.asaltoRodando ? "normal"
+              : g.silencioSegundos != null && g.silencioSegundos > UMBRALES.SILENCIO_MALO_S ? "mal"
+              : g.silencioSegundos != null && g.silencioSegundos > UMBRALES.SILENCIO_RARO_S ? "ojo"
+              : "bien"
             }
           />
           <Dato etiqueta="Peleas con película" valor={String(g.peleasConPelicula)} />
