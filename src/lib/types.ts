@@ -515,7 +515,7 @@ export type FightLastResult = {
   fightId: number | null;
   eventName: string | null;
   eventDate: string | null;
-  result: "win" | "loss" | "draw";
+  result: "win" | "loss" | "draw" | "nc";
   method: string | null;
 };
 

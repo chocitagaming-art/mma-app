@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
+import { fightResultCaseSql, noContestSqlPredicate } from "@/lib/fight-result";
 import { containsPattern } from "@/lib/sql-like";
 import type {
   DirectMatchupFight,
@@ -129,11 +130,7 @@ export const getFighterDetail = cache(async (
           when fi.fighter_red_id = $1 then 'red'
           else 'blue'
         end as corner,
-        case
-          when fi.winner_id is null then 'draw'
-          when fi.winner_id = $1 then 'win'
-          else 'loss'
-        end as result,
+        ${fightResultCaseSql("$1")} as result,
         fi.method,
         fi.end_round,
         fi.end_time,
@@ -291,11 +288,16 @@ export const getFighterDetail = cache(async (
     ),
     // Récord UFC (BE9a): W-L-D contando SOLO combates registrados en la BD ya
     // disputados. Empate = winner_id NULL con method registrado, EXCLUYENDO
-    // los No Contest (method 'CNC'/'Overturned*'/'Other'), que comparten esa
-    // firma pero no son empates (~94 peleas en BD: Aspinall-Gane, Oliveira-
-    // Lentz...). Los NC no cuentan como W, L ni D, igual que el récord
-    // oficial. winner y method ambos NULL = combate programado (excluido,
-    // evita el "empate fantasma").
+    // los No Contest, que comparten esa firma pero no son empates (92 peleas
+    // el 9-ago-2026: Aspinall-Gane, Oliveira-Lentz...). Los NC no cuentan como
+    // W, L ni D, igual que el récord oficial. winner y method ambos NULL =
+    // combate programado (excluido, evita el "empate fantasma").
+    //
+    // El criterio sale de fight-result.ts, el mismo que rotula la tabla del
+    // historial. Antes estaba escrito aquí por separado y AÑADÍA 'Other' a los
+    // no contest: sus dos únicas filas son Gracie-Shamrock (UFC 5) y
+    // Taktarov-Shamrock (UFC 7), los empates por límite de tiempo de 1995, así
+    // que el récord de esos tres se quedaba un empate corto.
     sql<UfcRecordRow>(
       `select
         (count(*) filter (where fi.winner_id = $1))::text as wins,
@@ -304,8 +306,7 @@ export const getFighterDetail = cache(async (
         ))::text as losses,
         (count(*) filter (
           where fi.winner_id is null and fi.method is not null
-            and fi.method not ilike 'overturn%'
-            and fi.method not in ('CNC', 'NC', 'Other')
+            and not ${noContestSqlPredicate()}
         ))::text as draws
       from fights fi
       where (fi.fighter_red_id = $1 or fi.fighter_blue_id = $1)

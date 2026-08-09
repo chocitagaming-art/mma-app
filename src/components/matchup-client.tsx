@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatMethod, formatWeightClass } from "@/lib/format";
 import {
+  classifyDirectMatchup,
+  describeMatchupTies,
   splitDirectMatchups,
   summarizeDirectMatchups,
 } from "@/lib/matchup-history";
@@ -384,8 +386,7 @@ export function MatchupClient({
                       Cara a cara
                     </p>
                     <p className="mt-2 text-lg text-muted-foreground">
-                      {matchupSummary.draws} empate
-                      {matchupSummary.draws === 1 ? "" : "s"}
+                      {describeMatchupTies(matchupSummary)}
                     </p>
                   </div>
                   <div className="text-left md:text-right">
@@ -416,13 +417,25 @@ export function MatchupClient({
                                 : "Categoría no disponible"}
                             </Badge>
                             <Badge className="border-primary/20 bg-primary/10 text-primary">
-                              {/* Aquí solo llegan peleas disputadas: winner NULL
-                                  con método registrado = empate o no contest. */}
-                              {fight.winnerId === detail.fighterA.id
-                                ? `Ganó ${detail.fighterA.name}`
-                                : fight.winnerId === detail.fighterB.id
-                                  ? `Ganó ${detail.fighterB.name}`
-                                  : "Empate / No contest"}
+                              {/* Aquí solo llegan peleas disputadas. El "Empate
+                                  / No contest" de antes no se mojaba porque la
+                                  query no traía con qué: ahora el método separa
+                                  las dos cosas (fight-result.ts). */}
+                              {
+                                {
+                                  redWin: `Ganó ${detail.fighterA.name}`,
+                                  blueWin: `Ganó ${detail.fighterB.name}`,
+                                  draw: "Empate",
+                                  nc: "Sin resultado",
+                                  scheduled: "Aún no disputada",
+                                }[
+                                  classifyDirectMatchup(
+                                    fight,
+                                    detail.fighterA.id,
+                                    detail.fighterB.id,
+                                  )
+                                ]
+                              }
                             </Badge>
                           </div>
                           <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">

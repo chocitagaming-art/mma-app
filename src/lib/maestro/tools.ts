@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sql } from "@/lib/db";
+import { fightResultCaseSql } from "@/lib/fight-result";
 import { getFighterComparisonDetail } from "@/lib/queries/fighters";
 import { getFighterRankingHistory } from "@/lib/queries/rankings";
 import { buildRankingTrajectory } from "@/lib/ranking-trajectory";
@@ -116,6 +117,18 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
   };
 }
 
+// El CASE de fight-result.ts habla en códigos (win/loss/draw/nc/scheduled); al
+// modelo se le entrega ya en castellano. Antes esta query resolvía el resultado
+// por su cuenta con `winner_id is null -> 'empate'`, así que le contaba como
+// empates los no contest Y los combates que aún no se han peleado.
+const RESULTADO_ES: Record<string, string> = {
+  win: "victoria",
+  loss: "derrota",
+  draw: "empate",
+  nc: "sin resultado (no contest, no cuenta en el récord)",
+  scheduled: "aún no disputada (combate programado)",
+};
+
 async function historialPeleas(input: unknown): Promise<ToolResult> {
   const obj = (input ?? {}) as { id?: unknown; limit?: unknown };
   const id = idSchema.parse(obj.id);
@@ -123,9 +136,7 @@ async function historialPeleas(input: unknown): Promise<ToolResult> {
   const rows = await sql<Record<string, unknown>>(
     `select fi.id as fight_id, e.name as event_name, e.event_date::text as event_date,
             case when fi.fighter_red_id = $1 then blue.name else red.name end as opponent_name,
-            case when fi.winner_id is null then 'empate'
-                 when fi.winner_id = $1 then 'victoria'
-                 else 'derrota' end as result,
+            ${fightResultCaseSql("$1")} as result,
             fi.method, fi.end_round, fi.end_time, fi.weight_class
      from fights fi
      left join events e on e.id = fi.event_id
@@ -140,7 +151,7 @@ async function historialPeleas(input: unknown): Promise<ToolResult> {
   return {
     peleas: rows.map((r) => ({
       oponente: r.opponent_name,
-      resultado: r.result,
+      resultado: RESULTADO_ES[String(r.result)] ?? String(r.result),
       metodo: r.method,
       ronda: r.end_round,
       tiempo: r.end_time,

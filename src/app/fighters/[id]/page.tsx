@@ -228,7 +228,7 @@ export default async function FighterDetailPage({
         ? "Derrota"
         : lastFight?.result === "draw"
           ? "Empate"
-          : "NC";
+          : "Sin resultado";
   const lastFightResultClass =
     lastFight?.result === "win"
       ? "bg-win/10 text-win"
@@ -817,7 +817,7 @@ export default async function FighterDetailPage({
                           ? "Derrota"
                           : fight.result === "draw"
                             ? "Empate"
-                            : "NC";
+                            : "Sin resultado";
                     const resultClass =
                       fight.result === "win"
                         ? "bg-win/10 text-win"

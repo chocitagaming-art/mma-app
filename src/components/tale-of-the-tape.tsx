@@ -79,6 +79,10 @@ const LAST_RESULT_LABEL: Record<FightLastResult["result"], string> = {
   win: "Victoria",
   loss: "Derrota",
   draw: "Empate",
+  // Un no contest no es un empate: el combate se anuló y no cuenta en el
+  // récord. Se rotula igual que su método en format.ts ('CNC' -> "Sin
+  // resultado") para que la fila diga lo mismo que la tabla del historial.
+  nc: "Sin resultado",
 };
 
 // Valor + color de la fila "Última pelea" (verde victoria / rojo derrota),

@@ -100,9 +100,11 @@ export function resolveFinishHighlights(
   };
 }
 
-// El historial llega ordenado del más reciente al más antiguo e incluye
-// combates futuros como placeholder (result 'draw' + method null, ver
-// fighter-form.ts). La "última pelea" es el primer combate ya disputado.
+// El historial llega ordenado del más reciente al más antiguo. El guard de
+// 'draw' + method null ya no alcanza a ninguna fila UFC (ver fighter-form.ts);
+// se mantiene por las de ESPN. La "última pelea" es el primer combate ya
+// disputado, y desde el arreglo de los no contest eso incluye un 'nc': un
+// combate anulado SÍ es la última vez que ese luchador se subió a la jaula.
 export function lastCompletedFight(
   history: FighterHistoryItem[],
 ): FighterHistoryItem | null {

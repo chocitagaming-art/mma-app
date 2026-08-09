@@ -12,9 +12,10 @@ export type RecentForm = {
   };
 };
 
-// Upcoming/unfought bouts show up in the history as a placeholder with no
-// result: result === "draw" && method === null. They are future fights, so we
-// drop them before computing streaks and recent form (only contested bouts).
+// Guard de combates sin disputar. Las filas UFC ya no pueden llegar así: la
+// query las excluye en el WHERE y el CASE compartido (fight-result.ts) emitiría
+// 'scheduled', no 'draw'. Se mantiene por las filas de fight_history_espn, que
+// vienen con el result ya escrito en la BD y sin método.
 function isContested(fight: FighterHistoryItem): boolean {
   return !(fight.result === "draw" && fight.method === null);
 }

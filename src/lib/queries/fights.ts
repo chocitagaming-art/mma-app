@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
+import { fightResultCaseSql } from "@/lib/fight-result";
 import type {
   FightCompetitorStats,
   FightDetail,
@@ -70,7 +71,7 @@ type LastFightRow = {
   fight_id: number;
   event_name: string | null;
   event_date: string | null;
-  result: "win" | "loss" | "draw";
+  result: "win" | "loss" | "draw" | "nc";
   method: string | null;
 };
 
@@ -79,7 +80,7 @@ type LastFightRow = {
 type LastFightEspnRow = {
   event_name: string | null;
   event_date: string | null;
-  result: "win" | "loss" | "draw";
+  result: "win" | "loss" | "draw" | "nc";
   method: string | null;
 };
 
@@ -141,11 +142,7 @@ const LAST_FIGHT_SQL = `select
     fi.id as fight_id,
     e.name as event_name,
     e.event_date,
-    case
-      when fi.winner_id is null then 'draw'
-      when fi.winner_id = $1 then 'win'
-      else 'loss'
-    end as result,
+    ${fightResultCaseSql("$1")} as result,
     fi.method
   from fights fi
   left join events e on e.id = fi.event_id

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyDirectMatchup,
+  describeMatchupTies,
   splitDirectMatchups,
   summarizeDirectMatchups,
 } from "@/lib/matchup-history";
@@ -37,20 +38,40 @@ describe("classifyDirectMatchup", () => {
     ).toBe("blueWin");
   });
 
-  it("classifies winner NULL + method registered as a real draw", () => {
-    expect(
-      classifyDirectMatchup(
-        fight({ winnerId: null, method: "Decision - Split Draw" }),
-        RED_ID,
-        BLUE_ID,
-      ),
-    ).toBe("draw");
-  });
+  // Los métodos de empate reales de `fights` son M-DEC/S-DEC/U-DEC (62 filas el
+  // 9-ago-2026). "Decision - Split Draw" y "Draw", que usaban estos fixtures,
+  // NO existen en la tabla: 0 filas con method ilike '%draw%'.
+  it.each(["M-DEC", "S-DEC", "U-DEC"])(
+    "classifies winner NULL + judges' decision %s as a real draw",
+    (method) => {
+      expect(
+        classifyDirectMatchup(fight({ winnerId: null, method }), RED_ID, BLUE_ID),
+      ).toBe("draw");
+    },
+  );
 
   it("classifies winner NULL + method NULL as a scheduled bout, not a draw", () => {
     expect(
       classifyDirectMatchup(fight({ winnerId: null, method: null }), RED_ID, BLUE_ID),
     ).toBe("scheduled");
+  });
+
+  // El bug: Aspinall (6335) vs Gane (6336), fight 3254, method 'CNC'. El cara a
+  // cara decía "1 empate" de un combate que se paró por un rodillazo ilegal.
+  it("classifies a CNC no contest as nc, not as a draw", () => {
+    expect(
+      classifyDirectMatchup(fight({ winnerId: null, method: "CNC" }), RED_ID, BLUE_ID),
+    ).toBe("nc");
+  });
+
+  it("classifies an Overturned result with detail as nc", () => {
+    expect(
+      classifyDirectMatchup(
+        fight({ winnerId: null, method: "Overturned - Punch" }),
+        RED_ID,
+        BLUE_ID,
+      ),
+    ).toBe("nc");
   });
 });
 
@@ -58,7 +79,7 @@ describe("splitDirectMatchups", () => {
   it("separates scheduled bouts from completed fights preserving order", () => {
     const upcoming = fight({ fightId: 12840, winnerId: null, method: null });
     const won = fight({ fightId: 10001, winnerId: RED_ID, method: "Decision - Unanimous" });
-    const drew = fight({ fightId: 10002, winnerId: null, method: "Draw" });
+    const drew = fight({ fightId: 10002, winnerId: null, method: "M-DEC" });
 
     const split = splitDirectMatchups([upcoming, won, drew]);
 
@@ -78,25 +99,82 @@ describe("summarizeDirectMatchups", () => {
     const summary = summarizeDirectMatchups(
       [
         fight({ fightId: 12840, winnerId: null, method: null }),
-        fight({ fightId: 11000, winnerId: RED_ID, method: "Decision - Unanimous" }),
+        fight({ fightId: 11000, winnerId: RED_ID, method: "U-DEC" }),
       ],
       RED_ID,
       BLUE_ID,
     );
 
-    expect(summary).toEqual({ redWins: 1, blueWins: 0, draws: 0 });
+    expect(summary).toEqual({ redWins: 1, blueWins: 0, draws: 0, noContests: 0 });
   });
 
-  it("still counts real draws (winner NULL with method)", () => {
+  it("still counts real draws (winner NULL with a judges' decision)", () => {
     const summary = summarizeDirectMatchups(
       [
-        fight({ winnerId: null, method: "Decision - Majority Draw" }),
-        fight({ winnerId: BLUE_ID, method: "Submission" }),
+        fight({ winnerId: null, method: "M-DEC" }),
+        fight({ winnerId: BLUE_ID, method: "SUB - Rear Naked Choke" }),
       ],
       RED_ID,
       BLUE_ID,
     );
 
-    expect(summary).toEqual({ redWins: 0, blueWins: 1, draws: 1 });
+    expect(summary).toEqual({ redWins: 0, blueWins: 1, draws: 1, noContests: 0 });
+  });
+
+  // Caso real: Aspinall-Gane. Un no contest no es un empate, y contarlo como
+  // tal es lo que hacía decir "1 empate" a una pareja que nunca empató.
+  it("counts a no contest apart from the draws", () => {
+    const summary = summarizeDirectMatchups(
+      [
+        fight({ fightId: 3254, winnerId: null, method: "CNC" }),
+        fight({ winnerId: RED_ID, method: "KO/TKO - Punch" }),
+      ],
+      RED_ID,
+      BLUE_ID,
+    );
+
+    expect(summary).toEqual({ redWins: 1, blueWins: 0, draws: 0, noContests: 1 });
+  });
+});
+
+// El rótulo del centro de la tarjeta "Cara a cara". Antes decía siempre
+// "N empates", así que Aspinall-Gane (un no contest) leía "1 empate".
+describe("describeMatchupTies", () => {
+  it("says zero draws when the pair only traded wins", () => {
+    expect(
+      describeMatchupTies({ redWins: 2, blueWins: 1, draws: 0, noContests: 0 }),
+    ).toBe("0 empates");
+  });
+
+  it("pluralises a single draw correctly", () => {
+    expect(
+      describeMatchupTies({ redWins: 0, blueWins: 0, draws: 1, noContests: 0 }),
+    ).toBe("1 empate");
+  });
+
+  it("pluralises several draws", () => {
+    expect(
+      describeMatchupTies({ redWins: 0, blueWins: 0, draws: 2, noContests: 0 }),
+    ).toBe("2 empates");
+  });
+
+  // El caso Aspinall-Gane: cero empates y un combate anulado. Decir "0 empates"
+  // a secas escondería el combate que sí existió.
+  it("names the no contest instead of hiding it behind a zero", () => {
+    expect(
+      describeMatchupTies({ redWins: 0, blueWins: 0, draws: 0, noContests: 1 }),
+    ).toBe("1 sin resultado");
+  });
+
+  it("does not pluralise 'sin resultado'", () => {
+    expect(
+      describeMatchupTies({ redWins: 0, blueWins: 0, draws: 0, noContests: 2 }),
+    ).toBe("2 sin resultado");
+  });
+
+  it("lists both when the pair has a draw and a no contest", () => {
+    expect(
+      describeMatchupTies({ redWins: 1, blueWins: 0, draws: 1, noContests: 1 }),
+    ).toBe("1 empate · 1 sin resultado");
   });
 });
