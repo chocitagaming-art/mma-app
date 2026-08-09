@@ -1,0 +1,340 @@
+import { computeGrappledSplit, computeGripSplit } from "@/lib/fight-grip";
+import { formatControlTime } from "@/lib/live-stats";
+
+// T5 de la película — el titular, el subtitular y la nota del reparto de agarre.
+//
+// Dos reglas mandan sobre todo lo que se escribe aquí:
+//
+// 1. VERBOS FÍSICOS, NUNCA DE VEREDICTO. "Lo tuvo sujeto" sí; "mandó",
+//    "dominó", "ventaja" o "controló el combate" no. ufcstats no distingue
+//    montada de valla, y quien ataca desde abajo sale a cero: cualquier verbo
+//    de mando sería una conclusión que el dato no sostiene. Hay un test que
+//    barre las palabras vetadas sobre todas las salidas.
+//
+// 2. LOS DOS LADOS AL MISMO TAMAÑO. Nunca "falló 8 de sus 9" a secas: retrata
+//    de fracasado justo al que acabó mandando, y sin su contraparte no es
+//    información, es un juicio.
+//
+// El texto sale en CAJA NORMAL a propósito. El maquetado lo enseña gritado,
+// pero la propia especificación veta las mayúsculas en frases largas —46
+// caracteres en caja alta son tres líneas a 375 px— y el titular canónico mide
+// exactamente 46. Decidir eso es del componente, que tendrá una pantalla
+// delante; congelarlo aquí sería tomar una decisión visual a ciegas.
+//
+// 🪤 Y el presupuesto de palabras de la especificación (titular ≤ 8) no lo
+// cumple ni su propio ejemplo, que tiene 9. No se testea un número que el
+// diseño aprobado incumple: lo que sí se fija con test es el texto exacto y la
+// lista de palabras prohibidas.
+
+export type HeadlineCorner = "red" | "blue";
+
+export type HeadlineInput = {
+  // 🪤 Nullables a propósito. El nombre bueno sale del join con `fighters`
+  // (red.name), NO de fights.fighter_red_name, que está a NULL en 8.694 de las
+  // 8.851 filas. Quien llame a esta función con la columna equivocada se lo va
+  // a encontrar vacío el 98 % de las veces, y aquí no se publica media frase.
+  redName: string | null;
+  blueName: string | null;
+  redControlSeconds: number | null;
+  blueControlSeconds: number | null;
+  fightSeconds: number | null;
+  winner: HeadlineCorner | null;
+  method: string | null;
+  endRound: number | null;
+};
+
+export type FightHeadline = {
+  headline: string;
+  subhead: string;
+  // El segundo denominador de la regla 5. null cuando nadie sujetó a nadie:
+  // sin agarre no hay porcentaje del agarre que enseñar.
+  grappledLine: string | null;
+  note: string | null;
+};
+
+// Por debajo de esta diferencia no hay historia que contar y la plantilla del
+// titular cambia: decir "lo tuvo sujeto medio minuto más" con 20 s de por medio
+// es mentir por énfasis. Son 2.310 combates de los 8.612 comparables.
+const GAP_MINIMO_SEGUNDOS = 30;
+
+// Las 36 fichas de la base con apellido compuesto llevan una de estas delante.
+// Cortar por el último espacio dejaría "Santos" o "Silva", que es otra persona.
+// "della" y "saint" salieron de la tercera revisión: sin ellas, 3215 publicaba
+// «Makhachev lo tuvo sujeto 19 minutos más que Maddalena» sobre Jack DELLA
+// Maddalena, que es campeón. Los otros dos son Saint Denis y Saint Preux.
+const PARTICULAS = new Set([
+  "da", "das", "de", "del", "della", "delle", "di", "do", "dos",
+  "la", "le", "saint", "st.", "van", "von",
+]);
+
+const NUMEROS = [
+  "cero", "un", "dos", "tres", "cuatro", "cinco",
+  "seis", "siete", "ocho", "nueve", "diez",
+];
+
+/**
+ * El apellido con el que se nombra a un luchador en una frase.
+ *
+ * 🪤 "Tiago dos Santos e Silva" devuelve "Silva": la partícula no es la palabra
+ * anterior. Es una ficha de 2.859 y se acepta a cambio de no inventar reglas
+ * de nombres brasileños que nadie ha medido.
+ */
+export function displayLastName(fullName: string | null | undefined): string {
+  const partes = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) {
+    return "";
+  }
+  if (partes.length === 1) {
+    return partes[0];
+  }
+  let inicio = partes.length - 1;
+  // Mientras la palabra de delante sea partícula, se arrastra hacia atrás:
+  // "de la Rocha" lleva dos seguidas. Nunca se come el nombre de pila.
+  while (inicio > 1 && PARTICULAS.has(partes[inicio - 1].toLowerCase())) {
+    inicio -= 1;
+  }
+  return partes.slice(inicio).join(" ");
+}
+
+/**
+ * Una diferencia de tiempo en palabras que se puedan imaginar.
+ *
+ * Nunca mm:ss: "1:02" hay que dividirlo mentalmente, "un minuto" se ve. Se
+ * redondea a la media unidad más cercana, que es la resolución a la que un
+ * lector distingue algo.
+ */
+export function grappleGapWords(seconds: number): string {
+  const medios = Math.max(1, Math.round(seconds / 30));
+  const minutos = Math.floor(medios / 2);
+  const conMedio = medios % 2 === 1;
+  if (minutos === 0) {
+    return "medio minuto";
+  }
+  if (minutos === 1) {
+    return conMedio ? "minuto y medio" : "un minuto";
+  }
+  // A partir de diez la palabra deja de ayudar: la mayor diferencia real de la
+  // base son 21,6 minutos, y "21" se lee mejor que "veintiún".
+  const cuerpo = `${minutos <= 10 ? NUMEROS[minutos] : minutos} minutos`;
+  return conMedio ? `${cuerpo} y medio` : cuerpo;
+}
+
+// Cuánto del combate se peleó agarrado, EN PORCENTAJE.
+//
+// 🪤 TERCERA VERSIÓN DE ESTA FUNCIÓN, y las dos anteriores se cayeron por el
+// mismo motivo: decían el agarre en minutos redondeados. Eso obligaba a que
+// convivieran DOS ESCALAS DE REDONDEO en la misma tarjeta —la del titular, que
+// va a medias unidades de 30 s, y la del subtítulo, a minutos enteros— y las
+// frases resultantes se desmentían entre sí. Los mismos 36 segundos salían
+// como «medio minuto» arriba y «casi un minuto» abajo, con «0:36» en la
+// tercera línea. Dos revisiones adversariales, diez fallos confirmados, y cada
+// parche abría un caso nuevo: 452 combates con «casi todo el combate se peleó
+// agarrado» sobre un tercio real, 1.066 con «1 de los 15 minutos se pelearon»,
+// 2.383 publicando más duración de la que tuvo el combate.
+//
+// El porcentaje no tiene escala que colisionar, no tiene singular ni plural
+// que concordar, y es lo que pide la regla 3 de la especificación al pie de la
+// letra: «Porcentaje antes que segundos. "58 % del combate" se entiende;
+// "232 segundos" hay que dividirlo mentalmente.»
+//
+// Devuelve la frase SIN punto: el titular la usa tal cual y el subtítulo le
+// añade el suyo.
+function fraseDelAgarre(grappledSeconds: number, fightSeconds: number): string {
+  const pct = Math.min(100, Math.round((grappledSeconds / fightSeconds) * 100));
+  // Un 0 % sobre un agarre que existe sería el mismo error que los 568
+  // medidores de ayer: un cero que no es un cero.
+  return pct < 1
+    ? "Menos del 1 % del combate se peleó agarrado"
+    : `El ${pct} % del combate se peleó agarrado`;
+}
+
+function capitalizar(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// La diferencia entre los dos, en palabras — salvo cuando el redondeo al alza
+// se pasaría de lo que hay.
+//
+// 🪤 grappleGapWords redondea a medias unidades de 30 s, así que 45 segundos
+// de diferencia se dicen «un minuto». El techo NO es la duración del combate
+// sino EL AGARRE TOTAL: la diferencia sale de ahí, no de la pelea. En 11949
+// (Ruffy 45 s, Fiziev 0 s, combate de 570 s) el titular decía «un minuto más»
+// sobre un agarre entero de 0:45; con el techo de la duración no saltaba
+// porque 60 cabe en 570. Son 801 combates de la base.
+//
+// Cuando la palabra no cabe se dice el reloj exacto: feo, pero nunca falso.
+function diferenciaEnTexto(gap: number, grappledSeconds: number): string {
+  const segundosQueImplicaLaPalabra = Math.max(1, Math.round(gap / 30)) * 30;
+  return segundosQueImplicaLaPalabra <= grappledSeconds
+    ? grappleGapWords(gap)
+    : formatControlTime(gap);
+}
+
+type Familia = "unanime" | "jueces" | "final" | "otro";
+
+// Familia del desenlace, para que la nota no afirme nada falso.
+//
+// 🪤 "Los tres jueces vieron ganar a X" es falso en 932 combates de la base:
+// 828 decisiones divididas y 104 mayoritarias, donde por definición al menos
+// un juez vio ganar al otro.
+//
+// 🪤 Y "lo acabó en el asalto N" es falso en las 23 descalificaciones: al
+// combate lo acaba el árbitro, no el rival.
+function familiaDelMetodo(method: string | null): Familia {
+  const key = (method ?? "").trim().toUpperCase();
+  if (key.startsWith("U-DEC")) {
+    return "unanime";
+  }
+  if (key.startsWith("S-DEC") || key.startsWith("M-DEC")) {
+    return "jueces";
+  }
+  if (key.startsWith("KO") || key.startsWith("TKO") || key.startsWith("SUB")) {
+    return "final";
+  }
+  return "otro";
+}
+
+// Cómo se cuenta el desenlace detrás de "y aun así perdió: ".
+function comoGano(
+  familia: Familia,
+  ganador: string,
+  endRound: number | null,
+): string {
+  if (familia === "unanime") {
+    return `los tres jueces vieron ganar a ${ganador}.`;
+  }
+  if (familia === "jueces") {
+    return `los jueces vieron ganar a ${ganador}.`;
+  }
+  if (familia === "final" && endRound != null) {
+    return `${ganador} lo acabó en el asalto ${endRound}.`;
+  }
+  return `ganó ${ganador}.`;
+}
+
+// La misma información, como frase suelta detrás de la nota N3.
+function quienDecidio(
+  familia: Familia,
+  ganador: string,
+  endRound: number | null,
+): string {
+  if (familia === "unanime" || familia === "jueces") {
+    return "Quién ganó lo decidieron los jueces.";
+  }
+  if (familia === "final" && endRound != null) {
+    return `${ganador} lo acabó en el asalto ${endRound}.`;
+  }
+  return `Ganó ${ganador}.`;
+}
+
+export function buildFightHeadline(input: HeadlineInput): FightHeadline | null {
+  const split = computeGripSplit(
+    input.redControlSeconds,
+    input.blueControlSeconds,
+    input.fightSeconds,
+  );
+  // Sin dato de agarre no hay bloque. Es la regla de la casa: un ratio sin
+  // denominador es null y no se pinta.
+  if (!split) {
+    return null;
+  }
+
+  const red = displayLastName(input.redName);
+  const blue = displayLastName(input.blueName);
+  // Sin nombre no hay frase: "lo tuvo sujeto un minuto más que " se corta a
+  // mitad. Misma regla que el ratio sin denominador — no se publica.
+  if (!red || !blue) {
+    return null;
+  }
+
+  const grappled = computeGrappledSplit(split.redSeconds, split.blueSeconds);
+  const gap = Math.abs(split.redSeconds - split.blueSeconds);
+
+  // Quién sujetó más, y con qué nombre se le llama.
+  const mayorEsRojo = split.redSeconds > split.blueSeconds;
+  const mayor = mayorEsRojo ? red : blue;
+  const menor = mayorEsRojo ? blue : red;
+  const ganador = input.winner === "red" ? red : input.winner === "blue" ? blue : null;
+  const familia = familiaDelMetodo(input.method);
+
+  // 🪤 La diferencia se calcula UNA SOLA VEZ y de aquí beben el titular y la
+  // nota. Antes cada uno la formateaba por su cuenta —el titular con el
+  // guardarraíl, la nota con grappleGapWords en crudo— y en el combate 5117
+  // los mismos 227 s salían como «3:47» arriba y «cuatro minutos» abajo, que
+  // además son más segundos que todo el combate. Es la misma lección que
+  // fight-result.ts: una regla, un sitio.
+  const diferencia = grappled
+    ? diferenciaEnTexto(gap, grappled.grappledSeconds)
+    : null;
+
+  let headline: string;
+  let subhead: string;
+
+  if (!grappled) {
+    // 167 combates de 8.612 se pelean sin que ninguno llegue a sujetar. Sin
+    // número de minutos: con un KO en el primer minuto la plantilla imprimía
+    // "en los 1 minutos", y la duración ya está bajo la barra.
+    headline = "Nadie sujetó a nadie en todo el combate";
+    subhead = "Los dos pelearon sin llegar a sujetarse ni un segundo.";
+  } else if (gap >= GAP_MINIMO_SEGUNDOS) {
+    headline = `${mayor} lo tuvo sujeto ${diferencia} más que ${menor}`;
+    subhead = `${fraseDelAgarre(grappled.grappledSeconds, split.totalSeconds)}.`;
+  } else {
+    // Sin diferencia que contar, el titular dice el hecho principal.
+    headline = capitalizar(
+      fraseDelAgarre(grappled.grappledSeconds, split.totalSeconds),
+    );
+    // 🪤 El subtítulo ENUNCIA los dos tiempos y no juzga si se parecen. Decir
+    // «los dos sujetaron casi lo mismo» era un juicio, y se rompía por los dos
+    // extremos: con uno a cero (1.083 combates) y con repartos de 7 a 1 —el
+    // combate 6819, Kattar 5 s contra Fishgold 33 s, lo publicaba junto a
+    // «Fishgold se llevó el 87 %»—. Un hecho no puede contradecir a otro hecho.
+    //
+    // Y van en orden rojo, azul: la frase tiene que casar con la barra, donde
+    // el rojo está siempre a la izquierda.
+    subhead = `${red} lo tuvo sujeto ${formatControlTime(
+      split.redSeconds,
+    )} y ${blue} ${formatControlTime(split.blueSeconds)}.`;
+  }
+
+  let grappledLine: string | null = null;
+  if (grappled) {
+    const reloj = formatControlTime(grappled.grappledSeconds);
+    grappledLine =
+      grappled.leader === null
+        ? `De los ${reloj} que alguno sujetó, se lo repartieron mitad y mitad.`
+        : `De los ${reloj} que alguno sujetó, ${
+            grappled.leader === "red" ? red : blue
+          } se llevó el ${grappled.leaderPercent} %.`;
+  }
+
+  // La nota N1 solo cabe cuando hay una diferencia que contar Y el que más
+  // sujetó perdió. Es un HECHO comprobable, no un descargo: el maquetado
+  // original decía "sujetar no es ganar: esto no mide quién pegó", dos
+  // negaciones sobre nuestros propios datos que se leen como "esta web no es
+  // fiable". El hecho enseña lo mismo mostrándolo.
+  const masAgarreYPerdio =
+    grappled !== null &&
+    grappled.leader !== null &&
+    ganador !== null &&
+    gap >= GAP_MINIMO_SEGUNDOS &&
+    mayor !== ganador;
+
+  let note: string;
+  if (masAgarreYPerdio && ganador) {
+    note = `${mayor} lo tuvo sujeto ${diferencia} más y aun así perdió: ${comoGano(
+      familia,
+      ganador,
+      input.endRound,
+    )}`;
+  } else {
+    const base = "Esto cuenta dónde se peleó el combate: agarrados o de pie.";
+    // 156 combates disputados no tienen ganador (64 empates y 92 anulados):
+    // ahí no cabe ni "ganó" ni "perdió".
+    note = ganador
+      ? `${base} ${quienDecidio(familia, ganador, input.endRound)}`
+      : base;
+  }
+
+  return { headline, subhead, grappledLine, note };
+}
