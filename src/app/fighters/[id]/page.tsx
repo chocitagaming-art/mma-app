@@ -743,7 +743,8 @@ export default async function FighterDetailPage({
                   criterio que el gráfico de métodos y el historial de ranking,
                   que se ocultan sin datos (más abajo). */}
               {defenseStats.strikingDefense !== null ||
-              defenseStats.takedownDefense !== null ? (
+              defenseStats.takedownDefense !== null ||
+              defenseStats.submissionDefense !== null ? (
                 <div className="grid gap-3">
                   {defenseStats.strikingDefense !== null ? (
                     <DefenseMeter
@@ -757,6 +758,13 @@ export default async function FighterDetailPage({
                       label="Defensa de derribo"
                       value={defenseStats.takedownDefense}
                       helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
+                    />
+                  ) : null}
+                  {defenseStats.submissionDefense !== null ? (
+                    <DefenseMeter
+                      label="Defensa de sumisión"
+                      value={defenseStats.submissionDefense}
+                      helper={`${defenseStats.oppSubmissionAttempts - defenseStats.submissionsLost} de ${defenseStats.oppSubmissionAttempts} superados`}
                     />
                   ) : null}
                 </div>

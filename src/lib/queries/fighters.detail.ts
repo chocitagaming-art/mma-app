@@ -202,11 +202,21 @@ export const getFighterDetail = cache(async (
         sum(opp.sig_strikes_landed)::text as opp_sig_strikes_landed,
         sum(opp.sig_strikes_attempted)::text as opp_sig_strikes_attempted,
         sum(opp.takedowns_landed)::text as opp_takedowns_landed,
-        sum(opp.takedowns_attempted)::text as opp_takedowns_attempted
+        sum(opp.takedowns_attempted)::text as opp_takedowns_attempted,
+        sum(opp.submission_attempts)::text as opp_submission_attempts,
+        -- Sumisiones consumadas: no hay columna, se derivan del método. El
+        -- join a fights no multiplica filas (una por combate en \`me\`).
+        (count(*) filter (
+          where fi.winner_id is not null
+            and fi.winner_id <> $1
+            and fi.method ilike 'sub%'
+        ))::text as submissions_lost
       from fight_stats me
       join fight_stats opp
         on opp.fight_id = me.fight_id
        and opp.fighter_id <> me.fighter_id
+      join fights fi
+        on fi.id = me.fight_id
       where me.fighter_id = $1`,
       [id],
     ),

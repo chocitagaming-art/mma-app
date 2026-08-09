@@ -124,6 +124,8 @@ export function mapDefense(row?: DefenseRow): FighterDefenseStats {
   const oppSigAtt = Number(row?.opp_sig_strikes_attempted ?? 0);
   const oppTdLanded = Number(row?.opp_takedowns_landed ?? 0);
   const oppTdAtt = Number(row?.opp_takedowns_attempted ?? 0);
+  const oppSubAtt = Number(row?.opp_submission_attempts ?? 0);
+  const subsLost = Number(row?.submissions_lost ?? 0);
 
   return {
     // Sin intentos del rival no hay defensa que medir: null, NO cero. Un cero
@@ -134,6 +136,9 @@ export function mapDefense(row?: DefenseRow): FighterDefenseStats {
     oppSigStrikesAttempted: oppSigAtt,
     oppTakedownsLanded: oppTdLanded,
     oppTakedownsAttempted: oppTdAtt,
+    submissionDefense: computeSubmissionDefense(oppSubAtt, subsLost),
+    oppSubmissionAttempts: oppSubAtt,
+    submissionsLost: subsLost,
   };
 }
 
@@ -181,6 +186,41 @@ export function computeControlShare(
 
   const share = controlSeconds / totalSeconds;
   return share > 1 ? null : share;
+}
+
+/**
+ * Intentos de sumisión encajados por debajo de los cuales NO se enseña el
+ * medidor. Decisión del dueño el 9-ago-2026, sobre las cifras medidas: con 3,
+ * el medidor sale en el 30,85 % de las fichas; con 1 saldría en el 63,94 % pero
+ * las 556 fichas con un único intento solo podrían decir 100 % o 0 %; con 5
+ * bajaba al 16,37 %, dejando fuera a 83 de cada 100 fichas incluidas las de
+ * élite (los rankeados tienen la misma muestra que el resto).
+ */
+export const SUBMISSION_DEFENSE_MIN_ATTEMPTS = 3;
+
+/**
+ * Defensa de sumisión: de los intentos que le hicieron, cuántos sobrevivió.
+ *
+ * 🪤 No hay columna de sumisiones consumadas: se derivan de `fights.method`
+ * (prefijo `SUB - `), que es una fuente distinta de `fight_stats`. Las dos no
+ * siempre cuadran — 9 fichas registran hoy más sumisiones sufridas que intentos
+ * encajados. Ninguna llega al umbral, pero un dato imposible no se publica
+ * aunque llegara: daría un porcentaje negativo.
+ *
+ * @returns null si no llega al umbral o si el dato es incoherente.
+ */
+export function computeSubmissionDefense(
+  attemptsFaced: number,
+  submissionsLost: number,
+): number | null {
+  if (attemptsFaced < SUBMISSION_DEFENSE_MIN_ATTEMPTS) {
+    return null;
+  }
+  if (submissionsLost > attemptsFaced) {
+    return null;
+  }
+
+  return 1 - submissionsLost / attemptsFaced;
 }
 
 export function mapWinMethods(row?: WinMethodRow): FighterWinMethods {

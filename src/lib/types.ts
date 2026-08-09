@@ -131,6 +131,12 @@ export type FighterAggregateStats = {
 export type FighterDefenseStats = {
   strikingDefense: number | null;
   takedownDefense: number | null;
+  // Fracción de intentos de sumisión encajados que sobrevivió. null por debajo
+  // del umbral (SUBMISSION_DEFENSE_MIN_ATTEMPTS): 36 % de las fichas no han
+  // encajado jamás un intento y no hay nada que medir en ellas.
+  submissionDefense: number | null;
+  oppSubmissionAttempts: number;
+  submissionsLost: number;
   oppSigStrikesLanded: number;
   oppSigStrikesAttempted: number;
   oppTakedownsLanded: number;

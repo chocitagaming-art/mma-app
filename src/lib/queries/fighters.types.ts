@@ -105,6 +105,9 @@ export type DefenseRow = {
   opp_sig_strikes_attempted: string | null;
   opp_takedowns_landed: string | null;
   opp_takedowns_attempted: string | null;
+  opp_submission_attempts: string | null;
+  // Derivadas de fights.method (prefijo 'SUB - '): no hay columna propia.
+  submissions_lost: string | null;
 };
 
 export type WinMethodRow = {

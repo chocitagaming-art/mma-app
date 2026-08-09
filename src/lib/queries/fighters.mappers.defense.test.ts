@@ -12,6 +12,8 @@ function fila(extra: Partial<DefenseRow> = {}): DefenseRow {
     opp_sig_strikes_attempted: null,
     opp_takedowns_landed: null,
     opp_takedowns_attempted: null,
+    opp_submission_attempts: null,
+    submissions_lost: null,
     ...extra,
   };
 }
