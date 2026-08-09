@@ -298,11 +298,22 @@ export const getFighterDetail = cache(async (
     // no contest: sus dos únicas filas son Gracie-Shamrock (UFC 5) y
     // Taktarov-Shamrock (UFC 7), los empates por límite de tiempo de 1995, así
     // que el récord de esos tres se quedaba un empate corto.
+    //
+    // 🪤 Y el predicado va en LOS TRES contadores, no solo en los empates. Un
+    // no contest CON ganador no existe hoy (0 filas), pero es el estado natural
+    // de una pelea que se anula DESPUÉS: `upsert_fight` conserva el winner_id
+    // viejo cuando ufcstats pasa a servir NC/NC, y el método sí se pisa. Con el
+    // predicado solo en los empates, esa fila rotularía "Sin resultado" en la
+    // tabla y contaría como victoria en el récord de la misma pantalla — la
+    // contradicción exacta que este arreglo vino a quitar.
     sql<UfcRecordRow>(
       `select
-        (count(*) filter (where fi.winner_id = $1))::text as wins,
+        (count(*) filter (
+          where fi.winner_id = $1 and not ${noContestSqlPredicate()}
+        ))::text as wins,
         (count(*) filter (
           where fi.winner_id is not null and fi.winner_id <> $1
+            and not ${noContestSqlPredicate()}
         ))::text as losses,
         (count(*) filter (
           where fi.winner_id is null and fi.method is not null
