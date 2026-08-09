@@ -729,18 +729,29 @@ export default async function FighterDetailPage({
                   </p>
                 </div>
               </div>
-              <div className="grid gap-3">
-                <DefenseMeter
-                  label="Defensa de golpeo"
-                  value={defenseStats.strikingDefense}
-                  helper={`${defenseStats.oppSigStrikesLanded} de ${defenseStats.oppSigStrikesAttempted} permitidos`}
-                />
-                <DefenseMeter
-                  label="Defensa de derribo"
-                  value={defenseStats.takedownDefense}
-                  helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
-                />
-              </div>
+              {/* Un medidor sin denominador no se pinta: decir "0 %" cuando
+                  nadie lo intentó es afirmar lo contrario de lo que pasó. Mismo
+                  criterio que el gráfico de métodos y el historial de ranking,
+                  que se ocultan sin datos (más abajo). */}
+              {defenseStats.strikingDefense !== null ||
+              defenseStats.takedownDefense !== null ? (
+                <div className="grid gap-3">
+                  {defenseStats.strikingDefense !== null ? (
+                    <DefenseMeter
+                      label="Defensa de golpeo"
+                      value={defenseStats.strikingDefense}
+                      helper={`${defenseStats.oppSigStrikesLanded} de ${defenseStats.oppSigStrikesAttempted} permitidos`}
+                    />
+                  ) : null}
+                  {defenseStats.takedownDefense !== null ? (
+                    <DefenseMeter
+                      label="Defensa de derribo"
+                      value={defenseStats.takedownDefense}
+                      helper={`${defenseStats.oppTakedownsLanded} de ${defenseStats.oppTakedownsAttempted} permitidos`}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 

@@ -126,8 +126,10 @@ export function mapDefense(row?: DefenseRow): FighterDefenseStats {
   const oppTdAtt = Number(row?.opp_takedowns_attempted ?? 0);
 
   return {
-    strikingDefense: oppSigAtt > 0 ? 1 - oppSigLanded / oppSigAtt : 0,
-    takedownDefense: oppTdAtt > 0 ? 1 - oppTdLanded / oppTdAtt : 0,
+    // Sin intentos del rival no hay defensa que medir: null, NO cero. Un cero
+    // aquí es un dato (encajó todos los que le tiraron) y se publica.
+    strikingDefense: oppSigAtt > 0 ? 1 - oppSigLanded / oppSigAtt : null,
+    takedownDefense: oppTdAtt > 0 ? 1 - oppTdLanded / oppTdAtt : null,
     oppSigStrikesLanded: oppSigLanded,
     oppSigStrikesAttempted: oppSigAtt,
     oppTakedownsLanded: oppTdLanded,

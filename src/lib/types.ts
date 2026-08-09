@@ -121,9 +121,16 @@ export type FighterAggregateStats = {
 // --- Ficha de luchador estilo UFC.com: agregados adicionales (#39) ---
 
 // Defensa = porcentaje de intentos del rival que NO conectaron (0..1).
+//
+// null = NO HAY DENOMINADOR: nadie lo intentó, o el luchador no tiene ni una
+// fila en fight_stats. No es lo mismo que 0, que significa "lo intentaron y los
+// encajó todos" y es un dato real de 207 fichas (medido el 9-ago-2026). Antes
+// los dos casos compartían el 0 y la web publicaba "Defensa de derribo 0 %" en
+// 398 fichas a las que nadie había intentado derribar. Misma convención que
+// `safe_divide` de mma-ingesta (metrics.py), que devuelve None.
 export type FighterDefenseStats = {
-  strikingDefense: number;
-  takedownDefense: number;
+  strikingDefense: number | null;
+  takedownDefense: number | null;
   oppSigStrikesLanded: number;
   oppSigStrikesAttempted: number;
   oppTakedownsLanded: number;
