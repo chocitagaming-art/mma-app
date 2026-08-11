@@ -17,6 +17,7 @@
   --color-corner-red-foreground: var(--corner-red-foreground);
   --color-corner-blue: var(--corner-blue);
   --color-corner-blue-foreground: var(--corner-blue-foreground);
+  --color-grip-nobody: var(--grip-nobody);
   --color-win: var(--win);
   --color-win-foreground: var(--win-foreground);
   --color-loss: var(--loss);
@@ -87,6 +88,21 @@
   --corner-red-foreground: #ffffff;
   --corner-blue: #0a5fc2;
   --corner-blue-foreground: #ffffff;
+  /* El tercer tramo de la barra de agarre: el tiempo en que NO sujetaba
+     ninguno de los dos. No es decoración — significa, y por eso WCAG 1.4.11
+     le exige >=3:1 contra el fondo Y contra los tramos que toca.
+     Medido el 11-ago-2026 contra la superficie REAL del tile (la base del
+     degradado de PREMIUM_TILE, no --card a secas):
+
+       --border  1.48 claro / 1.21 oscuro   <- lo que parecía la elección obvia
+       #52525b   6.95 claro                     y no llega ni a la mitad
+       #a1a1aa   6.84 oscuro
+
+     Token propio y no `var(--muted-foreground)` a pesar de compartir valor
+     hoy: si mañana alguien aclara el gris del texto secundario, este gráfico
+     NO debe moverse detrás. src/lib/contrast.test.ts lee este fichero y falla
+     en rojo si cualquiera de los dos valores deja de cumplir. */
+  --grip-nobody: #52525b;
   --win: #15803d;
   --win-foreground: #ffffff;
   --loss: #b91c1c;
@@ -140,6 +156,7 @@
   --corner-red-foreground: #ffffff;
   --corner-blue: #3b92f0;
   --corner-blue-foreground: #ffffff;
+  --grip-nobody: #a1a1aa;
   --win: #4ade80;
   --win-foreground: #052e16;
   --loss: #f87171;
