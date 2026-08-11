@@ -5,6 +5,7 @@ import { Play, Sparkles } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
 import { FightVideoPlayer } from "@/components/fight-video-player";
+import { FightGrip } from "@/components/fight/fight-grip";
 import { FightTimeline } from "@/components/fight/fight-timeline";
 import { RoundByRound } from "@/components/fight/round-by-round";
 import { MarketOnlyCard } from "@/components/market-corner-tile";
@@ -13,6 +14,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { TaleOfTheTape } from "@/components/tale-of-the-tape";
 import { Button } from "@/components/ui/button";
 import { marketFavorite } from "@/lib/odds";
+import { getFightGripStats } from "@/lib/queries/fight-grip";
 import { getFightDetail, getFightRoundStats } from "@/lib/queries/fights";
 import { getFightSampleSeries } from "@/lib/queries/live";
 import { getSkillRadarEntries } from "@/lib/queries/skill-radar";
@@ -63,12 +65,18 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
   // del directo (timeline, mig. 024) en paralelo: independientes entre sí; el
   // detalle ya está deduplicado con cache() frente a generateMetadata y los
   // percentiles vienen de unstable_cache (24 h).
-  const [fight, roundStats, radarEntries, sampleSeries] = await Promise.all([
-    getFightDetail(fightId),
-    getFightRoundStats(fightId),
-    getSkillRadarEntries(),
-    getFightSampleSeries([fightId]),
-  ]);
+  const [fight, roundStats, radarEntries, sampleSeries, gripStats] =
+    await Promise.all([
+      getFightDetail(fightId),
+      getFightRoundStats(fightId),
+      getSkillRadarEntries(),
+      getFightSampleSeries([fightId]),
+      // Tubería propia y aparte de getFightRoundStats: esa hace
+      // `control_time_seconds ?? 0` (queries/fights.ts:438), así que un asalto
+      // SIN ACTA llega como 0 y es indistinguible de "no sujetó nadie". Son
+      // 152 combates, toda la era 1995-1998. Aquí los nulos llegan vivos.
+      getFightGripStats(fightId),
+    ]);
 
   if (!fight) {
     notFound();
@@ -195,6 +203,35 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
           blueId={fight.blue.id}
           redName={fight.red.name}
           blueName={fight.blue.name}
+        />
+      ) : null}
+
+      {/* La película, T7-T9: cuánto del combate se peleó AGARRADO y quién
+          sujetaba a quién. Va entre la película de golpes y el asalto a asalto
+          a propósito: los otros dos hablan de golpes y este de segundos, así
+          que no añade un tercer marcador a la misma pantalla.
+          Sale del acta de ufcstats (8.612 combates), no del directo, así que
+          se pinta en casi todas las fichas mientras que la película solo
+          existe en 32. El mismo guard de cancelado que sus dos vecinos: sin él
+          una pelea que no se celebró pintaría reparto de agarre con filas
+          huérfanas. Si no hay acta de control o no hay reloj de fin, el
+          componente devuelve null y la sección no existe. */}
+      {!isCancelled ? (
+        <FightGrip
+          redControlSeconds={gripStats.redControlSeconds}
+          blueControlSeconds={gripStats.blueControlSeconds}
+          rounds={gripStats.rounds}
+          // 🪤 Los nombres, del join con `fighters` (fight.red.name), NUNCA de
+          // fights.fighter_red_name: esa columna está a NULL en 8.694 de las
+          // 8.852 filas y el bloque desaparecería en el 98 % de las fichas.
+          redName={fight.red.name}
+          blueName={fight.blue.name}
+          redId={fight.red.id}
+          blueId={fight.blue.id}
+          winnerId={fight.winnerId}
+          method={fight.method}
+          endRound={fight.endRound}
+          endTime={fight.endTime}
         />
       ) : null}
 

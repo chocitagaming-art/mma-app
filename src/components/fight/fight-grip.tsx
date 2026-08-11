@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import {
   buildFightGripView,
@@ -7,7 +9,6 @@ import {
   type GripSegment,
   type GripSegmentCorner,
 } from "@/lib/fight-grip-view";
-import type { GripSplit } from "@/lib/fight-grip";
 import { cn } from "@/lib/utils";
 
 // T8 de la película — "el reparto de agarre": cuánto del combate se peleó
@@ -86,15 +87,21 @@ function cifra(segment: GripSegment): string {
   return `${segment.percent} % (${segment.clock})`;
 }
 
-function celdaDeAsalto(split: GripSplit | null, corner: GripSegmentCorner) {
-  if (!split) {
-    return "—";
-  }
-  const segment = gripSegments(split).find((s) => s.corner === corner);
-  // gripSegments descarta los tramos de anchura cero para no dibujarlos, pero
-  // la cifra SÍ se publica: un cero medido es un dato, y callarlo lo convertiría
-  // en un hueco. Es la diferencia que separa este bloque de la columna
-  // «Control» de la tabla de al lado, que imprime 0:00 donde no hay acta.
+/**
+ * La cifra de un tramo concreto, o el cero MEDIDO si ese tramo no se dibuja.
+ *
+ * Un tramo de anchura cero desaparece del dibujo —pintarlo con su separador lo
+ * haría visible sin serlo— pero su cifra se sigue publicando: son 167 combates
+ * en los que alguna esquina no llegó a sujetar ni un segundo, y ese cero es un
+ * dato medido, no un hueco.
+ *
+ * 🪤 Y por eso "0 % (0:00)" NO se usa nunca para un asalto sin acta: ahí se
+ * escribe «sin acta de este asalto». Es justo la diferencia que la columna
+ * «Control» de la tabla de al lado no hace —imprime 0:00 en los dos casos—, y
+ * el motivo de que este bloque tenga tubería propia.
+ */
+function cifraDe(segments: GripSegment[], corner: GripSegmentCorner): string {
+  const segment = segments.find((s) => s.corner === corner);
   return segment ? cifra(segment) : "0 % (0:00)";
 }
 
@@ -136,23 +143,23 @@ export function FightGrip(props: FightGripProps) {
 
       <GripBar segments={segments} className="mt-1.5 h-7" />
 
-      <div className="mt-1.5 flex items-start justify-between gap-2 font-mono text-[0.7rem] text-muted-foreground">
-        {segments.map((segment) => (
-          <span
-            key={segment.corner}
-            className={cn(
-              "tabular",
-              segment.corner === "nobody" && "text-center",
-              segment.corner === "blue" && "text-right",
-            )}
-          >
-            {segment.corner === "nobody" ? "nadie sujetaba " : ""}
-            {cifra(segment)}
-          </span>
-        ))}
+      {/* 🪤 Las tres cifras NO caben en una fila a 375 px. Medido: los tres
+          rótulos suman 336 px de mono y el carril útil son 335. Puestas en una
+          sola fila se parten cada una en dos líneas y el bloque se lee como un
+          amasijo. Van en dos alturas: las dos esquinas a sus extremos —bajo su
+          nombre y su tramo, que es lo que mantiene el mapeo izquierda = rojo—
+          y el residuo centrado debajo, que es donde está su tramo. */}
+      <div className="mt-2 flex items-baseline justify-between gap-3 font-mono text-[0.7rem] text-muted-foreground">
+        <span className="tabular whitespace-nowrap">{cifraDe(segments, "red")}</span>
+        <span className="tabular whitespace-nowrap">{cifraDe(segments, "blue")}</span>
       </div>
-      <p className="mt-0.5 text-right font-mono text-[0.7rem] text-muted-foreground">
-        de {totalClock}
+      {segments.some((s) => s.corner === "nobody") ? (
+        <p className="tabular mt-1 text-center font-mono text-[0.7rem] text-muted-foreground">
+          nadie sujetaba {cifraDe(segments, "nobody")}
+        </p>
+      ) : null}
+      <p className="tabular mt-0.5 text-center font-mono text-[0.7rem] text-muted-foreground/80">
+        de {totalClock} de combate
       </p>
 
       {/* Regla 5: si se enseña un porcentaje del reparto, se enseñan los dos.
@@ -203,8 +210,12 @@ export function FightGrip(props: FightGripProps) {
           >
             <table
               className={cn(
-                "w-full text-sm",
-                asaltos > 3 ? "min-w-[520px]" : "min-w-[320px]",
+                // Los asaltos van en FILAS y las tres esquinas en columnas, al
+                // revés que el maquetado. Motivo medido a 375 px: con los
+                // asaltos en columnas la tabla crece con el combate y de tres
+                // asaltos solo se veían dos sin arrastrar; en uno de cinco
+                // (12863) se saldrían tres. Así son siempre cuatro columnas.
+                "w-full min-w-[300px] text-xs",
               )}
             >
               <caption className="sr-only">
@@ -215,83 +226,78 @@ export function FightGrip(props: FightGripProps) {
               </caption>
               <thead>
                 <tr className="border-b border-border">
-                  <td />
-                  {rounds.map((round) => (
+                  {(
+                    [
+                      ["red", redLastName],
+                      ["nobody", "Nadie"],
+                      ["blue", blueLastName],
+                    ] as const
+                  ).map(([corner, etiqueta]) => (
                     <th
-                      key={round.round}
+                      key={corner}
                       scope="col"
-                      className="px-2 py-2 text-right font-mono text-[0.65rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
+                      className="w-1/3 truncate px-1.5 py-2 text-center font-display text-[0.7rem] font-bold tracking-wide uppercase"
                     >
-                      Asalto {round.round}
+                      <span
+                        className={cn(
+                          corner === "red" && "text-corner-red",
+                          corner === "blue" && "text-corner-blue",
+                          corner === "nobody" && "text-muted-foreground",
+                        )}
+                      >
+                        {etiqueta}
+                      </span>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-border/60">
-                  <th
-                    scope="row"
-                    className="py-2 pr-3 text-left font-mono text-[0.65rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
-                  >
-                    Agarrados
-                  </th>
-                  {rounds.map((round) => (
-                    <td key={round.round} className="px-2 py-2">
-                      {round.split ? (
-                        <GripBar
-                          segments={gripSegments(round.split)}
-                          className="h-2"
-                        />
-                      ) : (
-                        <span className="block text-right font-mono text-[0.7rem] text-muted-foreground">
-                          sin medir
-                        </span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-
-                {(
-                  [
-                    ["red", redLastName],
-                    ["nobody", "Nadie"],
-                    ["blue", blueLastName],
-                  ] as const
-                ).map(([corner, etiqueta]) => (
-                  <tr key={corner} className="border-b border-border/60 last:border-b-0">
-                    <th
-                      scope="row"
-                      className="max-w-32 truncate py-2 pr-3 text-left font-display text-xs font-bold tracking-wide uppercase"
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "size-1.5 shrink-0 rounded-full",
-                            RELLENO[corner],
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "truncate",
-                            corner === "red" && "text-corner-red",
-                            corner === "blue" && "text-corner-blue",
-                            corner === "nobody" && "text-muted-foreground",
-                          )}
-                        >
-                          {etiqueta}
-                        </span>
-                      </span>
-                    </th>
-                    {rounds.map((round) => (
-                      <td
-                        key={round.round}
-                        className="tabular px-2 py-2 text-right font-mono text-sm whitespace-nowrap"
+                {rounds.map(({ round, split }) => (
+                  <Fragment key={round}>
+                    {/* El asalto como subcabecera a todo lo ancho, con su barra
+                        al lado: es el patrón del vecino (round-by-round.tsx:263)
+                        y libera la columna de rótulos, que a 375 px se comía el
+                        último dato. */}
+                    <tr className="bg-muted/40">
+                      <th
+                        colSpan={3}
+                        scope="colgroup"
+                        className="px-1.5 py-1.5 text-left font-mono text-[0.6rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
                       >
-                        {celdaDeAsalto(round.split, corner)}
-                      </td>
-                    ))}
-                  </tr>
+                        <span className="flex items-center gap-2">
+                          <span className="shrink-0">Asalto {round}</span>
+                          {split ? (
+                            <GripBar
+                              segments={gripSegments(split)}
+                              className="ml-auto h-1.5 w-24 shrink-0 sm:w-40"
+                            />
+                          ) : null}
+                        </span>
+                      </th>
+                    </tr>
+                    <tr className="border-b border-border/60 last:border-b-0">
+                      {split ? (
+                        (["red", "nobody", "blue"] as const).map((corner) => (
+                          <td
+                            key={corner}
+                            className="tabular px-1.5 py-2 text-center font-mono text-xs whitespace-nowrap"
+                          >
+                            {cifraDe(gripSegments(split), corner)}
+                          </td>
+                        ))
+                      ) : (
+                        // Aquí NO vale un guion ni un 0:00 en las tres celdas:
+                        // se leería como "no sujetó nadie", que es lo contrario
+                        // de "de este asalto no se conserva el dato".
+                        <td
+                          colSpan={3}
+                          className="px-1.5 py-2 text-center font-mono text-[0.7rem] text-muted-foreground"
+                        >
+                          sin acta de este asalto
+                        </td>
+                      )}
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
