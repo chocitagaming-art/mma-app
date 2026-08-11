@@ -38,6 +38,34 @@ describe("displayLastName", () => {
     expect(displayLastName("Chris de la Rocha")).toBe("de la Rocha");
   });
 
+  it("🪤 no llama «Jr.» a nadie: el sufijo arrastra la palabra de delante", () => {
+    // El agujero SIMÉTRICO del de las partículas, y se abrió al tapar aquel: la
+    // regla miraba hacia atrás pero nunca hacia delante, así que devolvía el
+    // sufijo como apellido. El bloque de agarre publicaba titulares enteros
+    // sobre alguien llamado «Jr.» en 68 de los 8.612 combates.
+    expect(displayLastName("Khalil Rountree Jr.")).toBe("Rountree Jr.");
+    expect(displayLastName("Raul Rosas Jr.")).toBe("Rosas Jr.");
+    expect(displayLastName("Michael Aswell Jr.")).toBe("Aswell Jr.");
+    expect(displayLastName("Kai Kamaka III")).toBe("Kamaka III");
+  });
+
+  it("y tampoco los quita: en portugués el sufijo ES el nombre", () => {
+    // Los cinco sufijos que existen de verdad en `fighters`, contados el
+    // 11-ago: jr. (9), neto (2), junior (2), iii (1) y filho (1). A «Antonio
+    // Carlos Junior» se le conoce como Carlos Junior, no como Carlos.
+    expect(displayLastName("Antonio Carlos Junior")).toBe("Carlos Junior");
+    expect(displayLastName("Marcio Alexandre Junior")).toBe("Alexandre Junior");
+    expect(displayLastName("Antonio Braga Neto")).toBe("Braga Neto");
+    // Nombre de dos palabras: el arrastre llega hasta el principio, que aquí
+    // es justo lo correcto.
+    expect(displayLastName("Mario Neto")).toBe("Mario Neto");
+    expect(displayLastName("Jafel Filho")).toBe("Jafel Filho");
+  });
+
+  it("el sufijo y la partícula se combinan sin pisarse", () => {
+    expect(displayLastName("Joao dos Santos Jr.")).toBe("dos Santos Jr.");
+  });
+
   it("conoce «Della» y «Saint»", () => {
     // 🪤 Tres luchadores de la base, y uno es campeón: 3215 lo publicaba como
     // «Makhachev lo tuvo sujeto 19 minutos más que Maddalena». Su apellido es
@@ -115,9 +143,12 @@ describe("buildFightHeadline", () => {
     // de la especificación: «Porcentaje antes que segundos. "58 % del
     // combate" se entiende; "232 segundos" hay que dividirlo mentalmente.»
     //
-    // 169 + 231 = 400 s de agarre; 400/900 = 44,4 % -> 44 %.
+    // 🪤 Y el porcentaje sale del MISMO reparto que pinta la barra, no de una
+    // cuenta propia. La barra dice 19 % del rojo y 26 % del azul: la frase
+    // tiene que decir 45, no el 44 que daba round(400/900) por su cuenta. Eran
+    // 1.531 combates con dos cifras del mismo dato a tres líneas de distancia.
     const h = buildFightHeadline(SOUSA_MIRANDA);
-    expect(h?.subhead).toBe("El 44 % del combate se peleó agarrado.");
+    expect(h?.subhead).toBe("El 45 % del combate se peleó agarrado.");
     // Regla 5: si se enseña un porcentaje del reparto, se enseñan los dos.
     // Sobre el combate Miranda es el 26 %; sobre el agarre, 231/400 = 58 %.
     expect(h?.grappledLine).toBe(
@@ -339,9 +370,11 @@ describe("buildFightHeadline", () => {
       expect(conCifras(0, 34, 89)?.subhead).toBe(
         "El 38 % del combate se peleó agarrado.",
       );
-      // 3338 Crosbie vs Nueraji: 199 s de 213 = 93,4 % -> 93 %.
+      // 3338 Crosbie vs Nueraji: 199 s de 213. Por resto mayor el reparto es
+      // 4 + 6 + 90, así que el agarre publicado es 4 + 90 = 94 y cuadra con las
+      // dos cifras de la barra.
       expect(conCifras(8, 191, 213)?.subhead).toBe(
-        "El 93 % del combate se peleó agarrado.",
+        "El 94 % del combate se peleó agarrado.",
       );
     });
 
@@ -450,14 +483,16 @@ describe("buildFightHeadline", () => {
       // los 568 medidores: un cero que no es un cero.
       // 2 s de 900 = 0,22 %. La diferencia es de 2 s, así que no hay historia
       // que contar y el porcentaje ocupa el titular.
+      // Ya no hace falta la fórmula «Menos del 1 %»: el reparto por resto mayor
+      // le da ese punto a la parte con segundos medidos, así que el porcentaje
+      // publicado es 1 y nunca 0. La guarda vive ahora en el reparto, que es
+      // donde se decide, y no en la frase que lo cuenta.
       const h = conCifras(2, 0, 900);
-      expect(h?.headline).toBe("Menos del 1 % del combate se peleó agarrado");
+      expect(h?.headline).toBe("El 1 % del combate se peleó agarrado");
       expect(h?.headline).not.toContain("El 0 %");
       // Y en el subtítulo, cuando la diferencia sí da titular: 40 s contra 0.
       const conTitular = conCifras(40, 0, 9000);
-      expect(conTitular?.subhead).toBe(
-        "Menos del 1 % del combate se peleó agarrado.",
-      );
+      expect(conTitular?.subhead).toBe("El 1 % del combate se peleó agarrado.");
     });
 
     it("R3·1 — el titular y la nota nombran igual el mismo hueco", () => {

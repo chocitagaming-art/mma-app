@@ -82,9 +82,27 @@ function GripBar({
   );
 }
 
-/** "19 % (2:49)" — el porcentaje primero, que es lo que se entiende. */
+/**
+ * "19 % (2:49)" — el porcentaje primero, que es lo que se entiende.
+ *
+ * 🪤 Salvo cuando el redondeo dejaría un «0 %» sobre segundos MEDIDOS: ahí se
+ * rotula «<1 %». Un 0 % afirma ausencia, y con 3 segundos de agarre no la hay.
+ * Eran 494 combates publicando «0 % (0:03)» con la misma tipografía que el cero
+ * de verdad, hasta que la revisión de después de desplegar lo cazó.
+ *
+ * El suelo NO se pone en el reparto: subir cada parte diminuta a 1 % infla el
+ * total —dos partes de 1 s en un combate de 501 publicarían un 2 % donde hay un
+ * 0,4 %— y eso lo prohíbe el barrido de fight-headline.test.ts. La parte
+ * diminuta se queda pequeña en la aritmética y se declara pequeña en el texto.
+ */
 function cifra(segment: GripSegment): string {
-  return `${segment.percent} % (${segment.clock})`;
+  // La condición mira la fracción EXACTA, no el entero que le tocó en el
+  // reparto: dos tramos con los mismos segundos tienen que rotularse igual. En
+  // 3850 los dos sujetaron 0:01 y el resto mayor le daba el punto a uno de los
+  // dos, así que salían «1 %» y «<1 %» sobre relojes idénticos.
+  const menorQueUno = segment.seconds > 0 && segment.share * 100 < 1;
+  const porcentaje = menorQueUno ? "<1" : `${segment.percent}`;
+  return `${porcentaje} % (${segment.clock})`;
 }
 
 /**

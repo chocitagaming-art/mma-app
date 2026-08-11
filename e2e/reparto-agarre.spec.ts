@@ -48,12 +48,33 @@ test("14232 publica los seis números del acta, que es el criterio de aceptació
     ).toHaveCount(1);
   }
 
-  // Y el total del combate, con sus dos denominadores.
+  // Y el total del combate, con sus dos denominadores. Los tres suman 100:
+  // los reparte `repartirPorcentajes` juntos, no cada uno por su cuenta.
   await expect(panel).toContainText("19 % (2:49)");
   await expect(panel).toContainText("26 % (3:51)");
-  await expect(panel).toContainText("nadie sujetaba 56 % (8:20)");
+  await expect(panel).toContainText("nadie sujetaba 55 % (8:20)");
   await expect(panel).toContainText("de 15:00 de combate");
   await expect(panel).toContainText("Miranda se llevó el 58 %");
+  // Y la frase de arriba dice lo mismo que la barra: 19 + 26 = 45.
+  await expect(panel).toContainText("El 45 % del combate se peleó agarrado");
+});
+
+test("🪤 no publica «100 %» ni «0 %» cuando el acta dice otra cosa", async ({
+  page,
+}) => {
+  // 3850, Rozenstruik vs Tuivasa: 1 s y 1 s de agarre en 900. Antes de la
+  // revisión de después de desplegar, esta ficha publicaba «nadie sujetaba
+  // 100 %» encima de dos cifras de «0 %» que tenían segundos medidos debajo.
+  await abrirFicha(page, 3850);
+
+  const panel = bloque(page);
+  await expect(panel).toBeVisible();
+
+  await expect(panel).not.toContainText("nadie sujetaba 100 %");
+  await expect(panel).toContainText("nadie sujetaba 99 %");
+  // Un segundo medido no se publica como 0 %: se declara pequeño.
+  await expect(panel).toContainText("<1 % (0:01)");
+  await expect(panel).not.toContainText("0 % (0:01)");
 });
 
 test("el rojo va a la izquierda y el azul a la derecha, en ese orden en el DOM", async ({

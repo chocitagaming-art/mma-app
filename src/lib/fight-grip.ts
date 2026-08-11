@@ -29,8 +29,9 @@ export type GripSplit = {
   redShare: number;
   blueShare: number;
   nobodyShare: number;
-  // Enteros, solo para el texto. Pueden sumar 101 por el redondeo: nunca se
-  // usan como anchura.
+  // Enteros, solo para el texto. Suman SIEMPRE 100 —los calcula
+  // `repartirPorcentajes` juntos, no cada uno por su cuenta— pero aun así no se
+  // usan como anchura: la anchura sale de los shares, que son exactos.
   redPercent: number;
   bluePercent: number;
   nobodyPercent: number;
@@ -130,6 +131,90 @@ export function roundDurationSeconds(
   return target < last ? ROUND_SECONDS : lastClock;
 }
 
+/**
+ * Los tres porcentajes enteros de un reparto, calculados JUNTOS y no cada uno
+ * por su cuenta.
+ *
+ * 🪤 EL FALLO QUE ESTO ARREGLA, y estaba publicado. Redondear cada parte por
+ * separado con `Math.round` produce tres afirmaciones falsas distintas, las
+ * tres medidas contra Neon sobre los 8.612 combates que publican el bloque:
+ *
+ *   «nadie sujetaba 100 %» con agarre medido . . .  86 combates (1,0 %)
+ *      3850: 898 s de 900 = 99,78 % publicado como 100 %, y dos líneas más
+ *      arriba el mismo bloque decía «lo tuvo sujeto 0:01».
+ *   «0 %» sobre segundos medidos . . . . . . . . . 494 combates (5,7 %)
+ *      5462: 4 s de agarre publicados como 0 %.
+ *   los tres no suman 100  . . . . . . . . . . . 1.553 combates (18,0 %)
+ *      4296: 27 + 37 + 37 = 101.
+ *
+ * Las tres reglas que aplica, en este orden:
+ *
+ *   1. TECHO. Una parte que no es el todo nunca se publica como 100 %: el
+ *      100 % no es un redondeo más, es una afirmación absoluta. El tope ya
+ *      existía diez líneas más abajo, en `computeGrappledSplit`, y era el
+ *      único sitio que lo tenía.
+ *   2. SUMA EXACTA. Lo que sobra o falta para 100 se reparte por resto decimal
+ *      descendente (método del resto mayor), sin saltarse el techo. Tres cifras
+ *      del mismo dato en la misma pantalla tienen que cuadrar, y de aquí sale
+ *      además el porcentaje del titular, que antes se redondeaba por su cuenta.
+ *
+ * 🪤 Y lo que esta función NO hace, porque el primer intento sí lo hacía y
+ * estaba mal: NO pone un suelo de 1 a las partes diminutas. Parecía la simetría
+ * del techo —«un 0 % sobre segundos medidos afirma ausencia»— pero cambiaba una
+ * mentira por otra: con 1 s y 1 s en un combate de 501, subir las dos a 1 %
+ * publica un 2 % de agarre donde hay un 0,4 %. Lo cazó el barrido adversarial
+ * de la sesión 5, que exige que el porcentaje publicado no se aleje más de un
+ * punto del real. El cero que no es cero se resuelve DONDE SE ESCRIBE, no aquí:
+ * el componente rotula «<1 %» cuando la parte tiene segundos y redondea a cero.
+ *
+ * El cero y el cien LEGÍTIMOS se siguen publicando: 167 combates donde nadie
+ * sujetó ni un segundo salen con «nadie 100 %», porque ahí es verdad.
+ */
+export function repartirPorcentajes(partes: number[], total: number): number[] {
+  if (!(total > 0)) {
+    return partes.map(() => 0);
+  }
+
+  const exactos = partes.map((valor) => (valor / total) * 100);
+  const techos = partes.map((valor) => (valor >= total ? 100 : 99));
+
+  const enteros = exactos.map((exacto, i) =>
+    Math.min(techos[i], Math.floor(exacto)),
+  );
+
+  // Índices ordenados por resto decimal descendente: quien más se acerca al
+  // siguiente entero es quien primero se lo lleva.
+  const porResto = exactos
+    .map((exacto, i) => ({ i, resto: exacto - Math.floor(exacto) }))
+    .sort((a, b) => b.resto - a.resto)
+    .map((x) => x.i);
+
+  let falta = 100 - enteros.reduce((a, b) => a + b, 0);
+
+  // El bucle termina siempre: cada vuelta o mueve una unidad o sale. El tope de
+  // vueltas es un cinturón, no la condición de parada.
+  for (let vuelta = 0; falta !== 0 && vuelta < 200; vuelta += 1) {
+    const orden = falta > 0 ? porResto : [...porResto].reverse();
+    let movido = false;
+    for (const i of orden) {
+      if (falta === 0) break;
+      if (falta > 0 && enteros[i] < techos[i]) {
+        enteros[i] += 1;
+        falta -= 1;
+        movido = true;
+      } else if (falta < 0 && enteros[i] > 0) {
+        enteros[i] -= 1;
+        falta += 1;
+        movido = true;
+      }
+    }
+    // Si el techo no deja cuadrar, se prefiere no cuadrar a mentir.
+    if (!movido) break;
+  }
+
+  return enteros;
+}
+
 export function computeGripSplit(
   redControlSeconds: number | null,
   blueControlSeconds: number | null,
@@ -152,6 +237,11 @@ export function computeGripSplit(
   // recorte los dos valores coinciden.
   const painted = red + blue + nobody;
 
+  const [redPercent, nobodyPercent, bluePercent] = repartirPorcentajes(
+    [red, nobody, blue],
+    painted,
+  );
+
   return {
     redSeconds: red,
     blueSeconds: blue,
@@ -160,9 +250,9 @@ export function computeGripSplit(
     redShare: red / painted,
     blueShare: blue / painted,
     nobodyShare: nobody / painted,
-    redPercent: Math.round((red / painted) * 100),
-    bluePercent: Math.round((blue / painted) * 100),
-    nobodyPercent: Math.round((nobody / painted) * 100),
+    redPercent,
+    bluePercent,
+    nobodyPercent,
   };
 }
 

@@ -72,16 +72,18 @@ describe("gripSegments", () => {
     const suma = segments.reduce((acc, s) => acc + s.share, 0);
     expect(suma).toBeCloseTo(1, 10);
 
-    // Y los enteros del texto, en este combate, suman 101: usarlos como
-    // anchura desbordaría la barra.
+    // Los enteros ya suman 100 —los reparte `repartirPorcentajes` juntos— pero
+    // siguen sin ser la anchura: son un redondeo, y la barra necesita la
+    // fracción exacta para que los tramos no se desplacen medio punto.
     const sumaPercent = segments.reduce((acc, s) => acc + s.percent, 0);
-    expect(sumaPercent).toBe(101);
+    expect(sumaPercent).toBe(100);
+    expect(segments[0].share).not.toBe(segments[0].percent / 100);
   });
 
   it("trae el reloj de cada tramo ya formateado", () => {
     const segments = gripSegments(split(169, 231, 900));
     expect(segments.map((s) => s.clock)).toEqual(["2:49", "8:20", "3:51"]);
-    expect(segments.map((s) => s.percent)).toEqual([19, 56, 26]);
+    expect(segments.map((s) => s.percent)).toEqual([19, 55, 26]);
   });
 
   it("descarta los tramos de anchura cero", () => {

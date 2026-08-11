@@ -74,8 +74,9 @@ describe("computeGripSplit", () => {
   it("reparte el combate del maquetado", () => {
     // 14232: Sousa (ROJO) 169 s, Miranda (AZUL) 231 s, 900 s de combate.
     // nadie = 900 - 169 - 231 = 500 s.
-    // 169/900 = 0,187777… -> 19 %  ·  231/900 = 0,256666… -> 26 %
-    // 500/900 = 0,555555… -> 56 %
+    // 169/900 = 18,78 %  ·  500/900 = 55,56 %  ·  231/900 = 25,67 %
+    // Por resto mayor: 18 + 55 + 25 = 98, y los dos que faltan van a los dos
+    // restos más grandes (0,78 del rojo y 0,67 del azul) -> 19, 55, 26.
     const split = computeGripSplit(169, 231, 900);
     expect(split).not.toBeNull();
     expect(split?.redSeconds).toBe(169);
@@ -84,19 +85,21 @@ describe("computeGripSplit", () => {
     expect(split?.totalSeconds).toBe(900);
     expect(split?.redPercent).toBe(19);
     expect(split?.bluePercent).toBe(26);
-    expect(split?.nobodyPercent).toBe(56);
+    expect(split?.nobodyPercent).toBe(55);
   });
 
-  it("da la fracción exacta aparte del porcentaje redondeado", () => {
-    // 🪤 19 + 26 + 56 = 101. Los porcentajes REDONDEADOS suman 101, así que
-    // usarlos como anchura desborda la barra en un 1 %. Las anchuras salen de
-    // las fracciones exactas, que suman 1 por construcción.
+  it("los tres porcentajes suman SIEMPRE 100", () => {
+    // 🪤 Antes se redondeaba cada parte por su cuenta y en 14232 salía
+    // 19 + 26 + 56 = 101. Eran 1.553 combates de 8.612 (18,0 %) publicando tres
+    // trozos de un mismo entero que no cuadraban, uno al lado del otro y con la
+    // misma tipografía. Ahora los tres los calcula `repartirPorcentajes`
+    // juntos, por resto mayor.
     const split = computeGripSplit(169, 231, 900);
     expect(
       (split?.redPercent ?? 0) +
         (split?.bluePercent ?? 0) +
         (split?.nobodyPercent ?? 0),
-    ).toBe(101);
+    ).toBe(100);
     expect(split?.redShare).toBeCloseTo(169 / 900, 12);
     expect(split?.blueShare).toBeCloseTo(231 / 900, 12);
     expect(split?.nobodyShare).toBeCloseTo(500 / 900, 12);
@@ -115,6 +118,71 @@ describe("computeGripSplit", () => {
     // 506/1361 = 0,37178… -> 37 %  ·  nadie = 855 -> 0,62821… -> 63 %
     expect(split?.redPercent).toBe(37);
     expect(split?.nobodyPercent).toBe(63);
+  });
+
+  it("🪤 nunca publica un 100 % sobre un tramo que no es el combate entero", () => {
+    // 3850, Rozenstruik vs Tuivasa: 1 s y 1 s de agarre en 900. El residuo son
+    // 898 s = 99,78 %, que redondeado a pelo sale 100 y afirma que NADIE sujetó
+    // a nadie — dos líneas por encima de un «lo tuvo sujeto 0:01». Eran 86
+    // combates. El 100 % no es un redondeo más: es una afirmación absoluta.
+    const split = computeGripSplit(1, 1, 900);
+    expect(split?.nobodySeconds).toBe(898);
+    expect(split?.nobodyPercent).toBe(99);
+    expect(split?.nobodyPercent).not.toBe(100);
+  });
+
+  it("pero el 100 % LEGÍTIMO se sigue publicando", () => {
+    // 167 combates de 8.612 se pelean sin que ninguno llegue a sujetar. Ahí el
+    // 100 % es verdad y taparlo sería el error contrario.
+    const split = computeGripSplit(0, 0, 900);
+    expect(split?.nobodyPercent).toBe(100);
+    expect(split?.redPercent).toBe(0);
+    expect(split?.bluePercent).toBe(0);
+  });
+
+  it("BARRIDO — los tres suman 100 y ningún 100 % es falso", () => {
+    // Recorre el espacio de duraciones y repartos. Es la comprobación que
+    // ninguna de las de arriba hace sola.
+    let casos = 0;
+    for (let total = 30; total <= 1500; total += 11) {
+      for (const red of [0, 1, 2, 5, 37, Math.floor(total / 3), total]) {
+        for (const blue of [0, 1, 3, 19, Math.floor(total / 4)]) {
+          if (red + blue > total) continue;
+          const split = computeGripSplit(red, blue, total);
+          if (!split) continue;
+          casos += 1;
+          const ctx = `total=${total} red=${red} blue=${blue}`;
+
+          expect(
+            split.redPercent + split.bluePercent + split.nobodyPercent,
+            ctx,
+          ).toBe(100);
+
+          for (const [segundos, porcentaje] of [
+            [split.redSeconds, split.redPercent],
+            [split.blueSeconds, split.bluePercent],
+            [split.nobodySeconds, split.nobodyPercent],
+          ] as const) {
+            // Un 100 % solo cuando esa parte ES todo lo pintado.
+            if (porcentaje === 100) {
+              expect(segundos, ctx).toBe(
+                split.redSeconds + split.blueSeconds + split.nobodySeconds,
+              );
+            }
+            // Y ningún porcentaje se aleja más de un punto del real: es la
+            // guarda que tumbó el primer intento de arreglo, que ponía un suelo
+            // de 1 a las partes diminutas e inflaba el total.
+            const pintado =
+              split.redSeconds + split.blueSeconds + split.nobodySeconds;
+            expect(
+              Math.abs(porcentaje - (segundos / pintado) * 100),
+              ctx,
+            ).toBeLessThan(1);
+          }
+        }
+      }
+    }
+    expect(casos).toBeGreaterThan(1000);
   });
 
   it("calla cuando no hay dato, en vez de dibujar un cero", () => {

@@ -67,6 +67,25 @@ const PARTICULAS = new Set([
   "la", "le", "saint", "st.", "van", "von",
 ]);
 
+// 🪤 Y el agujero SIMÉTRICO, que se abrió al tapar el de las partículas: la
+// regla miraba hacia atrás pero nunca hacia delante, así que si la última
+// palabra era un sufijo lo devolvía como apellido. «Khalil Rountree Jr.» daba
+// «Jr.», y el bloque publicaba un titular entero sobre alguien llamado Jr.
+// Medido: 68 combates de los 8.612 que pintan el bloque.
+//
+// La solución NO es quitar el sufijo: en «Antonio Carlos Junior» o «Mario Neto»
+// el sufijo ES parte del nombre con el que se le conoce. Se arrastra la palabra
+// de delante, igual que con las partículas, y así salen bien los dos idiomas:
+// «Rountree Jr.» y «Carlos Junior».
+//
+// Los cinco son los que existen de verdad en la base, contados el 11-ago: jr.
+// (9 luchadores), neto (2), junior (2), iii (1) y filho (1). No se inventan
+// sufijos que nadie tiene.
+const SUFIJOS = new Set([
+  "jr", "jr.", "sr", "sr.", "ii", "iii", "iv",
+  "junior", "júnior", "filho", "neto", "netto",
+]);
+
 const NUMEROS = [
   "cero", "un", "dos", "tres", "cuatro", "cinco",
   "seis", "siete", "ocho", "nueve", "diez",
@@ -88,6 +107,12 @@ export function displayLastName(fullName: string | null | undefined): string {
     return partes[0];
   }
   let inicio = partes.length - 1;
+  // Un sufijo no es un apellido: se arrastra la palabra de delante y se queda
+  // dentro. En un nombre de dos palabras ("Mario Neto") eso llega hasta el
+  // principio, que es justo lo correcto.
+  if (SUFIJOS.has(partes[inicio].toLowerCase())) {
+    inicio -= 1;
+  }
   // Mientras la palabra de delante sea partícula, se arrastra hacia atrás:
   // "de la Rocha" lleva dos seguidas. Nunca se come el nombre de pila.
   while (inicio > 1 && PARTICULAS.has(partes[inicio - 1].toLowerCase())) {
@@ -139,13 +164,20 @@ export function grappleGapWords(seconds: number): string {
 //
 // Devuelve la frase SIN punto: el titular la usa tal cual y el subtítulo le
 // añade el suyo.
-function fraseDelAgarre(grappledSeconds: number, fightSeconds: number): string {
-  const pct = Math.min(100, Math.round((grappledSeconds / fightSeconds) * 100));
-  // Un 0 % sobre un agarre que existe sería el mismo error que los 568
-  // medidores de ayer: un cero que no es un cero.
-  return pct < 1
-    ? "Menos del 1 % del combate se peleó agarrado"
-    : `El ${pct} % del combate se peleó agarrado`;
+// 🪤 El porcentaje NO se recalcula aquí: se toma del MISMO reparto que pinta la
+// barra. Antes esta función redondeaba por su cuenta —round((rojo+azul)/total)—
+// mientras la barra redondeaba cada esquina por separado, y las dos cifras del
+// mismo dato salían distintas a tres líneas de distancia: en 4296 la frase decía
+// «El 63 %» sobre una barra de 27 % + 37 %. Eran 1.531 combates. Misma lección
+// que fight-result.ts: una regla, un sitio.
+//
+// Y por eso ya no existe la rama «Menos del 1 %»: es inalcanzable por
+// construcción. `repartirPorcentajes` pone un suelo de 1 a toda parte con
+// segundos medidos, así que si alguien sujetó algo el porcentaje agarrado vale
+// 1 como mínimo. El cero que no es cero lo impide ahora el reparto, que es
+// donde tiene que impedirse.
+function fraseDelAgarre(grappledPercent: number): string {
+  return `El ${grappledPercent} % del combate se peleó agarrado`;
 }
 
 function capitalizar(texto: string): string {
@@ -278,11 +310,11 @@ export function buildFightHeadline(input: HeadlineInput): FightHeadline | null {
     subhead = "Los dos pelearon sin llegar a sujetarse ni un segundo.";
   } else if (gap >= GAP_MINIMO_SEGUNDOS) {
     headline = `${mayor} lo tuvo sujeto ${diferencia} más que ${menor}`;
-    subhead = `${fraseDelAgarre(grappled.grappledSeconds, split.totalSeconds)}.`;
+    subhead = `${fraseDelAgarre(split.redPercent + split.bluePercent)}.`;
   } else {
     // Sin diferencia que contar, el titular dice el hecho principal.
     headline = capitalizar(
-      fraseDelAgarre(grappled.grappledSeconds, split.totalSeconds),
+      fraseDelAgarre(split.redPercent + split.bluePercent),
     );
     // 🪤 El subtítulo ENUNCIA los dos tiempos y no juzga si se parecen. Decir
     // «los dos sujetaron casi lo mismo» era un juicio, y se rompía por los dos
