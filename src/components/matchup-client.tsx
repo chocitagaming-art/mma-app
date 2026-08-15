@@ -416,27 +416,56 @@ export function MatchupClient({
                                 ? formatWeightClass(fight.weightClass)
                                 : "Categoría no disponible"}
                             </Badge>
-                            <Badge className="border-primary/20 bg-primary/10 text-primary">
-                              {/* Aquí solo llegan peleas disputadas. El "Empate
-                                  / No contest" de antes no se mojaba porque la
-                                  query no traía con qué: ahora el método separa
-                                  las dos cosas (fight-result.ts). */}
-                              {
-                                {
-                                  redWin: `Ganó ${detail.fighterA.name}`,
-                                  blueWin: `Ganó ${detail.fighterB.name}`,
-                                  draw: "Empate",
-                                  nc: "Sin resultado",
-                                  scheduled: "Aún no disputada",
-                                }[
-                                  classifyDirectMatchup(
-                                    fight,
-                                    detail.fighterA.id,
-                                    detail.fighterB.id,
-                                  )
-                                ]
-                              }
-                            </Badge>
+                            {/* Aquí solo llegan peleas disputadas. El "Empate
+                                / No contest" de antes no se mojaba porque la
+                                query no traía con qué: ahora el método separa
+                                las dos cosas (fight-result.ts).
+
+                                🪤 Y HASTA EL 15-AGO LOS CINCO DESENLACES IBAN
+                                DEL MISMO COLOR: `bg-primary/10 text-primary`
+                                para «Ganó A», «Ganó B», «Empate» y «Sin
+                                resultado». El color no decía nada, y encima el
+                                tinte no aguantaba: la Card de arriba lleva
+                                `hover:bg-accent`, así que el fondo cambia bajo
+                                el badge y con el ratón encima el ratio caía a
+                                4,03-4,38 en varias ramas. Ninguna auditoría lo
+                                veía, porque axe no simula el puntero.
+
+                                Los badges SÓLIDOS lo arreglan por los dos
+                                lados: el fondo es opaco, así que el hover deja
+                                de importar, y cada desenlace tiene su color.
+                                Medido token + su foreground: 5,54/6,12 el rojo
+                                y el azul en claro, 5,26/5,59 en oscuro, 4,92 y
+                                8,97 el «sin resultado». El empate va en
+                                `outline` porque NO hay token --draw y darle el
+                                gris de `bg-muted` lo confundiría con el chip de
+                                categoría que va justo al lado. */}
+                            {(() => {
+                              const desenlace = classifyDirectMatchup(
+                                fight,
+                                detail.fighterA.id,
+                                detail.fighterB.id,
+                              );
+                              const ESTILO: Record<typeof desenlace, string> = {
+                                redWin: "border-transparent bg-corner-red text-corner-red-foreground",
+                                blueWin: "border-transparent bg-corner-blue text-corner-blue-foreground",
+                                draw: "border-border bg-transparent text-foreground",
+                                nc: "border-transparent bg-nc text-nc-foreground",
+                                scheduled: "border-border bg-transparent text-foreground",
+                              };
+                              const TEXTO: Record<typeof desenlace, string> = {
+                                redWin: `Ganó ${detail.fighterA.name}`,
+                                blueWin: `Ganó ${detail.fighterB.name}`,
+                                draw: "Empate",
+                                nc: "Sin resultado",
+                                scheduled: "Aún no disputada",
+                              };
+                              return (
+                                <Badge className={ESTILO[desenlace]}>
+                                  {TEXTO[desenlace]}
+                                </Badge>
+                              );
+                            })()}
                           </div>
                           <p className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">
                             {fight.eventName ?? "Evento desconocido"}

@@ -145,11 +145,21 @@ export function RoundByRound({
           Asalto a asalto
         </p>
         <p className="mt-1 text-center text-xs text-muted-foreground">
-          Estadísticas oficiales de cada asalto (fuente ufcstats). Las barras comparan
-          los golpes significativos conectados entre las dos esquinas.
+          Estadísticas de cada asalto, del acta oficial (fuente ufcstats). Las barras
+          comparan los golpes significativos conectados entre las dos esquinas.
         </p>
       </div>
-      <div className="mt-4 overflow-x-auto">
+      {/* tabIndex + nombre accesible: la tabla desborda a lo ancho (min-w de
+          520-580 px contra un carril de 301 a 375 px), y un carril que solo se
+          recorre arrastrando deja fuera a quien navega con teclado. Es la regla
+          scrollable-region-focusable, que el bloque de agarre de arriba ya
+          cumplía desde el primer día y esta tabla no. */}
+      <div
+        className="mt-4 overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label={`Desglose por asaltos, ${redName} contra ${blueName}`}
+      >
         <table
           className={cn("w-full border-t border-border text-sm", columnas === 6 ? "min-w-[580px]" : "min-w-[520px]")}
         >

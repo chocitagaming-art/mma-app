@@ -36,6 +36,28 @@ describe("displayLastName", () => {
     expect(displayLastName("Alessio Di Chirico")).toBe("Di Chirico");
     // Dos partículas seguidas.
     expect(displayLastName("Chris de la Rocha")).toBe("de la Rocha");
+    // 🪤 "du" faltaba desde el principio, y la ficha del CAMPEÓN de peso medio
+    // llevaba días publicando titulares sobre alguien llamado «Plessis». Igual
+    // que pasó con Della Maddalena: la lista se escribió mirando quién estaba
+    // en pantalla, no quién está en la base.
+    expect(displayLastName("Dricus Du Plessis")).toBe("Du Plessis");
+  });
+
+  it("🪤 NO mete partículas «por si acaso»: casi todas son nombres de pila", () => {
+    // El agujero que este test impide abrir. Al buscar por qué faltaba "du" se
+    // pasaron por la base las 29 partículas de apellido de los idiomas de la
+    // UFC, y seis de ellas SÍ aparecen como penúltima palabra... siendo el
+    // nombre de pila. Meterlas «para completar la lista» habría roto estas 14
+    // fichas que hoy están bien. La lista se amplía contando, no por simetría.
+    expect(displayLastName("Ben Askren")).toBe("Askren");
+    expect(displayLastName("Al Iaquinta")).toBe("Iaquinta");
+    expect(displayLastName("Mac Danzig")).toBe("Danzig");
+    expect(displayLastName("Abu Azaitar")).toBe("Azaitar");
+    expect(displayLastName("Li Jingliang")).toBe("Jingliang");
+    expect(displayLastName("Sung Bin Jo")).toBe("Jo");
+    // Y el caso al revés, que ya funciona: una partícula que abre el nombre es
+    // el nombre de pila, no una partícula. "Da Woon" es coreano.
+    expect(displayLastName("Da Woon Jung")).toBe("Jung");
   });
 
   it("🪤 no llama «Jr.» a nadie: el sufijo arrastra la palabra de delante", () => {

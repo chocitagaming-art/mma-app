@@ -323,3 +323,67 @@ describe("estadoDesglose", () => {
     expect(estadoDesglose(false, "U-DEC", new Date("vaya"))).toBe("nada");
   });
 });
+
+// ---------------------------------------------------------------------------
+// El acta que NO registra tiempo de control
+// ---------------------------------------------------------------------------
+//
+// 152 combates de la base, todos entre 1995 y 1999, no traen
+// `control_time_seconds` en ninguna de sus filas. Hasta el 15-ago-2026 la
+// consulta hacía `row.control_time_seconds ?? 0` y la columna «Control»
+// publicaba "0:00": 374 celdas de asalto y 304 de totales afirmando un cero que
+// nadie midió. Se veía por contraste desde que el bloque de agarre —que tiene
+// tubería propia y sí distingue— se calla en esos mismos combates.
+describe("control sin acta: null NO es cero", () => {
+  it("un asalto sin control deja el total sin control, no en cero", () => {
+    const datos = buildRoundByRound(
+      [
+        fila({ fighterId: ROJO, round: 1, controlTimeSeconds: null }),
+        fila({ fighterId: AZUL, round: 1, controlTimeSeconds: null }),
+        fila({ fighterId: ROJO, round: 2, controlTimeSeconds: null }),
+        fila({ fighterId: AZUL, round: 2, controlTimeSeconds: null }),
+      ],
+      ROJO,
+      AZUL,
+    );
+
+    expect(datos?.totals.red.controlTimeSeconds).toBeNull();
+    expect(datos?.totals.blue.controlTimeSeconds).toBeNull();
+  });
+
+  it("🪤 si UN asalto tiene dato y otro no, el total NO se inventa el que falta", () => {
+    // La tentación al abrir el tipo es `(a ?? 0) + (b ?? 0)`, que reintroduce
+    // la misma mentira escondida dentro del total. Hoy no hay ni un combate
+    // mixto medido —o vienen todos los asaltos con control o ninguno—, pero el
+    // tipo lo permite y el próximo scrape parcial lo puede crear.
+    const datos = buildRoundByRound(
+      [
+        fila({ fighterId: ROJO, round: 1, controlTimeSeconds: 60 }),
+        fila({ fighterId: AZUL, round: 1, controlTimeSeconds: null }),
+        fila({ fighterId: ROJO, round: 2, controlTimeSeconds: null }),
+        fila({ fighterId: AZUL, round: 2, controlTimeSeconds: 30 }),
+      ],
+      ROJO,
+      AZUL,
+    );
+
+    // Con dato en algún asalto, el total es la suma de lo que hay: parcial,
+    // pero no cero y no null.
+    expect(datos?.totals.red.controlTimeSeconds).toBe(60);
+    expect(datos?.totals.blue.controlTimeSeconds).toBe(30);
+  });
+
+  it("un cero MEDIDO se distingue de un hueco", () => {
+    const datos = buildRoundByRound(
+      [
+        fila({ fighterId: ROJO, round: 1, controlTimeSeconds: 0 }),
+        fila({ fighterId: AZUL, round: 1, controlTimeSeconds: null }),
+      ],
+      ROJO,
+      AZUL,
+    );
+
+    expect(datos?.totals.red.controlTimeSeconds).toBe(0);
+    expect(datos?.totals.blue.controlTimeSeconds).toBeNull();
+  });
+});

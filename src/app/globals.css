@@ -140,8 +140,12 @@
   --card-foreground: #fafafa;
   --popover: #161619;
   --popover-foreground: #fafafa;
+  /* Mismo caso que las esquinas: blanco sobre este rojo aclarado da 3,88:1 y
+     lo llevan TODOS los botones del sitio. NO se toca --primary: oscurecerlo
+     rompería los 176 usos de text-primary, que es texto rojo sobre fondo
+     oscuro y ahí el rojo claro es justo lo que hace falta. */
   --primary: #f5333a;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #2a0407; /* 4,84:1 */
   --secondary: #1f1f23;
   --secondary-foreground: #fafafa;
   --muted: #1f1f23;
@@ -152,10 +156,19 @@
   --border: #27272a;
   --input: #2a2a2e;
   --ring: #f5333a;
+  /* 🪤 TINTA OSCURA, NO BLANCA, y en los DOS. La paleta oscura aclara el rojo y
+     el azul de marca para que despeguen del negro, y al aclararlos el blanco de
+     encima se queda sin contraste: 3,57:1 el rojo y 3,20:1 el azul, donde el
+     texto pide 4,5. El azul estaba PEOR y no figuraba en ninguna lista de
+     deuda, porque las dos fichas que audita el e2e tienen ganador de la esquina
+     roja: la deuda describía la muestra, no el sitio.
+     Mismo patrón que sus hermanos --win-foreground y --nc-foreground: una
+     versión muy oscura del propio color, no un negro genérico. En :root siguen
+     en blanco a propósito, que ahí dan 5,54 y 6,12. Lo fija contrast.test.ts. */
   --corner-red: #f5474c;
-  --corner-red-foreground: #ffffff;
+  --corner-red-foreground: #2a0407; /* 5,26:1 */
   --corner-blue: #3b92f0;
-  --corner-blue-foreground: #ffffff;
+  --corner-blue-foreground: #04182d; /* 5,59:1 */
   --grip-nobody: #a1a1aa;
   --win: #4ade80;
   --win-foreground: #052e16;

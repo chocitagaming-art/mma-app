@@ -30,7 +30,25 @@ export function formatPercentage(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
-export function formatControlTime(seconds: number) {
+/**
+ * Segundos de control -> "1:01". Sin dato -> "—".
+ *
+ * 🪤 ACEPTA NULL, y eso es el arreglo. Hasta el 15-ago-2026 esta función exigía
+ * `number` y existía OTRA con el mismo nombre en live-stats.ts que sí aceptaba
+ * null y devolvía "—". Dos funciones homónimas con contratos distintos: bastaba
+ * importar la de al lado para que media ficha dijera "—" y la otra mitad "0:00"
+ * sobre el mismo combate. Ahora hay una sola y live-stats.ts la reexporta.
+ *
+ * El "—" no es cosmético: la columna «Control» de «Asalto a asalto» imprimía
+ * "0:00" en 152 combates (todos de 1995-1999) donde el acta NO REGISTRA el
+ * tiempo de control. 374 celdas de asalto y 304 de totales afirmando un cero
+ * que nadie midió. Se veía por contraste desde que el bloque de agarre, que
+ * tiene tubería propia, se calla en esos mismos combates.
+ */
+export function formatControlTime(seconds: number | null | undefined) {
+  if (seconds == null || seconds < 0) {
+    return "—";
+  }
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
 

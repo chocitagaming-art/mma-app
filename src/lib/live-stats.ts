@@ -170,14 +170,16 @@ export function liveStatusLabel(stats: LiveFightStats): string | null {
 }
 
 // Segundos de control -> "1:01" (formato del panel de ESPN). null -> "—".
-export function formatControlTime(seconds: number | null): string {
-  if (seconds == null || seconds < 0) {
-    return "—";
-  }
-  const minutes = Math.floor(seconds / 60);
-  const rest = String(seconds % 60).padStart(2, "0");
-  return `${minutes}:${rest}`;
-}
+//
+// 🪤 Ya NO es una implementación propia: es la de @/lib/format. Había dos
+// funciones con este mismo nombre y contratos distintos —esta aceptaba null y
+// la otra no—, así que cambiar un import bastaba para que la misma ficha
+// dijera "—" en un bloque y "0:00" en el de al lado. Se reexporta en vez de
+// borrarla para no tocar los cuatro ficheros que la importan de aquí.
+export { formatControlTime } from "@/lib/format";
+
+// Y para el uso interno de este mismo fichero, que un re-export no cubre.
+import { formatControlTime } from "@/lib/format";
 
 // "con./int." al estilo ESPN: 23/52. Sin conectados no hay dato; sin
 // intentados se muestra solo el conectado.

@@ -62,8 +62,22 @@ const GAP_MINIMO_SEGUNDOS = 30;
 // "della" y "saint" salieron de la tercera revisión: sin ellas, 3215 publicaba
 // «Makhachev lo tuvo sujeto 19 minutos más que Maddalena» sobre Jack DELLA
 // Maddalena, que es campeón. Los otros dos son Saint Denis y Saint Preux.
+//
+// 🪤 "du" entró el 15-ago-2026, y la lección es que la lista se había escrito
+// mirando quién estaba en pantalla, no quién está en la base: faltaba desde el
+// principio y llevaba días publicando «Chimaev lo tuvo sujeto 21 minutos más
+// que Plessis» sobre Dricus DU PLESSIS, que es campeón, igual que pasó con Jack
+// Della Maddalena. Son 11 fichas.
+//
+// LA LISTA SE AMPLÍA CONTANDO, NUNCA POR SI ACASO. El barrido del 15-ago pasó
+// por la base las 29 partículas de apellido que existen en los idiomas de la
+// UFC, y de las que faltaban solo "du" es una partícula de verdad: "ben", "al",
+// "mac", "abu", "li" y "bin" aparecen SIEMPRE como nombre de pila (Ben Askren,
+// Al Iaquinta, Mac Danzig, Abu Azaitar, Li Jingliang, Sung Bin Jo). Meterlas
+// «por completar» habría roto 14 fichas que hoy están bien. Verificado además
+// que añadir "du" cambia EXACTAMENTE un luchador de los 2.859.
 const PARTICULAS = new Set([
-  "da", "das", "de", "del", "della", "delle", "di", "do", "dos",
+  "da", "das", "de", "del", "della", "delle", "di", "do", "dos", "du",
   "la", "le", "saint", "st.", "van", "von",
 ]);
 

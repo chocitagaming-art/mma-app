@@ -240,3 +240,124 @@ describe("el chip «EN VIVO» de la cabecera cumple WCAG 1.4.3", () => {
     expect(clases).not.toMatch(/hover:bg-/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Los distintivos de esquina y el botón de marca, en tema oscuro
+// ---------------------------------------------------------------------------
+//
+// La paleta oscura ACLARA el rojo y el azul de marca para que despeguen del
+// fondo negro, y al aclararlos el texto blanco de encima se queda sin
+// contraste. Medido el 15-ago-2026, con blanco:
+//
+//     --corner-red   #f5474c . . . 3,57:1   (distintivo «Ganador»)
+//     --corner-blue  #3b92f0 . . . 3,20:1   (el mismo, esquina azul)
+//     --primary      #f5333a . . . 3,88:1   (todos los botones del sitio)
+//
+// 🪤 DOS COSAS QUE LA LISTA DE DEUDA TENÍA MAL. Primera: apuntaba el rojo y no
+// el azul, y el AZUL ESTÁ PEOR. No salía porque las dos fichas que audita el
+// e2e tienen ganador de la esquina roja — la deuda describía la muestra, no el
+// sitio. Segunda: la pista era «--corner-red-foreground es el único hermano que
+// sigue en blanco», y cambiar ese token solo no habría movido un píxel, porque
+// NADIE lo consumía: tale-of-the-tape.tsx escribía `text-white` a pelo.
+//
+// Las tintas nuevas siguen el patrón que ya usaban los hermanos del desenlace
+// (--win-foreground #052e16, --nc-foreground #451a03): una versión muy oscura
+// del propio color, no un negro genérico.
+describe("distintivos de esquina y botón: el texto encima cumple 4,5:1", () => {
+  const PARES = [
+    ["--corner-red", "--corner-red-foreground"],
+    ["--corner-blue", "--corner-blue-foreground"],
+    ["--primary", "--primary-foreground"],
+  ] as const;
+
+  for (const { nombre, tokens } of TEMAS) {
+    for (const [fondo, tinta] of PARES) {
+      it(`${tinta} sobre ${fondo} en tema ${nombre}`, () => {
+        const ratio = contrastRatio(tokens[tinta], tokens[fondo]);
+        expect(ratio, `faltan tokens: ${fondo}=${tokens[fondo]} ${tinta}=${tokens[tinta]}`).not.toBeNull();
+        expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+      });
+    }
+  }
+
+  it("el distintivo «Ganador» CONSUME los tokens en vez de escribir el blanco a pelo", () => {
+    // Sin esto, los tokens de arriba pueden estar perfectos y la pantalla
+    // seguir incumpliendo. Es exactamente lo que pasaba hasta el 15-ago.
+    const tape = readFileSync(
+      fileURLToPath(new URL("../components/tale-of-the-tape.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(tape).toContain("text-corner-red-foreground");
+    expect(tape).toContain("text-corner-blue-foreground");
+  });
+
+  it("el punto del directo NO cuelga de --primary-foreground", () => {
+    // `bg-primary-foreground` eran cuatro puntos pulsantes con un halo blanco
+    // escrito a mano. Con la tinta oscura nueva se habrían vuelto puntos
+    // NEGROS con halo blanco: el agujero simétrico de este arreglo. Un brillo
+    // no es texto y no puede colgar del token del texto.
+    for (const ruta of [
+      "../components/live/live-banner.tsx",
+      "../components/live/live-cta-button.tsx",
+      "../app/eventos/[id]/page.tsx",
+      "../app/ufc-hoy/page.tsx",
+    ]) {
+      const src = readFileSync(fileURLToPath(new URL(ruta, import.meta.url)), "utf8");
+      expect(src, `${ruta} sigue usando bg-primary-foreground para el punto`).not.toContain(
+        "bg-primary-foreground",
+      );
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Los badges de desenlace de /enfrentamiento
+// ---------------------------------------------------------------------------
+//
+// 🪤 EL HOVER OTRA VEZ. Los cinco desenlaces iban con `bg-primary/10
+// text-primary`, un tinte TRANSPARENTE, y la Card que los contiene lleva
+// `hover:bg-accent`: al pasar el ratón el fondo cambia bajo el badge y el ratio
+// se hunde a 4,03-4,38 en varias ramas. axe no simula el puntero, así que no lo
+// vio nadie — el mismo patrón que el chip «EN VIVO» de la cabecera.
+//
+// Con el badge SÓLIDO el fondo es opaco y el hover deja de importar: el ratio
+// es el mismo en los dos estados y solo hay un número que vigilar. Además cada
+// desenlace pasa a tener su color, que era la otra mitad del fleco.
+describe("badges de desenlace: sólidos, y por eso inmunes al hover", () => {
+  const SOLIDOS = [
+    ["--corner-red", "--corner-red-foreground"],
+    ["--corner-blue", "--corner-blue-foreground"],
+    ["--nc", "--nc-foreground"],
+  ] as const;
+
+  for (const { nombre, tokens } of TEMAS) {
+    for (const [fondo, tinta] of SOLIDOS) {
+      it(`${tinta} sobre ${fondo} en tema ${nombre}`, () => {
+        const ratio = contrastRatio(tokens[tinta], tokens[fondo]);
+        expect(ratio).not.toBeNull();
+        expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+      });
+
+      it(`el badge ${fondo} se distingue de la tarjeta en tema ${nombre}`, () => {
+        // 1.4.11: el badge es un elemento gráfico que transmite información, y
+        // tiene que despegarse de la superficie sobre la que se apoya, tanto en
+        // reposo (--card) como con el ratón encima (--accent).
+        for (const superficie of ["--card", "--accent"] as const) {
+          const ratio = contrastRatio(tokens[fondo], tokens[superficie]);
+          expect(ratio, `${fondo} sobre ${superficie}`).not.toBeNull();
+          expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL);
+        }
+      });
+    }
+  }
+
+  it("y el componente los consume: nada de tinte transparente", () => {
+    const src = readFileSync(
+      fileURLToPath(new URL("../components/matchup-client.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(src).toContain("bg-corner-red text-corner-red-foreground");
+    expect(src).toContain("bg-corner-blue text-corner-blue-foreground");
+    expect(src).toContain("bg-nc text-nc-foreground");
+  });
+});

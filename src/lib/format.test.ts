@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ageFromBirthDate,
   cleanNationality,
+  formatControlTime,
   formatDate,
   formatHeight,
   formatMethod,
@@ -246,5 +247,24 @@ describe("isDecisionMethod · qué combate es un empate", () => {
   it("sin método no se afirma nada", () => {
     expect(isDecisionMethod(null)).toBe(false);
     expect(isDecisionMethod("")).toBe(false);
+  });
+});
+
+describe("formatControlTime y el hueco del acta", () => {
+  it("sin dato escribe «—» y no «0:00»", () => {
+    // Había DOS funciones con este nombre, una que aceptaba null y otra que no.
+    // Importar la de al lado bastaba para que media ficha dijera "—" y la otra
+    // mitad "0:00" sobre el mismo combate. Ahora hay una sola.
+    expect(formatControlTime(null)).toBe("—");
+    expect(formatControlTime(undefined)).toBe("—");
+    expect(formatControlTime(-1)).toBe("—");
+  });
+
+  it("un cero MEDIDO sigue siendo 0:00", () => {
+    // La otra mitad del contrato: no todo cero es un hueco. 167 combates tienen
+    // una esquina que de verdad no sujetó ni un segundo.
+    expect(formatControlTime(0)).toBe("0:00");
+    expect(formatControlTime(61)).toBe("1:01");
+    expect(formatControlTime(600)).toBe("10:00");
   });
 });

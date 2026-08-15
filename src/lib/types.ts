@@ -571,7 +571,8 @@ export type FightCompetitorStats = {
   takedownsAttempted: number;
   takedownAccuracy: number;
   submissionAttempts: number;
-  controlTimeSeconds: number;
+  // null = el acta no registra el control (152 combates de 1995-1999). NO es 0.
+  controlTimeSeconds: number | null;
   knockdowns: number;
 };
 
@@ -594,7 +595,8 @@ export type FightRoundStats = {
   takedownsLanded: number;
   takedownsAttempted: number;
   submissionAttempts: number;
-  controlTimeSeconds: number;
+  // null = el acta no registra el control (152 combates de 1995-1999). NO es 0.
+  controlTimeSeconds: number | null;
   knockdowns: number;
 };
 

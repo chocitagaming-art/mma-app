@@ -23,7 +23,7 @@ async function abrirFicha(page: Page, id: number) {
 }
 
 const bloque = (page: Page) =>
-  page.locator("section").filter({ hasText: "Datos oficiales" });
+  page.getByTestId("fight-grip");
 
 test("14232 publica los seis números del acta, que es el criterio de aceptación", async ({
   page,

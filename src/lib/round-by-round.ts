@@ -28,7 +28,8 @@ export type CornerTotals = {
   takedownsLanded: number;
   takedownsAttempted: number;
   submissionAttempts: number;
-  controlTimeSeconds: number;
+  // null = ningun asalto trae control en el acta. Ver `acumular`.
+  controlTimeSeconds: number | null;
   knockdowns: number;
 };
 
@@ -51,7 +52,9 @@ const CEROS: CornerTotals = {
   takedownsLanded: 0,
   takedownsAttempted: 0,
   submissionAttempts: 0,
-  controlTimeSeconds: 0,
+  // Arranca en null, no en 0: el acumulado de cero asaltos con dato NO es cero
+  // segundos de control, es «no se sabe».
+  controlTimeSeconds: null,
   knockdowns: 0,
 };
 
@@ -62,7 +65,17 @@ function acumular(total: CornerTotals, fila: FightRoundStats): CornerTotals {
     takedownsLanded: total.takedownsLanded + fila.takedownsLanded,
     takedownsAttempted: total.takedownsAttempted + fila.takedownsAttempted,
     submissionAttempts: total.submissionAttempts + fila.submissionAttempts,
-    controlTimeSeconds: total.controlTimeSeconds + fila.controlTimeSeconds,
+    // 🪤 LA TENTACION AQUI ES `(a ?? 0) + (b ?? 0)`, y eso reintroduce la
+    // mentira que se acaba de quitar, escondida dentro del total. La regla es:
+    // si NINGUNO de los dos tiene dato, el total sigue sin dato; en cuanto uno
+    // lo tiene, se suma tratando al que falta como 0 y el total es parcial.
+    // Hoy no hay ni un combate mixto medido (o vienen los 5 asaltos con
+    // control o no viene ninguno), pero el tipo lo permite y el proximo
+    // scrape parcial lo puede crear.
+    controlTimeSeconds:
+      total.controlTimeSeconds == null && fila.controlTimeSeconds == null
+        ? null
+        : (total.controlTimeSeconds ?? 0) + (fila.controlTimeSeconds ?? 0),
     knockdowns: total.knockdowns + fila.knockdowns,
   };
 }

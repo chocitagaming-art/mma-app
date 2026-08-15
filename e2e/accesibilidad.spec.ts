@@ -124,38 +124,26 @@ async function abrirDesplegables(page: Page) {
 }
 
 /**
- * DEUDA CONOCIDA, medida el 11-ago-2026 y AJENA a este bloque.
+ * DEUDA CONOCIDA. Hoy: NINGUNA.
  *
- * No se silencia la regla entera: se descartan estos nodos concretos y
- * cualquier otro incumplimiento —incluido uno nuevo de la MISMA regla— sigue
- * saliendo en rojo. Si alguien arregla uno, este fichero avisa (ver el test
- * "la deuda conocida sigue siendo exactamente la que creemos").
+ * Aquí vivían tres nodos de tema oscuro anotados el 11-ago-2026, y los tres se
+ * arreglaron el 15-ago (ver el commit del bloque 2):
  *
- * Las tres son SOLO de tema oscuro, y la causa es la misma en dos de ellas: la
- * paleta oscura aclara el rojo de marca para que despegue del fondo negro, y al
- * aclararlo el TEXTO BLANCO que va encima se queda sin contraste. Los hermanos
- * de esos tokens ya lo resuelven al revés (--win-foreground es #052e16 y
- * --nc-foreground es #451a03, tintas oscuras), así que el arreglo probablemente
- * sea de una línea — pero cambia botones y distintivos de todo el sitio, y eso
- * no es de esta sesión.
+ *   · botón con blanco sobre --primary oscuro . . . . . 3,88:1
+ *   · distintivo «Ganador» sobre --corner-red oscuro . . 3,57:1
+ *   · la tabla de round-by-round.tsx sin recorrido por teclado
+ *
+ * 🪤 Y LA LISTA ESTABA MAL, que es lo que hay que recordar. Anotaba el rojo y
+ * NO el azul, cuando el azul estaba peor (3,20:1): no salía porque las dos
+ * fichas que audita este fichero tienen ganador de la esquina roja. Una lista
+ * de deuda escrita a partir de lo que la muestra enseña describe la muestra,
+ * no el sitio.
+ *
+ * La lista se deja vacía, y no se borra el mecanismo: filtrar NODO a NODO (y no
+ * regla a regla) es lo que permite anotar un incumplimiento concreto sin apagar
+ * la regla para todos los demás.
  */
-const DEUDA_CONOCIDA = [
-  {
-    regla: "color-contrast",
-    enHtml: "group/button",
-    nota: "botón con texto blanco sobre --primary oscuro (#f5333a): 3.87:1, pide 4.5:1",
-  },
-  {
-    regla: "color-contrast",
-    enHtml: "text-white bg-corner-red",
-    nota: 'distintivo "Ganador", blanco sobre --corner-red oscuro (#f5474c): 3.56:1',
-  },
-  {
-    regla: "scrollable-region-focusable",
-    enHtml: "mt-4 overflow-x-auto",
-    nota: "la tabla de round-by-round.tsx:152 desborda y no se recorre con teclado",
-  },
-] as const;
+const DEUDA_CONOCIDA: { regla: string; enHtml: string; nota: string }[] = [];
 
 const esDeudaConocida = (reglaId: string, html: string) =>
   DEUDA_CONOCIDA.some(
@@ -294,30 +282,28 @@ test("los nodos que el resolvedor de degradados NO sabe medir siguen siendo los 
   ).toBeGreaterThan(20);
 });
 
-test("la deuda conocida sigue siendo exactamente la que creemos", async ({
-  page,
-}) => {
-  // Solo en móvil oscuro: las tres son de tema oscuro, y la del carril con
-  // scroll solo se da cuando la tabla desborda, o sea en pantalla estrecha.
+test("la lista de deuda de accesibilidad sigue vacía", async ({ page }) => {
+  // Antes este test comprobaba que las tres deudas SEGUÍAN ahí, para que la
+  // lista no se pudriera. Ahora que están arregladas comprueba lo contrario:
+  // que nadie mete una nueva sin enterarse. Un nodo en la lista es una decisión
+  // deliberada y tiene que doler apuntarlo.
   test.skip(
     test.info().project.name !== "movil-dark",
-    "se comprueba una vez, donde se dan las tres",
+    "se comprueba una vez, en el tema donde estaban las tres",
   );
 
+  expect(
+    DEUDA_CONOCIDA,
+    "si añades deuda, escribe aquí por qué no se arregla y cuándo se revisa",
+  ).toEqual([]);
+
+  // Y que la auditoría sigue siendo capaz de ver la página entera: sin esto,
+  // «cero violaciones» y «no miré nada» son indistinguibles.
   await page.goto("/fights/3821");
   await expect(page.locator("#main-content")).toBeVisible();
   await esperarTema(page);
-
   const { violations } = await auditar(page);
-  const reglasEnDeuda = violations
-    .filter((v) => v.nodes.some((n) => esDeudaConocida(v.id, n.html)))
-    .map((v) => v.id)
-    .sort();
-
-  expect(
-    reglasEnDeuda,
-    "si una de las tres ya no aparece, bórrala de DEUDA_CONOCIDA en este fichero",
-  ).toEqual(["color-contrast", "scrollable-region-focusable"]);
+  expect(violations.map((v) => v.id).sort()).toEqual([]);
 });
 
 // La especificación de la película exige 375 px, y el viewport "móvil" de la

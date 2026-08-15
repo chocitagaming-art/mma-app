@@ -128,7 +128,12 @@ function mapStats(row?: FightStatsRow): FightCompetitorStats | null {
     takedownAccuracy:
       takedownsAttempted > 0 ? takedownsLanded / takedownsAttempted : 0,
     submissionAttempts: row.submission_attempts ?? 0,
-    controlTimeSeconds: row.control_time_seconds ?? 0,
+  // 🪤 NULL NO ES CERO. El acta de ufcstats no registra tiempo de control en 152
+  // combates (todos de 1995-1999) y el `?? 0` que había aquí convertía «no se
+  // sabe» en «no sujetó a nadie»: 678 celdas afirmando un cero que nadie midió.
+  // El tipo lo permite en null para que TypeScript OBLIGUE a decidir qué hace
+  // cada consumidor, que es lo que impide que el cero vuelva por otra puerta.
+    controlTimeSeconds: row.control_time_seconds,
     knockdowns: row.knockdowns ?? 0,
   };
 }
@@ -435,7 +440,12 @@ export async function getFightRoundStats(
     takedownsLanded: row.takedowns_landed ?? 0,
     takedownsAttempted: row.takedowns_attempted ?? 0,
     submissionAttempts: row.submission_attempts ?? 0,
-    controlTimeSeconds: row.control_time_seconds ?? 0,
+  // 🪤 NULL NO ES CERO. El acta de ufcstats no registra tiempo de control en 152
+  // combates (todos de 1995-1999) y el `?? 0` que había aquí convertía «no se
+  // sabe» en «no sujetó a nadie»: 678 celdas afirmando un cero que nadie midió.
+  // El tipo lo permite en null para que TypeScript OBLIGUE a decidir qué hace
+  // cada consumidor, que es lo que impide que el cero vuelva por otra puerta.
+    controlTimeSeconds: row.control_time_seconds,
     knockdowns: row.knockdowns ?? 0,
   }));
 }

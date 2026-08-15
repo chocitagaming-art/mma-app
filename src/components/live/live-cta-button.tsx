@@ -21,7 +21,7 @@ export function LiveCtaButton() {
   return (
     <Link href="/en-vivo">
       <Button size="lg" className="h-10 gap-2">
-        <span className="live-dot inline-block size-2 rounded-full bg-primary-foreground shadow-[0_0_8px_1px_rgba(255,255,255,0.6)]" />
+        <span className="live-dot inline-block size-2 rounded-full bg-white shadow-[0_0_8px_1px_rgba(255,255,255,0.6)]" />
         {etiquetaCtaDirecto(payload.live, payload.daysUntil ?? null)}
       </Button>
     </Link>

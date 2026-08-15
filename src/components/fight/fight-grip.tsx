@@ -150,7 +150,7 @@ export function FightGrip(props: FightGripProps) {
   const asaltos = rounds.length;
 
   return (
-    <section className={cn(PREMIUM_TILE, "p-5 sm:p-6")}>
+    <section data-testid="fight-grip" className={cn(PREMIUM_TILE, "p-5 sm:p-6")}>
       {/* El titular va en caja normal, no gritado: 46 caracteres en mayúsculas
           son tres líneas a 375 px, y el titular canónico mide exactamente 46. */}
       <p className="text-balance font-display text-lg leading-tight font-bold sm:text-xl">
@@ -213,8 +213,16 @@ export function FightGrip(props: FightGripProps) {
         <p className="mt-2 text-sm text-muted-foreground">{headline.note}</p>
       ) : null}
 
+      {/* 🪤 «Datos oficiales» era la TERCERA forma de nombrar la fuente en la
+          misma pantalla, y la segunda de nombrar ESTA: el bloque de abajo ya
+          decía «(fuente ufcstats)» para el mismo origen. Dos maneras de decir
+          lo mismo invitan a pensar que son dos cosas. Ahora las dos fuentes
+          reales de la ficha se escriben con la misma plantilla, «(fuente X)».
+          Y dice «Control:» y no «Datos» a secas porque solo el reparto sale del
+          acta: el titular y la nota usan fights.method y fights.winner_id, que
+          en la noche del evento son el resultado provisional de ESPN. */}
       <p className="mt-3 text-right text-[0.7rem] text-muted-foreground">
-        Datos oficiales
+        Control: acta oficial (fuente ufcstats)
       </p>
 
       {/* <details> nativo y no el disclosure de la casa: ese pliega con

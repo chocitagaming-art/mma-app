@@ -191,8 +191,14 @@ function FaceOffCorner({
       {isWinner ? (
         <span
           className={cn(
-            "inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white",
-            isRed ? "bg-corner-red" : "bg-corner-blue",
+            // 🪤 El color va por TOKEN y no `text-white` a pelo. Con el blanco
+            // escrito aquí, los tokens --corner-*-foreground no los consumía
+            // nadie en todo el repo: se podían dejar perfectos y la pantalla
+            // seguía incumpliendo (3,57:1 el rojo y 3,20:1 el azul en oscuro).
+            "inline-flex items-center rounded-sm px-2 py-0.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.15em]",
+            isRed
+              ? "bg-corner-red text-corner-red-foreground"
+              : "bg-corner-blue text-corner-blue-foreground",
           )}
         >
           Ganador
