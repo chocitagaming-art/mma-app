@@ -344,10 +344,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           videoId={event.liveVideoId}
           videoTitle={event.liveVideoTitle}
           eventName={event.name}
-          // Esta es la ÚNICA de las tres páginas que puede enseñar un evento ya
-          // terminado, y por eso es la única que pasa esto: con el estelar caído
-          // el rótulo deja de decir «retransmisión» y pasa a hablar en pasado.
-          eventOver={eventOver}
+          // 🪤 NO BASTA CON isMainEventFinished, y lo cazó un control positivo:
+          // se puso el vídeo en UFC 306 (2024, completed) y la sección SE PINTÓ.
+          //
+          // El motivo es que esa función se rinde cuando ningún combate tiene
+          // `bout_order` —devuelve false porque no sabe cuál es el estelar— y en
+          // el histórico eso es lo normal: los 10 combates del 357 tienen método
+          // y ganador, y los 10 tienen bout_order a NULL. Está pensada para la
+          // ventana del directo, donde ESPN sí lo da.
+          //
+          // Así que se combinan las tres señales, que cubren momentos distintos:
+          //   · isMainEventFinished — la noche de la velada, cuando el estelar ya
+          //     cayó pero el cron todavía no ha marcado el evento;
+          //   · status 'completed'  — el estado normal de un evento pasado;
+          //   · livePhase 'none'    — sin ventana de directo abierta.
+          eventOver={eventOver || event.status === "completed" || livePhase === "none"}
           className="mt-8"
         />
       ) : null}
