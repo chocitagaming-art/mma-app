@@ -91,7 +91,7 @@ const PARTICULAS = new Set([
 
 // Los nombres donde NINGUNA regla acierta, revisados a mano uno por uno.
 //
-// Barrido del 16-ago-2026 sobre los 2.859 nombres de `fighters`, ejecutando
+// Barrido del 15-ago-2026 sobre los 2.859 nombres de `fighters`, ejecutando
 // esta misma función y leyendo después los 109 nombres de 3+ palabras, los 128
 // de nacionalidad asiática y los 46 con partícula: 23 luchadores salen con un
 // apellido que no es su apellido, y aparecen en 134 de los 8.612 combates que
@@ -122,7 +122,7 @@ const PARTICULAS = new Set([
 // brasileño y mongol (Cortes Acosta, Conejo Ruiz, Batgerel Danaa…). Ahí no hay
 // un error medible sino una convención discutible —cuál de los dos apellidos
 // usa la prensa—, y esta lista es para lo que está mal, no para lo que es
-// opinable. Quedan escritos en la continuación del 16-ago.
+// opinable. Quedan escritos en la continuación del 15-ago.
 //
 // AL ENTRAR UN LUCHADOR NUEVO ESTA LISTA ENVEJECE. `npm run apellidos` vuelve a
 // pasar la función por la base entera y saca los que no están aquí.

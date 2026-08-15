@@ -164,7 +164,8 @@ export const getFighterDetail = cache(async (
         sum(submission_attempts)::text as submission_attempts,
         sum(control_time_seconds)::text as control_time_seconds,
         sum(knockdowns)::text as knockdowns,
-        count(*)::text as total_fight_stats
+        count(*)::text as total_fight_stats,
+        count(control_time_seconds)::text as fights_with_control
       from fight_stats
       where fighter_id = $1`,
       [id],

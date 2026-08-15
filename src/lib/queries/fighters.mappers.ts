@@ -108,6 +108,7 @@ export function mapAggregate(row?: AggregateRow): FighterAggregateStats {
       row?.control_time_seconds == null ? null : Number(row.control_time_seconds),
     knockdowns: Number(row?.knockdowns ?? 0),
     totalFightStats: Number(row?.total_fight_stats ?? 0),
+    fightsWithControl: Number(row?.fights_with_control ?? 0),
   };
 }
 
@@ -315,4 +316,45 @@ export function strikeBreakdownSelect(prefix: string): string {
     ${col("sig_str_clinch_attempted")} as clinch_attempted,
     ${col("sig_str_ground_landed")} as ground_landed,
     ${col("sig_str_ground_attempted")} as ground_attempted`;
+}
+
+/**
+ * Qué se imprime bajo el «T. control» del tile: la cuota, el alcance, o nada.
+ *
+ * Vive aquí y no en el JSX por dos motivos, y el segundo es el importante:
+ *
+ * 1. En este repo no hay tests de componente (decisión escrita en
+ *    vitest.config.ts), así que una decisión dentro del `.tsx` no se puede
+ *    probar sin levantar un navegador.
+ * 2. 🪤 LA EXCLUSIÓN TIENE QUE SER ESTRUCTURAL, NO UNA COINCIDENCIA DE DATOS.
+ *    Escrito como dos `? :` independientes en el JSX, nada impide que un día
+ *    salgan las dos líneas: el tile crecería a cuatro y rompería la rejilla de
+ *    2x2, que está alineada. Hoy no pasa —ninguna de las 2.859 fichas cumple
+ *    las dos condiciones— y por eso un test de altura pasaría en verde: el
+ *    escenario que rompe no existe todavía en la base. Con una función que
+ *    devuelve UNA cosa, no puede pasar nunca.
+ *
+ * @param share cuota de control ya calculada, o null si no se puede publicar.
+ * @param controlSeconds control total del luchador (null = ninguna acta lo trae).
+ * @param fightsWithControl actas suyas que SÍ traen el dato.
+ * @param totalFightStats actas suyas en total.
+ */
+export function controlTileNote(
+  share: number | null,
+  controlSeconds: number | null,
+  fightsWithControl: number,
+  totalFightStats: number,
+): { kind: "share"; percent: number } | { kind: "scope"; of: number; total: number } | null {
+  if (share !== null) {
+    return { kind: "share", percent: Math.round(share * 100) };
+  }
+  // 🪤 `controlSeconds !== null`, NO `if (controlSeconds)`. Dan Severn y Royce
+  // Gracie suman EXACTAMENTE 0 segundos de control con actas que sí traen el
+  // dato, así que un guard por veracidad se traga el aviso justo en dos de los
+  // casos más raros del lote — y un fixture con cualquier valor distinto de
+  // cero seguiría verde.
+  if (controlSeconds !== null && fightsWithControl < totalFightStats) {
+    return { kind: "scope", of: fightsWithControl, total: totalFightStats };
+  }
+  return null;
 }

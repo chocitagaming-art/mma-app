@@ -117,6 +117,10 @@ export type FighterAggregateStats = {
   controlTimeSeconds: number | null;
   knockdowns: number;
   totalFightStats: number;
+  // De cuántas de esas actas sale el tiempo de control. Cuando es menor que
+  // `totalFightStats`, `controlTimeSeconds` es una suma PARCIAL y el tile no
+  // puede presentarla como el total de la carrera. Son 38 luchadores.
+  fightsWithControl: number;
 };
 
 // --- Ficha de luchador estilo UFC.com: agregados adicionales (#39) ---

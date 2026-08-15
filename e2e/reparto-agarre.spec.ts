@@ -271,7 +271,7 @@ test("la tabla de asaltos y el bloque de agarre nombran igual al mismo luchador"
 test("🪤 el lector de pantalla NO pierde el nombre completo al unificar", async ({ page }) => {
   await abrirFicha(page, 14232);
 
-  // Hasta el 16-ago la celda visible y el aria-label salían de la MISMA prop.
+  // Hasta el 15-ago la celda visible y el aria-label salían de la MISMA prop.
   // Cambiarla al apellido «a secas» le habría quitado el nombre entero justo a
   // quien no puede echar un vistazo a la cabecera. Y «Silva» lo publican 22
   // luchadores distintos de esta base: sin nombre delante no es una abreviatura.

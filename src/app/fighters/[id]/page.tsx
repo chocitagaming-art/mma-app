@@ -68,6 +68,7 @@ import {
 import { promotionBadge } from "@/lib/promotion-badge";
 import { resolveFightVideoUrl } from "@/lib/video";
 import {
+  controlTileNote,
   getFighterDetail,
   getFighterStrikeProfile,
   getFighterUpcomingBouts,
@@ -720,10 +721,22 @@ export default async function FighterDetailPage({
                     {aggregateStats.takedownsLanded}
                   </p>
                 </div>
-                {/* El tiempo es el TOTAL del luchador; la cuota solo aparece
-                    cuando la muestra cronometrada cubre ese total entero, para
-                    que las dos cifras del tile no se contradigan (ver
-                    computeControlShare). */}
+                {/* 🪤 EL TIEMPO NO SIEMPRE ES EL TOTAL DEL LUCHADOR, y este
+                    comentario afirmaba que sí. `sum()` de Postgres ignora los
+                    NULL, así que en 38 fichas la cifra es la suma de UNAS
+                    CUANTAS actas con rótulo de total: David Abbott enseñaba
+                    «T. control 2:03», que salía de 3 de sus 18. No se veía
+                    porque el guard de `computeControlShare` ya tapaba la cuota
+                    en esos mismos casos — o sea que lo que ocultaba el error
+                    era el arreglo de OTRO error.
+
+                    Las tres ramas son EXCLUYENTES a propósito y van en una
+                    sola expresión, no en dos bloques `? :` independientes: el
+                    tile tiene sitio para una línea y los cuatro de la rejilla
+                    están alineados, así que dos líneas a la vez rompen la
+                    maqueta. Hoy ninguna ficha las pinta las dos, y por eso un
+                    test de altura pasaría igual: la exclusión tiene que ser
+                    estructural, no una coincidencia de los datos. */}
                 <div className={`${PREMIUM_TILE} p-4 text-center`}>
                   <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                     T. control
@@ -731,11 +744,22 @@ export default async function FighterDetailPage({
                   <p className="tabular mt-2 text-2xl font-bold text-foreground">
                     {formatControlTime(aggregateStats.controlTimeSeconds)}
                   </p>
-                  {rateStats.controlShare !== null ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {Math.round(rateStats.controlShare * 100)}% del combate
-                    </p>
-                  ) : null}
+                  {(() => {
+                    const nota = controlTileNote(
+                      rateStats.controlShare,
+                      aggregateStats.controlTimeSeconds,
+                      aggregateStats.fightsWithControl,
+                      aggregateStats.totalFightStats,
+                    );
+                    if (nota === null) return null;
+                    return (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {nota.kind === "share"
+                          ? `${nota.percent}% del combate`
+                          : `solo de ${nota.of} de sus ${nota.total} actas`}
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
               {/* Un medidor sin denominador no se pinta: decir "0 %" cuando

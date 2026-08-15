@@ -69,7 +69,7 @@ describe("displayLastName", () => {
   });
 
   it("🪤 el orden asiático: el apellido va DELANTE, y ninguna regla lo sabe", () => {
-    // Los 20 que salían mal, medidos el 16-ago sobre los 2.859 nombres de la
+    // Los 20 que salían mal, medidos el 15-ago sobre los 2.859 nombres de la
     // base. El peor es el de la campeona: la ficha publicaba «Weili lo tuvo
     // sujeto 15 minutos y medio más que Lemos» — el mismo fallo, palabra por
     // palabra, que ya costó los parches de Della Maddalena y Du Plessis.

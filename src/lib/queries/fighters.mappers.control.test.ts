@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeControlShare } from "@/lib/queries/fighters.mappers";
+import { controlTileNote, computeControlShare } from "@/lib/queries/fighters.mappers";
 
 // Cuota de control = segundos de control / segundos de combate.
 //
@@ -61,5 +61,46 @@ describe("computeControlShare", () => {
   // dos sumas coincidían. Contar peleas no tiene ese punto ciego.
   it("no se deja engañar por peleas excluidas que no aportan control", () => {
     expect(computeControlShare(300, 600, 2, 5)).toBeNull();
+  });
+});
+
+describe("controlTileNote · la tercera línea del tile «T. control»", () => {
+  it("con la muestra completa publica la cuota", () => {
+    expect(controlTileNote(0.41, 5123, 18, 18)).toEqual({ kind: "share", percent: 41 });
+  });
+
+  it("con la suma PARCIAL avisa del alcance en vez de callarse", () => {
+    // David Abbott (8793): 3 actas con control de 18. Publicaba «T. control
+    // 2:03» a secas, que es la suma de esas 3 con rótulo de total de carrera.
+    // No se veía porque el guard de computeControlShare ya tapaba la cuota en
+    // esos mismos casos: lo que ocultaba el error era el arreglo de OTRO error.
+    expect(controlTileNote(null, 123, 3, 18)).toEqual({ kind: "scope", of: 3, total: 18 });
+  });
+
+  it("🪤 NUNCA las dos líneas a la vez, y no por casualidad de los datos", () => {
+    // Entrada SINTÉTICA que hoy no existe en ninguna de las 2.859 fichas: cuota
+    // publicable Y cobertura parcial al mismo tiempo. Por eso un test de altura
+    // del tile pasaría en verde — el escenario que rompe la rejilla de 2x2 no
+    // está en la base todavía. Aquí la exclusión es estructural: la función
+    // devuelve UNA cosa, así que no puede pasar aunque los datos cambien.
+    const nota = controlTileNote(0.41, 123, 3, 18);
+    expect(nota).toEqual({ kind: "share", percent: 41 });
+  });
+
+  it("🪤 los dos que suman EXACTAMENTE 0 también reciben su aviso", () => {
+    // Dan Severn y Royce Gracie: control 0 con actas que sí traen el dato. Un
+    // guard escrito `if (controlSeconds)` los deja sin aviso justo a los dos
+    // peores casos del lote, y cualquier fixture con un valor distinto de cero
+    // seguiría verde. Este es el par que separa las dos implementaciones.
+    expect(controlTileNote(null, 0, 1, 10)).toEqual({ kind: "scope", of: 1, total: 10 });
+  });
+
+  it("CONTROL NEGATIVO: sin dato ninguno, ni cuota ni aviso", () => {
+    // Los 102: ninguna acta trae control, así que no hay suma que matizar. El
+    // tile ya imprime «—» arriba y una segunda línea sería ruido.
+    expect(controlTileNote(null, null, 0, 12)).toBeNull();
+    // Y con cobertura completa pero sin cuota publicable, tampoco: no hay nada
+    // que avisar.
+    expect(controlTileNote(null, 480, 12, 12)).toBeNull();
   });
 });

@@ -98,6 +98,11 @@ export type AggregateRow = {
   control_time_seconds: string | null;
   knockdowns: string | null;
   total_fight_stats: string | null;
+  // De cuantas de esas actas sale el tiempo de control. `count(col)` NO cuenta
+  // los NULL, asi que cuando no coincide con total_fight_stats la suma es
+  // PARCIAL. Son 38 luchadores: David Abbott publicaba "T. control 2:03", que
+  // es la suma de 3 de sus 18 actas, con rotulo de total de carrera.
+  fights_with_control: string | null;
 };
 
 export type DefenseRow = {
