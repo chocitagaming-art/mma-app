@@ -198,7 +198,9 @@ describe("comprobarProxima", () => {
   // publicaba sin careo y sin el pesaje de sus dos combates por el título. No
   // era un fallo de las comprobaciones: es que las dos SOLO existían para la
   // velada ya celebrada, o sea justo cuando ya no se pueden arreglar.
-  const VISPERA = { ...PROXIMA, diasQueFaltan: 0.5 };
+  // 0,4 dias = 9,6 h: dentro de la ventana de 12 h, y despues de las 20:00 UTC
+  // del viernes, que es cuando corre el unico cron que llena el pesaje.
+  const VISPERA = { ...PROXIMA, diasQueFaltan: 0.4 };
 
   it("la víspera, un pesaje incompleto es un fallo", () => {
     // El caso real: 20 filas de 24, porque las dos líneas de campeonato del
@@ -211,6 +213,31 @@ describe("comprobarProxima", () => {
 
   it("la víspera, un pesaje completo está en verde", () => {
     expect(nivelDeProxima(comprobarProxima({ ...VISPERA, pesajes: 24 }), "Pesajes")).toBe("ok");
+  });
+
+  it("🪤 el umbral abre DESPUÉS del cron, no antes: a 20 h no se exige nada", () => {
+    // El caso que casi manda diez correos seguidos. El cron del pesaje es
+    // semanal, viernes 20:00 UTC. Con el umbral de 1 día que tenía esto al
+    // principio, una velada del sábado a las 10:00 UTC abría su víspera el
+    // viernes a las 10:00 — diez horas ANTES de que el cron tuviera turno — y
+    // publicaba «Pesajes 0/18» en rojo acusando a una ejecución que no existía.
+    // 0,85 días = 20,4 h.
+    const p = comprobarProxima({ ...PROXIMA, diasQueFaltan: 0.85, pesajes: 0 }).find(
+      (x) => x.titulo === "Pesajes",
+    );
+    expect(p?.nivel).toBe("ok");
+    expect(p?.valor).toBe("aún no toca");
+  });
+
+  it("🪤 una cartelera vacía la víspera NO publica «0/0» en verde", () => {
+    // `pesajes >= 0` es siempre cierto: sin esta rama, un evento sin combates
+    // cargados aprobaba el pesaje. Un verde falso es justo lo que este panel
+    // existe para no dar.
+    const c = comprobarProxima({ ...VISPERA, combatesActivos: 0, pesajes: 0 });
+    const p = c.find((x) => x.titulo === "Pesajes");
+    expect(p?.valor).toBe("sin cartelera");
+    // Y la línea que SÍ tiene que estar en rojo es la de la cartelera.
+    expect(nivelDeProxima(c, "Cartelera")).toBe("mal");
   });
 
   it("a una semana vista el pesaje NO se exige: el artículo sale la víspera", () => {

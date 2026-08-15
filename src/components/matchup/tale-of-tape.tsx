@@ -86,11 +86,17 @@ export function buildTaleRows(
     },
     {
       label: "Tiempo control / pelea",
+      // Math.round(null) da 0, que volveria a publicar el «0:00» falso por la
+      // puerta de atras: el redondeo se hace SOLO si hay numero.
       red: formatControlTime(
-        Math.round(red.aggregateStats.controlTimePerFightSeconds),
+        red.aggregateStats.controlTimePerFightSeconds == null
+          ? null
+          : Math.round(red.aggregateStats.controlTimePerFightSeconds),
       ),
       blue: formatControlTime(
-        Math.round(blue.aggregateStats.controlTimePerFightSeconds),
+        blue.aggregateStats.controlTimePerFightSeconds == null
+          ? null
+          : Math.round(blue.aggregateStats.controlTimePerFightSeconds),
       ),
       redNum: red.aggregateStats.controlTimePerFightSeconds,
       blueNum: blue.aggregateStats.controlTimePerFightSeconds,

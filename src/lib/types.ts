@@ -113,7 +113,8 @@ export type FighterAggregateStats = {
   takedownsAttempted: number;
   takedownAccuracy: number;
   submissionAttempts: number;
-  controlTimeSeconds: number;
+  // null = ninguna de sus peleas trae control en el acta (102 luchadores).
+  controlTimeSeconds: number | null;
   knockdowns: number;
   totalFightStats: number;
 };
@@ -231,7 +232,7 @@ export type FighterComparisonAverages = {
   takedownsLandedPerFight: number;
   takedownAccuracy: number;
   submissionAttemptsPerFight: number;
-  controlTimePerFightSeconds: number;
+  controlTimePerFightSeconds: number | null;
   totalFightStats: number;
 };
 

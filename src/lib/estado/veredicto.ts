@@ -198,10 +198,23 @@ const DIAS_PARA_EXIGIR = 3;
 // El pesaje y el careo NO existen hasta la víspera, así que tienen su propio
 // umbral y es mucho más corto que el de la cartelera. Medido sobre UFC 330: el
 // artículo de pesaje de ufc.com se publicó ~33 h antes del estelar y el careo
-// de YouTube ~26 h antes. Con un día de margen los dos han tenido tiempo de
-// salir; exigirlos a tres días sería criar lobos, y un panel que cría lobos se
-// deja de mirar — que es la doctrina de todo este fichero.
-const DIAS_PARA_EXIGIR_VISPERA = 1;
+// de YouTube ~26 h antes.
+//
+// 🪤 PERO EL UMBRAL NO SE CALIBRA CONTRA CUÁNDO PUBLICA UFC.COM: SE CALIBRA
+// CONTRA CUÁNDO CORRE EL CRON QUE LO TRAE. La primera versión puso 1 día
+// mirando lo primero, y eso garantizaba un rojo que nadie podía arreglar:
+// `refresh-weighins.yml` es SEMANAL, los viernes a las 20:00 UTC. Para una
+// velada que empiece antes de esa hora del sábado —las de Asia y las
+// vespertinas europeas— la víspera abría hasta 10 h ANTES de que el cron
+// tuviera su turno. Medido sobre el evento 1065 (estelar sábado 29-ago 10:00
+// UTC): víspera a las 10:00 del viernes, cron a las 20:00 → diez horas de
+// «Pesajes 0/18» en rojo, con el guardián mandando un correo cada hora y con un
+// detalle que acusa al cron de «fallar en verde» cuando ni siquiera ha corrido.
+//
+// Con 12 h la ventana abre SIEMPRE después de las 20:00 UTC del viernes para
+// cualquier velada de sábado o domingo, que son todas. Un panel que pide un
+// dato antes de que alguien tenga el encargo de traerlo no informa: acusa.
+const HORAS_PARA_EXIGIR_VISPERA = 12;
 
 export function comprobarProxima(d: DatosProxima): Comprobacion[] {
   const inminente = d.diasQueFaltan <= DIAS_PARA_EXIGIR;
@@ -273,16 +286,30 @@ export function comprobarProxima(d: DatosProxima): Comprobacion[] {
   // Antes de la víspera el dato NO EXISTE todavía, así que no se puntúa: se
   // rotula «aún no toca» en verde. Un rojo que sale siete días seguidos no
   // informa de nada.
-  const esVispera = d.diasQueFaltan <= DIAS_PARA_EXIGIR_VISPERA;
+  const esVispera = d.diasQueFaltan * 24 <= HORAS_PARA_EXIGIR_VISPERA;
   const pesajesEsperados = d.combatesActivos * 2;
 
   out.push({
     titulo: "Pesajes",
-    valor: esVispera ? `${d.pesajes}/${pesajesEsperados}` : "aún no toca",
+    valor: !esVispera
+      ? "aún no toca"
+      : pesajesEsperados === 0
+        ? "sin cartelera"
+        : `${d.pesajes}/${pesajesEsperados}`,
     // Incompleto la víspera es TAN malo como vacío: los cuatro pesos que
     // faltaban en UFC 330 eran los del estelar y el coestelar, y el contador
     // decía 20/24 sin que nadie lo mirara.
-    nivel: !esVispera || d.pesajes >= pesajesEsperados ? "ok" : "mal",
+    // 🪤 `pesajes >= 0` es SIEMPRE cierto, así que una cartelera vacía la
+    // víspera publicaba «0/0» en VERDE — un verde falso, que es justo lo que
+    // este panel existe para no dar. Sin combates no hay pesaje que exigir,
+    // pero tampoco hay nada que aprobar: lo dice la línea «Cartelera», que ya
+    // está en rojo, y esta se declara sin dato.
+    nivel:
+      !esVispera || pesajesEsperados === 0
+        ? "ok"
+        : d.pesajes >= pesajesEsperados
+          ? "ok"
+          : "mal",
     detalle: !esVispera
       ? "El artículo de ufc.com se publica la víspera; antes es normal que no esté."
       : d.pesajes >= pesajesEsperados

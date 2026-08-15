@@ -180,7 +180,7 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
               Intenta ampliar tu búsqueda o quitar uno de los filtros activos.
             </p>
             <Link href="/fighters">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button className="bg-primary text-primary-foreground hover:ring-3 hover:ring-primary/40">
                 Ver plantilla completa
               </Button>
             </Link>

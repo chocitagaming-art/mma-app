@@ -446,9 +446,27 @@ export function MatchupClient({
                                 detail.fighterA.id,
                                 detail.fighterB.id,
                               );
+                              // 🪤 NI ROJO NI AZUL AQUI. El primer intento pinto
+                              // redWin en bg-corner-red y blueWin en
+                              // bg-corner-blue, y era un color que MENTIA:
+                              // 'redWin' no significa "gano la esquina roja",
+                              // significa "gano el luchador que el usuario metio
+                              // en la ranura roja del formulario"
+                              // (matchup-history.ts:30 compara contra fighterA,
+                              // que es el ?red= de la URL). La esquina real ni
+                              // siquiera viaja: DirectMatchupFight no la trae.
+                              // Y justo encima la pagina rotula "Esquina roja" y
+                              // "Esquina azul", asi que el lector lee ese color
+                              // como un dato del combate. Intercambiar los dos
+                              // luchadores en el formulario cambiaba el color del
+                              // MISMO combate pasado.
+                              //
+                              // Los dos desenlaces con ganador comparten color:
+                              // el badge afirma "hubo ganador", que es cierto, y
+                              // QUIEN gano lo dice su texto.
                               const ESTILO: Record<typeof desenlace, string> = {
-                                redWin: "border-transparent bg-corner-red text-corner-red-foreground",
-                                blueWin: "border-transparent bg-corner-blue text-corner-blue-foreground",
+                                redWin: "border-transparent bg-win text-win-foreground",
+                                blueWin: "border-transparent bg-win text-win-foreground",
                                 draw: "border-border bg-transparent text-foreground",
                                 nc: "border-transparent bg-nc text-nc-foreground",
                                 scheduled: "border-border bg-transparent text-foreground",
@@ -533,7 +551,7 @@ export function MatchupClient({
               </p>
             </div>
             <Link href="/fighters">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button className="bg-primary text-primary-foreground hover:ring-3 hover:ring-primary/40">
                 Ver la plantilla
               </Button>
             </Link>

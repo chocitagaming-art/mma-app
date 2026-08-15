@@ -87,7 +87,25 @@ function GripBar({
           {i > 0 ? <span className="w-0.5 shrink-0 bg-card" /> : null}
           <span
             className={cn("h-full", RELLENO[segment.corner])}
-            style={{ width: `${segment.share * 100}%` }}
+            // 🪤 UN PIXEL DE SUELO, y solo uno. Sacar el separador del overlay
+            // arreglo la OCLUSION pero no el REDONDEO DEL PINTADO: Chrome fija
+            // el fondo de una caja entre round(inicio) y round(fin) en pixeles
+            // de dispositivo, asi que una caja de 0,33 px existe en el arbol y
+            // no pinta nada. Quedaban 111 fichas a 375 px publicando
+            // «<1 % (0:01)» sobre una barra sin un solo pixel de ese color.
+            //
+            // El suelo miente, si. Medido: como mucho 0,331 puntos en la barra
+            // grande (301 px) y 1,041 en la de asalto (96 px). El PORCENTAJE
+            // QUE SE PUBLICA AL LADO ya se redondea a entero, o sea que se
+            // aleja del real hasta 0,500 puntos por definicion: en la barra
+            // grande el suelo miente MENOS que el numero que el lector lee.
+            // Entre dibujar 0,33 puntos de mas y afirmar un cero que no
+            // existe, la primera es la mentira pequena.
+            //
+            // Va en las DOS barras o en ninguna: con suelo solo en la grande,
+            // el resumen dibujaria tramos que las barras de asalto del mismo
+            // tile no dibujan, y dos vistas del mismo dato dejarian de cuadrar.
+            style={{ width: `${segment.share * 100}%`, minWidth: "1px" }}
           />
         </Fragment>
       ))}

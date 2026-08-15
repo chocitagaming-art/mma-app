@@ -214,7 +214,7 @@ export function MarketModelComparison({
             onClick={handleCompare}
             disabled={loading}
             aria-label="Comparar las cuotas del mercado con el modelo de IA"
-            className="h-11 w-full rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+            className="h-11 w-full rounded-2xl bg-primary text-primary-foreground hover:ring-3 hover:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
           >
             {loading ? (
               <Loader2 className="animate-spin" />

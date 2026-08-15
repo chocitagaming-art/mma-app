@@ -8,7 +8,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // 🪤 El hover NO puede atenuar el fondo: en oscuro `bg-primary/80` hunde
+        // la tinta a 3,39:1 (ver contrast.test.ts). El anillo da el feedback sin
+        // mover un solo color, igual que hace focus-visible aqui al lado.
+        default: "bg-primary text-primary-foreground hover:ring-3 hover:ring-primary/40",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

@@ -356,8 +356,84 @@ describe("badges de desenlace: sólidos, y por eso inmunes al hover", () => {
       fileURLToPath(new URL("../components/matchup-client.tsx", import.meta.url)),
       "utf8",
     );
-    expect(src).toContain("bg-corner-red text-corner-red-foreground");
-    expect(src).toContain("bg-corner-blue text-corner-blue-foreground");
+    expect(src).toContain("bg-win text-win-foreground");
     expect(src).toContain("bg-nc text-nc-foreground");
+    // 🪤 Y NO puede volver el color de esquina: 'redWin' es la ranura del
+    // formulario, no la esquina del combate, asi que pintarlo de rojo publica
+    // un dato falso que cambia si intercambias a los dos luchadores.
+    expect(src).not.toContain("bg-corner-red text-corner-red-foreground");
+    expect(src).not.toContain("bg-corner-blue text-corner-blue-foreground");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El hover de los botones primarios
+// ---------------------------------------------------------------------------
+//
+// 🪤 EL AGUJERO SIMÉTRICO DEL ARREGLO DE LA TARDE, cazado por la revisión de
+// después de desplegar. Al pasar --primary-foreground a tinta oscura, el reposo
+// pasó a cumplir (4,84) y el HOVER se rompió: `hover:bg-primary/80` atenúa el
+// rojo contra el fondo negro, y sobre ese rojo apagado la tinta oscura cae a
+// 3,39. Antes era al revés — reposo 3,88 y hover 5,54 con el blanco.
+//
+// Y no hay tinta que salve las dos. Medido en tema oscuro sobre los tres
+// fondos que genera el propio CSS del botón (#f5333a, /90 #de2f36, /80
+// #c62b31):
+//
+//     #ffffff . . . 3,88 / 4,60 / 5,54     falla el reposo
+//     #2a0407 . . . 4,84 / 4,08 / 3,39     falla el hover
+//     #000000 . . . 5,42 / 4,57 / 3,79     falla el hover
+//
+// El problema no es la tinta: es que --primary en oscuro no aguanta que le
+// bajen la opacidad. `hover:opacity-90` tampoco vale (4,11): atenúa el fondo
+// mucho más que la tinta casi negra, que ya está pegada al negro del fondo.
+//
+// Por eso EL HOVER YA NO TOCA EL COLOR. Da el feedback con un anillo, como ya
+// hace `focus-visible`, y el ratio del texto es el mismo en los dos estados:
+// un único número que vigilar en vez de dos que se mueven en direcciones
+// contrarias. Es la misma conclusión a la que se llegó con el chip «EN VIVO» y
+// con los badges de desenlace, tres veces el mismo día.
+describe("ningún estado del botón primario puede atenuar su fondo", () => {
+  const FICHEROS = [
+    "../components/ui/button.tsx",
+    "../components/ui/badge.tsx",
+    "../components/market-model-comparison.tsx",
+    "../components/matchup/prediction-section.tsx",
+    "../app/fighters/page.tsx",
+    "../components/matchup-client.tsx",
+  ];
+
+  for (const ruta of FICHEROS) {
+    it(`${ruta.split("/").pop()} no baja la opacidad de bg-primary al pasar el ratón`, () => {
+      const src = readFileSync(fileURLToPath(new URL(ruta, import.meta.url)), "utf8");
+      // Solo importa donde el texto va con --primary-foreground ENCIMA de
+      // bg-primary sólido. `hover:bg-primary/10` de los botones con borde es
+      // otro patrón: ahí la tinta es `text-primary` y el fondo es la tarjeta,
+      // no el rojo. Meterlos en el mismo saco daría un rojo que no significa
+      // nada, y una puerta que grita sin motivo se acaba silenciando.
+      //
+      // 🪤 SE MIRA CADA CADENA, NO CADA LÍNEA NI CADA `className=`. La primera
+      // versión de este aserto filtraba las líneas que contuvieran "className"
+      // y daba VERDE con el fallo puesto a mano en button.tsx, porque ahí las
+      // clases viven dentro de un objeto `cva` y no hay ningún `className=`.
+      // Un verificador que no caza su propio control negativo no verifica nada,
+      // y hoy es la tercera vez que pasa.
+      const cadenas = src.match(/"[^"\n]*"|'[^'\n]*'|`[^`]*`/g) ?? [];
+      const culpables = cadenas
+        .filter((cadena) => /text-primary-foreground/.test(cadena))
+        .flatMap((cadena) => cadena.match(/hover:bg-primary\/\d+/g) ?? []);
+      expect(
+        culpables,
+        `atenuar bg-primary en hover hunde el texto a 3,39:1 en oscuro; usa un anillo`,
+      ).toEqual([]);
+    });
+  }
+
+  it("y la tinta cumple sobre el fondo a plena opacidad, que ahora es el único", () => {
+    for (const { nombre, tokens } of TEMAS) {
+      const ratio = contrastRatio(tokens["--primary-foreground"], tokens["--primary"]);
+      expect(ratio, `tema ${nombre}`).not.toBeNull();
+      expect(ratio as number, `tema ${nombre}`).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+    }
   });
 });

@@ -97,7 +97,15 @@ export function mapAggregate(row?: AggregateRow): FighterAggregateStats {
     takedownAccuracy:
       takedownsAttempted > 0 ? takedownsLanded / takedownsAttempted : 0,
     submissionAttempts: Number(row?.submission_attempts ?? 0),
-    controlTimeSeconds: Number(row?.control_time_seconds ?? 0),
+    // 🪤 NULL NO ES CERO, tambien aqui. El `?? 0` de esta linea sobrevivio al
+    // arreglo de la ficha de COMBATE y creo una incoherencia peor que la que
+    // aquel quitaba: /fights/11451 decia «Tiempo control —» y /fighters/8899,
+    // el mismo luchador y ese combate entre los suyos, decia «T. control 0:00».
+    // La misma web afirmando dos cosas incompatibles del mismo dato. Son 102
+    // fichas de luchador, entre ellas Bas Rutten, Don Frye y Mark Kerr.
+    // El `sum()` de la consulta devuelve NULL cuando NINGUNA fila tiene dato.
+    controlTimeSeconds:
+      row?.control_time_seconds == null ? null : Number(row.control_time_seconds),
     knockdowns: Number(row?.knockdowns ?? 0),
     totalFightStats: Number(row?.total_fight_stats ?? 0),
   };
@@ -114,7 +122,10 @@ export function mapComparisonAggregate(row?: AggregateRow): FighterComparisonAve
     takedownsLandedPerFight: totals.takedownsLanded / fightCount,
     takedownAccuracy: totals.takedownAccuracy,
     submissionAttemptsPerFight: totals.submissionAttempts / fightCount,
-    controlTimePerFightSeconds: totals.controlTimeSeconds / fightCount,
+    // Sin segundos medidos no hay media que dar: null se propaga hasta el
+    // formateador, que escribe «—».
+    controlTimePerFightSeconds:
+      totals.controlTimeSeconds == null ? null : totals.controlTimeSeconds / fightCount,
     totalFightStats: totals.totalFightStats,
   };
 }

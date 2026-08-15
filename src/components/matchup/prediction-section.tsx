@@ -62,7 +62,7 @@ export function PredictionSection({
             type="button"
             onClick={handlePredict}
             disabled={loading}
-            className="h-12 rounded-2xl bg-primary px-6 text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+            className="h-12 rounded-2xl bg-primary px-6 text-primary-foreground hover:ring-3 hover:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
           >
             {loading ? (
               <Loader2 className="animate-spin" />
