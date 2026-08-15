@@ -66,14 +66,46 @@ async function getSkillRadarEntriesUncached(): Promise<SkillRadarEntry[]> {
         coalesce(sum(takedowns_landed)::float * 900 / nullif(sum(fight_seconds), 0), 0) as td15,
         coalesce(sum(takedowns_landed)::float / nullif(sum(takedowns_attempted), 0), 0) as td_acc,
         coalesce(sum(submission_attempts)::float * 900 / nullif(sum(fight_seconds), 0), 0) as sub15,
-        coalesce(sum(control_time_seconds)::float / nullif(sum(fight_seconds), 0), 0) as ctrl_share,
+        -- 🪤 NULL NO ES CERO, tercera vez en este proyecto. 'sum()' devuelve
+        -- NULL cuando ninguna acta trae el dato, y el 'coalesce(..., 0)' que
+        -- había aquí lo convertía en «no controló a nadie» — el mismo bug que
+        -- ya se arregló en la ficha del combate, en la del luchador y en el
+        -- Maestro, entrando por la cuarta puerta. Y 'fighters.mappers.ts:167'
+        -- declara POR ESCRITO que si esta definición diverge de la del tile la
+        -- app enseñará dos cuotas de control que no cuadran.
+        --
+        -- MEDIDO HOY: 0 fichas cambian. El filtro de era de :50
+        -- ('event_date >= '2001-01-01'') deja fuera a los 102 luchadores sin
+        -- control, que son de 1995-1998, así que el coalesce nunca llegaba a
+        -- dispararse por falta de dato: era un no-op documentado como
+        -- protección. Se corrige igual — «cero filas en la base» no es «no
+        -- puede pasar», y basta con que entre un acta antigua sin control para
+        -- que el eje de agarre empiece a publicar un cero inventado.
+        --
+        -- 🪤 Y AQUÍ EL ARREGLO OBVIO ABRE UNA PUERTA PEOR QUE LA QUE CIERRA.
+        -- Devolver NULL a secas no vale: 'percent_rank()' ordena los NULL al
+        -- final y les da **1.0**, el percentil MÁS ALTO de la división.
+        -- Comprobado en Postgres. O sea que «no se midió su control» se
+        -- publicaría como «es el que más controla de su categoría» — cambiar un
+        -- cero falso por un máximo falso es mover el incumplimiento de sitio,
+        -- que es exactamente lo que pasó con el hover de los botones.
+        -- Por eso el descarte va en el 'having' de abajo: quien no tiene NI UNA
+        -- acta con control sale del radar entero, igual que ya sale quien tiene
+        -- menos de tres peleas. Un eje que no se puede medir no se dibuja.
+        sum(control_time_seconds)::float / nullif(sum(fight_seconds), 0) as ctrl_share,
         coalesce(1 - sum(opp_sig_landed)::float / nullif(sum(opp_sig_attempted), 0), 0) as str_def,
         coalesce(1 - sum(opp_td_landed)::float / nullif(sum(opp_td_attempted), 0), 0) as td_def,
         coalesce(sum(opp_sig_landed)::float * 60 / nullif(sum(fight_seconds), 0), 0) as sapm,
         sum(fight_seconds)::float / count(*) as avg_fight_seconds
       from per_fight
       group by fighter_id
-      having count(*) >= 3 and sum(fight_seconds) > 0
+      having count(*) >= 3
+        and sum(fight_seconds) > 0
+        -- Sin una sola acta con tiempo de control no hay eje de agarre que
+        -- calcular. Ver la nota de 'ctrl_share': publicarlo como 0 miente, y
+        -- publicarlo como NULL miente MÁS, porque percent_rank lo asciende al
+        -- percentil más alto. Hoy no excluye a nadie (medido: 0 de 1.811).
+        and count(control_time_seconds) > 0
     ),
     latest_wc as (
       select distinct on (a.fighter_id)
