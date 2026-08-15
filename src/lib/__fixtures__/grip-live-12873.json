@@ -1,0 +1,45 @@
+[
+  {
+    "state": "post",
+    "statusName": "STATUS_FINAL",
+    "period": 1,
+    "displayClock": "0:30",
+    "byFighter": {
+      "6290": {
+        "kd": 1,
+        "tsl": 11,
+        "tsa": 14,
+        "ssl": 11,
+        "ssa": 14,
+        "hl": 9,
+        "ha": 11,
+        "bl": 1,
+        "ba": 2,
+        "ll": 1,
+        "la": 1,
+        "tdl": 0,
+        "tda": 0,
+        "sub": 0,
+        "ctrl": 4
+      },
+      "6930": {
+        "kd": 0,
+        "tsl": 1,
+        "tsa": 3,
+        "ssl": 1,
+        "ssa": 3,
+        "hl": 0,
+        "ha": 2,
+        "bl": 0,
+        "ba": 0,
+        "ll": 1,
+        "la": 1,
+        "tdl": 0,
+        "tda": 0,
+        "sub": 0,
+        "ctrl": 0
+      }
+    },
+    "sampledAt": "2026-08-01 19:43:26.019945+00"
+  }
+]
