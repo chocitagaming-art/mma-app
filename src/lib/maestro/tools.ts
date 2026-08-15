@@ -13,6 +13,41 @@ const textSchema = z.string().trim().min(1).max(80);
 
 const num = (v: unknown): number => Number(v ?? 0);
 
+/**
+ * Como `num`, pero un null sigue siendo null.
+ *
+ * 🪤 `num` NO se toca, y es deliberado: se usa en once sitios más de este
+ * fichero donde el 0 SÍ es un dato (cero knockdowns, cero intentos de sumisión).
+ * Cambiarlo ahí convertiría en «no consta» un montón de cosas que constan y
+ * valen cero — el mismo pecado del `?? 0`, solo que del revés.
+ *
+ * Dónde importa la diferencia: `sum()` de Postgres devuelve NULL cuando ninguna
+ * fila tiene el dato, y con `?? 0` el Maestro recibía `tiempo_control_seg: 0`
+ * para 102 luchadores —Bas Rutten, Don Frye, Mark Kerr— cuyas actas son de una
+ * época en la que ese tiempo no se medía. El prompt le ordena citar solo cifras
+ * que aparezcan literalmente en los datos, así que el modelo decía, citando,
+ * que acumularon cero segundos de control en toda su carrera.
+ *
+ * Y `Number(null)` es 0, así que un `Number(v)` a secas lo colaría otra vez.
+ */
+const numOrNull = (v: unknown): number | null => {
+  if (v == null) return null;
+  const n = Number(v);
+  // Un NaN se disfrazaría igualmente de null al serializar (`JSON.stringify(NaN)`
+  // es `null`), así que se hace explícito aquí en vez de dejarlo pasar como si
+  // fuera un "sin dato" legítimo.
+  return Number.isFinite(n) ? n : null;
+};
+
+/**
+ * "W-L-D", o null si falta cualquiera de las tres. Una sola forma para las tres
+ * herramientas que publican récord: antes `buscar_luchador` entregaba la cadena
+ * "null-null-null", `ficha_y_stats` entregaba "0-0-0" y el ranking miraba solo
+ * las victorias, así que un luchador con derrotas sin registrar salía invicto.
+ */
+const recordOrNull = (w: unknown, l: unknown, d: unknown): string | null =>
+  w == null || l == null || d == null ? null : `${num(w)}-${num(l)}-${num(d)}`;
+
 type ToolResult = unknown;
 
 async function buscarLuchador(input: unknown): Promise<ToolResult> {
@@ -43,7 +78,10 @@ async function buscarLuchador(input: unknown): Promise<ToolResult> {
       nombre: r.name,
       apodo: r.nickname,
       nacionalidad: r.nationality,
-      record: `${r.wins}-${r.losses}-${r.draws}`,
+      // Sin guard esto publicaba la cadena literal "null-null-null", mientras
+      // que `ficha_y_stats` publicaba "0-0-0" para el MISMO luchador. Dos
+      // mentiras distintas para el mismo dato en el mismo fichero.
+      record: recordOrNull(r.wins, r.losses, r.draws),
     })),
   };
 }
@@ -74,15 +112,21 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
             sum(submission_attempts) as submission_attempts,
             sum(control_time_seconds) as control_time_seconds,
             sum(knockdowns) as knockdowns,
-            count(*) as total_fight_stats
+            count(*) as total_fight_stats,
+            -- El denominador honesto: count(col) NO cuenta los NULL, así que
+            -- esto dice de cuántas de sus actas sale de verdad el tiempo de
+            -- control. Sin él, una suma parcial se entrega como si fuera total.
+            count(control_time_seconds) as fights_with_control
      from fight_stats where fighter_id = $1`,
     [id],
   );
 
-  const sl = num(agg?.sig_strikes_landed);
-  const sa = num(agg?.sig_strikes_attempted);
-  const tl = num(agg?.takedowns_landed);
-  const ta = num(agg?.takedowns_attempted);
+  const sl = numOrNull(agg?.sig_strikes_landed);
+  const sa = numOrNull(agg?.sig_strikes_attempted);
+  const tl = numOrNull(agg?.takedowns_landed);
+  const ta = numOrNull(agg?.takedowns_attempted);
+  const conStats = num(agg?.total_fight_stats);
+  const conControl = num(agg?.fights_with_control);
 
   return {
     ficha: {
@@ -90,7 +134,7 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
       nombre: fighter.name,
       apodo: fighter.nickname,
       nacionalidad: fighter.nationality,
-      record: `${num(fighter.wins)}-${num(fighter.losses)}-${num(fighter.draws)}`,
+      record: recordOrNull(fighter.wins, fighter.losses, fighter.draws),
       altura_cm: fighter.height_cm,
       alcance_cm: fighter.reach_cm,
       peso_gramos: fighter.weight_grams,
@@ -101,19 +145,31 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
     stats_carrera: {
       golpes_sig_conectados: sl,
       golpes_sig_intentados: sa,
-      precision_golpeo: sa > 0 ? `${Math.round((sl / sa) * 100)}%` : "—",
+      precision_golpeo: sl != null && sa != null && sa > 0 ? `${Math.round((sl / sa) * 100)}%` : "—",
       derribos_conectados: tl,
       derribos_intentados: ta,
-      precision_derribo: ta > 0 ? `${Math.round((tl / ta) * 100)}%` : "—",
-      intentos_sumision: num(agg?.submission_attempts),
-      tiempo_control_seg: num(agg?.control_time_seconds),
-      knockdowns: num(agg?.knockdowns),
-      peleas_con_stats: num(agg?.total_fight_stats),
+      precision_derribo: tl != null && ta != null && ta > 0 ? `${Math.round((tl / ta) * 100)}%` : "—",
+      intentos_sumision: numOrNull(agg?.submission_attempts),
+      tiempo_control_seg: numOrNull(agg?.control_time_seconds),
+      knockdowns: numOrNull(agg?.knockdowns),
+      peleas_con_stats: conStats,
+      // De cuántas de esas actas sale el tiempo de control. Cuando no coincide
+      // con `peleas_con_stats`, el total es una suma PARCIAL y el modelo tiene
+      // que poder decirlo en vez de presentarla como la cifra de la carrera.
+      peleas_con_control_medido: conControl,
     },
+    // La nota cubría solo «no hay actas». Faltaba el caso de los 102: SÍ hay
+    // actas y el agregado sigue siendo null, que es cuando un null desnudo se
+    // lee como cero. Sin esta frase, el arreglo se limita a cambiar la mentira
+    // «acumuló 0 segundos» por «no tiene golpes registrados» — otra mentira.
     nota:
-      num(agg?.total_fight_stats) === 0
+      conStats === 0
         ? "Sin estadísticas detalladas registradas para este luchador."
-        : undefined,
+        : conControl === 0
+          ? "Tiene actas registradas, pero ninguna incluye tiempo de control: en esa época no se medía. `tiempo_control_seg: null` significa SIN DATO, no cero."
+          : conControl < conStats
+            ? `El tiempo de control sale solo de ${conControl} de sus ${conStats} actas; es una suma parcial, no el total de su carrera.`
+            : undefined,
   };
 }
 
@@ -243,8 +299,7 @@ async function ranking(input: unknown): Promise<ToolResult> {
       ranking: rows.map((r) => ({
         posicion: r.is_champion ? "Campeón" : num(r.rank_position),
         luchador: r.fighter_name,
-        record:
-          r.wins == null ? null : `${num(r.wins)}-${num(r.losses)}-${num(r.draws)}`,
+        record: recordOrNull(r.wins, r.losses, r.draws),
       })),
     };
   } catch {
