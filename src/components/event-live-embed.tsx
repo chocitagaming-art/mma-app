@@ -29,16 +29,35 @@ export function EventLiveEmbed({
   videoId,
   videoTitle,
   eventName,
+  eventOver = false,
   className,
 }: {
   videoId: string;
   videoTitle: string | null;
   eventName: string;
+  // El estelar ya cayó. Solo la ficha del evento lo pasa: en la portada y en
+  // /en-vivo el evento nunca está terminado, porque en cuanto lo está esas dos
+  // páginas apuntan a otro.
+  eventOver?: boolean;
   className?: string;
 }) {
-  // El título del vídeo es el rótulo. Sin él no se pinta la sección: preferimos
-  // no enseñar el directo a enseñarlo sin poder decir qué es.
-  if (!videoTitle) {
+  // 🪤 DOS MOTIVOS PARA NO PINTAR NADA, y los dos son el mismo: no afirmar algo
+  // que ha dejado de ser cierto.
+  //
+  //   · Sin título no se puede decir QUÉ es el vídeo, y un rótulo escrito a mano
+  //     haría creer que ahí se ve el combate. Ver la cabecera del fichero.
+  //   · Con el evento ya terminado, «Retransmisión oficial» es falso —y el
+  //     título de YouTube suele llevar un «¡EN VIVO!» dentro, así que la ficha
+  //     de una velada de hace meses estaría anunciando un directo que acabó.
+  //
+  // Se probó a cambiar el rótulo en pasado («Vídeo previo del evento») y se
+  // descartó por decisión del dueño: si no está, no puede mentir. Es también lo
+  // que ya hacía la portada, donde la franja desaparece sola en cuanto el
+  // estelar cae y `getNextEventHero` pasa al siguiente evento.
+  //
+  // La diferencia con el careo, que SÍ se queda para siempre: «Careo oficial»
+  // sigue siendo cierto dentro de un año. «Retransmisión» no.
+  if (!videoTitle || eventOver) {
     return null;
   }
 

@@ -344,6 +344,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           videoId={event.liveVideoId}
           videoTitle={event.liveVideoTitle}
           eventName={event.name}
+          // Esta es la ÚNICA de las tres páginas que puede enseñar un evento ya
+          // terminado, y por eso es la única que pasa esto: con el estelar caído
+          // el rótulo deja de decir «retransmisión» y pasa a hablar en pasado.
+          eventOver={eventOver}
           className="mt-8"
         />
       ) : null}
