@@ -243,6 +243,13 @@ type EventRow = {
   start_time: string | null;
   image_url: string | null;
   faceoff_video_id: string | null;
+  // Migración 027. El vídeo que la UFC emite EN ABIERTO la noche de la velada,
+  // que NO es el combate estelar: ese es de pago. Suele ser la previa. NULL =
+  // no hay directo y no se pinta nada.
+  live_video_id: string | null;
+  // El título REAL del vídeo. No es un adorno: es lo que evita inventarse un
+  // rótulo que haga creer que ahí se ve el combate.
+  live_video_title: string | null;
   broadcast: string | null;
   ticket_url: string | null;
   tagline: string | null;
@@ -466,6 +473,7 @@ export const getEventDetail = cache(async (
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url, faceoff_video_id,
+            live_video_id, live_video_title,
             broadcast, ticket_url, tagline, headliner, source, source_id,
             early_prelims_time::text AS early_prelims_time,
             prelims_time::text AS prelims_time
@@ -529,6 +537,8 @@ export const getEventDetail = cache(async (
     startTime: event.start_time,
     imageUrl: absolutePoster(event.image_url),
     faceoffVideoId: event.faceoff_video_id,
+    liveVideoId: event.live_video_id,
+    liveVideoTitle: event.live_video_title,
     broadcast: event.broadcast,
     ticketUrl: event.ticket_url,
     tagline: event.tagline,
@@ -552,6 +562,10 @@ type NextEventRow = {
   location: string | null;
   image_url: string | null;
   broadcast: string | null;
+  // Migración 027: el directo en abierto de la UFC. La portada lo enmarca justo
+  // debajo del hero.
+  live_video_id: string | null;
+  live_video_title: string | null;
 };
 
 type MainEventRow = {
@@ -667,7 +681,8 @@ async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
             -- sede), que para el 1087 iba 24 h por delante de su cuenta atras.
             e.prelims_time::text AS prelims_time,
             e.early_prelims_time::text AS early_prelims_time,
-            e.location, e.image_url, e.broadcast
+            e.location, e.image_url, e.broadcast,
+            e.live_video_id, e.live_video_title
      FROM events e
      WHERE COALESCE(
              e.start_time,
@@ -749,6 +764,8 @@ async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
     location: event.location,
     imageUrl: absolutePoster(event.image_url),
     broadcast: event.broadcast,
+    liveVideoId: event.live_video_id,
+    liveVideoTitle: event.live_video_title,
     mainEvent: mainEventRow
       ? {
           fightId: mainEventRow.fight_id,

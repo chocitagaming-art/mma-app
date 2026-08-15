@@ -436,6 +436,16 @@ export type EventDetail = {
   imageUrl: string | null;
   // Careo oficial de UFC (face-off) en YouTube: solo el video id (migración 022).
   faceoffVideoId: string | null;
+  // El directo que la UFC emite EN ABIERTO la noche de la velada (migración 027).
+  //
+  // ⚠️ NO es el combate estelar: ese es de pago (Paramount+ / DAZN según el
+  // mercado). Lo que la UFC publica gratis es la PREVIA y, a veces, las
+  // preliminares iniciales. Por eso el rótulo de pantalla sale del título real
+  // del vídeo y no de una frase escrita a mano: si el vídeo se llama «UFC 330 |
+  // Previa del Evento», eso es lo que se lee, y nadie se sienta a esperar el
+  // combate estelar delante de una tertulia.
+  liveVideoId: string | null;
+  liveVideoTitle: string | null;
   broadcast: string | null;
   ticketUrl: string | null;
   tagline: string | null;
@@ -512,6 +522,10 @@ export type NextEventHero = {
   location: string | null;
   imageUrl: string | null;
   broadcast: string | null;
+  // El directo en abierto de la UFC (migración 027). Ver EventDetail para lo que
+  // NO es: el combate estelar no está aquí, es de pago.
+  liveVideoId: string | null;
+  liveVideoTitle: string | null;
   // null cuando el evento aún no tiene cartelera registrada.
   mainEvent: NextEventMainBout | null;
 };

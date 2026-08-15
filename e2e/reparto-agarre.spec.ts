@@ -258,9 +258,32 @@ test("la tabla de asaltos y el bloque de agarre nombran igual al mismo luchador"
 }) => {
   await abrirFicha(page, 14232);
 
-  const enAgarre = await bloque(page).locator("thead th").first().innerText();
+  const celdaAgarre = bloque(page).locator("thead th").first();
   const tabla = page.getByRole("region", { name: /Desglose por asaltos/i });
-  const enTabla = await tabla.locator('tbody th[scope="row"]').first().innerText();
+  const celdaTabla = tabla.locator('tbody th[scope="row"]').first();
+
+  // 🪤 `textContent` Y NO `innerText`, y esto costó un rojo aprenderlo.
+  //
+  // Con `innerText` este test salió FLAKY el 15-ago-2026 en tablet-light: fallaba
+  // en 536 ms y pasaba al reintentar en 1,1 s. La causa es que `innerText`
+  // depende del LAYOUT y cambia de comportamiento según el elemento esté
+  // renderizado o no — dentro de un <details> cerrado devuelve el texto crudo,
+  // y mientras el desplegable se abre puede devolver otra cosa. Dos lecturas del
+  // mismo nodo en instantes distintos no dan lo mismo.
+  //
+  // Y el arreglo evidente —esperar con `toBeVisible()`— es PEOR: las dos celdas
+  // viven dentro del <details>, que aquí está CERRADO, así que nunca son
+  // visibles y el test se queda 15 s esperando algo que no va a pasar. Se probó
+  // y dejó tres proyectos en rojo.
+  //
+  // `textContent` no mira el layout: devuelve siempre la misma cadena del DOM,
+  // esté el desplegable abierto o cerrado. Que es justo lo que este test
+  // compara.
+  const enAgarre = (await celdaAgarre.textContent()) ?? "";
+  const enTabla = (await celdaTabla.textContent()) ?? "";
+
+  expect(enAgarre.trim()).not.toBe("");
+  expect(enTabla.trim()).not.toBe("");
 
   // Las mayúsculas son CSS (text-transform), así que el DOM lleva la misma
   // cadena en los dos sitios y comparar en crudo bastaría... pero solo mientras

@@ -1,0 +1,71 @@
+import { Radio } from "lucide-react";
+
+// El directo que la UFC emite EN ABIERTO la noche de la velada, incrustado.
+//
+// ⚠️ ESTA WEB NO RETRANSMITE NADA. Lo que hay aquí es el reproductor del canal
+// oficial de la UFC en YouTube, servido por YouTube. Si el vídeo desaparece o
+// deja de estar disponible, se ve el aviso del propio YouTube dentro del marco,
+// que es más honesto que cualquier cosa que pudiéramos escribir nosotros.
+//
+// 🪤 EL RÓTULO NO SE INVENTA: sale del TÍTULO REAL DEL VÍDEO.
+//
+// La tentación era poner «EN DIRECTO» o «Ver la velada en directo», y las dos
+// serían falsas. La UFC NO emite los combates gratis en YouTube —el estelar es
+// de pago, Paramount+ o DAZN según el mercado— y lo que sí publica en abierto es
+// la PREVIA del evento, a veces las preliminares iniciales. Un rótulo escrito a
+// mano haría que alguien se siente a esperar el combate delante de una tertulia.
+// El título del vídeo lo dice solo: «UFC 330 | Previa del Evento ¡EN VIVO!».
+//
+// Y por eso tampoco pone la hora ni «empieza en X minutos»: el vídeo puede estar
+// programado, en directo o acabado, y la única fuente que sabe cuál de las tres
+// es en este segundo es el propio reproductor. Lo dice él dentro del marco.
+//
+// Es un componente de SERVIDOR: no lleva estado ni "use client". El iframe va
+// con `loading="lazy"` —el usuario pidió verlo abierto, no que pese en cada
+// visita— y sin `autoplay`, porque un vídeo que arranca solo con sonido es de
+// las pocas cosas que un navegador bloquea por su cuenta.
+
+export function EventLiveEmbed({
+  videoId,
+  videoTitle,
+  eventName,
+  className,
+}: {
+  videoId: string;
+  videoTitle: string | null;
+  eventName: string;
+  className?: string;
+}) {
+  // El título del vídeo es el rótulo. Sin él no se pinta la sección: preferimos
+  // no enseñar el directo a enseñarlo sin poder decir qué es.
+  if (!videoTitle) {
+    return null;
+  }
+
+  return (
+    <section className={className}>
+      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
+        <Radio className="size-4" aria-hidden />
+        Retransmisión oficial
+      </h2>
+
+      {/* El título real, y la fuente al lado. «Canal oficial de la UFC» importa:
+          deja claro de quién es la señal y que esta web solo la enmarca. */}
+      <p className="mb-2 text-sm font-medium text-balance">{videoTitle}</p>
+      <p className="mb-3 font-mono text-[0.7rem] text-muted-foreground">
+        En abierto en el canal oficial de la UFC (fuente YouTube)
+      </p>
+
+      <div className="w-full max-w-3xl">
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+          title={`${videoTitle} · ${eventName}`}
+          loading="lazy"
+          allow="accelerated-rotation; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          className="aspect-video w-full rounded-lg border border-border bg-muted"
+        />
+      </div>
+    </section>
+  );
+}

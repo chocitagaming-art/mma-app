@@ -5,6 +5,7 @@ import { CalendarDays, Clapperboard, MapPin, Ticket, Tv } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
 import { EventBoutRow } from "@/components/event-bout-row";
+import { EventLiveEmbed } from "@/components/event-live-embed";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
@@ -332,6 +333,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             ))}
           </div>
         </details>
+      ) : null}
+
+      {/* El directo de la UFC, entre las peleas y el pesaje. Va ANTES del careo
+          a propósito: el careo es de la víspera y esto es de esta noche, así que
+          lo más actual queda arriba. Si el evento no tiene directo, no se pinta
+          nada — ni un hueco ni un «no disponible». */}
+      {event.liveVideoId ? (
+        <EventLiveEmbed
+          videoId={event.liveVideoId}
+          videoTitle={event.liveVideoTitle}
+          eventName={event.name}
+          className="mt-8"
+        />
       ) : null}
 
       {/* Careo oficial (face-off): su propia sección, debajo de las peleas

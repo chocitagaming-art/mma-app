@@ -20,6 +20,7 @@ import {
   resolveLivePhase,
   type BoutLiveState,
 } from "@/lib/live-event";
+import { EventLiveEmbed } from "@/components/event-live-embed";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import {
@@ -408,6 +409,19 @@ export default async function LivePage() {
           Cartelera por confirmar.
         </p>
       )}
+
+      {/* El directo en abierto de la UFC, entre la cartelera y el pesaje. Esta
+          es LA página de la noche de la velada, así que aquí importa más que en
+          ningún otro sitio. Va antes del careo por lo mismo que en la ficha del
+          evento: el careo es de la víspera y esto es de ahora. */}
+      {event.liveVideoId ? (
+        <EventLiveEmbed
+          videoId={event.liveVideoId}
+          videoTitle={event.liveVideoTitle}
+          eventName={event.name}
+          className="mt-8"
+        />
+      ) : null}
 
       {/* Con la velada ya arrancada el careo baja aquí en vez de desaparecer:
           sigue siendo el ritual previo, pero por debajo de lo que la gente
