@@ -72,13 +72,92 @@ const GAP_MINIMO_SEGUNDOS = 30;
 // LA LISTA SE AMPLÍA CONTANDO, NUNCA POR SI ACASO. El barrido del 15-ago pasó
 // por la base las 29 partículas de apellido que existen en los idiomas de la
 // UFC, y de las que faltaban solo "du" es una partícula de verdad: "ben", "al",
-// "mac", "abu", "li" y "bin" aparecen SIEMPRE como nombre de pila (Ben Askren,
-// Al Iaquinta, Mac Danzig, Abu Azaitar, Li Jingliang, Sung Bin Jo). Meterlas
-// «por completar» habría roto 14 fichas que hoy están bien. Verificado además
-// que añadir "du" cambia EXACTAMENTE un luchador de los 2.859.
+// "mac", "abu" y "bin" aparecen SIEMPRE como nombre de pila (Ben Askren, Al
+// Iaquinta, Mac Danzig, Abu Azaitar). Meterlas «por completar» habría roto 14
+// fichas que hoy están bien. Verificado además que añadir "du" cambia
+// EXACTAMENTE un luchador de los 2.859.
+//
+// 🪤 Y "li" estaba en esa lista de descartes por un motivo FALSO. Decía que «Li
+// Jingliang» prueba que "li" es siempre nombre de pila. 李 es de los apellidos
+// chinos más frecuentes, y en esta base los nombres chinos están guardados con
+// el APELLIDO DELANTE. La conclusión (no meter "li" aquí) sigue siendo correcta,
+// pero por otra razón: estas partículas se arrastran hacia ATRÁS y aquí el
+// apellido está DELANTE, así que esta lista no puede arreglarlo. Ver
+// APELLIDO_REVISADO.
 const PARTICULAS = new Set([
   "da", "das", "de", "del", "della", "delle", "di", "do", "dos", "du",
   "la", "le", "saint", "st.", "van", "von",
+]);
+
+// Los nombres donde NINGUNA regla acierta, revisados a mano uno por uno.
+//
+// Barrido del 16-ago-2026 sobre los 2.859 nombres de `fighters`, ejecutando
+// esta misma función y leyendo después los 109 nombres de 3+ palabras, los 128
+// de nacionalidad asiática y los 46 con partícula: 23 luchadores salen con un
+// apellido que no es su apellido, y aparecen en 134 de los 8.612 combates que
+// pintan el bloque de agarre. Los documentos decían «4 fichas»: ese 4 son los
+// COMBATES de un solo luchador, el del conector «e», que resulta ser el caso
+// más pequeño de todos.
+//
+// La vía dominante —20 de los 23— es el ORDEN ASIÁTICO, que no estaba
+// mencionado en ninguna parte. La web publicaba «Weili lo tuvo sujeto 15
+// minutos y medio más que Lemos» sobre Zhang Weili, CAMPEONA: el mismo fallo,
+// palabra por palabra, que ya costó los parches de Della Maddalena y Du Plessis.
+//
+// 🪤 POR QUÉ UNA LISTA DE NOMBRES Y NO UNA REGLA. Una lista de apellidos
+// («zhang», «li», «yan»…) es una regla disfrazada y rompe por los dos lados:
+// "Yan Cabral" es brasileño y ahí «Yan» es nombre de pila, y "Te Edwards" sale
+// bien hoy porque su «Te» tampoco es partícula, mientras que el «Te» de "James
+// Te Huna" sí lo es. Ninguna regla automática separa "Li Jingliang" (apellido
+// delante) de "Kevin Lee" (apellido detrás). Así que no se adivina: se cuenta,
+// se lee y se escribe el nombre entero.
+//
+// EVIDENCIA MECÁNICA de que el orden es apellido-nombre, sin conocimiento
+// externo: cuatro luchadores distintos de esta base comparten «Zhang» como
+// primera palabra (Lipeng, Mingyang, Tiequan, Weili) y sus segundas palabras
+// son únicas. Una palabra repetida en cuatro personas sin relación es un
+// apellido. Igual con «Song» (Kenan, Yadong) y «Wang» (Cong, Guan).
+//
+// LO QUE NO ENTRA, y es deliberado: los 14 casos de doble apellido hispano,
+// brasileño y mongol (Cortes Acosta, Conejo Ruiz, Batgerel Danaa…). Ahí no hay
+// un error medible sino una convención discutible —cuál de los dos apellidos
+// usa la prensa—, y esta lista es para lo que está mal, no para lo que es
+// opinable. Quedan escritos en la continuación del 16-ago.
+//
+// AL ENTRAR UN LUCHADOR NUEVO ESTA LISTA ENVEJECE. `npm run apellidos` vuelve a
+// pasar la función por la base entera y saca los que no están aquí.
+export const APELLIDO_REVISADO = new Map<string, string>([
+  // Orden asiático: el apellido va delante (20).
+  ["li jingliang", "Li"],
+  ["song yadong", "Song"],
+  ["zhang weili", "Zhang"],
+  ["yan xiaonan", "Yan"],
+  ["song kenan", "Song"],
+  ["wang cong", "Wang"],
+  ["wu yanan", "Wu"],
+  ["zhang mingyang", "Zhang"],
+  ["xiao long", "Xiao"],
+  ["liang na", "Liang"],
+  ["zhang lipeng", "Zhang"],
+  ["zhang tiequan", "Zhang"],
+  ["yao zhikui", "Yao"],
+  ["hu yaozong", "Hu"],
+  ["shi ming", "Shi"],
+  ["feng xiaocan", "Feng"],
+  ["wang guan", "Wang"],
+  ["ding meng", "Ding"],
+  ["zhu kangjie", "Zhu"],
+  ["kwon won il", "Kwon"],
+  // Partícula polinesia: el apellido es «Te Huna» entero. NO se mete "te" en
+  // PARTICULAS porque "Te Edwards" (id 7733) sale bien hoy y se rompería.
+  ["james te huna", "Te Huna"],
+  // Conector «e» dentro del apellido compuesto. Tampoco se arregla con regla:
+  // con «arrastra si la anterior es conector», "Pedro e Silva" devolvería el
+  // nombre entero. Es el único caso de la base.
+  ["tiago dos santos e silva", "dos Santos e Silva"],
+  // «de los» escrito pegado. No lo caza ningún criterio de partícula: «Delos»
+  // tiene cinco letras y va en mayúscula.
+  ["jon delos reyes", "Delos Reyes"],
 ]);
 
 // 🪤 Y el agujero SIMÉTRICO, que se abrió al tapar el de las partículas: la
@@ -108,11 +187,29 @@ const NUMEROS = [
 /**
  * El apellido con el que se nombra a un luchador en una frase.
  *
- * 🪤 "Tiago dos Santos e Silva" devuelve "Silva": la partícula no es la palabra
- * anterior. Es una ficha de 2.859 y se acepta a cambio de no inventar reglas
- * de nombres brasileños que nadie ha medido.
+ * Primero la lista revisada a mano (`APELLIDO_REVISADO`), porque hay 23 nombres
+ * en los que ninguna regla acierta; después las reglas, que cubren el resto.
  */
 export function displayLastName(fullName: string | null | undefined): string {
+  const partes = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) {
+    return "";
+  }
+  const revisado = APELLIDO_REVISADO.get(partes.join(" ").toLowerCase());
+  if (revisado !== undefined) {
+    return revisado;
+  }
+  return porReglas(fullName);
+}
+
+/**
+ * `displayLastName` SIN la lista revisada. No se usa en producción: existe para
+ * que el test pueda exigir que ninguna entrada de la lista sobre, o sea que
+ * cada una cambie de verdad el resultado. Sin esa comprobación la lista se
+ * llena de nombres que la regla ya hacía bien y deja de saberse cuáles hacen
+ * falta — y peor: una entrada podría estar tapando un arreglo de la regla.
+ */
+export function porReglas(fullName: string | null | undefined): string {
   const partes = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
   if (partes.length === 0) {
     return "";

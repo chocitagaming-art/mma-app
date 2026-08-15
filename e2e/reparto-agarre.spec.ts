@@ -245,3 +245,58 @@ test("a 375 px la ficha entera no desborda, con el desplegable abierto", async (
   await page.waitForTimeout(300);
   await expectNoHorizontalOverflow(page, "/fights/14232 a 375 px con el desplegable abierto");
 });
+
+// ------------------------------------------------- los nombres, una sola forma
+//
+// El mismo luchador salía en cuatro formas en una ficha: nombre completo en la
+// cabecera, apellido en el bloque de agarre, nombre completo otra vez en la
+// tabla de asaltos y en el titular. Se unifica en el APELLIDO para los bloques
+// de detalle y se deja el nombre completo donde es identidad.
+
+test("la tabla de asaltos y el bloque de agarre nombran igual al mismo luchador", async ({
+  page,
+}) => {
+  await abrirFicha(page, 14232);
+
+  const enAgarre = await bloque(page).locator("thead th").first().innerText();
+  const tabla = page.getByRole("region", { name: /Desglose por asaltos/i });
+  const enTabla = await tabla.locator('tbody th[scope="row"]').first().innerText();
+
+  // Las mayúsculas son CSS (text-transform), así que el DOM lleva la misma
+  // cadena en los dos sitios y comparar en crudo bastaría... pero solo mientras
+  // los dos bloques lleven la misma clase. Se comparan normalizados a propósito.
+  expect(enTabla.trim().toUpperCase()).toBe(enAgarre.trim().toUpperCase());
+});
+
+test("🪤 el lector de pantalla NO pierde el nombre completo al unificar", async ({ page }) => {
+  await abrirFicha(page, 14232);
+
+  // Hasta el 16-ago la celda visible y el aria-label salían de la MISMA prop.
+  // Cambiarla al apellido «a secas» le habría quitado el nombre entero justo a
+  // quien no puede echar un vistazo a la cabecera. Y «Silva» lo publican 22
+  // luchadores distintos de esta base: sin nombre delante no es una abreviatura.
+  const tabla = page.getByRole("region", { name: /Desglose por asaltos/i });
+  const etiqueta = (await tabla.getAttribute("aria-label")) ?? "";
+  const celda = (await tabla.locator('tbody th[scope="row"]').first().innerText()).trim();
+
+  // 🪤 `innerText` devuelve el texto YA transformado por el CSS: la celda lleva
+  // «Sousa» en el DOM y se lee «SOUSA». Comparar en crudo contra el aria-label
+  // falla por las mayúsculas, no por el contenido — y una comparación que falla
+  // por la razón equivocada acabaría "arreglándose" relajando la aserción.
+  expect(etiqueta.toUpperCase()).toContain(celda); // el apellido va dentro del nombre completo
+  expect(etiqueta.length).toBeGreaterThan(celda.length * 2); // …y hay bastante más
+  expect(etiqueta).toMatch(/\w+ \w+ contra \w+ \w+/); // nombre Y apellido de los dos
+});
+
+test("🪤 Zhang Weili se publica «Zhang», no «Weili»", async ({ page }) => {
+  // El fallo que llevaba meses en pantalla, sobre una campeona: «Weili lo tuvo
+  // sujeto 15 minutos y medio más que Lemos». Weili es su NOMBRE DE PILA; en
+  // chino el apellido va delante. Es el mismo caso, palabra por palabra, que
+  // Della Maddalena y Du Plessis, y ninguna regla automática lo distingue de
+  // «Kevin Lee», así que va por lista revisada a mano.
+  await abrirFicha(page, 4353);
+
+  const texto = await bloque(page).innerText();
+  expect(texto).toContain("Zhang");
+  expect(texto).not.toMatch(/\bWeili\b/);
+});

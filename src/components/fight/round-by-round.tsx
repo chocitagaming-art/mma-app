@@ -1,4 +1,5 @@
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+import { displayLastName } from "@/lib/fight-headline";
 import { formatControlTime } from "@/lib/format";
 import {
   anchoBarra,
@@ -115,6 +116,25 @@ export function RoundByRound({
   const datos = buildRoundByRound(rounds, redId, blueId);
   const estado = estadoDesglose(datos != null, method, eventDate);
 
+  // DOS FORMAS DEL MISMO NOMBRE, Y CADA UNA VA A UN SITIO DISTINTO.
+  //
+  // En las CELDAS, el apellido: el mismo luchador salía en cuatro formas en una
+  // sola ficha —«Manoel Sousa» en la película, «SOUSA» en el bloque de agarre,
+  // «MANOEL SOUSA» aquí y el nombre entero en la cabecera—, y esta tabla era la
+  // única que no se había unificado. El bloque de agarre de justo encima ya
+  // imprime el apellido, así que dos tablas hermanas nombraban distinto a la
+  // misma persona a diez centímetros una de otra.
+  //
+  // 🪤 PERO EL `aria-label` Y EL `caption` SE QUEDAN CON EL NOMBRE COMPLETO, y
+  // ese es el detalle que casi se cuela: hasta hoy los dos salían de la MISMA
+  // prop que las celdas. Cambiarla a secas le habría quitado el nombre entero a
+  // quien usa lector de pantalla justo donde hoy lo tiene, y esa es la única
+  // parte de la ficha donde no puede leer la cabecera de un vistazo. Un apellido
+  // sin nombre delante no es una abreviatura: «Silva» lo publican 22 luchadores
+  // distintos de esta base, Anderson Silva entre ellos.
+  const redApellido = displayLastName(redName);
+  const blueApellido = displayLastName(blueName);
+
   if (estado === "nada") {
     return null;
   }
@@ -202,8 +222,8 @@ export function RoundByRound({
                 round={round}
                 red={red}
                 blue={blue}
-                redName={redName}
-                blueName={blueName}
+                redName={redApellido}
+                blueName={blueApellido}
                 columnas={columnas}
                 conSumisiones={hasSubmissionAttempts}
                 maxSigLanded={maxSigLanded}
@@ -225,14 +245,14 @@ export function RoundByRound({
             </tr>
             <CornerRow
               corner="red"
-              name={redName}
+              name={redApellido}
               stats={totals.red}
               conSumisiones={hasSubmissionAttempts}
               destacada
             />
             <CornerRow
               corner="blue"
-              name={blueName}
+              name={blueApellido}
               stats={totals.blue}
               conSumisiones={hasSubmissionAttempts}
               destacada

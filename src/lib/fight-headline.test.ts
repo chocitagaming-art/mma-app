@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  APELLIDO_REVISADO,
   buildFightHeadline,
   displayLastName,
   grappleGapWords,
+  porReglas,
   type HeadlineInput,
 } from "@/lib/fight-headline";
 
@@ -53,11 +55,65 @@ describe("displayLastName", () => {
     expect(displayLastName("Al Iaquinta")).toBe("Iaquinta");
     expect(displayLastName("Mac Danzig")).toBe("Danzig");
     expect(displayLastName("Abu Azaitar")).toBe("Azaitar");
-    expect(displayLastName("Li Jingliang")).toBe("Jingliang");
+    // 🪤 AQUÍ HABÍA UN «expect(displayLastName("Li Jingliang")).toBe("Jingliang")»
+    // y este test lo daba por CORRECTO. No lo era: 李 es un apellido chino de los
+    // más frecuentes y en esta base va delante, así que el ejemplo elegido para
+    // demostrar que "li" es nombre de pila era justo uno de los 20 luchadores a
+    // los que se les publicaba el nombre de pila como apellido. Un test puede
+    // congelar el fallo de al lado mientras vigila el suyo; ese caso vive ahora
+    // en el bloque del orden asiático, con el valor bueno.
     expect(displayLastName("Sung Bin Jo")).toBe("Jo");
     // Y el caso al revés, que ya funciona: una partícula que abre el nombre es
     // el nombre de pila, no una partícula. "Da Woon" es coreano.
     expect(displayLastName("Da Woon Jung")).toBe("Jung");
+  });
+
+  it("🪤 el orden asiático: el apellido va DELANTE, y ninguna regla lo sabe", () => {
+    // Los 20 que salían mal, medidos el 16-ago sobre los 2.859 nombres de la
+    // base. El peor es el de la campeona: la ficha publicaba «Weili lo tuvo
+    // sujeto 15 minutos y medio más que Lemos» — el mismo fallo, palabra por
+    // palabra, que ya costó los parches de Della Maddalena y Du Plessis.
+    expect(displayLastName("Zhang Weili")).toBe("Zhang");
+    expect(displayLastName("Li Jingliang")).toBe("Li");
+    expect(displayLastName("Song Yadong")).toBe("Song");
+    expect(displayLastName("Yan Xiaonan")).toBe("Yan");
+    expect(displayLastName("Kwon Won Il")).toBe("Kwon");
+    // «Liang Na» daba «Na»: dos letras que no son un apellido de nadie.
+    expect(displayLastName("Liang Na")).toBe("Liang");
+
+    // 🪤 EL CONTROL NEGATIVO, y es lo que impide que esto se convierta en una
+    // regla. Las mismas palabras son nombre de pila en otros idiomas, y estos
+    // salen bien HOY: si alguien "simplifica" la lista de nombres a una lista de
+    // apellidos, estos cuatro se rompen y este bloque se pone rojo.
+    expect(displayLastName("Yan Cabral")).toBe("Cabral"); // brasileño
+    expect(displayLastName("Kevin Lee")).toBe("Lee"); // apellido DETRÁS
+    expect(displayLastName("Da Woon Jung")).toBe("Jung");
+    expect(displayLastName("Te Edwards")).toBe("Edwards"); // su «Te» no cuenta
+  });
+
+  it("🪤 los tres que no son de orden asiático y tampoco caza ninguna regla", () => {
+    // «Te Huna» es partícula polinesia, y no se puede meter "te" en PARTICULAS
+    // sin romper a Te Edwards, que está dos líneas más arriba.
+    expect(displayLastName("James Te Huna")).toBe("Te Huna");
+    // El conector «e». Es el ÚNICO caso de la base y es de donde salía el «son
+    // 4 fichas» de los documentos: 4 es el número de COMBATES de este luchador.
+    // Con una regla de conectores, "Pedro e Silva" devolvería el nombre entero.
+    expect(displayLastName("Tiago dos Santos e Silva")).toBe("dos Santos e Silva");
+    // «de los» escrito pegado: ni es partícula ni lo parece.
+    expect(displayLastName("Jon Delos Reyes")).toBe("Delos Reyes");
+  });
+
+  it("🪤 ninguna entrada de la lista revisada sobra", () => {
+    // Una lista de excepciones se llena de basura sola: alguien mete un nombre
+    // «por si acaso», la regla ya lo hacía bien, y a partir de ahí nadie sabe
+    // cuáles hacen falta. Cada entrada tiene que CAMBIAR el resultado — si no,
+    // fuera. Esto además caza el caso peligroso: que alguien arregle la regla
+    // general y deje aquí una entrada tapándolo.
+    for (const [nombre, apellido] of APELLIDO_REVISADO) {
+      expect(displayLastName(nombre)).toBe(apellido);
+      expect(porReglas(nombre)).not.toBe(apellido);
+    }
+    expect(APELLIDO_REVISADO.size).toBe(23);
   });
 
   it("🪤 no llama «Jr.» a nadie: el sufijo arrastra la palabra de delante", () => {
