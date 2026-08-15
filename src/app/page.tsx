@@ -124,19 +124,20 @@ export default async function HomePage() {
           Si no hay eventos futuros en la BD, la sección no se pinta. */}
       {nextEvent ? <UpNextHero event={nextEvent} /> : null}
 
-      {/* El directo en abierto de la UFC, entre el hero y los contadores. Solo
-          existe cuando el evento tiene vídeo: sin él no queda hueco, la franja
-          desaparece entera y el hero y los contadores vuelven a tocarse. */}
+      {/* El directo en abierto de la UFC, entre el hero y los contadores.
+          🪤 SIN franja propia: la primera versión lo metió en una <section> con
+          `border-b bg-card` a todo lo ancho, y el resultado no se leía como un
+          vídeo sino como un cajón enorme cruzando la página. Ahora va en el
+          mismo carril que el resto del contenido y el vídeo manda su tamaño.
+          Solo existe cuando el evento tiene vídeo: sin él no queda ni el hueco. */}
       {nextEvent?.liveVideoId ? (
-        <section className="border-b border-border bg-card">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <EventLiveEmbed
-              videoId={nextEvent.liveVideoId}
-              videoTitle={nextEvent.liveVideoTitle}
-              eventName={nextEvent.name}
-            />
-          </div>
-        </section>
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <EventLiveEmbed
+            videoId={nextEvent.liveVideoId}
+            videoTitle={nextEvent.liveVideoTitle}
+            eventName={nextEvent.name}
+          />
+        </div>
       ) : null}
 
       {/* Stat strip */}

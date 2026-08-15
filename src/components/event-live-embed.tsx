@@ -56,6 +56,11 @@ export function EventLiveEmbed({
         En abierto en el canal oficial de la UFC (fuente YouTube)
       </p>
 
+      {/* 🪤 EL MARCO NO SE TOCA sin mirar los TRES sitios donde vive: /en-vivo,
+          la ficha del evento y la portada. Al arreglar la portada estuvo a punto
+          de cambiarse aquí el tamaño y las esquinas, y eso habría movido las
+          otras dos, que ya estaban bien. Lo que fallaba era la franja que lo
+          envolvía en la portada, no el reproductor. */}
       <div className="w-full max-w-3xl">
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${videoId}`}
