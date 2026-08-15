@@ -212,12 +212,33 @@ describe("el chip «EN VIVO» de la cabecera cumple WCAG 1.4.3", () => {
         expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
       });
 
-      it("y el hover NO puede oscurecer el fondo, o vuelve a incumplir", () => {
-        // La prueba de que el arreglo de reposo no basta: con el tinte del
-        // hover que había antes (0.2), el claro se queda en 3,66.
-        const conHoverViejo = blend(tokens["--primary"], tokens["--background"], 0.2);
-        const ratioViejo = contrastRatio(tokens["--primary"], conHoverViejo as string);
-        expect(ratioViejo as number).toBeLessThan(UMBRAL_TEXTO);
+      it("aguanta en reposo aunque alguien suba el tinte al del hover viejo", () => {
+        // 🪤 ESTE ASERTO ESTABA AL REVÉS HASTA EL 15-AGO-2026 (sesión 10).
+        //
+        // Decía: «con el tinte del hover que había antes (0.2) esto TIENE que
+        // incumplir», y lo exigía en los dos temas. Era cierto cuando se
+        // escribió, y es la clase de aserto que caduca sin avisar: afirma una
+        // propiedad de la PALETA, no del componente.
+        //
+        // Al aclarar --primary de #f5333a a #ff4f56 para cerrar los 183
+        // incumplimientos del hover, ese escenario pasó a dar 4,83 en oscuro y
+        // el test se cayó pidiendo que fuera peor. Un test no puede exigir que
+        // algo siga estando mal.
+        //
+        // Lo que se mide ahora es lo que importa de verdad: cuánto margen tiene
+        // el chip. En OSCURO la paleta nueva aguanta hasta el tinte 0.2; en
+        // CLARO no llega (3,66), y por eso el chip no lleva hover de fondo en
+        // ningún tema. Quien impide que alguien se lo vuelva a poner es el
+        // aserto sobre el className de abajo, que mira el componente y no la
+        // aritmética.
+        const conTinteFuerte = blend(tokens["--primary"], tokens["--background"], 0.2);
+        const ratio = contrastRatio(tokens["--primary"], conTinteFuerte as string);
+        expect(ratio).not.toBeNull();
+        const margen = nombre === "oscuro" ? UMBRAL_TEXTO : 3.5;
+        expect(
+          ratio as number,
+          `tema ${nombre}: el chip pierde contraste al oscurecer su propio fondo`,
+        ).toBeGreaterThanOrEqual(margen);
       });
     });
   }
@@ -435,5 +456,114 @@ describe("ningún estado del botón primario puede atenuar su fondo", () => {
       expect(ratio, `tema ${nombre}`).not.toBeNull();
       expect(ratio as number, `tema ${nombre}`).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
     }
+  });
+});
+
+/**
+ * 🪤 EL FLECO QUE ESTE FICHERO NO VEÍA, con 59 tests suyos en verde.
+ *
+ * El 15-ago-2026 se auditó el contraste como no se había hecho nunca: con un
+ * navegador de verdad, sobre 12 páginas de producción, PONIENDO EL RATÓN ENCIMA
+ * de cada elemento que declara un estado hover y esperando a que la transición
+ * de color terminase. Resultado: **183 incumplimientos**, y todos eran el mismo
+ * par de colores repetido.
+ *
+ * Lo que nadie estaba mirando:
+ *
+ *   1. NO ERAN LOS TINTES. Todo el expediente hablaba de `bg-primary/N` con
+ *      `text-primary` encima, y de multiplicar opacidades. Pero el par que
+ *      fallaba era `text-primary` A PELO —sin tinte ninguno— sobre `--accent`
+ *      y `--muted`, que son los fondos que se encienden al pasar el ratón por
+ *      una fila o una tarjeta.
+ *   2. EN REPOSO SOLO FALLABAN 4. Por eso ninguna auditoría anterior lo vio:
+ *      todas medían la página quieta.
+ *   3. Y NO SE ARREGLABA EN LOS FICHEROS. Eran 183 sitios con dos colores. Se
+ *      arregla en el token o no se arregla: se aclaró `--primary` de #f5333a a
+ *      #ff4f56, y los 183 se cerraron de una vez.
+ *
+ * La otra vía —oscurecer `--accent`— está descartada CON NÚMEROS: para llegar a
+ * 4,5 hay que bajarlo a #191920, y entonces solo se distingue de `--card` en
+ * 1,03, o sea que el hover deja de verse. Se movió el color que tenía sitio
+ * para moverse.
+ *
+ * ⚠️ Este test es de TOKENS, no de render: caza que alguien vuelva a bajar el
+ * rojo, que es la regresión probable. NO sustituye a medir en el navegador,
+ * porque Tailwind v4 mezcla en oklab y aquí se calcula en sRGB (desvía
+ * 0,02-0,03). Para lo mezclado, el auditor de navegador es el que manda.
+ */
+describe("🪤 texto de marca sobre los fondos que enciende el hover", () => {
+  // Los cuatro fondos sobre los que vive `text-primary`, de peor a mejor. Los
+  // dos primeros son los del hover, y son los que fallaban.
+  const FONDOS = ["--accent", "--muted", "--card", "--background"] as const;
+
+  for (const { nombre, tokens } of TEMAS) {
+    for (const fondo of FONDOS) {
+      it(`${nombre}: text-primary sobre ${fondo} llega a 4,5`, () => {
+        const ratio = contrastRatio(tokens["--primary"], tokens[fondo]);
+        expect(ratio, `${nombre} · ${fondo}`).not.toBeNull();
+        expect(
+          ratio as number,
+          `${tokens["--primary"]} sobre ${tokens[fondo]} en tema ${nombre}. ` +
+            `Si has cambiado --primary, mide TAMBIÉN en el navegador: ` +
+            `este cálculo es sRGB y Tailwind mezcla en oklab.`,
+        ).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+      });
+    }
+  }
+
+  it("y --ring acompaña a --primary, que es el mismo color de marca", () => {
+    // Si se cambia uno y no el otro, el anillo de foco deja de ser el color de
+    // la casa y nadie se entera hasta verlo.
+    for (const { nombre, tokens } of TEMAS) {
+      expect(tokens["--ring"], `tema ${nombre}`).toBe(tokens["--primary"]);
+    }
+  });
+
+  // Los colores de desenlace tienen DOS papeles: texto (el distintivo
+  // «Victoria» del historial) y fondo (con --win-foreground encima). El hover
+  // de la fila hunde el primero, y hasta el 15-ago-2026 nadie medía ese estado.
+  for (const { nombre, tokens } of TEMAS) {
+    for (const token of ["--win", "--loss", "--nc"] as const) {
+      it(`${nombre}: ${token} como TEXTO aguanta el hover de la fila`, () => {
+        const sobreMuted = contrastRatio(tokens[token], tokens["--muted"]);
+        expect(sobreMuted, `${nombre} · ${token}`).not.toBeNull();
+        expect(
+          sobreMuted as number,
+          `${tokens[token]} sobre --muted ${tokens["--muted"]} (tema ${nombre})`,
+        ).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+      });
+    }
+  }
+});
+
+describe("🪤 el pie es negro en los DOS temas, así que su rojo tampoco cambia", () => {
+  // 180 incumplimientos medidos con el ratón encima, uno por enlace del pie en
+  // cada página: `hover:text-primary` cogía el rojo del tema activo y en claro
+  // daba 3,55 sobre este negro. En reposo el pie cumple, por eso no se vio.
+  it("--brand-ink-primary cumple sobre --brand-ink", () => {
+    const ratio = contrastRatio(claro["--brand-ink-primary"], claro["--brand-ink"]);
+    expect(ratio, "falta el token --brand-ink-primary en :root").not.toBeNull();
+    expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+  });
+
+  it("está registrado en @theme inline, sin lo cual la utilidad no existe", () => {
+    // Un token que no se registra no genera clase: `hover:text-brand-ink-primary`
+    // se quedaría sin efecto y el enlace no cambiaría de color al pasar por
+    // encima. Falla en silencio, que es lo peor que puede hacer.
+    expect(CSS).toContain("--color-brand-ink-primary: var(--brand-ink-primary)");
+  });
+
+  it("y el pie lo CONSUME, en vez de volver a colgarse de --primary", () => {
+    const pie = readFileSync(
+      fileURLToPath(new URL("../components/site-footer.tsx", import.meta.url)),
+      "utf8",
+    );
+    // Solo los className, no el fichero entero: un vigilante que se lee a sí
+    // mismo se pone rojo por su propio comentario (ya pasó con el chip).
+    const clases = [...pie.matchAll(/className="([^"]+)"/g)].map((m) => m[1]).join(" ");
+    expect(clases).toContain("hover:text-brand-ink-primary");
+    expect(clases, "el pie volvió a usar el rojo que cambia con el tema").not.toContain(
+      "hover:text-primary",
+    );
   });
 });

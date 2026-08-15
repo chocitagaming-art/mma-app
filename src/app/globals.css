@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --color-brand-ink: var(--brand-ink);
   --color-brand-ink-foreground: var(--brand-ink-foreground);
+  --color-brand-ink-primary: var(--brand-ink-primary);
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-plex-mono);
   --font-display: var(--font-saira);
@@ -103,15 +104,25 @@
      NO debe moverse detrás. src/lib/contrast.test.ts lee este fichero y falla
      en rojo si cualquiera de los dos valores deja de cumplir. */
   --grip-nobody: #52525b;
-  --win: #15803d;
+  /* 🪤 EL VERDE Y EL OCRE SE OSCURECIERON EL 15-AGO-2026 (sesión 10) por el
+     mismo motivo que el rojo: sobre el fondo que enciende el HOVER de una fila
+     (--muted #f0e9e7) el texto caía por debajo de 4,5, y en reposo cumplía.
+        --win #15803d . . . 5,02 sobre --card  pero  4,18 sobre --muted ✗
+        --nc  #a16207 . . . 4,92 sobre --card  pero  4,11 sobre --muted ✗
+     Medido en el navegador con el ratón encima: 38 incumplimientos en el
+     historial de combates. Oscurecerlos MEJORA también su otro uso —como fondo
+     con --win-foreground blanco encima, que sube de 5,02 a 6,51—, así que aquí
+     no hay que elegir entre los dos papeles del color.
+     --loss no se toca: ya daba 5,40 sobre --muted. */
+  --win: #146c34; /* 5,43 sobre --muted · 6,51 con el blanco encima */
   --win-foreground: #ffffff;
-  --loss: #b91c1c;
+  --loss: #b91c1c; /* 5,40 sobre --muted, ya cumplía */
   --loss-foreground: #ffffff;
   /* No contest: el combate se anuló y no cuenta en el récord. No es victoria
      ni derrota, pero tampoco es un empate — un empate es un desenlace normal y
      esto es la excepción. Ocre, lejos del verde y del rojo, y a propósito lejos
      también del rojo de --loss, con el que se confundiría un ámbar más oscuro. */
-  --nc: #a16207;
+  --nc: #8a5406; /* 5,23 sobre --muted · 6,27 con el blanco encima */
   --nc-foreground: #ffffff;
   --chart-1: #d20a0a;
   --chart-2: #0a5fc2;
@@ -130,6 +141,15 @@
   /* Superficie de marca fija (footer y similares) — igual en ambos temas. */
   --brand-ink: #0b0b0d;
   --brand-ink-foreground: #fafafa;
+  /* 🪤 Y SU ROJO, que NO puede ser --primary.
+     El pie es negro en los DOS temas, pero `hover:text-primary` cogía el rojo
+     del tema activo: en claro, #d20a0a sobre este negro da 3,55 y el texto
+     pide 4,5. Medido en el navegador el 15-ago-2026 con el ratón encima de
+     cada enlace: 180 incumplimientos, uno por enlace del pie en cada página, y
+     ninguna auditoría anterior los vio porque en reposo el pie cumple.
+     Es el mismo error que --corner-red-foreground: una superficie que no
+     cambia con el tema no puede pintarse con un token que sí cambia. */
+  --brand-ink-primary: #ff4f56; /* 6,09:1 sobre --brand-ink, en ambos temas */
 }
 
 /* DARK — octagon-canvas black, brighter corner-red accent */
@@ -140,12 +160,27 @@
   --card-foreground: #fafafa;
   --popover: #161619;
   --popover-foreground: #fafafa;
-  /* Mismo caso que las esquinas: blanco sobre este rojo aclarado da 3,88:1 y
-     lo llevan TODOS los botones del sitio. NO se toca --primary: oscurecerlo
-     rompería los 176 usos de text-primary, que es texto rojo sobre fondo
-     oscuro y ahí el rojo claro es justo lo que hace falta. */
-  --primary: #f5333a;
-  --primary-foreground: #2a0407; /* 4,84:1 */
+  /* 🪤 ESTE ROJO SE ACLARÓ EL 15-AGO-2026 (sesión 10), de #f5333a a #ff4f56, y
+     el motivo es que era la ÚNICA forma de cerrar el contraste sin tocar 25
+     ficheros.
+     El problema no eran los tintes `bg-primary/N`, que es donde todo el mundo
+     miraba: era `text-primary` A PELO, sin tinte ninguno, sobre los dos fondos
+     de hover. Medido en el navegador (que es donde Tailwind v4 resuelve la
+     mezcla en oklab) sobre 12 páginas, con el ratón encima de cada elemento:
+        183 incumplimientos, en UN SOLO par de colores repetido
+        #f5333a sobre --accent #232329 . . . 4,03   (pide 4,5)
+        #f5333a sobre --muted  #1f1f23 . . . 4,24   (pide 4,5)
+     En reposo solo fallaban 4: por eso ninguna auditoría anterior lo vio.
+     La otra vía —oscurecer --accent— está MUERTA con números: para llegar a
+     4,5 hay que bajarlo a #191920, y entonces se distingue de --card en 1,03,
+     o sea que el hover deja de verse. Se cambió el color del texto, no el del
+     fondo, porque el texto es quien tiene sitio para moverse.
+     Y aclararlo NO rompe nada de lo que el comentario viejo protegía: la tinta
+     oscura de encima (--primary-foreground) MEJORA de 4,84 a 5,81, y los usos
+     de text-primary sobre fondos oscuros mejoran todos. Lo que estaba prohibido
+     era OSCURECERLO, que es lo contrario de lo que se ha hecho. */
+  --primary: #ff4f56; /* sobre --accent 4,84 · sobre --muted 5,09 */
+  --primary-foreground: #2a0407; /* 5,81:1 */
   --secondary: #1f1f23;
   --secondary-foreground: #fafafa;
   --muted: #1f1f23;
@@ -155,7 +190,7 @@
   --destructive: #f5474c;
   --border: #27272a;
   --input: #2a2a2e;
-  --ring: #f5333a;
+  --ring: #ff4f56; /* sigue a --primary: el anillo de foco ES el color de marca */
   /* 🪤 TINTA OSCURA, NO BLANCA, y en los DOS. La paleta oscura aclara el rojo y
      el azul de marca para que despeguen del negro, y al aclararlos el blanco de
      encima se queda sin contraste: 3,57:1 el rojo y 3,20:1 el azul, donde el
@@ -183,12 +218,12 @@
   --chart-5: #a78bfa;
   --sidebar: #161619;
   --sidebar-foreground: #fafafa;
-  --sidebar-primary: #f5333a;
+  --sidebar-primary: #ff4f56;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #232329;
   --sidebar-accent-foreground: #fafafa;
   --sidebar-border: #27272a;
-  --sidebar-ring: #f5333a;
+  --sidebar-ring: #ff4f56;
 }
 
 @layer base {

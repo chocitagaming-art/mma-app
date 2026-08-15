@@ -44,7 +44,10 @@ function FooterColumn({
           <li key={link.href}>
             <Link
               href={link.href}
-              className="font-display text-sm font-semibold uppercase tracking-wide text-brand-ink-foreground/80 transition-colors hover:text-primary"
+              // hover:text-brand-ink-primary y NO hover:text-primary: el pie es
+              // negro en los dos temas, así que su rojo tampoco puede cambiar
+              // con el tema. Con --primary, en claro daba 3,55:1.
+              className="font-display text-sm font-semibold uppercase tracking-wide text-brand-ink-foreground/80 transition-colors hover:text-brand-ink-primary"
             >
               {link.label}
             </Link>
@@ -100,7 +103,7 @@ export function SiteFooter() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70 transition-colors hover:text-primary"
+                className="font-mono text-xs uppercase tracking-[0.16em] text-brand-ink-foreground/70 transition-colors hover:text-brand-ink-primary"
               >
                 {link.label}
               </Link>
