@@ -18,6 +18,9 @@ import {
 const nivelDe = (cs: ReturnType<typeof comprobarVelada>, titulo: string) =>
   cs.find((c) => c.titulo === titulo)?.nivel;
 
+const nivelDeProxima = (cs: ReturnType<typeof comprobarProxima>, titulo: string) =>
+  cs.find((c) => c.titulo === titulo)?.nivel;
+
 // La velada del 1-ago-2026 tal y como quedó: 14 combates resueltos a mano horas
 // después, sin película y sin estadísticas por asalto. Es el caso que este
 // panel existe para no volver a pasar por alto.
@@ -153,6 +156,8 @@ describe("comprobarProxima", () => {
     sinFicha: 0,
     luchadores: 24,
     diasQueFaltan: 7,
+    pesajes: 0, // a siete días no existe todavía, y eso es lo normal
+    tieneCareo: false,
   };
 
   it("sin hora de prelims NO es un fallo: es lo normal y se deduce", () => {
@@ -185,6 +190,55 @@ describe("comprobarProxima", () => {
   it("pero a diez días una cartelera vacía solo es un aviso", () => {
     const c = comprobarProxima({ ...PROXIMA, combatesActivos: 0, diasQueFaltan: 10 });
     expect(c.find((x) => x.titulo === "Cartelera")?.nivel).toBe("aviso");
+  });
+
+  // --- Pesaje y careo de la velada QUE VIENE ------------------------------
+  //
+  // El 15-ago-2026 el panel dijo que todo estaba en orden mientras UFC 330 se
+  // publicaba sin careo y sin el pesaje de sus dos combates por el título. No
+  // era un fallo de las comprobaciones: es que las dos SOLO existían para la
+  // velada ya celebrada, o sea justo cuando ya no se pueden arreglar.
+  const VISPERA = { ...PROXIMA, diasQueFaltan: 0.5 };
+
+  it("la víspera, un pesaje incompleto es un fallo", () => {
+    // El caso real: 20 filas de 24, porque las dos líneas de campeonato del
+    // artículo de ufc.com no parseaban.
+    const c = comprobarProxima({ ...VISPERA, pesajes: 20 });
+    const p = c.find((x) => x.titulo === "Pesajes");
+    expect(p?.nivel).toBe("mal");
+    expect(p?.valor).toBe("20/24");
+  });
+
+  it("la víspera, un pesaje completo está en verde", () => {
+    expect(nivelDeProxima(comprobarProxima({ ...VISPERA, pesajes: 24 }), "Pesajes")).toBe("ok");
+  });
+
+  it("a una semana vista el pesaje NO se exige: el artículo sale la víspera", () => {
+    // Ponerlo en rojo siete días antes sería criar lobos: no existe todavía.
+    const p = comprobarProxima({ ...PROXIMA, pesajes: 0 }).find((x) => x.titulo === "Pesajes");
+    expect(p?.nivel).toBe("ok");
+    expect(p?.valor).toBe("aún no toca");
+  });
+
+  it("la víspera sin careo se avisa, y el detalle dice qué hacer", () => {
+    const c = comprobarProxima({ ...VISPERA, tieneCareo: false });
+    const v = c.find((x) => x.titulo === "Vídeo del careo");
+    expect(v?.nivel).toBe("aviso");
+    expect(v?.detalle).toContain("refresh-faceoffs");
+  });
+
+  it("a una semana vista la falta de careo no dice nada", () => {
+    const v = comprobarProxima({ ...PROXIMA, tieneCareo: false }).find(
+      (x) => x.titulo === "Vídeo del careo",
+    );
+    expect(v?.nivel).toBe("ok");
+    expect(v?.valor).toBe("aún no toca");
+  });
+
+  it("con el pesaje a cero la víspera, el detalle recuerda que el cron falla EN VERDE", () => {
+    const p = comprobarProxima({ ...VISPERA, pesajes: 0 }).find((x) => x.titulo === "Pesajes");
+    expect(p?.nivel).toBe("mal");
+    expect(p?.detalle).toContain("EN VERDE");
   });
 });
 
@@ -519,6 +573,8 @@ describe("comprobarProxima y el luchador sin ficha", () => {
     sinFicha: 1, // Jose Montanha da Silva, sin fila en `fighters`
     luchadores: 18, // 9 combates x 2 esquinas, con ficha o sin ella
     diasQueFaltan: 6,
+    pesajes: 0,
+    tieneCareo: false,
   };
 
   it("cuenta las 18 esquinas, no las 17 que tienen ficha", () => {

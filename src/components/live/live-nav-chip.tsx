@@ -19,10 +19,18 @@ export function LiveNavChip() {
     return null;
   }
 
+  // 🪤 EL TINTE DEL FONDO NO PUEDE SUBIR, y el hover no puede tocarlo.
+  // `bg-primary/10` daba 4,36:1 contra --primary en tema claro (pide 4,5), y el
+  // `hover:bg-primary/20` que había aquí lo hundía a 3,66. Los dos eran
+  // invisibles para axe: este chip solo existe en día de velada —fase "live" o
+  // "pre"—, así que un megatest de un martes no lo ve, y el hover no se simula
+  // nunca. Ahora el fondo es fijo y el que responde al puntero es el BORDE, así
+  // que el texto mide lo mismo en los dos estados y no hay un segundo número
+  // que vigilar. Lo fija src/lib/contrast.test.ts, que además lee este fichero.
   return (
     <Link
       href="/en-vivo"
-      className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-2.5 py-1 font-display text-xs font-bold uppercase tracking-wide text-primary transition-colors hover:bg-primary/20 lg:hidden xl:inline-flex"
+      className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/50 bg-primary/5 px-2.5 py-1 font-display text-xs font-bold uppercase tracking-wide text-primary transition-colors hover:border-primary lg:hidden xl:inline-flex"
     >
       <span className="live-dot inline-block size-1.5 rounded-full bg-primary shadow-[0_0_8px_1px_var(--primary)]" />
       {etiquetaChipDirecto(payload.live, payload.daysUntil ?? null)}

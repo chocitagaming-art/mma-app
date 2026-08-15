@@ -175,3 +175,68 @@ describe("T7 · el tramo «nadie sujetaba» cumple WCAG 1.4.11", () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// El chip «EN VIVO» de la cabecera (live-nav-chip.tsx)
+// ---------------------------------------------------------------------------
+//
+// 🪤 LO CAZÓ EL MEGATEST DEL 15-AGO, Y SOLO PORQUE ERA DÍA DE VELADA. El chip
+// se pinta únicamente en fase "live" o "pre" (evento a menos de 24 h), así que
+// en un día cualquiera NO EXISTE en el DOM y axe no puede verlo. Llevaba
+// publicándose en la cabecera de TODAS las páginas cada fin de semana de
+// velada con `text-primary` sobre `bg-primary/10` = 4,36:1 en tema claro,
+// donde el texto pequeño pide 4,5.
+//
+// Y el agujero simétrico, que es la parte que casi se cuela: el HOVER estaba
+// PEOR que el reposo —`bg-primary/20` da 3,66 en claro y 4,22 en oscuro— y
+// axe tampoco lo audita, porque no simula el puntero encima. Bajar solo el
+// reposo habría dejado el de al lado abierto. Por eso el hover ya no cambia el
+// fondo: intensifica el BORDE, y así el ratio del texto es el mismo en los dos
+// estados y no hay un segundo número que vigilar.
+const UMBRAL_TEXTO = 4.5;
+
+describe("el chip «EN VIVO» de la cabecera cumple WCAG 1.4.3", () => {
+  // Tiene que coincidir con live-nav-chip.tsx. Si alguien sube el tinte, este
+  // número deja de cuadrar con el CSS y el test de abajo cae.
+  const ALPHA_FONDO = 0.05;
+
+  for (const { nombre, tokens } of TEMAS) {
+    describe(`tema ${nombre}`, () => {
+      // El chip vive en el <header>, que es `bg-background/85` sobre la página:
+      // el fondo efectivo es --background, no --card.
+      const fondo = blend(tokens["--primary"], tokens["--background"], ALPHA_FONDO);
+
+      it("el texto llega a 4,5:1 en reposo", () => {
+        const ratio = contrastRatio(tokens["--primary"], fondo as string);
+        expect(ratio).not.toBeNull();
+        expect(ratio as number).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+      });
+
+      it("y el hover NO puede oscurecer el fondo, o vuelve a incumplir", () => {
+        // La prueba de que el arreglo de reposo no basta: con el tinte del
+        // hover que había antes (0.2), el claro se queda en 3,66.
+        const conHoverViejo = blend(tokens["--primary"], tokens["--background"], 0.2);
+        const ratioViejo = contrastRatio(tokens["--primary"], conHoverViejo as string);
+        expect(ratioViejo as number).toBeLessThan(UMBRAL_TEXTO);
+      });
+    });
+  }
+
+  it("live-nav-chip.tsx usa el alpha que este test mide, y no cambia el fondo al pasar el ratón", () => {
+    // Sin esto el test mediría una aritmética bonita que el componente no usa.
+    //
+    // 🪤 Se lee SOLO el className, no el fichero entero. La primera versión de
+    // este aserto hacía `expect(fichero).not.toContain("hover:bg-primary")` y
+    // salía en rojo por el comentario que explica el arreglo, que menciona las
+    // clases viejas. Un vigilante que se lee a sí mismo no vigila nada.
+    const chip = readFileSync(
+      fileURLToPath(new URL("../components/live/live-nav-chip.tsx", import.meta.url)),
+      "utf8",
+    );
+    const clases = chip.match(/className="([^"]+)"/)?.[1];
+    expect(clases, "no encontré el className del chip").toBeDefined();
+    expect(clases).toContain("bg-primary/5");
+    // Cualquier utilidad de fondo en hover vuelve a mover el ratio del texto.
+    expect(clases).not.toMatch(/hover:bg-/);
+  });
+});

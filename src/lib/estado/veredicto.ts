@@ -185,11 +185,23 @@ export type DatosProxima = {
   luchadores: number;
   /** Días que faltan. Lo que es tolerable a diez días no lo es a dos. */
   diasQueFaltan: number;
+  /** Filas de `weigh_ins` de la cartelera activa. Dos por combate. */
+  pesajes: number;
+  /** `events.faceoff_video_id` puesto. */
+  tieneCareo: boolean;
 };
 
 // A partir de aquí una cartelera incompleta deja de ser normal y pasa a ser un
 // problema: ya no da tiempo a que los automatismos semanales la completen.
 const DIAS_PARA_EXIGIR = 3;
+
+// El pesaje y el careo NO existen hasta la víspera, así que tienen su propio
+// umbral y es mucho más corto que el de la cartelera. Medido sobre UFC 330: el
+// artículo de pesaje de ufc.com se publicó ~33 h antes del estelar y el careo
+// de YouTube ~26 h antes. Con un día de margen los dos han tenido tiempo de
+// salir; exigirlos a tres días sería criar lobos, y un panel que cría lobos se
+// deja de mirar — que es la doctrina de todo este fichero.
+const DIAS_PARA_EXIGIR_VISPERA = 1;
 
 export function comprobarProxima(d: DatosProxima): Comprobacion[] {
   const inminente = d.diasQueFaltan <= DIAS_PARA_EXIGIR;
@@ -250,6 +262,46 @@ export function comprobarProxima(d: DatosProxima): Comprobacion[] {
       sinFotoTotal > 0
         ? `${sinFotoTotal} a los que la web no puede pintar NINGUNA foto: saldrán con silueta. Se arregla con 'add_manual_fighter --photo'.`
         : undefined,
+  });
+
+  // 🪤 PESAJE Y CAREO DE LA VELADA QUE VIENE. Las dos comprobaciones ya
+  // existían para la velada YA CELEBRADA (comprobarVelada), o sea justo cuando
+  // ya no se pueden arreglar. El 15-ago-2026 el panel dio el visto bueno a UFC
+  // 330 mientras la página se publicaba sin careo y sin el pesaje de sus dos
+  // combates por el título; lo cazó el dueño mirando la web, no el panel.
+  //
+  // Antes de la víspera el dato NO EXISTE todavía, así que no se puntúa: se
+  // rotula «aún no toca» en verde. Un rojo que sale siete días seguidos no
+  // informa de nada.
+  const esVispera = d.diasQueFaltan <= DIAS_PARA_EXIGIR_VISPERA;
+  const pesajesEsperados = d.combatesActivos * 2;
+
+  out.push({
+    titulo: "Pesajes",
+    valor: esVispera ? `${d.pesajes}/${pesajesEsperados}` : "aún no toca",
+    // Incompleto la víspera es TAN malo como vacío: los cuatro pesos que
+    // faltaban en UFC 330 eran los del estelar y el coestelar, y el contador
+    // decía 20/24 sin que nadie lo mirara.
+    nivel: !esVispera || d.pesajes >= pesajesEsperados ? "ok" : "mal",
+    detalle: !esVispera
+      ? "El artículo de ufc.com se publica la víspera; antes es normal que no esté."
+      : d.pesajes >= pesajesEsperados
+        ? undefined
+        : `Faltan ${pesajesEsperados - d.pesajes} de ${pesajesEsperados}. Este cron falla EN VERDE: relanzar 'refresh-weighins.yml' con event_id y mirar 'bout_shaped_lines_unparsed' en su resumen.`,
+  });
+
+  out.push({
+    titulo: "Vídeo del careo",
+    valor: esVispera ? (d.tieneCareo ? "sí" : "no") : "aún no toca",
+    // Nunca rojo: la ficha del evento se lee perfectamente sin careo. Pero la
+    // víspera SÍ se avisa, porque a esa hora ya está publicado y solo hay que
+    // ir a por él.
+    nivel: !esVispera || d.tieneCareo ? "ok" : "aviso",
+    detalle: !esVispera
+      ? "La UFC lo sube la noche de la víspera; antes no existe."
+      : d.tieneCareo
+        ? undefined
+        : "Ya debería estar. El cron solo mira a las 20:00 y 23:00 UTC: si la UFC subió el vídeo entre medias, hay que lanzar 'refresh-faceoffs.yml' a mano.",
   });
 
   return out;

@@ -87,12 +87,15 @@ type FilaProxima = {
    */
   sin_foto_cuerpo_en_la_base: string;
   dias_que_faltan: string | null;
+  pesajes: string;
+  tiene_careo: boolean;
 };
 
 const PROXIMA_VELADA_SQL = `
   with proxima as (
     select e.id, e.name, e.start_time,
       (e.prelims_time is not null or e.early_prelims_time is not null) as tiene_prelims,
+      (e.faceoff_video_id is not null) as tiene_careo,
       extract(epoch from (e.start_time - now())) / 86400 as dias_que_faltan
     from events e
     where e.start_time is not null and e.start_time >= now()
@@ -119,7 +122,11 @@ const PROXIMA_VELADA_SQL = `
     (select count(*) from esquinas) as luchadores,
     (select count(*) from esquinas where fighter_id is null) as sin_ficha,
     (select count(*) from peleadores pe join fighters fi on fi.id = pe.fighter_id
-      where fi.full_body_url is null) as sin_foto_cuerpo_en_la_base
+      where fi.full_body_url is null) as sin_foto_cuerpo_en_la_base,
+    -- Mismo filtro de canceladas que 'combates_activos', que es su denominador:
+    -- contar las filas de una pelea que ya no existe daria un 26/24.
+    (select count(*) from weigh_ins w join fights f on f.id = w.fight_id
+      where f.event_id = p.id and f.status is distinct from 'cancelled') as pesajes
   from proxima p`;
 
 type FilaCartelera = {
@@ -387,6 +394,8 @@ export async function obtenerEstado(): Promise<Estado> {
       sinFicha: num(proxima.sin_ficha),
       luchadores: num(proxima.luchadores),
       diasQueFaltan: dias,
+      pesajes: num(proxima.pesajes),
+      tieneCareo: Boolean(proxima.tiene_careo),
     };
     bloques.push({
       titulo: "La próxima velada",
