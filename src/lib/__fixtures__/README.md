@@ -86,8 +86,14 @@ WHERE s.fight_id = :fid;
 
 Comprobado (2026-08-15) contra el camino real: mapear las filas crudas con
 `mapFightTimelineSample` y serializar da **exactamente** el contenido de cada
-fichero, en los cinco combates. La fixture la escribió SQL y la comprobación la
-hizo el mapeador de producción: no es la misma fórmula verificándose a sí misma.
+fichero, en los **ocho** combates, sin perder ni una fila en el mapeo. La fixture
+la escribió SQL y la comprobación la hizo el mapeador de producción: no es la
+misma fórmula verificándose a sí misma.
+
+Las tres últimas (`12875`, `12877`, `14493`) se añadieron en la sesión 9, al
+escribir T3. Motivo: son los otros tres combates a los que les falta el ancla de
+R1 —los cuatro son 12875, 12877, 12880 y 14493, no solo 12880— y sin ellos el
+peor error de la variante ingenua quedaba cubierto por un único caso.
 
 ### Qué combate cubre qué
 
@@ -97,7 +103,7 @@ hizo el mapeador de producción: no es la misma fórmula verificándose a sí mi
 ```sql
 SELECT r.fight_id, r.fighter_id, r.round, r.control_time_seconds
 FROM fight_stats_rounds r
-WHERE r.fight_id IN (14232, 12872, 14022, 12880, 12873)
+WHERE r.fight_id IN (14232, 12872, 14022, 12880, 12873, 12875, 12877, 14493)
 ORDER BY r.fight_id, r.fighter_id, r.round;
 ```
 
@@ -108,6 +114,9 @@ ORDER BY r.fight_id, r.fighter_id, r.round;
 | `grip-live-14022.json` | 39 | 6455 Gibson / 9099 Hussein | 66/62 · 0/284 · 10/121 | La `post` final **corrige a la baja** el `ctrl` del azul (469 → 467). Anclas 14, 28, 38 |
 | `grip-live-12880.json` | 1 | 7184 Buzukja / 6243 Grad | 0/164 · 0/100 | Muestra única con `period: 2`: **R1 no tiene ancla**. Repartir por diferencias le daría a R2 los 264 s enteros; el acta dice 100 |
 | `grip-live-12873.json` | 1 | 6290 Medic / 6930 Rodriguez | 4/0 | Control positivo del caso anterior: muestra única con `period: 1`, aquí el asalto **sí** es medible (4/0 = acta) |
+| `grip-live-12877.json` | 1 | 6348 Klein / 6970 Musayev | 0/20 · 0/42 | Falta el ancla de R1 **con el error pequeño** (+20 s). El tamaño del fallo no decide si es un fallo: si solo se prueba con 12880 (+164 s), un umbral de tolerancia mal puesto deja pasar este |
+| `grip-live-14493.json` | 1 | 9103 Nikolic / 9021 Vologdin | 28/62 · 41/4 · 176/5 | Falta el ancla de R1 y **se pasan LOS DOS lados** (+69 rojo, +66 azul). Además el `fighter_id` del azul es **menor** que el del rojo, así que delata a quien tome «el primero de `byFighter`» por la esquina roja |
+| `grip-live-12875.json` | 1 | 6343 Rakic / 7053 Tybura | 0/0 · 0/0 · 191/0 | 🪤 **EL FALSO NEGATIVO PERFECTO.** También le falta el ancla de R1, pero su acta es 0 en los dos primeros asaltos, así que la regla equivocada —darle el acumulado entero al asalto de la muestra— **acierta por casualidad**. Está aquí para que nadie lo use como prueba de nada |
 
 ### Anclas (última muestra de cada `period`)
 

@@ -46,14 +46,35 @@ export type GrappledSplit = {
 
 export type GripRoundInput = {
   round: number;
+  // Los asaltos que ESTA fila cubre, cuando no se pueden separar. Ausente = solo
+  // `round`, que es el caso del acta: ahí cada asalto trae su propia fila.
+  //
+  // Existe por el directo (T3). Las muestras de ESPN traen el control ACUMULADO,
+  // así que un asalto se calcula restándole el anterior; si del asalto anterior
+  // no se guardó ninguna muestra, esa resta no se puede hacer y el acumulado que
+  // hay cubre los dos. Medido sobre los 4 combates de la base a los que les
+  // falta el ancla de R1: repartir el acumulado entero al asalto de la muestra
+  // se equivoca en 3 de ellos (+164 s en 12880, +135 s en 14493, +20 s en
+  // 12877), y fundirlos acierta el acta EXACTAMENTE en los cuatro.
+  covers?: number[];
   redControlSeconds: number | null;
   blueControlSeconds: number | null;
 };
 
 export type GripRound = {
   round: number;
-  // null = asalto sin acta. Se rotula "no medido"; jamás se reparte a ojo.
+  // Los asaltos que cubre la fila; ver GripRoundInput.covers. Quien la pinta
+  // rotula "Asaltos 1-2" en vez de "Asalto 2".
+  covers?: number[];
+  // null = no hay reparto publicable. Se rotula "no medido"; jamás se reparte a
+  // ojo. Dos motivos posibles, y los dos son "no lo sé", no "fue cero":
+  //   · el acta no guarda el control de ese asalto (374 filas, era 1995-1998);
+  //   · la suma de los dos no cabe en lo que duró el tramo (ver computeGripRounds).
   split: GripSplit | null;
+  // Cuál de los dos, para quien lo pinta. «De este asalto no se conserva el
+  // dato» y «los números de este asalto no cuadran» dicen cosas distintas, y la
+  // segunda no es culpa del acta. Solo viene cuando `split` es null.
+  unmeasured?: "sin-dato" | "no-cuadra";
 };
 
 // "5:00" -> 300. Devuelve null para cualquier cosa que no sea un reloj, porque
@@ -291,6 +312,57 @@ export function computeGrappledSplit(
   };
 }
 
+// Lo que duró el tramo que cubre una fila: un asalto suelto, o la suma de los
+// asaltos fundidos. Si de alguno de ellos no se sabe la duración, del tramo
+// tampoco: sumar los que sí se saben daría un denominador corto y con él un
+// porcentaje inflado.
+function duracionDelTramo(
+  row: GripRoundInput,
+  endRound: number | null,
+  endTime: string | null,
+): number | null {
+  const asaltos = row.covers?.length ? row.covers : [row.round];
+  let total = 0;
+  for (const asalto of asaltos) {
+    const duracion = roundDurationSeconds(asalto, endRound, endTime);
+    if (duracion === null) {
+      return null;
+    }
+    total += duracion;
+  }
+  return total;
+}
+
+/**
+ * 🪤 Cuando la suma de los dos NO CABE en lo que duró el tramo, el reparto
+ * entero se declara no medido en vez de recortarse.
+ *
+ * `computeGripSplit` tiene un cinturón —`Math.max(0, total - red - blue)`— que
+ * impide que el residuo se vuelva negativo, y con el acta no se dispara nunca
+ * (0 asaltos de 8.764 combates). Pero con el directo sí: en el asalto 3 de
+ * 14493 las muestras dan 245 + 71 = 316 s dentro de un asalto de 300. Ahí el
+ * cinturón publica «nadie sujetaba, 0 %» y reparte el resto entre los dos, o
+ * sea 78 % / 0 % / 22 % cuando el acta dice 59 % / 39 % / 2 %.
+ *
+ * Veinte puntos de más a un luchador no son un redondeo: son otra pelea. Y el
+ * cinturón, al cerrar la barra, hace que el error se vea BIEN. Si los números
+ * no cuadran, lo que hay es un dato roto, y para eso ya existe «no medido».
+ */
+function sumaCabe(
+  redControlSeconds: number | null,
+  blueControlSeconds: number | null,
+  duration: number,
+): boolean {
+  const red = toSeconds(redControlSeconds);
+  const blue = toSeconds(blueControlSeconds);
+  // Que falte un lado no es que no quepa: de eso ya se encarga computeGripSplit
+  // devolviendo null, y con su propio motivo.
+  if (red === null || blue === null) {
+    return true;
+  }
+  return red + blue <= duration;
+}
+
 export function computeGripRounds(
   rounds: GripRoundInput[],
   endRound: number | null,
@@ -300,17 +372,26 @@ export function computeGripRounds(
   // Copia antes de ordenar: la entrada es de quien la pasó. Y el orden es un
   // invariante del dibujo, no una casualidad de la query.
   for (const row of [...rounds].sort((a, b) => a.round - b.round)) {
-    const duration = roundDurationSeconds(row.round, endRound, endTime);
+    const duration = duracionDelTramo(row, endRound, endTime);
     if (duration === null) {
       continue;
     }
+    const cabe = sumaCabe(
+      row.redControlSeconds,
+      row.blueControlSeconds,
+      duration,
+    );
+    const split = cabe
+      ? computeGripSplit(row.redControlSeconds, row.blueControlSeconds, duration)
+      : null;
+
     out.push({
       round: row.round,
-      split: computeGripSplit(
-        row.redControlSeconds,
-        row.blueControlSeconds,
-        duration,
-      ),
+      ...(row.covers?.length ? { covers: row.covers } : {}),
+      split,
+      ...(split === null
+        ? { unmeasured: cabe ? ("sin-dato" as const) : ("no-cuadra" as const) }
+        : {}),
     });
   }
   return out;

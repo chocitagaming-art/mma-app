@@ -334,6 +334,84 @@ describe("computeGripRounds", () => {
     expect(rounds.map((r) => r.round)).toEqual([1, 2, 3]);
   });
 
+  it("una fila que cubre dos asaltos se divide entre lo que duraron LOS DOS", () => {
+    // 12877 Klein-Musayev, KO en el segundo a 4:07. Del asalto 1 no se guardó
+    // ninguna muestra del directo, así que los 62 s de agarre del azul cubren
+    // los dos asaltos (el acta dice 20 + 42 = 62). El denominador tiene que ser
+    // 300 + 247 = 547, no 247: con el del asalto suelto saldría un 25 % donde
+    // hay un 11 %, más del doble.
+    const rounds = computeGripRounds(
+      [{ round: 2, covers: [1, 2], redControlSeconds: 0, blueControlSeconds: 62 }],
+      2,
+      "4:07",
+    );
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0]?.covers).toEqual([1, 2]);
+    expect(rounds[0]?.split?.totalSeconds).toBe(547);
+    expect(rounds[0]?.split?.blueSeconds).toBe(62);
+    // 62/547 = 11,33 % -> 11
+    expect(rounds[0]?.split?.bluePercent).toBe(11);
+  });
+
+  it("una fila fundida que incluye un asalto que no se peleó no se dibuja", () => {
+    // Si `covers` menciona un asalto sin duración conocida, del tramo entero no
+    // se sabe la duración: sumar solo los que sí se saben daría un denominador
+    // corto y con él un porcentaje inflado.
+    expect(
+      computeGripRounds(
+        [{ round: 4, covers: [3, 4], redControlSeconds: 10, blueControlSeconds: 10 }],
+        3,
+        "5:00",
+      ),
+    ).toEqual([]);
+  });
+
+  it("🪤 marca no medido el asalto cuya suma no cabe, en vez de recortarlo", () => {
+    // 14493 R3: las muestras del directo dan 245 + 71 = 316 s dentro de un
+    // asalto de 300. El cinturón de computeGripSplit cerraría la barra
+    // publicando 78 % / 0 % / 22 %, cuando el acta dice 59 % / 39 % / 2 %.
+    // Veinte puntos de más a un luchador no son un redondeo.
+    const rounds = computeGripRounds(
+      [{ round: 3, redControlSeconds: 245, blueControlSeconds: 71 }],
+      3,
+      "5:00",
+    );
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0]?.split).toBeNull();
+    expect(rounds[0]?.unmeasured).toBe("no-cuadra");
+  });
+
+  it("distingue «no hay dato» de «los datos no cuadran»", () => {
+    // Las dos son "no lo sé", pero no se escriben igual en pantalla: una culpa
+    // al acta y la otra no.
+    const rounds = computeGripRounds(
+      [
+        { round: 1, redControlSeconds: null, blueControlSeconds: null },
+        { round: 2, redControlSeconds: 200, blueControlSeconds: 200 },
+        { round: 3, redControlSeconds: 48, blueControlSeconds: 53 },
+      ],
+      3,
+      "5:00",
+    );
+    expect(rounds[0]?.unmeasured).toBe("sin-dato");
+    expect(rounds[1]?.unmeasured).toBe("no-cuadra");
+    // Y el que sí se puede repartir no lleva motivo ninguno.
+    expect(rounds[2]?.unmeasured).toBeUndefined();
+  });
+
+  it("la suma que cabe JUSTA se sigue publicando", () => {
+    // El límite es <=, no <: dos luchadores que se pasan el asalto entero
+    // agarrados suman exactamente la duración y eso es un dato bueno.
+    const rounds = computeGripRounds(
+      [{ round: 1, redControlSeconds: 150, blueControlSeconds: 150 }],
+      1,
+      "5:00",
+    );
+    expect(rounds[0]?.split).not.toBeNull();
+    expect(rounds[0]?.split?.nobodySeconds).toBe(0);
+    expect(rounds[0]?.unmeasured).toBeUndefined();
+  });
+
   it("devuelve lista vacía cuando no hay nada que dibujar", () => {
     expect(computeGripRounds([], 3, "5:00")).toEqual([]);
     expect(

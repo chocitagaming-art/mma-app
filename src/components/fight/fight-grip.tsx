@@ -165,7 +165,13 @@ export function FightGrip(props: FightGripProps) {
 
   const { headline, segments, rounds, redLastName, blueLastName, totalClock } =
     view;
-  const asaltos = rounds.length;
+  // Los asaltos que cubre la tira, que NO son las filas: una fila puede cubrir
+  // dos asaltos cuando vienen del directo y falta el acumulado de uno de ellos
+  // (ver GripRoundInput.covers). Con el acta las dos cuentas coinciden siempre.
+  const asaltos = rounds.reduce(
+    (total, fila) => total + (fila.covers?.length ?? 1),
+    0,
+  );
 
   return (
     <section data-testid="fight-grip" className={cn(PREMIUM_TILE, "p-5 sm:p-6")}>
@@ -317,7 +323,7 @@ export function FightGrip(props: FightGripProps) {
                 </tr>
               </thead>
               <tbody>
-                {rounds.map(({ round, split }) => (
+                {rounds.map(({ round, covers, split, unmeasured }) => (
                   <Fragment key={round}>
                     {/* El asalto como subcabecera a todo lo ancho, con su barra
                         al lado: es el patrón del vecino (round-by-round.tsx:263)
@@ -330,7 +336,17 @@ export function FightGrip(props: FightGripProps) {
                         className="px-1.5 py-1.5 text-left font-mono text-[0.6rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
                       >
                         <span className="flex items-center gap-2">
-                          <span className="shrink-0">Asalto {round}</span>
+                          {/* «Asaltos 1-2» cuando los dos van en la misma fila
+                              porque del primero no se guardó el acumulado. El
+                              rótulo tiene que decirlo: si pusiera «Asalto 2»
+                              sobre los segundos de los dos, el lector leería
+                              como de un asalto lo que son dos, y encima la tira
+                              se saltaría el 1 sin avisar. */}
+                          <span className="shrink-0">
+                            {covers && covers.length > 1
+                              ? `Asaltos ${covers[0]}-${covers[covers.length - 1]}`
+                              : `Asalto ${round}`}
+                          </span>
                           {split ? (
                             <GripBar
                               segments={gripSegments(split)}
@@ -354,11 +370,22 @@ export function FightGrip(props: FightGripProps) {
                         // Aquí NO vale un guion ni un 0:00 en las tres celdas:
                         // se leería como "no sujetó nadie", que es lo contrario
                         // de "de este asalto no se conserva el dato".
+                        //
+                        // Y las dos maneras de no tener dato no se escriben
+                        // igual. «Sin acta» culpa a la fuente, y es verdad
+                        // cuando el acta no lo guardó (374 filas de la era
+                        // 1995-1998). Pero desde el directo puede pasar que los
+                        // segundos SÍ estén y no cuadren —que los dos juntos
+                        // sumen más de lo que duró el asalto—, y ahí «sin acta»
+                        // sería falso: el dato existe, lo que no se sostiene es
+                        // el reparto.
                         <td
                           colSpan={3}
                           className="px-1.5 py-2 text-center font-mono text-[0.7rem] text-muted-foreground"
                         >
-                          sin acta de este asalto
+                          {unmeasured === "no-cuadra"
+                            ? "los datos de este asalto no cuadran"
+                            : "sin acta de este asalto"}
                         </td>
                       )}
                     </tr>
