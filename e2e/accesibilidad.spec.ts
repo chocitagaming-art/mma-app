@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { medirContrasteEnDegradados } from "./contraste-degradado";
 import { expectNoHorizontalOverflow } from "./helpers";
 
 // T8 de la película — la primera auditoría de accesibilidad automática del repo.
@@ -8,7 +9,8 @@ import { expectNoHorizontalOverflow } from "./helpers";
 // QUÉ CUBRE Y QUÉ NO, para que nadie la dé por más de lo que es:
 //
 //   SÍ  · contraste de TEXTO (WCAG 1.4.3) en los dos temas, que es donde se
-//         cuelan las etiquetas grises sobre fondos claros.
+//         cuelan las etiquetas grises sobre fondos claros. Incluido el texto
+//         sobre DEGRADADO, pero eso NO lo mide axe: ver el 🪤 de abajo.
 //   SÍ  · semántica de tabla: caption, scope, cabeceras con datos debajo. El
 //         bloque de agarre pinta sus asaltos como tabla justo por esto.
 //   SÍ  · aria-hidden que contenga algo enfocable — la regla que pilla el
@@ -20,6 +22,20 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //         ratios contra la superficie real y contra los colores adyacentes.
 //
 // Las dos redes juntas cubren el bloque entero. Ninguna sola basta.
+//
+// 🪤 Y HASTA EL 15-AGO-2026 ESTA CABECERA MENTÍA. Decía que el contraste de
+// texto estaba cubierto, y para todo lo que va dentro de un tile era falso:
+// axe-core no resuelve un fondo en DEGRADADO —y los tiles de la ficha son
+// `bg-gradient-to-b from-card to-muted/60`—, así que no lo declara violación,
+// lo deja en `incomplete`. Este fichero solo leía `violations`. Resultado: 29
+// nodos de texto del bloque de agarre nunca se midieron, y por ese hueco se
+// publicó durante cuatro días una línea a 4,01:1 en las 8.612 fichas.
+//
+// La lección no es «axe es limitado»: es que un vigilante tiene que declarar lo
+// que NO mira, y este afirmaba lo contrario en su propia cabecera. Ahora los
+// `incomplete` de contraste se resuelven en e2e/contraste-degradado.ts y los
+// que ni ese resolvedor sabe decidir se cuentan y se congelan, para que un nodo
+// nuevo no pueda volver a desaparecer en silencio.
 
 // 14232 es el combate del maquetado: Sousa (rojo) vs Miranda (azul), U-DEC, y
 // el ÚNICO tipo de ficha donde conviven los tres bloques (película + agarre +
@@ -149,9 +165,27 @@ const esDeudaConocida = (reglaId: string, html: string) =>
 async function auditar(page: Page) {
   await asentar(page);
   await abrirDesplegables(page);
-  const { violations } = await new AxeBuilder({ page })
+  const { violations, incomplete } = await new AxeBuilder({ page })
     .withTags(ETIQUETAS)
     .analyze();
+
+  // 🪤 `incomplete` NO ES RUIDO: es donde axe deja lo que no sabe decidir, y
+  // hasta el 15-ago-2026 este fichero solo leía `violations`. Todo el texto de
+  // un tile va sobre el degradado de PREMIUM_TILE, y ante un degradado axe se
+  // abstiene: 29 nodos del bloque de agarre caían ahí en silencio mientras la
+  // cabecera de este fichero afirmaba cubrir el contraste de texto.
+  const candidatos = incomplete
+    .filter((v) => v.id === "color-contrast")
+    .flatMap((v) =>
+      v.nodes.map((n) => ({
+        target: n.target.map(String),
+        html: n.html,
+        mensaje: [...n.any, ...n.all, ...n.none]
+          .map((c) => c.message ?? "")
+          .join(" "),
+      })),
+    );
+  const degradados = await medirContrasteEnDegradados(page, candidatos);
 
   // Se filtra NODO a NODO, no regla a regla: si aparece otro elemento que
   // incumple color-contrast, la violación sobrevive al filtro y falla.
@@ -162,7 +196,33 @@ async function auditar(page: Page) {
     }))
     .filter((v) => v.nodes.length > 0);
 
-  return { violations, vivas };
+  // Los fallos del degradado entran por la misma puerta que los de axe, con la
+  // misma regla, para que la lista de deuda los filtre igual y para que no haya
+  // dos sitios donde mirar.
+  const delDegradado = degradados.fallos.filter(
+    (f) => !esDeudaConocida("color-contrast", f.html),
+  );
+  if (delDegradado.length > 0) {
+    vivas.push({
+      id: "color-contrast",
+      impact: "serious",
+      help: "Texto sobre degradado: contraste insuficiente (medido por e2e/contraste-degradado.ts, no por axe)",
+      description: "",
+      helpUrl: "",
+      tags: [],
+      nodes: delDegradado.map((f) => ({
+        html: f.html,
+        target: [f.target],
+        failureSummary: `${f.ratio}:1 sobre ${f.fondo} con texto ${f.color}; exige ${f.exigido}:1. Texto: «${f.texto}»`,
+        any: [],
+        all: [],
+        none: [],
+        impact: "serious" as const,
+      })),
+    } as (typeof vivas)[number]);
+  }
+
+  return { violations, vivas, degradados };
 }
 
 type Violaciones = Awaited<ReturnType<typeof auditar>>["vivas"];
@@ -200,6 +260,40 @@ for (const ficha of FICHAS) {
 // La lista de deuda no puede convertirse en un cajón donde las cosas entran y
 // nunca salen. Este test la mantiene honesta: si alguien arregla una de las
 // tres, aquí sale en rojo pidiendo que se borre de la lista.
+// El resolvedor de degradados tampoco lo sabe todo, y lo que no sabe hay que
+// CONTARLO. Sin este test, un nodo que el resolvedor no pueda medir se
+// comportaría igual que antes —desaparecer sin dejar rastro—, que es el fallo
+// que se acaba de arreglar, solo que una capa más adentro.
+test("los nodos que el resolvedor de degradados NO sabe medir siguen siendo los que creemos", async ({
+  page,
+}) => {
+  test.skip(
+    test.info().project.name !== "movil-light",
+    "el recuento es el mismo en los seis proyectos; se comprueba una vez",
+  );
+
+  await page.goto("/fights/14232");
+  await expect(page.locator("#main-content")).toBeVisible();
+  await esperarTema(page);
+
+  const { degradados } = await auditar(page);
+
+  // Hoy el resolvedor decide TODOS los candidatos. Si algún día aparece un
+  // fondo que no sabe componer (una imagen, un filtro, un color exótico), este
+  // número sube y hay que mirarlo, no subirlo aquí sin más.
+  expect(
+    degradados.sinResolver.map((n) => n.motivo).sort(),
+    "el resolvedor se ha topado con algo nuevo; míralo antes de tocar este número",
+  ).toEqual([]);
+
+  // Y que efectivamente esté midiendo: un resolvedor que no resuelve nada
+  // también devolvería cero fallos.
+  expect(
+    degradados.resueltos,
+    "el resolvedor no midió ni un nodo: o axe dejó de devolver incomplete, o el filtro los descarta todos",
+  ).toBeGreaterThan(20);
+});
+
 test("la deuda conocida sigue siendo exactamente la que creemos", async ({
   page,
 }) => {

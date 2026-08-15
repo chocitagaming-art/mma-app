@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildFightGripView,
   gripSegments,
-  segmentBoundaries,
   winnerCorner,
   type FightGripViewInput,
 } from "@/lib/fight-grip-view";
@@ -107,39 +106,18 @@ describe("gripSegments", () => {
   });
 });
 
-describe("segmentBoundaries", () => {
-  it("pone una frontera entre cada par de tramos visibles", () => {
-    const segments = gripSegments(split(169, 231, 900));
-    const boundaries = segmentBoundaries(segments);
-
-    expect(boundaries).toHaveLength(2);
-    expect(boundaries[0]).toBeCloseTo((169 / 900) * 100, 6);
-    expect(boundaries[1]).toBeCloseTo(((169 + 500) / 900) * 100, 6);
-  });
-
-  it("con un solo tramo no hay ninguna frontera", () => {
-    expect(segmentBoundaries(gripSegments(split(0, 0, 900)))).toEqual([]);
-  });
-
-  it("con dos tramos hay exactamente una", () => {
-    expect(segmentBoundaries(gripSegments(split(0, 231, 900)))).toHaveLength(1);
-  });
-
-  it("ninguna frontera cae en 0 ni en 100", () => {
-    // Una frontera en el borde sería un separador pegado al canto de la barra:
-    // se leería como si hubiera un tramo más, invisible.
-    for (const caso of [
-      split(169, 231, 900),
-      split(0, 231, 900),
-      split(450, 450, 900),
-    ]) {
-      for (const posicion of segmentBoundaries(gripSegments(caso))) {
-        expect(posicion).toBeGreaterThan(0);
-        expect(posicion).toBeLessThan(100);
-      }
-    }
-  });
-});
+// 🪤 AQUÍ HABÍA CUATRO TESTS DE `segmentBoundaries`, y todos pasaban mientras
+// el dibujo mentía. Comprobaban que la frontera estaba en el porcentaje
+// correcto, que es verdad y es irrelevante: el fallo no era DÓNDE se pintaba la
+// línea, sino que se pintaba ENCIMA del tramo y se lo comía. Una función de
+// posiciones no puede ver eso, y por eso el separador va ahora en flujo y la
+// función ya no existe.
+//
+// Lo que quedó en su lugar es un test que mira el píxel:
+// e2e/reparto-agarre.spec.ts, «un tramo con SEGUNDOS MEDIDOS se dibuja, por
+// estrecho que sea», que le pregunta al navegador qué hay pintado en el centro
+// de cada tramo con document.elementFromPoint sobre el combate 3211 —donde
+// Almakhan sujetó 1 segundo de 900—. Eso es lo que ve un lector.
 
 describe("buildFightGripView", () => {
   it("arma el bloque entero del combate canónico", () => {
@@ -260,7 +238,6 @@ describe("buildFightGripView", () => {
     });
 
     expect(view?.segments.map((s) => s.corner)).toEqual(["nobody"]);
-    expect(view?.boundaries).toEqual([]);
     expect(view?.headline.headline).toBe(
       "Nadie sujetó a nadie en todo el combate",
     );

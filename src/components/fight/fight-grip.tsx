@@ -4,7 +4,6 @@ import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import {
   buildFightGripView,
   gripSegments,
-  segmentBoundaries,
   type FightGripViewInput,
   type GripSegment,
   type GripSegmentCorner,
@@ -42,9 +41,27 @@ const RELLENO: Record<GripSegmentCorner, string> = {
  *
  * ⚠️ El separador NO es decoración. Ningún relleno llega a 3:1 contra su vecino
  * —«nadie» contra el rojo da 1.39 y contra el azul 1.26, medido— así que sin la
- * línea la barra incumple WCAG 1.4.11. Va por posición absoluta y no como borde
- * de cada tramo: un borde de 2 px dentro de un tramo estrecho se lo come entero.
- * Lo fija src/lib/contrast.test.ts.
+ * línea la barra incumple WCAG 1.4.11. Lo fija src/lib/contrast.test.ts.
+ *
+ * 🪤 Y VA EN FLUJO, NO ENCIMA. Hasta el 15-ago-2026 los separadores eran un
+ * overlay absoluto de 2 px centrado en la frontera (`left: calc(X% - 1px)`),
+ * así que se pintaban SOBRE los rellenos y tapaban 1 px del tramo de cada lado.
+ * Medido sobre las 8.612 fichas con carril real de 301 px a 375 px: en 641
+ * (7,4 %) un tramo con segundos medidos quedaba por debajo de eso, y en 284
+ * (3,3 %) desaparecía del todo. La barra decía «cero» donde el texto de justo
+ * debajo publicaba «<1 % (0:01)».
+ *
+ * Lo cual era exactamente la mentira que el separador vino a impedir: el
+ * comentario que estaba aquí decía que iba por posición «porque un borde de
+ * 2 px dentro de un tramo estrecho se lo come entero». Se blindó una puerta y
+ * se dejó abierta la de al lado, que es el patrón que ya se repitió con el
+ * `Math.round` y con las partículas de los apellidos.
+ *
+ * En flujo, los 2 px del separador los ceden los rellenos por flex-shrink,
+ * repartidos en proporción a su tamaño: ningún tramo pierde píxeles PROPIOS y
+ * las cifras publicadas no se tocan. No se pone suelo mínimo a propósito —
+ * dibujar un tramo más ancho de lo que es sería el mismo pecado por el otro
+ * lado, y el «<1 %» del texto ya cuenta lo que la barra no puede.
  *
  * aria-hidden porque las cifras exactas van debajo en texto: repetirlas solo
  * añadiría ruido al lector de pantalla.
@@ -59,24 +76,20 @@ function GripBar({
   return (
     <span
       aria-hidden
-      className={cn(
-        "relative flex w-full overflow-hidden rounded-sm",
-        className,
-      )}
+      // El e2e que vigila que ningún tramo se quede sin píxeles necesita
+      // agarrarse a algo: colgarlo de las clases de Tailwind ya rompió el test
+      // una vez, al quitar `relative` de aquí.
+      data-testid="grip-bar"
+      className={cn("flex w-full overflow-hidden rounded-sm", className)}
     >
-      {segments.map((segment) => (
-        <span
-          key={segment.corner}
-          className={cn("h-full", RELLENO[segment.corner])}
-          style={{ width: `${segment.share * 100}%` }}
-        />
-      ))}
-      {segmentBoundaries(segments).map((posicion) => (
-        <span
-          key={posicion}
-          className="absolute inset-y-0 w-0.5 bg-card"
-          style={{ left: `calc(${posicion}% - 1px)` }}
-        />
+      {segments.map((segment, i) => (
+        <Fragment key={segment.corner}>
+          {i > 0 ? <span className="w-0.5 shrink-0 bg-card" /> : null}
+          <span
+            className={cn("h-full", RELLENO[segment.corner])}
+            style={{ width: `${segment.share * 100}%` }}
+          />
+        </Fragment>
       ))}
     </span>
   );
@@ -176,7 +189,15 @@ export function FightGrip(props: FightGripProps) {
           nadie sujetaba {cifraDe(segments, "nobody")}
         </p>
       ) : null}
-      <p className="tabular mt-0.5 text-center font-mono text-[0.7rem] text-muted-foreground/80">
+      {/* 🪤 El alpha de esta línea NO puede bajar de /90. Con el /80 que tenía
+          daba 4,01:1 sobre el extremo oscuro del degradado del tile en tema
+          claro, donde el texto pequeño pide 4,5 — en las 8.612 fichas. Y no lo
+          cazó nadie durante cuatro días porque axe-core NO SABE resolver un
+          fondo en degradado: dejaba este nodo en `incomplete`, y el vigilante
+          solo leía `violations`. Ahora lo mide e2e/contraste-degradado.ts.
+          Sigue siendo la línea más tenue del bloque (5,30 contra los 6,78 del
+          texto de encima), que es lo que la ordena por detrás de las cifras. */}
+      <p className="tabular mt-0.5 text-center font-mono text-[0.7rem] text-muted-foreground/90">
         de {totalClock} de combate
       </p>
 

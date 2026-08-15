@@ -163,6 +163,77 @@ test("un cero MEDIDO se publica aunque su tramo no se dibuje", async ({ page }) 
   await expect(panel).toContainText("se llevó el 100 %");
 });
 
+test("🪤 un tramo con SEGUNDOS MEDIDOS se dibuja, por estrecho que sea", async ({
+  page,
+}) => {
+  // EL FALLO QUE ESTE TEST EXISTE PARA IMPEDIR, medido el 15-ago-2026 sobre
+  // 8.612 fichas: en 284 de ellas un tramo con segundos medidos quedaba a CERO
+  // PÍXELES. No por su anchura, sino porque los separadores se dibujaban
+  // ENCIMA: iban en un overlay absoluto de 2 px centrado en la frontera
+  // (`left: calc(X% - 1px)`), así que tapaban 1 px del tramo de cada lado. Un
+  // tramo más estrecho que eso desaparecía entero.
+  //
+  // Y la ironía es que el separador se puso para impedir exactamente esta
+  // mentira: el comentario que tenía al lado decía que iba por posición «porque
+  // un borde de 2 px dentro de un tramo estrecho se lo come entero». Se cerró
+  // una puerta y se dejó abierta la de al lado.
+  //
+  // 3211 es el caso real: Almakhan sujetó 1 SEGUNDO de 900 (0,33 px a 375 px).
+  await page.setViewportSize({ width: 375, height: 812 });
+  await abrirFicha(page, 3211);
+
+  const panel = bloque(page);
+  await expect(panel).toBeVisible();
+  // La cifra se publica, así que el dibujo tiene que respaldarla.
+  await expect(panel).toContainText("<1 % (0:01)");
+
+  // 🪤 NO se mide `getBoundingClientRect().width`. Ese número vale 0,33 px con
+  // el fallo puesto y con él quitado: la caja siempre estuvo ahí, lo que no
+  // estaba era el PÍXEL. Un aserto sobre la anchura sería un verificador que
+  // replica la implementación y le da la razón al bug.
+  //
+  // Lo que se le pregunta al navegador es qué hay REALMENTE PINTADO en el
+  // centro de cada tramo, que es lo que ve el lector.
+  const visibles = await panel
+    .getByTestId("grip-bar")
+    .first()
+    .evaluate(async (barra) => {
+      // elementFromPoint trabaja en coordenadas del VIEWPORT y devuelve null
+      // fuera de él. Sin este scroll el test daba «no se ve» hasta para un
+      // tramo de 46 px, que es su forma de avisar de que estaba midiendo la
+      // nada. Un verificador también hay que verificarlo.
+      barra.scrollIntoView({ block: "center" });
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+      const tramos = ([...barra.children] as HTMLElement[]).filter((h) =>
+        /bg-corner-|bg-grip-nobody/.test(h.className),
+      );
+      return tramos.map((tramo) => {
+        const r = tramo.getBoundingClientRect();
+        const x = r.left + r.width / 2;
+        const y = r.top + r.height / 2;
+        const encima = document.elementFromPoint(x, y);
+        return {
+          clase: (tramo.className.match(/bg-[\w-]+/) ?? ["?"])[0],
+          ancho: +r.width.toFixed(2),
+          seVe: encima === tramo,
+        };
+      });
+    });
+
+  // Tres tramos con segundos: rojo 140 s, nadie 759 s, azul 1 s.
+  expect(visibles).toHaveLength(3);
+  for (const tramo of visibles) {
+    // Ni suelo ni relleno mínimo: el tramo conserva su anchura real, y lo que
+    // cambia es que ya no hay una línea encima comiéndosela. Inflarlo
+    // publicaría un dibujo que no cuadra con el porcentaje del texto, que es el
+    // mismo pecado por el otro lado.
+    expect(tramo, `el tramo ${tramo.clase} (${tramo.ancho} px) no se ve`).toMatchObject({
+      seVe: true,
+    });
+  }
+});
+
 test("a 375 px la ficha entera no desborda, con el desplegable abierto", async ({
   page,
 }) => {

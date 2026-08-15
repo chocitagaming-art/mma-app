@@ -44,9 +44,6 @@ export type FightGripView = {
   // Un tramo de 0 px al que se le pinta un separador de 2 px se ve como un
   // tramo de verdad: 167 combates de 8.612 tienen las dos esquinas a cero.
   segments: GripSegment[];
-  // Posición 0..100 de cada frontera ENTRE tramos visibles. Los separadores se
-  // dibujan aquí, encima de la barra, para no robarle anchura a ningún tramo.
-  boundaries: number[];
   // Vacío = no hay tira que enseñar y NO se pinta el desplegable. Ni vacío ni
   // con un contenedor de cero barras.
   rounds: GripRound[];
@@ -124,30 +121,13 @@ export function gripSegments(split: GripSplit): GripSegment[] {
   return todos.filter((segment) => segment.share > 0);
 }
 
-/**
- * Dónde va cada separador, en porcentaje del ancho de la barra.
- *
- * Los separadores NO son decoración: son lo que hace que la barra cumpla WCAG
- * 1.4.11. Ningún relleno llega a 3:1 contra su vecino —«nadie» contra el rojo
- * da 1.39 y contra el azul 1.26, medido— así que el contraste de la frontera lo
- * pone la línea, que es del color de la superficie. Ver contrast.test.ts.
- *
- * Van por posición y no como borde de cada tramo a propósito: un borde de 2 px
- * dentro de un tramo estrecho se lo come entero y lo convierte en invisible,
- * que es exactamente la mentira que este bloque viene a impedir.
- */
-export function segmentBoundaries(segments: GripSegment[]): number[] {
-  const out: number[] = [];
-  let acumulado = 0;
-
-  // La última frontera sería el final de la barra: no se dibuja.
-  for (const segment of segments.slice(0, -1)) {
-    acumulado += segment.share;
-    out.push(acumulado * 100);
-  }
-
-  return out;
-}
+// 🪤 AQUÍ VIVÍA `segmentBoundaries`, que decía en qué porcentaje del ancho iba
+// cada separador para poder pintarlos en un overlay absoluto. Se borró el
+// 15-ago-2026 con el fallo que causaba: al ir ENCIMA de los rellenos, la línea
+// de 2 px tapaba 1 px del tramo de cada lado y borraba del dibujo 284 tramos
+// que tenían segundos medidos. Ahora los separadores van en flujo, como
+// hermanos entre relleno y relleno (fight-grip.tsx), así que no hay ninguna
+// posición que calcular: la pone el propio flex.
 
 export function buildFightGripView(
   input: FightGripViewInput,
@@ -191,7 +171,6 @@ export function buildFightGripView(
     headline,
     split,
     segments,
-    boundaries: segmentBoundaries(segments),
     rounds: conDato ? rounds : [],
     redLastName: displayLastName(input.redName),
     blueLastName: displayLastName(input.blueName),
