@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   comprobarCatalogo,
   comprobarFrescura,
+  comprobarGuardia,
   comprobarPrediccion,
   comprobarProxima,
   comprobarVelada,
   contarSinFotoVisible,
   descontarFotosLocales,
+  muestrasExigidas,
   peorNivel,
+  type Comprobacion,
+  type DatosGuardia,
   type DatosProxima,
   type DatosVelada,
   type FilaDeCartelera,
@@ -97,8 +101,25 @@ describe("comprobarVelada", () => {
     expect(nivelDe(c, "Estadísticas por asalto")).toBe("mal");
   });
 
-  it("un combate sin resolver es fallo, y dice cómo arreglarlo", () => {
+  it("con la velada en marcha, los resultados que faltan son un aviso, no un fallo", () => {
+    // La velada del 15-ago mandó TRES correos por esto (02:09, 03:29 y 04:17Z,
+    // diciendo «8/12» y «11/12») mientras la cartelera se estaba peleando: la
+    // consulta coge el evento con `start_time < now()`, que en directo es el que
+    // está EN CURSO, y se exigía la cartelera entera desde el primer minuto. El
+    // último de esos correos cayó 93 segundos antes de que se sellara el estelar.
     const c = comprobarVelada({ ...VELADA_1063, combatesResueltos: 9 });
+    const r = c.find((x) => x.titulo === "Resultados");
+    expect(r?.nivel).toBe("aviso");
+    expect(r?.valor).toBe("9/14");
+    expect(r?.detalle).toContain("sigue en marcha");
+  });
+
+  it("pero pasada la velada, un combate sin resolver sí es fallo y dice cómo arreglarlo", () => {
+    const c = comprobarVelada({
+      ...VELADA_1063,
+      combatesResueltos: 9,
+      horasDesdeElFinal: 8,
+    });
     const r = c.find((x) => x.titulo === "Resultados");
     expect(r?.nivel).toBe("mal");
     expect(r?.valor).toBe("9/14");
@@ -679,5 +700,290 @@ describe("comprobarPrediccion", () => {
     const c = comprobarPrediccion({ horasDesdeElUltimoLatido: null });
     expect(c[0].nivel).toBe("aviso");
     expect(c[0].valor).toBe("sin noticias todavía");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El turno de guardia: ¿SE ESTÁ GRABANDO?
+// ---------------------------------------------------------------------------
+//
+// Este bloque no tenía NI UN test, y es el único del panel que puede despertar
+// a alguien a las tres de la mañana. Los números de cada caso están medidos
+// sobre el 1064 (UFC 330, la noche del 15 al 16-ago-2026), que se grabó
+// entera y bien: 352 muestras, 12 combates activos de 14 filas (2 canceladas).
+//
+// EL FALLO QUE ESTOS TESTS FIJAN: con la regla vieja
+// (`veladaEnMarcha && muestrasUltimaHora === 0 → "mal"`) el panel decía PARADO
+// durante los paseíllos, porque el escritor tiene PROHIBIDO guardar muestras
+// hasta la campana del asalto 1. Ventana ciega real de esa noche: ancla
+// 21:30:00Z, primera muestra 21:45:03Z = 15 min 3 s de rojo con todo
+// funcionando.
+const ANCLA_1064 = "2026-08-15T21:30:00.000Z";
+
+// El cartel del 1064 tal cual: 12 peleas activas y ninguna con película todavía.
+const GUARDIA_1064: DatosGuardia = {
+  arranqueDelDirectoUtc: ANCLA_1064,
+  horasHastaElArranque: null,
+  veladaEnMarcha: true,
+  minutosDesdeElAncla: 0,
+  minutosSinPulso: 0,
+  muestrasUltimaHora: 0,
+  peleasActivas: 12,
+  peleasConFilaViva: 0,
+  peleasSinCerrar: 0,
+  peleasConPelicula: 0,
+  muestrasDelEvento: 0,
+};
+
+const guardia = (cambios: Partial<DatosGuardia> = {}): Comprobacion[] =>
+  comprobarGuardia({ ...GUARDIA_1064, ...cambios });
+
+const comprobacionQueEmpiezaPor = (cs: Comprobacion[], prefijo: string) => {
+  const c = cs.find((x) => x.titulo.startsWith(prefijo));
+  if (!c) throw new Error(`No hay ninguna comprobación que empiece por «${prefijo}»`);
+  return c;
+};
+
+/** El veredicto de la cámara. El vigilante dice SIEMPRE lo mismo (ver el caso 14). */
+const camaraDe = (cs: Comprobacion[]) => comprobacionQueEmpiezaPor(cs, "Cámara");
+const vigilanteDe = (cs: Comprobacion[]) => comprobacionQueEmpiezaPor(cs, "Vigilante");
+
+/** Los 13 escenarios, para poder recorrerlos todos en el caso 14. */
+const ESCENARIOS: { nombre: string; datos: Partial<DatosGuardia> }[] = [
+  { nombre: "sin velada", datos: { veladaEnMarcha: false, minutosDesdeElAncla: null, minutosSinPulso: 351 } },
+  { nombre: "paseíllos", datos: { minutosDesdeElAncla: 5, minutosSinPulso: 0.4, peleasConFilaViva: 1, peleasSinCerrar: 1 } },
+  { nombre: "el minuto antes de la primera muestra", datos: { minutosDesdeElAncla: 14, minutosSinPulso: 0.3, peleasConFilaViva: 1, peleasSinCerrar: 1 } },
+  { nombre: "pulso NULL en el minuto cero", datos: { minutosDesdeElAncla: 0.2, minutosSinPulso: null } },
+  { nombre: "el 1-ago: nadie lanzó el bucle", datos: { minutosDesdeElAncla: 26, minutosSinPulso: null } },
+  { nombre: "la peor hora medida", datos: { minutosDesdeElAncla: 268, minutosSinPulso: 0.5, muestrasUltimaHora: 27, peleasConFilaViva: 9, peleasSinCerrar: 1 } },
+  { nombre: "el hueco de 24,6 min entre prelims y estelar", datos: { minutosDesdeElAncla: 235, minutosSinPulso: 4.9, muestrasUltimaHora: 45, peleasConFilaViva: 7, peleasSinCerrar: 1 } },
+  { nombre: "el hueco de pulso más largo medido", datos: { minutosDesdeElAncla: 90, minutosSinPulso: 4.92, muestrasUltimaHora: 55, peleasConFilaViva: 3, peleasSinCerrar: 1 } },
+  { nombre: "26 min sin pulso a mitad de velada", datos: { minutosDesdeElAncla: 116, minutosSinPulso: 26, muestrasUltimaHora: 40, peleasConFilaViva: 5, peleasSinCerrar: 1 } },
+  { nombre: "la cola de la noche", datos: { minutosDesdeElAncla: 420, minutosSinPulso: 10, muestrasUltimaHora: 52, peleasConFilaViva: 12, peleasSinCerrar: 0, peleasConPelicula: 12, muestrasDelEvento: 352 } },
+  { nombre: "media cartelera sellada", datos: { minutosDesdeElAncla: 116, minutosSinPulso: 26, peleasConFilaViva: 5, peleasSinCerrar: 0 } },
+  { nombre: "bucle muerto con el respaldo vivo", datos: { minutosDesdeElAncla: 155, minutosSinPulso: 9, muestrasUltimaHora: 6, peleasConFilaViva: 5, peleasSinCerrar: 1 } },
+  { nombre: "cartel vacío", datos: { minutosDesdeElAncla: 200, minutosSinPulso: null, peleasActivas: 0 } },
+  // Los dos añadidos en la revisión adversarial: el cartel CUBIERTO pero SIN
+  // PELÍCULA. Los números salen de la base, no de la cabeza. Ver el caso 18.
+  { nombre: "el 1063: cartel entero escrito de una sentada", datos: { minutosDesdeElAncla: 344, minutosSinPulso: 2, muestrasUltimaHora: 14, peleasActivas: 14, peleasConFilaViva: 14, peleasSinCerrar: 0, peleasConPelicula: 14, muestrasDelEvento: 14 } },
+  { nombre: "el 1060: media velada sin grabar y el respaldo cierra el cartel", datos: { minutosDesdeElAncla: 400, minutosSinPulso: 3, muestrasUltimaHora: 6, peleasActivas: 14, peleasConFilaViva: 14, peleasSinCerrar: 0, peleasConPelicula: 8, muestrasDelEvento: 50 } },
+  { nombre: "velada en marcha sin hora de ancla", datos: { minutosDesdeElAncla: null, minutosSinPulso: 1, peleasConFilaViva: 1, peleasSinCerrar: 1 } },
+];
+
+describe("comprobarGuardia · ¿se está grabando?", () => {
+  it("1. sin velada todo está en reposo, aunque el pulso sea viejísimo", () => {
+    // El dato de HOY, 16-ago a las 14:51Z: la última escritura en
+    // `live_fight_stats` es de las 09:12:20Z (351 min) y son las 12 filas del
+    // 1064, que la poda conserva 48 h. Sin velada eso no significa nada.
+    const c = guardia(ESCENARIOS[0].datos);
+    expect(c).toHaveLength(5);
+    expect(c.map((x) => x.nivel)).toEqual(["ok", "ok", "ok", "ok", "ok"]);
+    expect(camaraDe(c).valor).toBe("en reposo");
+  });
+
+  it("2. 🔴 LOS PASEÍLLOS DEL 1064: cero muestras, pulso latiendo, y eso es NORMAL", () => {
+    // ES EL TEST DEL FALLO. Ancla+5 min: ESPN ya da el evento por empezado
+    // (abrió a las 21:30:37Z, 37 s después del ancla) y el bucle reescribe la
+    // fila viva cada ~23 s, pero NO hay ni una muestra porque el escritor solo
+    // las guarda con `period >= 1` (live_stats.py:153). Con la regla vieja
+    // esto era "mal": 15 min 3 s de rojo por diseño, cada sábado.
+    const c = guardia(ESCENARIOS[1].datos);
+    expect(camaraDe(c).nivel).toBe("ok");
+    expect(camaraDe(c).valor).toBe("paseíllos");
+  });
+
+  it("3. 🔴 21:44Z, el minuto anterior a la primera muestra (21:45:03Z)", () => {
+    const c = guardia(ESCENARIOS[2].datos);
+    expect(camaraDe(c).nivel).toBe("ok");
+  });
+
+  it("4. pulso NULL dentro de la gracia: aviso, ni rojo ni verde", () => {
+    // Hasta que ESPN no pasa el evento a 'in' NO EXISTE fila que tocar: el log
+    // del 1064 tiene 45 pasadas seguidas con «no ESPN event in/post, DB
+    // untouched». Exigir pulso ahí es exigir lo imposible; darlo por bueno es
+    // el fallo del 1-ago. Ámbar, que se ve en el panel y no manda correo.
+    const c = guardia(ESCENARIOS[3].datos);
+    expect(camaraDe(c).nivel).toBe("aviso");
+    expect(camaraDe(c).valor).toBe("arrancando");
+  });
+
+  it("5. 🔴 EL 1-ago: nadie lanzó el bucle; pasada la gracia es rojo", () => {
+    const c = guardia(ESCENARIOS[4].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("sin señal");
+    expect(camaraDe(c).detalle).toContain("1-ago");
+  });
+
+  it("6. la peor hora medida de toda la velada (27 muestras) sigue en verde", () => {
+    // 01:58Z del 1064: la hora más floja de la noche con el bucle sano
+    // (mín 27 / media 49,6 / máx 70). Fija el margen de 2,7× sobre el umbral.
+    const c = guardia(ESCENARIOS[5].datos);
+    expect(camaraDe(c).nivel).toBe("ok");
+    expect(camaraDe(c).valor).toBe("27 en 1 h");
+  });
+
+  it("7. el hueco de 24,6 min entre prelims y estelar no es rojo", () => {
+    // 01:00:45Z → 01:25:21Z sin una sola muestra, y la velada iba perfecta:
+    // entre combates no hay nada que muestrear. Lo que no se paró fue el pulso.
+    expect(camaraDe(guardia(ESCENARIOS[6].datos)).nivel).toBe("ok");
+  });
+
+  it("8. el hueco de pulso más largo medido (4 min 55 s) no es rojo", () => {
+    // 846 pasadas con el evento vivo, 53 sin escribir, en dos grupos; el mayor
+    // de 4 min 55 s. El umbral está cinco veces por encima de eso.
+    expect(camaraDe(guardia(ESCENARIOS[7].datos)).nivel).toBe("ok");
+  });
+
+  it("9. 26 min sin pulso con la velada a medias es rojo", () => {
+    const c = guardia(ESCENARIOS[8].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("26 min sin escribir");
+  });
+
+  it("10. 🔴 LA COLA DE LA NOCHE: cartel entero grabado y sellado, no es rojo", () => {
+    // Medido: el bucle selló la última pelea a las 04:20Z y `velada_en_marcha`
+    // siguió TRUE hasta las 04:47:23Z, cuando el backfill escribió los últimos
+    // resultados. 27 min de velada en marcha sin nada que grabar.
+    const c = guardia(ESCENARIOS[9].datos);
+    expect(camaraDe(c).nivel).toBe("ok");
+    expect(camaraDe(c).valor).toBe("cartel grabado");
+
+    // Y a las 04:46, un minuto antes del backfill, con el pulso ya por encima
+    // del umbral: sin la escapatoria esto sería "mal".
+    const tarde = guardia({ ...ESCENARIOS[9].datos, minutosSinPulso: 26, muestrasUltimaHora: 51 });
+    expect(camaraDe(tarde).nivel).toBe("ok");
+    expect(camaraDe(tarde).valor).toBe("cartel grabado");
+  });
+
+  it("11. 🔴 la escapatoria del cartel grabado NO se cuela a mitad de cartel", () => {
+    // La cobertura CRECE pelea a pelea: a las 22:00 / 23:00 / 00:00 / 01:00 /
+    // 02:00 / 03:00 / 04:00 había película de 1, 3, 5, 7, 9, 11 y 12 peleas.
+    // Una pelea que aún no ha ocurrido no tiene fila viva, así que 5 de 12
+    // nunca puede leerse como «no queda nada que grabar».
+    const c = guardia(ESCENARIOS[10].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+  });
+
+  it("12. 🔴 bucle muerto y cron de respaldo vivo: el pulso fresco NO salva", () => {
+    // `live-results.yml` (*/10) lanza EL MISMO programa que el bucle, así que
+    // mantiene el pulso fresco con el bucle muerto: 07:36, 07:59, 08:41 y
+    // 09:12Z de hoy son suyas. Lo único que los separa es el RITMO — ~50
+    // muestras/h el bucle, 2-6/h el cron.
+    const c = guardia(ESCENARIOS[11].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("6 en 1 h");
+    expect(camaraDe(c).detalle).toContain("respaldo");
+  });
+
+  it("13. un cartel vacío no aprueba por 0 >= 0", () => {
+    // El mismo guardarraíl que `cartelSellado` en el panel de directo: sin
+    // combates no hay nada completo, hay una cartelera que falta.
+    const c = guardia(ESCENARIOS[12].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).not.toBe("cartel grabado");
+  });
+
+  it("14. el vigilante y la cámara dicen SIEMPRE el mismo nivel y el mismo valor", () => {
+    // Eran dos literales gemelos, carácter por carácter. Dos copias es
+    // exactamente cómo un panel acaba contradiciéndose en la misma pantalla,
+    // que es la avería que este panel no se puede permitir.
+    for (const { nombre, datos } of ESCENARIOS) {
+      const c = guardia(datos);
+      expect(vigilanteDe(c).nivel, nombre).toBe(camaraDe(c).nivel);
+      expect(vigilanteDe(c).valor, nombre).toBe(camaraDe(c).valor);
+    }
+  });
+
+  it("15. la rampa de muestras exigidas sube desde el ancla y satura en 10/h", () => {
+    expect(muestrasExigidas(null)).toBe(0);
+    expect(muestrasExigidas(0)).toBe(0);
+    // Dentro de la gracia no se exige nada: no hay dato que entrar todavía.
+    expect(muestrasExigidas(25)).toBe(0);
+    // Ancla+45: el 1064 llevaba 34 muestras y esto pide 3,33.
+    expect(muestrasExigidas(45)).toBeCloseTo(3.33, 2);
+    expect(muestrasExigidas(85)).toBe(10);
+    expect(muestrasExigidas(400)).toBe(10);
+  });
+
+  it("16. el centinela, el guardián y el censo no se han movido", () => {
+    // La foto del panel de hoy, para que este arreglo no cambie lo que ya
+    // estaba bien: la hora es de Madrid y lleva restados los 15 min de adelanto.
+    const c = guardia({ veladaEnMarcha: false, minutosDesdeElAncla: null, minutosSinPulso: null });
+    expect(comprobacionQueEmpiezaPor(c, "Centinela").nivel).toBe("ok");
+    expect(comprobacionQueEmpiezaPor(c, "Centinela").valor).toContain("23:15");
+    expect(comprobacionQueEmpiezaPor(c, "Guardián").valor).toBe("activo");
+    expect(comprobacionQueEmpiezaPor(c, "El resto de la plantilla").valor).toBe("27 de 38");
+  });
+
+  it("17. sin ficha en `fighters` no hay fila viva, y eso acaba en rojo, no en verde", () => {
+    // El punto ciego conocido de la escapatoria: si a una pelea activa el bucle
+    // no le escribe nunca fila (el luchador no existe en `fighters`, y el bucle
+    // empareja por nombre), la cobertura no se completa jamás. Es un rojo
+    // TARDÍO, no un verde falso — y «Luchadores con ficha» ya está en rojo por
+    // su cuenta desde días antes.
+    const c = guardia({
+      minutosDesdeElAncla: 430,
+      minutosSinPulso: 30,
+      muestrasUltimaHora: 0,
+      peleasConFilaViva: 11,
+      peleasSinCerrar: 0,
+    });
+    expect(camaraDe(c).nivel).toBe("mal");
+  });
+
+  // -------------------------------------------------------------------------
+  // Añadidos en la revisión adversarial del 16-ago-2026.
+  // -------------------------------------------------------------------------
+
+  it("18. 🔴 EL 1063 OTRA VEZ: cartel CUBIERTO no es cartel GRABADO", () => {
+    // El agujero que quedaba abierto. `peleas_con_fila_viva` cuenta FILAS, y una
+    // fila sólo prueba que alguien MIRÓ la pelea. Medido en la base: las 14
+    // filas del 1063 se escribieron el 1-ago entre las 19:43:21 y las 19:43:26Z
+    // —el MISMO segundo, con el cartel entero ya terminado— y dejaron UNA
+    // muestra por pelea. Con la regla anterior, la noche que se perdió entera
+    // habría pintado «cartel grabado» en VERDE en la fila cuyo único trabajo es
+    // decir si se está grabando.
+    const c = guardia(ESCENARIOS[13].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).not.toBe("cartel grabado");
+    expect(camaraDe(c).detalle).toContain("SIN PELÍCULA");
+  });
+
+  it("19. 🔴 y el 1060: media velada sin grabar tampoco compra el verde", () => {
+    // El 1063 lo cazaría un umbral de muestras totales, pero el 1060 no: 50
+    // muestras para 14 peleas pasan cualquier mínimo por pelea razonable, y sin
+    // embargo SEIS de sus catorce peleas no tienen NI UNA muestra. Por eso se
+    // exigen las dos cosas: todas con serie Y un mínimo de muestras.
+    const c = guardia(ESCENARIOS[14].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).detalle).toContain("8 con serie");
+  });
+
+  it("20. una velada normal sigue cerrando en verde con el cartel grabado", () => {
+    // El guardarraíl del guardarraíl: la peor de las tres veladas bien grabadas
+    // de la base (1087, 288 muestras / 12 peleas) tiene que seguir en verde, y
+    // también una cartelera entera de finalizaciones rápidas (la pelea más corta
+    // del 1064 dejó 4 muestras: 12 × 4 = 48, y se piden 36).
+    const buena = guardia({
+      minutosDesdeElAncla: 420, minutosSinPulso: 10, muestrasUltimaHora: 30,
+      peleasConFilaViva: 12, peleasSinCerrar: 0, peleasConPelicula: 12, muestrasDelEvento: 288,
+    });
+    expect(camaraDe(buena).nivel).toBe("ok");
+    expect(camaraDe(buena).valor).toBe("cartel grabado");
+
+    const todoKos = guardia({
+      minutosDesdeElAncla: 300, minutosSinPulso: 8, muestrasUltimaHora: 20,
+      peleasConFilaViva: 12, peleasSinCerrar: 0, peleasConPelicula: 12, muestrasDelEvento: 48,
+    });
+    expect(camaraDe(todoKos).nivel).toBe("ok");
+  });
+
+  it("21. 🔴 velada en marcha SIN hora de ancla: rojo, no «paseíllos»", () => {
+    // `muestrasExigidas(null)` vale 0 —«no se exige nada»—, así que con el pulso
+    // fresco del cron de respaldo y el ancla perdida esto daba VERDE para
+    // siempre. Es la misma trampa que `num(null)`, por la otra puerta.
+    const c = guardia(ESCENARIOS[15].datos);
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("sin hora de ancla");
   });
 });

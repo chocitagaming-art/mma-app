@@ -75,20 +75,48 @@ const HORAS_PARA_EXIGIR_ASALTOS = 20;
 // algo sin remedio. Se vio mirando el panel real, no razonándolo.
 const HORAS_PARA_SALVAR_LA_PELICULA = 5;
 
+// Lo que tarda una cartelera en desplegarse entera desde `start_time`: el
+// estelar cae al FINAL, no al principio. Anoche el 1064 empezó a las 01:00Z y su
+// estelar se selló a las 04:47Z (3 h 47). Es el mismo plazo que usa el CTE
+// `en_marcha` de consulta.ts para dar una velada por viva, y sirve para no
+// exigir resultados de combates que todavía no se han peleado.
+const HORAS_DE_VELADA = 5;
+
 export function comprobarVelada(d: DatosVelada): Comprobacion[] {
   const out: Comprobacion[] = [];
 
   // 1. Resultados. Es lo primero que se nota y lo que más molesta si falta.
+  //
+  // Y TAMBIÉN TIENE SU PLAZO, como sus tres vecinas. Era la única sin él, y por
+  // eso se ponía roja MIENTRAS LA VELADA SE ESTABA PELEANDO: `ULTIMA_VELADA_SQL`
+  // coge el evento con `start_time < now()`, que en directo es el que está en
+  // curso, y exigir ahí la cartelera completa es exigir que ya hayan ocurrido
+  // combates que todavía no han ocurrido. La noche del UFC 330 eso mandó TRES
+  // correos (02:09, 03:29 y 04:17Z, diciendo «8/12» y «11/12») y el último cayó
+  // 93 segundos antes de que se sellara el estelar. El panel entero quedaba en
+  // rojo global toda la velada hiciera lo que hiciera la cámara, que es
+  // justamente lo que enseña a no leer los correos — y de paso enmascara los
+  // rojos de la cámara, que son los que sí hay que mirar esa noche.
   const faltan = d.combatesActivos - d.combatesResueltos;
+  const veladaAunRodando = d.horasDesdeElFinal < HORAS_DE_VELADA;
   out.push({
     titulo: "Resultados",
     valor: `${d.combatesResueltos}/${d.combatesActivos}`,
-    nivel: d.combatesActivos === 0 ? "aviso" : faltan === 0 ? "ok" : "mal",
+    nivel:
+      d.combatesActivos === 0
+        ? "aviso"
+        : faltan === 0
+          ? "ok"
+          : veladaAunRodando
+            ? "aviso"
+            : "mal",
     detalle:
       d.combatesActivos === 0
         ? "La cartelera no tiene combates cargados."
         : faltan > 0
-          ? `Faltan ${faltan}. Lanzar «Live results (ESPN)» a mano lo arregla en un minuto.`
+          ? veladaAunRodando
+            ? `Faltan ${faltan}, pero la velada sigue en marcha: es lo normal a esta hora.`
+            : `Faltan ${faltan}. Lanzar «Live results (ESPN)» a mano lo arregla en un minuto.`
           : undefined,
   });
 
@@ -467,8 +495,26 @@ export type DatosGuardia = {
   horasHastaElArranque: number | null;
   /** ¿Se está celebrando una velada ahora mismo? */
   veladaEnMarcha: boolean;
-  /** Muestras entradas en la última hora (solo importa con velada en marcha). */
+  /** Minutos desde el ancla del evento EN MARCHA. null si no hay velada. */
+  minutosDesdeElAncla: number | null;
+  /**
+   * Minutos desde la última escritura en `live_fight_stats` DEL EVENTO EN
+   * MARCHA. null = no hay ni una fila viva: nadie ha escrito NUNCA.
+   * ⚠️ Lo escriben el bucle Y el cron de respaldo: fresco no prueba «bucle vivo».
+   */
+  minutosSinPulso: number | null;
+  /** Muestras DEL EVENTO EN MARCHA en la última hora. */
   muestrasUltimaHora: number;
+  /** Combates activos del cartel (sin las canceladas). */
+  peleasActivas: number;
+  /** Cuántos de esos tienen fila viva: la película empezada. */
+  peleasConFilaViva: number;
+  /** Cuántas de esas filas siguen abiertas (`state <> 'post'`). */
+  peleasSinCerrar: number;
+  /** Cuántas peleas activas tienen AL MENOS UNA muestra: película de verdad. */
+  peleasConPelicula: number;
+  /** Muestras TOTALES del evento en marcha, desde el principio de la velada. */
+  muestrasDelEvento: number;
 };
 
 // El centinela arranca 15 minutos antes del primer combate (ADELANTO_MINUTOS en
@@ -496,6 +542,262 @@ function horaCorta(iso: string | null): string {
   });
 }
 
+// 🪤 EL PANEL DECÍA «PARADO» DURANTE LOS PASEÍLLOS, Y TENÍA RAZÓN EL BUCLE.
+//
+// La regla vieja eran DOS literales gemelos, carácter por carácter, en las dos
+// filas de abajo: `veladaEnMarcha && muestrasUltimaHora === 0 ? "mal" : "ok"`.
+// Y el contador de muestras está a cero POR DISEÑO al principio de cada velada:
+// el escritor tiene PROHIBIDO guardar una muestra hasta la campana del asalto 1
+// (`live_stats.py:153`, `COALESCE(lfs.period, 0) >= 1`). Medido en el 1064:
+// ancla 21:30:00Z, primera muestra 21:45:03Z → **15 min 3 s de rojo con todo
+// funcionando**, cada sábado, y con el guardián disparando a las :40.
+//
+// Lo que SÍ late en esos minutos es `live_fight_stats.updated_at`: durante los
+// paseíllos ESPN da el evento como 'in' con `period = 0`, el bucle reescribe la
+// fila viva en cada pasada (~23 s medidos) y el `DO UPDATE` pone `updated_at =
+// NOW()` aunque el contenido no cambie (`live_stats.py:98`). Ese es el pulso.
+//
+// ⚠️ Y LO QUE EL PULSO NO DEMUESTRA, que hay que decirlo en voz alta:
+// `live_fight_stats` tiene DOS escritores con EL MISMO código
+// (`espn_live_results`): el bucle de 20 s y el cron de respaldo live-results
+// (*/10 en sus franjas). Un pulso fresco prueba que ALGUIEN escribe, no que el
+// bucle esté vivo — comprobado: las escrituras de 07:36/07:59/08:41/09:12Z
+// sobre el 1064 son del cron, con el bucle muerto desde las 04:47Z. Por eso el
+// pulso NUNCA da el visto bueno él solo: **sólo puede sumar rojo**. Quien de
+// verdad separa al bucle del cron es el RITMO, y por eso se sigue mirando.
+//
+// Y el precio de eso, dicho también: el ritmo se mide sobre una hora, así que
+// un bucle muerto TAPADO por el respaldo puede tardar hasta 60 min en salir en
+// rojo (antes si el cron se retrasa más de los 25 min de silencio). En ese
+// hueco se pierden dos o tres peleas de película. Si algún día eso resulta
+// inaceptable, la solución NO está en este panel: está en que el bucle escriba
+// su propio latido en `service_heartbeats` —como ya hace el microservicio de
+// predicción, migración 026—. Eso sí sería una prueba, y es una línea en el
+// bucle. Con sólo la base delante, «alguien escribe» es demostrable y «el bucle
+// de 20 s está vivo» no lo es.
+
+// Cuánto puede callar el PULSO con una velada en marcha y el cartel a medias.
+//
+// Entre combates el contador de muestras se para, pero el bucle sigue tocando
+// la fila viva mientras ESPN dé el evento como in/post. Medido en el 1064: 846
+// pasadas con el evento vivo, 53 sin escribir, agrupadas en dos huecos, el
+// mayor de **4 min 55 s** — son los minutos en que la pelea anterior ya está
+// sellada (`WHERE NOT is_final` corta el UPDATE) y ESPN aún no ha puesto la
+// siguiente en 'in'. 25 min es cinco veces ese peor caso.
+//
+// Y es el MISMO número que `PAUSA_ESPERADA_MAX_S` en lib/directo/consulta.ts,
+// que contesta esta misma pregunta en la otra pantalla. Que no coincidieran
+// sería un panel contradiciendo al otro la misma noche.
+const SILENCIO_MAX_MIN = 25;
+
+// Gracia desde el ancla, sólo para cuando NO hay ni una fila viva. De 21:15 a
+// 21:30Z el bucle del 1064 dio 45 pasadas con «no ESPN event in/post, DB
+// untouched»: hasta que ESPN no abre el evento NO EXISTE fila que tocar, y
+// exigir pulso antes es exigir lo imposible. Esa noche abrió a las 21:30:37Z,
+// 37 s después del ancla; con 25 min hay cuarenta veces ese margen.
+const GRACIA_ARRANQUE_MIN = 25;
+
+// EL RITMO: lo ÚNICO que separa al bucle del cron de respaldo, porque los dos
+// son el mismo programa y lo que cambia es la cadencia — 20 s contra 10 min.
+//
+// El umbral tiene que caer en el hueco entre los dos, y el hueco está medido
+// por los dos lados:
+//   · POR ARRIBA, el bucle sano. En el 1064, la peor hora de toda la velada
+//     dejó 27 muestras (media 49,6; máx 70).
+//   · POR ABAJO, el techo del respaldo, y no es una estimación: el cron da 6
+//     pasadas a la hora y en cada pasada sólo puede escribir muestra de lo que
+//     haya CAMBIADO (el dedup de `live_stats.py:154` la descarta si el estado,
+//     el asalto, el reloj y las stats son los mismos). A mitad de cartel eso es
+//     una pelea, así que su techo son ~6/h. Lo observado esta mañana con el
+//     bucle muerto fueron 2.
+// 10/h queda 2,7 veces por debajo del peor caso bueno y por encima del techo
+// del respaldo: es el número que impide que un bucle muerto pinte verde aunque
+// el cron mantenga el pulso fresco.
+//
+// Es el umbral más delicado del arreglo y sólo hay UNA velada medida minuto a
+// minuto: una cartelera corta de finalizaciones rápidas puede dar horas más
+// flojas. Revisar tras la velada del 22-ago.
+const MUESTRAS_MIN_POR_HORA = 10;
+
+// 🪤 CUÁNTAS MUESTRAS POR PELEA HACEN FALTA PARA PODER DECIR «PELÍCULA».
+//
+// La escapatoria «cartel grabado» mira `live_fight_stats`, y esa tabla NO
+// prueba que se haya grabado nada: prueba que ALGUIEN vio la pelea, aunque
+// fuera media hora después de terminar. Está medido en esta misma base, y es el
+// desastre del 1-ago: las 14 filas del 1063 se escribieron **en el mismo
+// segundo** (19:43:21-19:43:26Z), todas en 'post', con el cartel entero ya
+// acabado y una sola muestra por pelea. Con sólo el conteo de filas, esa noche
+// —la noche que este panel existe para no repetir— habría pintado
+// «cartel grabado» en VERDE.
+//
+// Y no es un caso aislado: de las seis últimas veladas de la base, TRES no se
+// grabaron enteras (1061: 0 muestras; 1063: 14; 1060: 50, con 6 de sus 14
+// peleas sin una sola muestra).
+//
+// Las dos poblaciones no se tocan: las veladas bien grabadas dejan 24-29
+// muestras POR PELEA (1087 288/12, 1064 352/12, 1062 345/12) y las perdidas
+// dejan 1. Se piden 3, ocho veces por debajo de la peor buena, y ADEMÁS que
+// todas las peleas tengan serie — porque el 1063 pasaría un umbral por pelea
+// (14 filas con serie de 14) y el 1060 pasaría uno por total (50 >= 42) y hace
+// falta cazar los dos.
+const MUESTRAS_MINIMAS_POR_PELEA = 3;
+
+/**
+ * Muestras exigibles ahora mismo. Sube en rampa durante la primera hora para no
+ * pedir una hora entera de dato a los diez minutos de empezar: a ancla+45 el
+ * 1064 llevaba 34 muestras y esto pedía 3,33.
+ *
+ * La rampa es la que perdona los paseíllos, NO el pulso. Es deliberado: si lo
+ * que perdonara fuese el pulso, bastaría con que el cron de respaldo siguiera
+ * vivo para comprar un verde con el bucle muerto.
+ */
+export function muestrasExigidas(minutosDesdeElAncla: number | null): number {
+  if (minutosDesdeElAncla == null) return 0;
+  const utiles = minutosDesdeElAncla - GRACIA_ARRANQUE_MIN;
+  if (utiles <= 0) return 0;
+  return MUESTRAS_MIN_POR_HORA * Math.min(1, utiles / 60);
+}
+
+export type VeredictoCamara = { nivel: Nivel; valor: string; detalle: string };
+
+/**
+ * ¿Se está grabando? UNA sola respuesta para las dos filas que lo preguntan (el
+ * vigilante y la cámara). Tenían la condición escrita dos veces, idéntica, y
+ * dos copias es exactamente cómo un panel acaba contradiciéndose en la misma
+ * pantalla — el pecado que `directo/consulta.ts` declara «la peor avería
+ * posible en algo cuyo único trabajo es merecer confianza».
+ *
+ * El orden de las ramas es la parte frágil:
+ *   1. cartel cubierto → no queda nada que grabar (la cola de la noche), PERO
+ *      sólo si además hay película: una fila viva no prueba que se grabara;
+ *   2. sin hora de ancla → no se puede medir el ritmo, así que no se aprueba;
+ *   3. sin pulso       → o está arrancando, o no hay NADIE grabando;
+ *   4. pulso viejo     → alguien tenía que estar escribiendo y no escribe;
+ *   5. ritmo por debajo del bucle → escribe el respaldo, no el bucle.
+ */
+export function juzgarLaCamara(d: DatosGuardia): VeredictoCamara {
+  if (!d.veladaEnMarcha) {
+    return {
+      nivel: "ok",
+      valor: "en reposo",
+      detalle: "No hay ninguna velada en marcha. El contador parado es lo normal aquí.",
+    };
+  }
+
+  // 1. EL CARTEL YA ESTÁ GRABADO ENTERO. Medido en el 1064: el bucle selló la
+  // última pelea a las 04:20Z y `velada_en_marcha` siguió TRUE hasta las
+  // 04:47:23Z, cuando el backfill escribió los últimos resultados — 27 min de
+  // velada en marcha sin nada que grabar, que sin esta salida serían rojo. Y
+  // ese silencio no es una avería, es el propio diseño del escritor: una fila
+  // sellada deja de tocarse (`WHERE NOT live_fight_stats.is_final`).
+  //
+  // NO se puede usar `cartelSellado` para esto: mira las MISMAS columnas de
+  // `fights` que mantienen viva la velada, así que en esos 27 min vale false
+  // por construcción y no cerraría ni un segundo. La pista tiene que venir de
+  // la tabla del DIRECTO.
+  //
+  // Y esto no puede colarse a mitad de cartel: una pelea que aún no ha ocurrido
+  // NO TIENE FILA VIVA (el escritor sólo mira las in/post), así que la cobertura
+  // crece pelea a pelea — medida en el 1064 a las 22/23/00/01/02/03/04 h: 1, 3,
+  // 5, 7, 9, 11 y 12 de 12. El `> 0` es el guardarraíl del 0 >= 0.
+  const cartelCubierto =
+    d.peleasActivas > 0 &&
+    d.peleasConFilaViva >= d.peleasActivas &&
+    d.peleasSinCerrar === 0;
+  if (cartelCubierto) {
+    // 🪤 CUBIERTO NO ES GRABADO. Tener fila viva sólo demuestra que alguien
+    // MIRÓ la pelea, y el cron de respaldo puede escribir el cartel entero de
+    // una sentada cuando ya ha terminado — es literalmente lo que pasó el
+    // 1-ago. Antes de dar el visto bueno hay que ver la película: todas las
+    // peleas con serie y un mínimo de muestras. Ver MUESTRAS_MINIMAS_POR_PELEA.
+    const hayPelicula =
+      d.peleasConPelicula >= d.peleasActivas &&
+      d.muestrasDelEvento >= d.peleasActivas * MUESTRAS_MINIMAS_POR_PELEA;
+    if (!hayPelicula) {
+      return {
+        nivel: "mal",
+        valor: `${d.muestrasDelEvento} muestras`,
+        detalle: `El cartel entero está cerrado pero SIN PELÍCULA: ${d.muestrasDelEvento} muestras para ${d.peleasActivas} peleas (${d.peleasConPelicula} con serie), cuando una velada grabada deja unas ${d.peleasActivas * 25}. Las filas las escribió alguien DESPUÉS, con las peleas ya acabadas: es el 1-ago-2026. La película no se recupera; comprobar por qué no corrió «Live event loop».`,
+      };
+    }
+    return {
+      nivel: "ok",
+      valor: "cartel grabado",
+      detalle: `Las ${d.peleasActivas} peleas tienen su película (${d.muestrasDelEvento} muestras) y ninguna sigue en curso: no queda nada que grabar. Los resultados que falten los trae el backfill.`,
+    };
+  }
+
+  // 🪤 SIN HORA DE ANCLA NO SE PUEDE JUZGAR EL RITMO, y callarlo es un verde.
+  // `muestrasExigidas(null)` vale 0, o sea «no se exige nada»: con la velada en
+  // marcha, el pulso fresco del cron de respaldo y el ancla perdida, la rama de
+  // abajo daba «paseíllos» en VERDE para siempre. Hoy el SQL no puede producir
+  // esa fila (el ancla y `velada_en_marcha` salen del MISMO CTE), pero es la
+  // misma trampa que `num(null)` y cerrarla cuesta cuatro líneas. Ante la duda
+  // manda el rojo, igual que en la rama de la gracia.
+  if (d.minutosDesdeElAncla == null) {
+    return {
+      nivel: "mal",
+      valor: "sin hora de ancla",
+      detalle:
+        "Hay velada en marcha pero no consta a qué hora empezó, así que no se puede saber cuánto dato debería haber entrado ya. Mirar `early_prelims_time` / `prelims_time` / `start_time` del evento.",
+    };
+  }
+
+  // Llegados aquí el ancla existe: la rama de arriba se lleva el caso sin hora.
+  const enGracia = d.minutosDesdeElAncla <= GRACIA_ARRANQUE_MIN;
+
+  // 2. NI UNA FILA VIVA. Ni verde a ciegas ni rojo en el minuto cero: hasta que
+  // ESPN pasa el evento a 'in' no hay nada que escribir. Dentro de la gracia se
+  // AVISA, que se ve en el panel y no manda correo; pasada la gracia es el
+  // 1-ago en directo.
+  if (d.minutosSinPulso == null) {
+    return enGracia
+      ? {
+          nivel: "aviso",
+          valor: "arrancando",
+          detalle: `La velada acaba de abrir y todavía no consta ni una fila viva. ESPN tarda unos minutos en dar el evento por empezado (en el 1064 tardó 37 s); si a los ${GRACIA_ARRANQUE_MIN} min sigue así, esto se pone rojo.`,
+        }
+      : {
+          nivel: "mal",
+          valor: "sin señal",
+          detalle:
+            "VELADA EN MARCHA Y NI UNA FILA VIVA ESCRITA. No está grabando nadie: es el fallo del 1-ago-2026, cuando los 35 crons salieron en verde y la velada se perdió entera.",
+        };
+  }
+
+  // 3. EL PULSO SE HA PARADO. Con el cartel a medias, alguien tenía que estar
+  // escribiendo: o la pelea en curso, o los paseíllos de la siguiente.
+  if (d.minutosSinPulso > SILENCIO_MAX_MIN) {
+    const min = Math.round(d.minutosSinPulso);
+    return {
+      nivel: "mal",
+      valor: `${min} min sin escribir`,
+      detalle: `Nadie toca una fila viva desde hace ${min} min y el cartel no está cerrado. Entre combates el contador de muestras se para, pero el pulso no: el hueco más largo medido fue de 4 min 55 s.`,
+    };
+  }
+
+  // 4. ESCRIBE ALGUIEN, PERO NO AL RITMO DEL BUCLE. Es la rama que cierra el
+  // agujero de hoy: con la regla vieja bastaba UNA muestra en la última hora
+  // para pintar verde, y el cron de respaldo las pone él solo.
+  const exigidas = muestrasExigidas(d.minutosDesdeElAncla);
+  if (d.muestrasUltimaHora < exigidas) {
+    return {
+      nivel: "mal",
+      valor: `${d.muestrasUltimaHora} en 1 h`,
+      detalle: `Con el bucle vivo, la peor hora de una velada deja ~27 muestras; aquí hay ${d.muestrasUltimaHora}. Ese es el ritmo del cron de respaldo (*/10), no el del bucle: mirar si «Live event loop» tiene runs vivos.`,
+    };
+  }
+
+  return {
+    nivel: "ok",
+    valor: d.muestrasUltimaHora > 0 ? `${d.muestrasUltimaHora} en 1 h` : "paseíllos",
+    detalle:
+      d.muestrasUltimaHora > 0
+        ? "Velada en marcha y entrando dato. Todo correcto."
+        : "Nadie peleando todavía: no se graban muestras hasta el asalto 1, así que el contador a cero es lo normal aquí. El bucle sí está escribiendo.",
+  };
+}
+
 export function comprobarGuardia(d: DatosGuardia): Comprobacion[] {
   const out: Comprobacion[] = [];
 
@@ -518,25 +820,30 @@ export function comprobarGuardia(d: DatosGuardia): Comprobacion[] {
       : "Despierta cada hora. No hay ninguna velada en su ventana de 5 h.",
   });
 
+  // 2 y 3. El vigilante y la cámara contestan a LA MISMA pregunta —¿se está
+  // grabando?— así que la contestan con la MISMA función. Antes eran dos
+  // literales gemelos y cualquier arreglo que tocara uno dejaba al panel
+  // diciendo dos cosas distintas del mismo hecho, en filas contiguas.
+  const camara = juzgarLaCamara(d);
+
   // 2. El watchdog: el que mira que la cámara esté grabando.
   out.push({
     titulo: "Vigilante · comprueba que se graba (live-watchdog)",
-    valor: d.veladaEnMarcha ? `${d.muestrasUltimaHora} en 1 h` : "en reposo",
-    nivel: d.veladaEnMarcha && d.muestrasUltimaHora === 0 ? "mal" : "ok",
-    detalle: d.veladaEnMarcha
-      ? d.muestrasUltimaHora === 0
-        ? "VELADA EN MARCHA Y NO ENTRAN MUESTRAS. Debería estar relanzando el bucle ahora mismo."
-        : "Velada en marcha y entrando dato. Todo correcto."
-      : "Cada hora comprueba si hay velada sin grabar. Si la hay, relanza el bucle él solo.",
+    valor: camara.valor,
+    nivel: camara.nivel,
+    detalle: !d.veladaEnMarcha
+      ? "Cada hora comprueba si hay velada sin grabar. Si la hay, relanza el bucle él solo."
+      : camara.nivel === "mal"
+        ? `${camara.detalle} Debería estar relanzando el bucle ahora mismo.`
+        : camara.detalle,
   });
 
   // 3. El bucle: el cámara. No tiene horario propio a propósito — lo llaman.
   out.push({
     titulo: "Cámara · graba el combate (live-event-loop)",
-    valor: d.veladaEnMarcha ? (d.muestrasUltimaHora > 0 ? "grabando" : "parado") : "en reposo",
-    nivel: d.veladaEnMarcha && d.muestrasUltimaHora === 0 ? "mal" : "ok",
-    detalle:
-      "Una pasada cada 20 s mientras dura la velada. No tiene horario propio a propósito: lo llaman el centinela y el vigilante, que antes comprueban que no haya otro grabando.",
+    valor: camara.valor,
+    nivel: camara.nivel,
+    detalle: `${camara.detalle} Una pasada cada 20 s mientras dura la velada; no tiene horario propio a propósito: lo llaman el centinela y el vigilante, que antes comprueban que no haya otro grabando.`,
   });
 
   // 4. El guardián: el que llama por teléfono.

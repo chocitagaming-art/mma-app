@@ -239,13 +239,52 @@ type FilaGuardia = {
   arranque_utc: string | Date | null;
   horas_hasta_el_arranque: string | null;
   velada_en_marcha: boolean;
+  /** Minutos desde el ancla del evento EN MARCHA. NULL si no hay velada. */
+  minutos_desde_el_ancla: string | null;
+  /**
+   * Minutos desde la última escritura en `live_fight_stats` DE ESE evento.
+   * NULL = no hay ni una fila viva (nadie ha escrito nunca).
+   */
+  minutos_sin_pulso: string | null;
+  /** Muestras DE ESE evento en la última hora (antes: de toda la base). */
   muestras_ultima_hora: string;
+  peleas_activas: string;
+  peleas_con_fila_viva: string;
+  peleas_sin_cerrar: string;
+  /** Peleas activas con AL MENOS una muestra: película de verdad, no fila. */
+  peleas_con_pelicula: string;
+  /** Muestras totales del evento en marcha, desde el principio de la velada. */
+  muestras_del_evento: string;
 };
 
 // El ancla del directo, calculada IGUAL que en scripts/live_sentinel.py:
 // early_prelims ?? prelims ?? (estelar - 4 h). Si aquí y allí divergieran, el
 // panel enseñaría una hora y el centinela arrancaría a otra — y el panel
 // existiría para mentir, que es peor que no tenerlo.
+//
+// 🪤 POR QUÉ SE PIDE EL PULSO Y NO SÓLO LAS MUESTRAS. El escritor tiene
+// PROHIBIDO guardar muestras hasta la campana del asalto 1 (`live_stats.py:153`,
+// `COALESCE(lfs.period, 0) >= 1`), así que durante los paseíllos el contador
+// está a cero POR DISEÑO y el panel daba «parado» con todo funcionando: medido
+// en el 1064, ancla 21:30:00Z y primera muestra 21:45:03Z = 15 min 3 s de rojo
+// falso. Lo que SÍ late en esos minutos es `live_fight_stats.updated_at`, que el
+// bucle reescribe en cada pasada (~23 s medidos) mientras la fila no esté
+// sellada (`live_stats.py:98`, dentro del DO UPDATE).
+//
+// ⚠️ Y LO QUE ESTE PULSO NO DEMUESTRA: `live_fight_stats` tiene DOS escritores
+// con el MISMO código (`espn_live_results`), el bucle de 20 s y el cron de
+// respaldo live-results. Un pulso fresco prueba que ALGUIEN escribe, no que el
+// bucle esté vivo — comprobado: las escrituras de 07:36/07:59/08:41/09:12Z
+// sobre el 1064 son del cron, con el bucle muerto desde las 04:47Z. Por eso el
+// pulso sólo puede sumar rojo, nunca comprar un verde (ver `juzgarLaCamara`).
+//
+// Las cuentas nuevas van UNIDAS POR `fights.event_id` al evento en marcha, y no
+// es cosmético: `prune_live_fight_stats` conserva 48 h, así que pueden convivir
+// dos veladas. Hoy mismo, sin velada, el pulso SIN filtrar devuelve 351 min (las
+// filas de ayer) en vez de NULL, y el contador de muestras sin filtrar daba por
+// grabada una velada muerta si en la misma hora entraba dato de otro evento.
+// Y se descartan las canceladas por el mismo motivo que en el resto del
+// fichero: sus filas no cuentan en el denominador, así que tampoco arriba.
 const GUARDIA_SQL = `
   with proxima as (
     select coalesce(e.early_prelims_time, e.prelims_time,
@@ -258,7 +297,12 @@ const GUARDIA_SQL = `
     -- sale por el RESULTADO. Sin la segunda condicion, el panel daria por viva
     -- una velada terminada (paso con el 1063: acabo a las 19:40Z y el reloj
     -- decia que seguia hasta las 22:00Z) y contradiria al watchdog de verdad.
-    select e.id
+    -- El 'order by' es por determinismo: dos veladas el mismo dia (numerada +
+    -- Contender) pasan, y sin el la fila elegida dependia del plan. Manda la
+    -- que empezo antes, que es la que lleva mas rato exigiendo dato.
+    select e.id,
+           coalesce(e.early_prelims_time, e.prelims_time,
+                    e.start_time - interval '4 hours') as ancla
     from events e
     where coalesce(e.early_prelims_time, e.prelims_time,
                    e.start_time - interval '4 hours') <= now()
@@ -268,14 +312,63 @@ const GUARDIA_SQL = `
         where f.event_id = e.id and f.status is distinct from 'cancelled'
           and not ${resueltoSqlPredicate("f")}
       )
+    order by ancla asc
     limit 1
   )
   select
     (select ancla from proxima) as arranque_utc,
     extract(epoch from ((select ancla from proxima) - now())) / 3600 as horas_hasta_el_arranque,
     exists (select 1 from en_marcha) as velada_en_marcha,
-    (select count(*) from live_fight_stat_samples s
-      where s.sampled_at > now() - interval '1 hour') as muestras_ultima_hora`;
+    (select extract(epoch from (now() - m.ancla)) / 60 from en_marcha m)
+      as minutos_desde_el_ancla,
+    -- EL PULSO. Sin velada da NULL (agregado sobre cero filas), no cero.
+    (select extract(epoch from (now() - max(l.updated_at))) / 60
+       from live_fight_stats l
+       join fights f on f.id = l.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled') as minutos_sin_pulso,
+    (select count(*)
+       from live_fight_stat_samples s
+       join fights f on f.id = s.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled'
+        and s.sampled_at > now() - interval '1 hour') as muestras_ultima_hora,
+    -- LA ESCAPATORIA DE LA COLA DE LA NOCHE. Una pelea que aun no ha ocurrido
+    -- NO TIENE FILA VIVA (el escritor solo mira las in/post), asi que esto no
+    -- puede cumplirse a mitad de cartel: medido en el 1064, la cobertura fue
+    -- 1,3,5,7,9,11,12 y la ultima pelea no tuvo su primera muestra hasta las
+    -- 03:47:39Z. 'state' y no 'is_final': un fetch de stats que falla deja la
+    -- fila en 'post' sin sellar para siempre, y con is_final esto no abriria
+    -- nunca. Ademas 'post' es pegajoso, que es lo que lo hace fiable aqui.
+    (select count(*) from fights f
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled') as peleas_activas,
+    (select count(*) from live_fight_stats l
+       join fights f on f.id = l.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled') as peleas_con_fila_viva,
+    (select count(*) from live_fight_stats l
+       join fights f on f.id = l.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled'
+        and l.state is distinct from 'post') as peleas_sin_cerrar,
+    -- Y LA PRUEBA DE QUE ESO ES PELICULA Y NO UNA FOTO TARDIA. Una fila viva
+    -- solo demuestra que alguien MIRO la pelea: el cron de respaldo puede
+    -- escribir el cartel entero de una sentada con las peleas ya acabadas, y es
+    -- lo que paso el 1-ago-2026 (las 14 filas del 1063 llevan el MISMO segundo,
+    -- 19:43:2xZ, y una sola muestra por pelea). Sin estas dos cuentas, aquella
+    -- noche habria salido 'cartel grabado' en verde. Ver
+    -- MUESTRAS_MINIMAS_POR_PELEA en veredicto.ts.
+    (select count(distinct s.fight_id)
+       from live_fight_stat_samples s
+       join fights f on f.id = s.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled') as peleas_con_pelicula,
+    (select count(*)
+       from live_fight_stat_samples s
+       join fights f on f.id = s.fight_id
+       join en_marcha m on m.id = f.event_id
+      where f.status is distinct from 'cancelled') as muestras_del_evento`;
 
 export type Apunte = {
   hora: string;
@@ -328,12 +421,25 @@ function aIso(v: string | Date | null): string | null {
 
 const num = (v: string | null | undefined): number => Number(v ?? 0) || 0;
 
+// 🪤 EL HERMANO HONESTO DE `num`, y la diferencia son cuatro caracteres.
+// `num(null)` es CERO, y hay dos campos donde cero y «no hay dato» significan lo
+// contrario: `minutos_sin_pulso` NULL es «no hay ni una fila viva, NADIE está
+// grabando» y cero es «acaban de escribir hace un instante». Pasar ese NULL por
+// `num` pintaría de verde el peor fallo que puede tener este panel.
+const numOrNull = (v: string | null | undefined): number | null => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 export async function obtenerEstado(): Promise<Estado> {
-  // En paralelo, pero son 8 y el pool tiene 3 conexiones: las demás esperan unos
+  // En paralelo, pero son 9 y el pool tiene 3 conexiones: las demás esperan unos
   // milisegundos. Compensa frente a encadenarlas, y esta ruta la visita una
-  // persona cada mucho rato, no un buscador.
-  // 🪤 Este comentario decía «son 4» y ya eran 7 antes de añadir la octava.
-  // Si añades una consulta aquí, actualiza la cuenta o vuelve a mentir.
+  // persona cada mucho rato, no un buscador. Ojo: el guardián sí la llama cada
+  // hora, así que no conviene engordarla sin motivo.
+  // 🪤 Este comentario decía «son 4» cuando ya eran 7, y «son 8» cuando ya eran
+  // 9 (entró CARTELERA_SQL y nadie tocó la cuenta). Van 9. Si añades una
+  // consulta aquí, actualiza el número o vuelve a mentir.
   const [
     [ultima],
     [proxima],
@@ -410,11 +516,22 @@ export async function obtenerEstado(): Promise<Estado> {
       subtitulo: "Los tres que trabajan cuando no hay nadie delante",
       comprobaciones: comprobarGuardia({
         arranqueDelDirectoUtc: aIso(guardia.arranque_utc),
-        horasHastaElArranque: guardia.horas_hasta_el_arranque
-          ? num(guardia.horas_hasta_el_arranque)
-          : null,
+        horasHastaElArranque: numOrNull(guardia.horas_hasta_el_arranque),
         veladaEnMarcha: Boolean(guardia.velada_en_marcha),
+        minutosDesdeElAncla: numOrNull(guardia.minutos_desde_el_ancla),
+        // 🪤 numOrNull y NO num: `num(null)` es 0, y un 0 aquí significa «pulso
+        // recién escrito» = VERDE con la sala a oscuras. Ver el comentario de
+        // `numOrNull` y el test «un pulso NULL llega al veredicto como null».
+        minutosSinPulso: numOrNull(guardia.minutos_sin_pulso),
         muestrasUltimaHora: num(guardia.muestras_ultima_hora),
+        peleasActivas: num(guardia.peleas_activas),
+        peleasConFilaViva: num(guardia.peleas_con_fila_viva),
+        peleasSinCerrar: num(guardia.peleas_sin_cerrar),
+        // Aquí `num` SÍ es lo correcto y no `numOrNull`: son `count(*)`, que
+        // sobre cero filas devuelve 0 y no NULL, y además un cero de verdad
+        // significa «ni una muestra», que es lo que hay que creerse.
+        peleasConPelicula: num(guardia.peleas_con_pelicula),
+        muestrasDelEvento: num(guardia.muestras_del_evento),
       }),
     });
   }
