@@ -35,9 +35,20 @@ export function EventLiveEmbed({
   videoId: string;
   videoTitle: string | null;
   eventName: string;
-  // El estelar ya cayó. Solo la ficha del evento lo pasa: en la portada y en
-  // /en-vivo el evento nunca está terminado, porque en cuanto lo está esas dos
-  // páginas apuntan a otro.
+  // El estelar ya cayó. Lo pasan la ficha del evento y /en-vivo.
+  //
+  // 🪤 AQUÍ PONÍA que «en la portada y en /en-vivo el evento nunca está
+  // terminado». La mitad de /en-vivo era FALSA y costó una noche entera de UFC
+  // 330: esa página NO salta al siguiente evento cuando el estelar cae, se
+  // queda en el mismo en modo «Finalizado», así que necesita la prop. Sin ella
+  // la cabecera decía «Finalizado» y debajo seguía «Retransmisión oficial»
+  // sobre «UFC 330 | Previa del Evento ¡EN VIVO!» durante 2-4 h.
+  //
+  // La portada sí es cierta, y por eso el default es `false`: getNextEventHero
+  // excluye el evento por SQL (`AND NOT MAIN_EVENT_FINISHED_SQL`, en
+  // queries/events.ts) y pasa al siguiente. Matiz honesto: va con
+  // unstable_cache revalidate 1800, así que puede arrastrar el embed hasta 30
+  // min. Es desfase de caché acotado, no falta de esta prop.
   eventOver?: boolean;
   className?: string;
 }) {

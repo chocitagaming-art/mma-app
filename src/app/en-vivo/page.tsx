@@ -419,6 +419,22 @@ export default async function LivePage() {
           videoId={event.liveVideoId}
           videoTitle={event.liveVideoTitle}
           eventName={event.name}
+          // 🪤 SIN ESTO LA PÁGINA SE CONTRADICE A SÍ MISMA: la cabecera ya dice
+          // «Finalizado» (`over`, se calcula arriba con isMainEventFinished) y
+          // aquí abajo seguía el rótulo «Retransmisión oficial» con el título
+          // del vídeo de YouTube, que la noche del UFC 330 (15-ago-2026) era
+          // «UFC 330 | Previa del Evento ¡EN VIVO!». La mentira duró entre 2 y
+          // 4 h: `over` pasó a true a las 04:19Z (ESPN 'post' del estelar) y el
+          // evento no salió de getLiveEventCandidate hasta que el cron le puso
+          // status='completed' (06:24Z).
+          //
+          // BASTA CON `over`, al revés que en la ficha del evento: allí se le
+          // suman status='completed' y livePhase==='none' porque esa ficha se
+          // abre en cualquier evento del histórico. Aquí los dos son
+          // redundantes — getLiveEventCandidate ya excluye status='completed'
+          // por SQL (queries/live.ts) y el guard del estado vacío (arriba) solo
+          // deja llegar a la fase 'none' cuando `over` es true.
+          eventOver={over}
           className="mt-8"
         />
       ) : null}
