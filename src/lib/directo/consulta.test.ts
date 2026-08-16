@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decidir, UMBRALES } from "@/lib/directo/consulta";
+import { cartelSellado, decidir, UMBRALES } from "@/lib/directo/consulta";
 
 // POR QUÉ ESTE FICHERO EXISTE: las ramas de `decidir` sólo se ejercitan unas
 // horas a la semana, la noche de una velada. Son exactamente las que nadie
@@ -276,5 +276,55 @@ describe("decidir · el cartel completo cierra la velada, aunque el reloj no", (
     // dependiera sólo del ganador, una velada con un NC no se cerraría jamás.
     const r = decidir({ ...acabada, combatesConGanador: 11, combatesConMetodo: 12 });
     expect(r.nivel).toBe("grabada");
+  });
+
+  it("con 14 filas y 2 canceladas se quedaba EN PAUSA para siempre", () => {
+    // Los números REALES del 1064 (UFC 330) con la consulta sin filtrar: 14
+    // filas, de las que 12894 y 13314 están canceladas, y 12 con ganador. La
+    // fracción no llega nunca, porque a una pelea cancelada no le puede salir un
+    // ganador. El panel se quedaba en pausa hasta que cerraba la ventana por
+    // reloj: seis horas diciendo EN PAUSA de una velada que había terminado.
+    const sinFiltrar = decidir({
+      ...acabada, combatesTotales: 14, combatesConGanador: 12, combatesConMetodo: 12,
+    });
+    expect(sinFiltrar.nivel).toBe("pausa");
+
+    // Y con el filtro puesto, la MISMA velada cierra.
+    const filtrando = decidir({
+      ...acabada, combatesTotales: 12, combatesConGanador: 12, combatesConMetodo: 12,
+    });
+    expect(filtrando.nivel).toBe("grabada");
+  });
+});
+
+describe("cartelSellado · la regla, una sola vez", () => {
+  // Vive suelta y exportada porque la página pinta el TONO de «Combates
+  // sellados» con ella. Antes eran tres copias —`Math.max` aquí, `===` del
+  // ganador en la página, `==` del ganador en el despacho de terminal— y sólo
+  // se corregía una: la fila podía quedarse en gris mientras el veredicto de
+  // arriba, en la misma pantalla, daba la velada por cerrada.
+
+  it("con todo resuelto, sellado", () => {
+    expect(cartelSellado(12, 12, 12)).toBe(true);
+  });
+
+  it("con uno pendiente, no", () => {
+    expect(cartelSellado(12, 11, 11)).toBe(false);
+  });
+
+  it("un empate o un no-contest sellan igual: tienen método y no ganador", () => {
+    expect(cartelSellado(12, 11, 12)).toBe(true);
+  });
+
+  it("y al revés, con el método aún por llegar (tarda horas)", () => {
+    // Medido en el 1087: ganador en los doce a las 02:39, método del primero a
+    // las 05:50. Exigir el método dejaba tres horas de rojo falso.
+    expect(cartelSellado(12, 12, 0)).toBe(true);
+  });
+
+  it("un cartel vacío NO está sellado: el guardarraíl del 0 >= 0", () => {
+    // Sin el `total > 0` una velada sin cartel cargado saldría en verde
+    // diciendo que está entera. No está completa: está vacía.
+    expect(cartelSellado(0, 0, 0)).toBe(false);
   });
 });

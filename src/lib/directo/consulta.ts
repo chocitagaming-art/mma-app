@@ -201,12 +201,29 @@ const VIVAS_SQL = `
   JOIN fights f ON f.id = l.fight_id
   WHERE f.event_id = $1`;
 
+// 🪤 EL FILTRO QUE FALTABA, y no es cosmético. Una pelea CANCELADA no tiene
+// ganador ni método POR DEFINICIÓN, así que jamás completa la fracción: el 1064
+// (UFC 330, 14 filas y 2 canceladas —las 12894 y 13314, bouts 4 y 5—) se
+// quedaba en **12/14 PARA SIEMPRE**, `cartelSellado` no se cumplía nunca y el
+// panel no daba la velada por cerrada aunque estuviera entera: EN PAUSA hasta
+// que cerrase la ventana por reloj. El mismo rojo falso de G4 y G5, otra vez
+// por la puerta de atrás.
+//
+// `IS DISTINCT FROM` y NUNCA `!= 'cancelled'`: `status` sólo toma dos valores
+// en toda la base —NULL en las 8.859 peleas vivas y 'cancelled' en 10— y un
+// `!=` se tragaría todos los NULL, dejando el marcador en 0/0.
+//
+// Es el mismo filtro que ya documenta `lib/estado/consulta.ts` («contar las
+// filas de una pelea que ya no existe daría un 26/24»). Aquí SOLO va en esta
+// consulta: `GRABACION_SQL` y `VIVAS_SQL` no lo necesitan, y está medido —en
+// toda la base hay 0 muestras y 0 filas vivas de peleas canceladas—.
 const RESULTADOS_SQL = `
   SELECT COUNT(*)::text                                       AS total,
          COUNT(*) FILTER (WHERE winner_id IS NOT NULL)::text  AS ganador,
          COUNT(*) FILTER (WHERE method IS NOT NULL)::text     AS metodo
   FROM fights
-  WHERE event_id = $1`;
+  WHERE event_id = $1
+    AND status IS DISTINCT FROM 'cancelled'`;
 
 // La última fila viva que tocó el bucle: es lo más parecido a "qué se está
 // peleando ahora" que hay en la base, porque `fights` no guarda estado en vivo.
@@ -382,17 +399,13 @@ export function decidir(d: {
   // aplicado también al final: sin esto, una velada perfecta seguía en rojo
   // las horas que quedaban de ventana.
   //
-  // Se mira el MAYOR de los dos contadores, no sólo el método, y hay una razón
-  // medida: rebobinando la noche del 1087 minuto a minuto, exigir el método
-  // dejaba el panel en rojo desde las 03:01 hasta el cierre de la ventana —
-  // tres horas gritando por una velada que había terminado bien. El método del
-  // primer combate no llegó hasta las 05:50, pero a las 02:39 ya había ganador
-  // en los doce. Al revés también pasa: un empate o un no-contest tienen método
-  // y NO tienen ganador, así que ninguno de los dos contadores vale solo.
-  const cartelCompleto =
-    combatesTotales > 0 &&
-    Math.max(combatesConGanador, combatesConMetodo) >= combatesTotales;
-  const yaTermino = d.yaTermino || cartelCompleto;
+  // Por qué el MAYOR de los dos contadores y por qué el `total > 0`, con los
+  // números medidos que lo justifican: en `cartelSellado`, ahí abajo. La regla
+  // vive escrita UNA sola vez porque la página pinta con ella el tono de la
+  // fila «Combates sellados», y tener dos copias fue exactamente lo que dejó
+  // esa fila en gris mientras esta línea daba la velada por cerrada.
+  const yaTermino =
+    d.yaTermino || cartelSellado(combatesTotales, combatesConGanador, combatesConMetodo);
 
   if (yaTermino) {
     if (muestras >= MUESTRAS_EXITO) {
@@ -495,6 +508,30 @@ export function decidir(d: {
     return { nivel: "atencion", parte: [`Última escritura hace ${silencioSegundos} s, y debería escribir cada 20 s. Vigílalo.`] };
   }
   return { nivel: "grabando", parte: [`Grabando: ${ritmo} muestras en los últimos 5 minutos. No hay nada que hacer.`] };
+}
+
+/**
+ * ¿Está el cartel entero? UNA regla, y hasta ahora se preguntaba de tres formas
+ * distintas: el veredicto miraba el MAYOR de los dos contadores, el tono de la
+ * página miraba sólo el ganador con un `===`, y el despacho de terminal hacía lo
+ * mismo con un `==`. Es exactamente cómo nació el fallo de los umbrales
+ * duplicados que documenta `app/directo/page.tsx` («había dos copias del mismo
+ * número y sólo se corregía una»): con una sola copia, el panel ya no puede
+ * contradecirse consigo mismo.
+ *
+ * Se mira el MAYOR de los dos porque un empate o un no-contest tienen método y
+ * NO tienen ganador, y porque el método tarda horas en llegar (medido en el
+ * 1087: ganador en los doce a las 02:39, método del primer combate a las 05:50).
+ *
+ * El `total > 0` es el guardarraíl del 0 >= 0: una velada sin cartel cargado no
+ * está "completa", está vacía.
+ */
+export function cartelSellado(
+  total: number,
+  conGanador: number,
+  conMetodo: number,
+): boolean {
+  return total > 0 && Math.max(conGanador, conMetodo) >= total;
 }
 
 export const UMBRALES = {

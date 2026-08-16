@@ -4,7 +4,10 @@ import type { Metadata } from "next";
 import { AutoRefresco } from "@/app/estado/auto-refresco";
 import { EnlacePanel } from "@/app/estado/enlace-panel";
 import { claveValidaDirecta } from "@/lib/estado/clave";
-import { obtenerDirecto, UMBRALES, type Directo, type NivelDirecto } from "@/lib/directo/consulta";
+import {
+  cartelSellado, obtenerDirecto, UMBRALES,
+  type Directo, type NivelDirecto,
+} from "@/lib/directo/consulta";
 import { cn } from "@/lib/utils";
 
 // EL CONTROL ROOM. Hermano de /estado y con su misma puerta, pero contesta a
@@ -307,11 +310,23 @@ function Cuerpo({ d, clave }: { d: Directo; clave: string }) {
 
       {d.resultados ? (
         <Puesto n="03" titulo="Resultados" sub="lo que ya está sellado">
+          {/* 🪤 EL TONO SALE DE `cartelSellado` Y NO DE UN `===` A MANO, por lo
+              mismo que los umbrales salen de `UMBRALES`: había tres copias de la
+              regla "el cartel está entero" y sólo se corregía una. La de aquí
+              miraba únicamente el ganador, así que un empate o un no-contest
+              —método sí, ganador no— dejaba esta fila en gris para siempre
+              mientras el veredicto de arriba ya daba la velada por cerrada.
+              El denominador viene YA sin las canceladas (ver RESULTADOS_SQL):
+              el 1064 pintaba 12/14 eternamente por las peleas 12894 y 13314. */}
           <Dato
             etiqueta="Combates sellados"
             valor={`${d.resultados.conGanador} / ${d.resultados.total}`}
             nota={`${d.resultados.conMetodo} con método`}
-            tono={d.resultados.total > 0 && d.resultados.conGanador === d.resultados.total ? "bien" : "normal"}
+            tono={
+              cartelSellado(d.resultados.total, d.resultados.conGanador, d.resultados.conMetodo)
+                ? "bien"
+                : "normal"
+            }
           />
         </Puesto>
       ) : null}
