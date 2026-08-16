@@ -10,6 +10,7 @@ import {
   parseHex,
   relativeLuminance,
 } from "@/lib/contrast";
+import { controlLaneOffset } from "@/lib/fight-timeline-markers";
 
 // Este test LEE globals.css. No es una copia de los valores: si alguien cambia
 // un color en el CSS, aquí se entera. Es el único vigilante de contraste que
@@ -174,6 +175,156 @@ describe("T7 · el tramo «nadie sujetaba» cumple WCAG 1.4.11", () => {
       });
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// La banda de agarre de la película (fight-timeline.tsx)
+// ---------------------------------------------------------------------------
+//
+// La banda se dibuja en DOS capas y este fichero fija por qué no puede ser una:
+//
+//   · el BAÑO, dentro del área de dibujo, tiñe el fondo con el color de quien
+//     sujetaba a --timeline-band de opacidad. Es atmósfera: conecta "la línea
+//     está plana" con "porque lo tenía en el suelo".
+//   · el CARRIL, bajo el eje, a color SÓLIDO y en dos alturas (rojo arriba,
+//     azul abajo). Es la capa que afirma.
+//
+// El reparto no es un gusto: el rojo y el azul de marca tienen casi la misma
+// LUMINANCIA, así que como baño se distinguen entre sí ~1,04:1 y ni sólidos
+// pasan de 1,11. Un baño rojo/azul a secas no puede decir QUIÉN sujetaba —en
+// escala de grises son la misma mancha— y eso incumple 1.4.1. Por eso el dueño
+// va codificado por POSICIÓN, igual que las esquinas ya van por FORMA.
+describe("la banda de agarre: el baño susurra y el carril afirma", () => {
+  // El token es de OPACIDAD, no de color, así que parseColorTokens (que solo
+  // entiende hex) no lo ve: se lee a mano.
+  function bandAlpha(bloque: string): number {
+    const match = /--timeline-band:\s*([\d.]+)\s*;/.exec(bloque);
+    expect(match, "falta el token --timeline-band").not.toBeNull();
+    return Number(match![1]);
+  }
+
+  const ALPHA = {
+    claro: bandAlpha(extractBlock(CSS, ":root") ?? ""),
+    oscuro: bandAlpha(extractBlock(CSS, ".dark") ?? ""),
+  };
+
+  it("el token existe en los DOS temas, y el oscuro necesita más", () => {
+    expect(ALPHA.claro).toBeGreaterThan(0);
+    expect(ALPHA.oscuro).toBeGreaterThanOrEqual(ALPHA.claro);
+  });
+
+  it("NO va registrado en @theme inline, y eso es correcto", () => {
+    // Al revés que --grip-nobody, este token no genera ninguna utilidad de
+    // Tailwind: se consume con style={{ fillOpacity: "var(--timeline-band)" }}.
+    // Registrarlo como --color-* lo convertiría en un color que no es.
+    expect(CSS).not.toContain("--color-timeline-band");
+  });
+
+  for (const { nombre, tokens, alphaMuted } of TEMAS) {
+    describe(`tema ${nombre}`, () => {
+      const alpha = ALPHA[nombre];
+      const { arriba, abajo } = superficies(tokens, alphaMuted);
+      const fondos = [
+        ["arriba del degradado", arriba],
+        ["abajo del degradado", abajo],
+      ] as const;
+      const esquinas = ["--corner-red", "--corner-blue"] as const;
+
+      // 🪤 EL NÚMERO QUE DE VERDAD LIMITA EL BAÑO no es su propio contraste:
+      // es el de la LÍNEA DE GOLPES por encima de él. Medido, con alpha 0,20 la
+      // línea roja cae a 3,43 sobre su propio baño en claro y con 0,25 a 3,15:
+      // el baño se empieza a comer el dato principal, que es lo único que la
+      // película lleva publicando desde que existe.
+      for (const esquina of esquinas) {
+        for (const [donde, fondo] of fondos) {
+          it(`la línea ${esquina} sigue despegando de su baño ${donde}`, () => {
+            const bano = blend(tokens[esquina], fondo, alpha) as string;
+            const ratio = contrastRatio(tokens[esquina], bano);
+            expect(ratio).not.toBeNull();
+            expect(
+              ratio as number,
+              `con --timeline-band ${alpha} la línea se emborrona sobre su propio baño`,
+            ).toBeGreaterThanOrEqual(3.5);
+          });
+        }
+      }
+
+      it("y el baño llega a verse, que es la otra mitad del compromiso", () => {
+        for (const esquina of esquinas) {
+          for (const [donde, fondo] of fondos) {
+            const bano = blend(tokens[esquina], fondo, alpha) as string;
+            const ratio = contrastRatio(bano, fondo);
+            expect(ratio, `${esquina} ${donde}`).not.toBeNull();
+            expect(ratio as number).toBeGreaterThanOrEqual(1.15);
+          }
+        }
+      });
+
+      // 🪤 EL ESPEJO DEL TEST DEL SEPARADOR DE GripBar, y existe por lo mismo:
+      // para que quitar la segunda altura del carril salga EN ROJO. Si alguien
+      // "simplifica" a un solo carril coloreado según el dueño, el gráfico pasa
+      // a decir quién sujetaba únicamente con el tono.
+      it("rojo y azul NO se distinguen entre sí: el carril necesita DOS alturas", () => {
+        const ratio = contrastRatio(tokens["--corner-red"], tokens["--corner-blue"]);
+        expect(ratio).not.toBeNull();
+        expect(ratio as number).toBeLessThan(UMBRAL);
+      });
+
+      // Y como baño, todavía menos: ni de lejos.
+      it("y como baño se parecen aún más", () => {
+        for (const [donde, fondo] of fondos) {
+          const rojo = blend(tokens["--corner-red"], fondo, alpha) as string;
+          const azul = blend(tokens["--corner-blue"], fondo, alpha) as string;
+          const ratio = contrastRatio(rojo, azul);
+          expect(ratio, donde).not.toBeNull();
+          expect(ratio as number).toBeLessThan(1.2);
+        }
+      });
+    });
+  }
+
+  // 🪤 ESTE ES EL QUE DE VERDAD PROTEGE 1.4.1, y los dos de arriba no. Los dos
+  // de arriba comparan --corner-red con --corner-blue: eso es una propiedad de
+  // la PALETA, y sale igual se dibujen uno o dos carriles. Comprobado con una
+  // mutación: dejando las dos esquinas a la misma altura, la suite entera
+  // seguía en verde mientras el gráfico pasaba a decir quién sujetaba solo con
+  // el tono. Por eso el reparto de alturas vive en lib y se comprueba aquí.
+  it("el carril reparte a las esquinas en DOS alturas distintas", () => {
+    const lane = 4;
+    const gap = 2;
+    expect(controlLaneOffset("red", lane, gap)).toBe(0);
+    expect(controlLaneOffset("blue", lane, gap)).toBe(6);
+    // Lo que importa no son los números, sino que no coincidan y que el azul
+    // caiga POR DEBAJO del rojo sin solaparse con él.
+    expect(controlLaneOffset("blue", lane, gap)).toBeGreaterThanOrEqual(
+      controlLaneOffset("red", lane, gap) + lane,
+    );
+    // Y con la geometría de la variante compacta, que es la otra que existe.
+    expect(controlLaneOffset("blue", 7, 3)).toBeGreaterThanOrEqual(
+      controlLaneOffset("red", 7, 3) + 7,
+    );
+  });
+
+  it("y el componente USA ese reparto en vez de calcular la altura a mano", () => {
+    const timeline = readFileSync(
+      fileURLToPath(new URL("../components/fight/fight-timeline.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(timeline).toContain("controlLaneOffset(owner, layout.lane, gap)");
+  });
+
+  it("el carril CONSUME los tokens de esquina, no un color a pelo", () => {
+    // Los tests de arriba miden --corner-red/--corner-blue contra el fondo del
+    // tile (3:1, ya cubierto por el bloque de T7). Si el componente pintara el
+    // carril con otro color, esa medición no significaría nada.
+    const timeline = readFileSync(
+      fileURLToPath(new URL("../components/fight/fight-timeline.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(timeline).toContain("var(--corner-red)");
+    expect(timeline).toContain("var(--corner-blue)");
+    expect(timeline).toContain('fillOpacity: "var(--timeline-band)"');
+  });
 });
 
 // ---------------------------------------------------------------------------

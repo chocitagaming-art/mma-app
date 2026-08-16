@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MIN_CONTROL_SECONDS,
+  MIN_CONTROL_SHARE,
+  buildControlBands,
   buildFightTimeline,
   decimateSamples,
   mapFightTimelineSample,
@@ -261,6 +264,41 @@ describe("buildFightTimeline", () => {
     expect(timeline!.red.points.map((p) => p.kdDelta)).toEqual([1, 0, 0]);
   });
 
+  it("tdTotal se queda con el ÚLTIMO tdl, no con el máximo del directo", () => {
+    // Patrón REAL de la 14022 (esquina roja 6455): un derribo en R1, ESPN
+    // acredita un segundo en R3 y lo RETIRA al sellar la ficha. El acta de
+    // ufcstats —y la tabla de asaltos de la misma página— dicen 1.
+    const s = [
+      sample({ period: 1, displayClock: "4:15", stats: { "201": { ssl: 8, tdl: 1 } } }),
+      sample({
+        period: 3, displayClock: "-", statusName: "STATUS_END_OF_ROUND",
+        stats: { "201": { ssl: 44, tdl: 2 } },
+      }),
+      // La 'post' del cierre repite segundo y golpes: se DEDUPLICA y no añade
+      // punto. La retirada del derribo tiene que sobrevivir igualmente.
+      sample({
+        state: "post", statusName: "STATUS_FINAL", period: 3, displayClock: "5:00",
+        stats: { "201": { ssl: 44, tdl: 1 } },
+      }),
+    ];
+    const timeline = buildFightTimeline(s, 201, null);
+    expect(timeline!.red.points.length).toBe(2);
+    // Los deltas siguen siendo monótonos: suman 2 (dos tachas sin tope).
+    expect(timeline!.red.points.map((p) => p.tdDelta)).toEqual([1, 1]);
+    // Y el total con el que ESPN cierra es 1: el tope que deja una sola.
+    expect(timeline!.red.tdTotal).toBe(1);
+    // Una esquina ausente no inventa derribos.
+    expect(timeline!.blue.tdTotal).toBe(0);
+  });
+
+  it("tdTotal ignora las muestras sin tdl en vez de contarlas como cero", () => {
+    const s = [
+      sample({ period: 1, displayClock: "4:00", stats: { "201": { ssl: 5, tdl: 1 } } }),
+      sample({ period: 1, displayClock: "3:00", stats: { "201": { ssl: 9 } } }),
+    ];
+    expect(buildFightTimeline(s, 201, null)!.red.tdTotal).toBe(1);
+  });
+
   it("una pelea de 5 asaltos etiqueta R4/R5 y extiende el dominio", () => {
     const five = [
       sample({ period: 4, displayClock: "3:00", stats: { "201": { ssl: 40 } } }),
@@ -270,6 +308,262 @@ describe("buildFightTimeline", () => {
     expect(timeline!.rounds).toBe(5);
     expect(timeline!.totalSeconds).toBe(1440);
     expect(timeline!.red.points[1].label).toBe("R5 · 4:00");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LA BANDA DE AGARRE
+// ---------------------------------------------------------------------------
+//
+// buildControlBands recibe el eje X YA APLANADO (`elapsed`), que es lo que
+// construye buildFightTimeline. Estos tests se lo pasan explícito a propósito:
+// el aplanado del reloj ya tiene sus propios tests ahí arriba, y aquí lo que se
+// prueba es el REPARTO DE VENTANAS, no la lectura del scoreboard.
+describe("buildControlBands", () => {
+  // Muestra con solo el reloj de agarre de cada esquina. El ssl va porque una
+  // muestra sin ninguna clave usable se descarta en el mapeo.
+  function ctrl(red: number | null, blue: number | null): FightTimelineSample {
+    const stats: Record<string, Record<string, number>> = {};
+    if (red != null) {
+      stats["201"] = { ssl: 1, ctrl: red };
+    }
+    if (blue != null) {
+      stats["202"] = { ssl: 1, ctrl: blue };
+    }
+    return sample({ stats });
+  }
+
+  it("la ventana es de quien la ocupa: 40 s de agarre en 60 dan un tramo", () => {
+    const bands = buildControlBands([ctrl(40, 0)], [60], 201, 202);
+    expect(bands).toEqual([{ from: 0, to: 60, owner: "red", seconds: 40 }]);
+  });
+
+  it("🪤 EL UMBRAL ES UN TERCIO, y cambiarlo tiene que salir en rojo", () => {
+    expect(MIN_CONTROL_SHARE).toBe(1 / 3);
+    // 15 s en una ventana de 60 son el 25 %: el resto de la ventana se peleó de
+    // pie y pintar los 60 s enteros de rojo sería afirmar de más.
+    expect(buildControlBands([ctrl(15, 0)], [60], 201, 202)).toEqual([]);
+    // 20 s son el 33,3 % justo, y el justo entra.
+    expect(buildControlBands([ctrl(20, 0)], [60], 201, 202)).toHaveLength(1);
+  });
+
+  it("🪤 un RETROCESO de ctrl deja la ventana sin dueño, no en cero", () => {
+    // El caso real es la 13315 esquina roja: 36 -> 14, o sea -22 s. Un
+    // retroceso significa "no sé quién sujetaba aquí", jamás "cero segundos".
+    // (Este aserto fija el CONTRATO; hoy un Math.max(0, delta) daría el mismo
+    // dibujo porque el suelo del umbral ya excluye al cero — ver el comentario
+    // de ctrlDelta. El que muerde de verdad es el test de aquí debajo.)
+    const bands = buildControlBands(
+      [ctrl(36, 5), ctrl(14, 6)],
+      [60, 120],
+      201,
+      202,
+    );
+    // La primera ventana sí tiene dueño; la del retroceso NO, y el rival que
+    // ganó 1 s en ella tampoco se la lleva.
+    expect(bands).toEqual([{ from: 0, to: 60, owner: "red", seconds: 36 }]);
+  });
+
+  it("🪤 y la línea base NO baja con el retroceso: se queda en el MÁXIMO", () => {
+    // Misma doctrina que los KD y los derribos: el reloj de agarre solo sube,
+    // así que una bajada es un error de ESPN y no un hecho de la pelea. Medir
+    // la recuperación desde el valor rebajado cuenta DOS VECES los mismos
+    // segundos: aquí, 74 - 14 = 60 s de agarre en una ventana de 60, o sea el
+    // tramo entero, cuando el propio ESPN solo ha acreditado 74 en total y ya
+    // había 36 pintados antes.
+    const bands = buildControlBands(
+      [ctrl(36, 0), ctrl(14, 0), ctrl(74, 0)],
+      [60, 120, 180],
+      201,
+      202,
+    );
+    expect(bands[bands.length - 1].seconds).toBe(38);
+    // Y el invariante que esto compra: la banda JAMÁS afirma más agarre del que
+    // ESPN llegó a acreditar. 36 + 38 = 74. Con la base bajando salían 96.
+    const total = bands.reduce((acc, band) => acc + band.seconds, 0);
+    expect(total).toBeLessThanOrEqual(74);
+  });
+
+  it("🪤 y el retroceso NO puede inventarse un tramo entero (caso real 13315)", () => {
+    // Abdul-Malik, esquina roja de la 13315: ESPN lo sube a 36, lo desploma a
+    // 14 durante dos muestras y lo devuelve a 34 antes de cerrar en 37. El acta
+    // de ufcstats también dice 37. La versión que bajaba la base leía la
+    // recuperación como "+20 s nuevos" y publicaba un SEGUNDO rectángulo con el
+    // <title> «sujetó 0:20»: 56 s dibujados sobre 37 reales.
+    const bands = buildControlBands(
+      [ctrl(15, 0), ctrl(36, 0), ctrl(14, 0), ctrl(14, 0), ctrl(34, 0), ctrl(37, 0)],
+      [60, 120, 180, 240, 300, 360],
+      201,
+      202,
+    );
+    const total = bands.reduce((acc, band) => acc + band.seconds, 0);
+    expect(total).toBeLessThanOrEqual(37);
+  });
+
+  it("🪤 UN TRAMO TIENE QUE MEDIR ALGO: el suelo absoluto de 5 s", () => {
+    expect(MIN_CONTROL_SECONDS).toBe(5);
+    // El umbral relativo solo se cumple a sí mismo: en una ventana de 2 s, 2 s
+    // de agarre son el 100 %. Es el patrón real de la 14232, donde ESPN emite
+    // dos muestras pegadas en el corte de asalto y salían rectángulos de 0,3 px
+    // de pantalla que además contaban en el «5 tramos de…» del aria-label.
+    expect(buildControlBands([ctrl(0, 0), ctrl(2, 0)], [598, 600], 201, 202)).toEqual(
+      [],
+    );
+    // Con 5 s justos sí, y ahí el suelo relativo (1/3) vuelve a mandar.
+    expect(
+      buildControlBands([ctrl(0, 0), ctrl(5, 0)], [595, 600], 201, 202),
+    ).toHaveLength(1);
+  });
+
+  it("un empate exacto en la ventana no tiene dueño", () => {
+    expect(buildControlBands([ctrl(30, 30)], [60], 201, 202)).toEqual([]);
+  });
+
+  it("🪤 LA RÁFAGA: el reloj de ESPN llega a saltos y el sobrante va hacia atrás", () => {
+    // Patrón real del estelar: de 2 a 103 s de agarre en una ventana de 30. Los
+    // 71 s que no caben ocurrieron ANTES —el acumulado no puede superar al
+    // reloj de combate—, así que el tramo arranca 71 s antes.
+    const bands = buildControlBands(
+      [ctrl(2, 0), ctrl(103, 0)],
+      [88, 118],
+      201,
+      202,
+    );
+    expect(bands).toEqual([{ from: 17, to: 118, owner: "red", seconds: 101 }]);
+    // Y el ancho es el techo: nunca se publican más segundos de los que dura.
+    for (const band of bands) {
+      expect(band.seconds).toBeLessThanOrEqual(band.to - band.from);
+    }
+  });
+
+  it("🪤 la ráfaga NO cruza el corte de asalto", () => {
+    // Entre asalto y asalto no se sujeta a nadie: un salto gordo en la primera
+    // muestra del R2 no puede pintar dentro del R1.
+    const bands = buildControlBands(
+      [ctrl(0, 0), ctrl(200, 0)],
+      [300, 330],
+      201,
+      202,
+    );
+    expect(bands).toEqual([{ from: 300, to: 330, owner: "red", seconds: 30 }]);
+  });
+
+  it("🪤 la ráfaga NO pisa el tramo anterior", () => {
+    const bands = buildControlBands(
+      [ctrl(30, 0), ctrl(30, 40), ctrl(130, 40)],
+      [60, 120, 150],
+      201,
+      202,
+    );
+    expect(bands).toEqual([
+      { from: 0, to: 60, owner: "red", seconds: 30 },
+      { from: 60, to: 120, owner: "blue", seconds: 40 },
+      { from: 120, to: 150, owner: "red", seconds: 30 },
+    ]);
+  });
+
+  it("ventanas seguidas del mismo dueño se funden en UN tramo", () => {
+    // Y por eso el carril no necesita separador: dos tramos del mismo color
+    // nunca se tocan.
+    expect(
+      buildControlBands([ctrl(30, 0), ctrl(60, 0)], [60, 120], 201, 202),
+    ).toEqual([{ from: 0, to: 120, owner: "red", seconds: 60 }]);
+  });
+
+  it("una pelea de pie no tiene banda: sin ctrl, o con ctrl a cero, no hay tramos", () => {
+    // Es el caso de Barboza-Ribovics (19 s de clinch en 6:33) y de
+    // Johnson-McConico (3 s): cero tramos, y la capa entera desaparece.
+    const sinCtrl = [
+      sample({ stats: { "201": { ssl: 5 }, "202": { ssl: 3 } } }),
+      sample({ stats: { "201": { ssl: 9 }, "202": { ssl: 7 } } }),
+    ];
+    expect(buildControlBands(sinCtrl, [60, 120], 201, 202)).toEqual([]);
+    expect(
+      buildControlBands([ctrl(0, 0), ctrl(0, 0)], [60, 120], 201, 202),
+    ).toEqual([]);
+  });
+
+  it("una esquina ausente no puede tener tramos", () => {
+    const bands = buildControlBands(
+      [ctrl(40, 40), ctrl(80, 90)],
+      [60, 120],
+      201,
+      null,
+    );
+    expect(bands.length).toBeGreaterThan(0);
+    expect(bands.every((band) => band.owner === "red")).toBe(true);
+  });
+
+  it("las muestras que no mueven el reloj no abren ventana (las dos 'post')", () => {
+    const bands = buildControlBands(
+      [ctrl(40, 0), ctrl(45, 0), ctrl(45, 0)],
+      [60, 60, 60],
+      201,
+      202,
+    );
+    expect(bands).toEqual([{ from: 0, to: 60, owner: "red", seconds: 40 }]);
+  });
+
+  it("invariantes sobre una serie larga: ordenados, sin solapes y honrados", () => {
+    const serie = [
+      ctrl(0, 0), ctrl(4, 0), ctrl(2, 0), ctrl(103, 0), ctrl(133, 5),
+      ctrl(133, 60), ctrl(140, 60), ctrl(300, 60), ctrl(300, 61),
+    ];
+    const eje = [26, 57, 88, 118, 149, 211, 241, 273, 330];
+    const bands = buildControlBands(serie, eje, 201, 202);
+    expect(bands.length).toBeGreaterThan(1);
+    let prevTo = -1;
+    for (const band of bands) {
+      expect(band.from).toBeLessThan(band.to);
+      expect(band.from).toBeGreaterThanOrEqual(prevTo);
+      expect(band.seconds).toBeGreaterThan(0);
+      expect(band.seconds).toBeLessThanOrEqual(band.to - band.from);
+      prevTo = band.to;
+    }
+  });
+
+  it("el R1 REAL del estelar de UFC 330 sale de una pieza", () => {
+    // Serie literal de la pelea 12885 (Makhachev rojo 6258 · Garry azul 6232),
+    // asalto 1: ssl congelado en (2,1) los 5 minutos mientras el reloj de
+    // agarre de Makhachev sube 0-4-2-103-133-166-196-235 y ESPN lo corrige a
+    // 218 al cerrar el asalto. La película de hoy dibuja ahí una raya
+    // horizontal; con la banda, ese R1 es UN bloque rojo con 3:46 dentro.
+    const r1 = [0, 4, 2, 103, 133, 166, 196, 235, 218, 218].map((c) =>
+      ctrl(c, 0),
+    );
+    const eje = [26, 57, 88, 118, 149, 211, 241, 273, 300, 300];
+    // El arranque en 19 sale de la ráfaga: a 1:58 ESPN declara 103 s de agarre
+    // en una ventana de 30, así que 69 de esos segundos ocurrieron antes. La
+    // base es el MÁXIMO visto (4), no el 2 al que ESPN lo bajó por el camino:
+    // por eso 19 y no 17, y por eso el bloque declara 3:44 y no 3:46.
+    expect(buildControlBands(r1, eje, 201, 202)).toEqual([
+      { from: 19, to: 273, owner: "red", seconds: 224 },
+    ]);
+  });
+});
+
+describe("buildFightTimeline · el contrato de `control`", () => {
+  it("una pelea sin ctrl publica una lista vacía, no undefined", () => {
+    const sinCtrl = [
+      sample({ period: 1, displayClock: "4:00", stats: { "201": { ssl: 5 } } }),
+      sample({ period: 1, displayClock: "3:00", stats: { "201": { ssl: 9 } } }),
+    ];
+    expect(buildFightTimeline(sinCtrl, 201, null)!.control).toEqual([]);
+  });
+
+  it("y los tramos se recortan al dominio que el eje llega a dibujar", () => {
+    // La última muestra trae agarre pero NO golpes, así que no es punto:
+    // totalSeconds se queda en 120 y el tramo no puede acabar en 180.
+    const s = [
+      sample({ period: 1, displayClock: "4:00", stats: { "201": { ssl: 5, ctrl: 0 } } }),
+      sample({ period: 1, displayClock: "3:00", stats: { "201": { ssl: 8, ctrl: 40 } } }),
+      sample({ period: 1, displayClock: "2:00", stats: { "201": { ctrl: 100 } } }),
+    ];
+    const timeline = buildFightTimeline(s, 201, null)!;
+    expect(timeline.totalSeconds).toBe(120);
+    expect(timeline.control).toEqual([
+      { from: 60, to: 120, owner: "red", seconds: 60 },
+    ]);
   });
 });
 

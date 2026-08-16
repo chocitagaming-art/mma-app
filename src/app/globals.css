@@ -104,6 +104,24 @@
      NO debe moverse detrás. src/lib/contrast.test.ts lee este fichero y falla
      en rojo si cualquiera de los dos valores deja de cumplir. */
   --grip-nobody: #52525b;
+  /* El baño de la banda de agarre de la película (fight-timeline.tsx): la
+     OPACIDAD con la que el color de la esquina que sujetaba tiñe el fondo del
+     área de dibujo. Es un token de opacidad, no de color, y por eso NO va en
+     @theme inline: se consume con `style={{ fillOpacity: "var(--timeline-band)" }}`
+     y no como utilidad de Tailwind, así que aquí no aplica el fallo silencioso
+     que obliga a registrar --grip-nobody.
+     Medido con src/lib/contrast.ts sobre la superficie REAL del tile
+     (PREMIUM_TILE, los dos extremos del degradado y las dos esquinas):
+       el baño despega del fondo . . . . . 1,22-1,28 claro · 1,18-1,24 oscuro
+       la LÍNEA sigue despegando del baño. 3,82-4,98 claro · 4,24-4,78 oscuro
+     Y los dos números se mueven en direcciones contrarias, que es lo que fija
+     el valor: con alpha 0,20 la línea cae a 3,43 en claro y con 0,25 a 3,15
+     —el dato principal se emborrona—, y con 0,10 el baño se queda en 1,09
+     sobre el fondo oscuro, o sea que no se ve.
+     Es atmósfera y no dato: el baño rojo contra el azul mide 1,04, así que por
+     sí solo NO puede decir quién sujetaba. El que lo AFIRMA es el carril sólido
+     de debajo del eje, que cumple 1.4.11 con 4,86-6,12:1. */
+  --timeline-band: 0.14;
   /* 🪤 EL VERDE Y EL OCRE SE OSCURECIERON EL 15-AGO-2026 (sesión 10) por el
      mismo motivo que el rojo: sobre el fondo que enciende el HOVER de una fila
      (--muted #f0e9e7) el texto caía por debajo de 4,5, y en reposo cumplía.
@@ -205,6 +223,9 @@
   --corner-blue: #3b92f0;
   --corner-blue-foreground: #04182d; /* 5,59:1 */
   --grip-nobody: #a1a1aa;
+  /* Dos puntos más que en claro: sobre el negro del tema oscuro el mismo 0,14
+     se queda por debajo de lo que el ojo distingue (ver :root). */
+  --timeline-band: 0.16;
   --win: #4ade80;
   --win-foreground: #052e16;
   --loss: #f87171;
