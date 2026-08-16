@@ -131,17 +131,80 @@ jobs:
       # no. Por eso se busca por TITULO y no por etiqueta: un Issue viejo sin
       # cerrar solo debe silenciar su propio hilo, nunca el canal entero (esa
       # fue exactamente la averia del Issue 16 en mma-ingesta).
+      #
+      # `always() && job.status != 'success'` Y NO `failure()` (cambiado el
+      # 16-ago-2026). 'failure' no es el unico final malo: si el job se cancela
+      # o agota su `timeout-minutes`, GitHub deja el JOB en `cancelled`, y
+      # `failure()` mira el job. Con `failure()` el aviso ni se evaluaba; con
+      # `always() && job.status != 'success'` si.
+      #
+      # LO QUE ESTE CAMBIO **NO** ARREGLA, y va escrito porque la primera
+      # version de este comentario daba por recuperados tres avisos que NO se
+      # recuperan (corregido en la revision del mismo 16-ago). El 6-ago hubo
+      # tres runs con el JOB en `cancelled`:
+      #   - 31117459183 (15:48:08 -> 15:54:44Z): expulsado al segundo exacto en
+      #     que arrancaba el run siguiente, o sea el `cancel-in-progress`
+      #     de :35-37.
+      #   - 31117890269 (15:54:44 -> 16:09:46Z) y 31125432909
+      #     (18:13:27 -> 18:28:29Z): 15m02s clavados los dos, que es el
+      #     `timeout-minutes: 15` de :42.
+      # Los tres salen de la API con `steps: []` Y ADEMAS `runs/<id>/logs`
+      # devuelve un zip VACIO de 22 bytes: no se ejecuto ni un solo paso. No fue
+      # que el bucle de espera al SHA diera vueltas; es que el job nunca llego a
+      # arrancar pasos (lo mas probable, esperando runner). Y un paso que no
+      # existe no se ejecuta ni con `always()`. Esos tres avisos siguen
+      # perdidos, y solo se tapan desde FUERA del job, con un vigilante por
+      # `workflow_run` como el notify-on-failure.yml del repo hermano.
+      # OJO con la prueba que NO vale: `runs/<id>/timing` da 0 ms para los tres,
+      # pero tambien para el 31885488222, que si ejecuto sus 13 pasos. El repo
+      # es publico y no se factura nada, asi que el timing no distingue.
+      #
+      # LO QUE SI ARREGLA: el job que YA esta ejecutando pasos y muere a mitad,
+      # expulsado por un push nuevo o por el `timeout-minutes` mientras el bucle
+      # de espera al SHA de :71-97 hace sus 45 intentos (~7,5 min, y antes van
+      # `npm ci` y el `playwright install`). Ahi el aviso ahora sale, y antes no.
+      #
+      # SI, esto avisara alguna vez de una cancelacion que era rutina (dos push
+      # seguidos con runner disponible). Medido: en seis semanas ha pasado CERO
+      # veces, porque las tres cancelaciones que hubo murieron sin arrancar
+      # pasos y no habrian abierto nada. Aun asi hay que contar con ello el
+      # sabado de velada, que es cuando hay rafagas de push. Se acepta y sale
+      # barato: el paso de cierre de aqui abajo lo borra solo en cuanto el run
+      # que lo expulso termine en verde. Un aviso de mas se autolimpia; uno de
+      # menos con produccion caida, no.
+      #
+      # EL GUARD DEL base_url: este workflow acepta apuntar a otra URL (:24-26).
+      # Un rojo contra una preview NO es produccion rota, y abrir el Issue con
+      # ese titulo seria una mentira que ademas amordaza el canal de verdad. Se
+      # compara la URL REALMENTE comprobada, no el evento: un dispatch a mano
+      # contra produccion si debe avisar. Las dos formas (con y sin barra final)
+      # porque el input es texto libre y una barra de mas silenciaria el aviso.
+      #
+      # El `!= 'pull_request'` es letra muerta hoy (el `on:` de :16-26 no lo
+      # incluye) y se conserva a proposito: el dia que alguien anada
+      # pull_request al disparo, no abrira un Issue por cada PR en rojo.
       - name: Avisar si produccion esta rota
-        if: failure() && github.event_name != 'pull_request'
+        if: >-
+          ${{ always() && job.status != 'success'
+              && github.event_name != 'pull_request'
+              && contains(fromJSON('["https://mmastatus.app","https://mmastatus.app/"]'),
+                          env.PLAYWRIGHT_BASE_URL) }}
+        # NUNCA convierte un fallo en dos. Si el aviso no sale se pierde el
+        # correo; si ademas tumbara el paso, ensuciaria el diagnostico del fallo
+        # de verdad, que es lo que hay que leer.
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SHA: ${{ github.sha }}
+          # El estado real, que ya no es siempre 'failure'.
+          ESTADO: ${{ job.status }}
         run: |
+          set -uo pipefail
           TITULO="🔴 Produccion rota — el smoke ha fallado"
-          BODY=$(printf '⛔ **%s** — el smoke contra produccion ha fallado sobre el commit `%s`.\n\n[Ver el run](%s)\n\nQue comprobar primero:\n- `curl -s https://mmastatus.app/api/health` — si dice `db: down`, es la conexion a Neon (variable de entorno o endpoint pooler).\n- Que la version que sirve `/api/health` sea la esperada.\n\n_Cierra este Issue al arreglarlo: mientras siga abierto, los siguientes fallos seran comentarios y no te llegara un email nuevo._' \
-            "$(date -u +'%Y-%m-%d %H:%M UTC')" "${SHA:0:7}" "$RUN_URL")
+          BODY=$(printf '⛔ **%s** — el smoke contra produccion ha terminado en `%s` sobre el commit `%s`.\n\n[Ver el run](%s)\n\nQue comprobar primero:\n- `curl -s https://mmastatus.app/api/health` — si dice `db: down`, es la conexion a Neon (variable de entorno o endpoint pooler).\n- Que la version que sirve `/api/health` sea la esperada.\n- Si pone `cancelled`, mira la hora: si coincide con otro push, fue el relevo de `cancel-in-progress` y este aviso se cerrara solo; si son 15 minutos justos, es el `timeout-minutes` y produccion tardo en servir el commit.\n\n_Cierra este Issue al arreglarlo: mientras siga abierto, los siguientes fallos seran comentarios y no te llegara un email nuevo._' \
+            "$(date -u +'%Y-%m-%d %H:%M UTC')" "${ESTADO:-failure}" "${SHA:0:7}" "$RUN_URL")
           ISSUE=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
             | jq -r --arg t "$TITULO" '[.[] | select(.title == $t)] | .[0].number // empty')
           if [ -n "$ISSUE" ]; then
@@ -149,4 +212,124 @@ jobs:
           else
             gh label create produccion-rota --repo "$REPO" --color B60205 --description "El smoke contra produccion ha fallado" --force || true
             gh issue create --repo "$REPO" --title "$TITULO" --label produccion-rota --body "$BODY"
+          fi
+
+      # EL RELEVO: cerrar el aviso cuando produccion vuelve a estar en pie.
+      #
+      # Anadido el 16-ago-2026, y llega tarde. Este fichero ABRIA Issues y no
+      # cerraba NINGUNO, y su propio cuerpo (:206) explica por que eso es grave:
+      # "mientras siga abierto, los siguientes fallos seran comentarios y no te
+      # llegara un email nuevo". GitHub manda correo al ABRIR, no al comentar.
+      #
+      # EL CASO REAL: el Issue #20 se abrio el 15-ago a las 12:56:25Z por el run
+      # 31885488222 (produccion no servia el commit 74d6f48 a tiempo) y siguio
+      # abierto hasta que se cerro A MANO hoy 16-ago a las 11:03:55Z. 22 horas y
+      # 7 minutos, con 13 smokes en verde por detras (31886356882 a las 13:07Z
+      # ... 31937622169 del cron de las 08:53Z de hoy). Durante todo ese rato el
+      # canal de aviso de produccion de este repo estuvo MUDO: si la web se
+      # hubiera caido de verdad, el aviso habria sido un comentario sin email.
+      # No llego a pasar de milagro, no por diseno.
+      #
+      # ESPEJA AL PASO DE APERTURA DE ESTE REPO, no al job `cerrar` de
+      # notify-on-failure.yml en mma-ingesta, que NO se puede copiar tal cual:
+      # alli el titulo lleva el nombre del workflow interpolado y la busqueda
+      # filtra por etiqueta `cron-failure`. Aqui el titulo es FIJO y la busqueda
+      # de :208 no filtra por etiqueta, asi que el cierre tampoco lo hace. Si
+      # los dos lados no buscan igual, el cierre no encuentra lo que abrio el
+      # otro y volvemos al punto de partida sin enterarnos.
+      #
+      # Las citas al repo hermano van por NOMBRE de job/paso y no por numero de
+      # linea a proposito. Hoy 16-ago notify-on-failure.yml ha cambiado (commit
+      # b70e6ea) y su job `cerrar`, que estaba sobre la linea 177, esta ahora en
+      # la 294: las citas por linea que quedaron DENTRO de mma-ingesta ya apuntan
+      # a sitio equivocado. Un nombre sobrevive al siguiente commit del vecino;
+      # un numero de linea de otro repo caduca sin avisar y nadie lo nota.
+      #
+      # VA COMO PASO Y NO COMO JOB CON `needs`, por tres motivos:
+      #   1. El guard del base_url necesita `env.PLAYWRIGHT_BASE_URL`, y el
+      #      contexto `env` NO existe en el `if:` de un job (solo github, needs,
+      #      vars e inputs). Como job habria que reescribir a mano el `||` de
+      #      :44 y mantener dos copias de la misma regla.
+      #   2. El de apertura es un paso. Dos mitades del mismo mecanismo en
+      #      sitios distintos acaban divergiendo.
+      #   3. Un job aparte paga un runner nuevo y una fila mas en la UI de cada
+      #      run, todos los dias, para no hacer nada el 99% de las veces.
+      # Es la misma decision que tomo el paso "Cerrar el aviso si el bucle ha ido
+      # bien" de live-event-loop.yml en el repo hermano.
+      #
+      # `success()` basta como guard de "produccion esta bien": es falso si
+      # cualquier paso anterior fallo, y en una cancelacion o un timeout los
+      # pasos con condicion estandar ni se ejecutan. No hay forma de que esto
+      # cierre el Issue sin haber comprobado produccion de verdad.
+      #
+      # SOBRE EL RELEVO A+B: si el run A muere cancelado por el push B y B sale
+      # verde, B cierra el Issue que abrio A. Es lo correcto y esta pensado (lo
+      # mismo que razona el bloque "SOBRE EL RELEVO A+B" de live-event-loop.yml):
+      # el correo ya se mando, el dueno ya se entero, y dejarlo abierto
+      # amordazaria el aviso de manana.
+      - name: Cerrar el aviso si produccion vuelve a estar en pie
+        if: >-
+          ${{ success()
+              && github.event_name != 'pull_request'
+              && contains(fromJSON('["https://mmastatus.app","https://mmastatus.app/"]'),
+                          env.PLAYWRIGHT_BASE_URL) }}
+        # Si el cierre no sale se pierde una comodidad; si tumbara el run,
+        # produccion apareceria rota estando sana.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          # La MISMA cadena de :205, byte a byte: 🔴 (U+1F534), raya larga
+          # (U+2014, no un guion), "Produccion" SIN tilde y "el smoke ha
+          # fallado" en minusculas. Si esto no casa exacto, el cierre no
+          # encuentra nada NUNCA y el fallo es invisible: el paso sale en verde
+          # diciendo "nada que cerrar" mientras el Issue sigue abierto.
+          TITULO="🔴 Produccion rota — el smoke ha fallado"
+          # Mismo emparejamiento que :208-209: `--state open` sin `--label`, y
+          # comparacion EXACTA con jq externo. Con `--search` la busqueda es
+          # difusa y podria cerrar otro Issue del repo.
+          ISSUE=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title,labels \
+            | jq -r --arg t "$TITULO" '[.[] | select(.title == $t)] | .[0] | select(.) | @json')
+
+          if [ -z "$ISSUE" ]; then
+            echo "No hay aviso de produccion abierto. Nada que cerrar."
+            exit 0
+          fi
+
+          NUM=$(echo "$ISSUE" | jq -r '.number')
+
+          # SALVAVIDAS, calcado del job `cerrar` de notify-on-failure.yml (repo
+          # hermano) para que los dos cierres se comporten IGUAL y no haya que
+          # recordar cual es cual.
+          # Aqui su caso de uso es el fallo INTERMITENTE: si produccion falla
+          # una vez de cada cinco, sin esta valvula el Issue se abre y se cierra
+          # en bucle, manda un correo cada vez y borra el rastro de los fallos
+          # anteriores. Con la etiqueta puesta a mano, el hilo se queda abierto
+          # y los fallos se acumulan como comentarios en un solo sitio.
+          if echo "$ISSUE" | jq -e '.labels[]? | select(.name == "no-cerrar-solo")' >/dev/null; then
+            echo "::notice title=Relevo::El Issue #$NUM lleva 'no-cerrar-solo'. Se deja abierto a proposito."
+            exit 0
+          fi
+
+          STAMP=$(date -u +'%Y-%m-%d %H:%M UTC')
+          # SE COMPRUEBA SI EL CIERRE SALIO BIEN, y no es puntilloso: aqui no hay
+          # `set -e`, asi que sin este `if` un `gh issue close` que falla (rate
+          # limit, red, permisos recortados) seguiria de largo, imprimiria
+          # "Issue #N cerrado." y saldria con 0. Con el `continue-on-error: true`
+          # de arriba, el run entero se quedaria VERDE contando una mentira
+          # mientras el Issue sigue abierto amordazando el canal: exactamente el
+          # fallo invisible que este paso viene a arreglar, reintroducido en la
+          # ultima linea. Se anota con `::error` para que se vea en la pagina del
+          # run, y el `continue-on-error` impide que produccion parezca rota por
+          # no haber podido cerrar un aviso.
+          if gh issue close "$NUM" --repo "$REPO" --reason completed --comment "$(printf '✅ **%s** — el smoke contra produccion ha vuelto a pasar entero sobre el commit `%s`, asi que este aviso se cierra solo.\n\n[Ver el run](%s)\n\n_Se cierra para que el PROXIMO fallo vuelva a abrir un Issue nuevo y te llegue un email. Mientras un aviso sigue abierto, los fallos siguientes son comentarios mudos._\n\n_Si este aviso no debe cerrarse aunque el smoke pase, ponle la etiqueta `no-cerrar-solo`._' \
+              "$STAMP" "${SHA:0:7}" "$RUN_URL")"; then
+            echo "Issue #$NUM cerrado."
+          else
+            echo "::error title=Relevo::No se ha podido cerrar el aviso #$NUM. Sigue ABIERTO, y mientras lo este el proximo fallo de produccion sera un comentario sin email. Cierralo a mano."
+            exit 1
           fi
