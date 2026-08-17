@@ -37,6 +37,14 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   "gigi canuto": "/fighters/gigi-canuto.jpg",
   "ce liu": "/fighters/ce-liu.png",
   "salahdine parnasse": "/fighters/salahdine-parnasse.jpg",
+  // Debutantes del 1086 (22-ago): ufc.com tiene su página vacía y ESPN no trae
+  // foto. Recortadas de Tapology; la de Dorsainvil venía de una foto de grupo.
+  "terrance chatman": "/fighters/terrance-chatman.jpg",
+  "ryan kuse": "/fighters/ryan-kuse.jpg",
+  "stan dorsainvil": "/fighters/stan-dorsainvil.jpg",
+  // La BD y Tapology lo llaman Stan; el alias cubre que ufc.com lo publique
+  // como Stanley antes del sábado.
+  "stanley dorsainvil": "/fighters/stan-dorsainvil.jpg",
 };
 
 // Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para
