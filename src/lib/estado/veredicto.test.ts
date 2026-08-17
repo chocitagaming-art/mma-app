@@ -733,6 +733,8 @@ const GUARDIA_1064: DatosGuardia = {
   peleasSinCerrar: 0,
   peleasConPelicula: 0,
   muestrasDelEvento: 0,
+  // El bucle acaba de latir. Los escenarios que prueban el latido lo pisan.
+  minutosDesdeElLatidoDelBucle: 0.5,
 };
 
 const guardia = (cambios: Partial<DatosGuardia> = {}): Comprobacion[] =>
@@ -985,5 +987,76 @@ describe("comprobarGuardia · ¿se está grabando?", () => {
     const c = guardia(ESCENARIOS[15].datos);
     expect(camaraDe(c).nivel).toBe("mal");
     expect(camaraDe(c).valor).toBe("sin hora de ancla");
+  });
+
+  // ------------------------------------------- el latido propio del bucle
+
+  it("22. 🔴 EL QUE DA VALOR AL ARREGLO: bucle muerto DENTRO de la ventana del ritmo", () => {
+    // El agujero que quedaba después del test 12. Ahí el cron ya había hundido
+    // el ritmo, pero el ritmo se mide sobre UNA HORA: en los primeros minutos
+    // tras morir el bucle, la ventana todavía arrastra sus ~50 muestras/h y el
+    // pulso lo mantiene fresco el respaldo. Eso daba VERDE hasta 60 min.
+    //
+    // Escenario: el bucle murió hace 12 min, el cron ha escrito desde entonces
+    // (pulso de 3 min) y la última hora aún tiene 45 muestras, casi todas del
+    // bucle vivo. Sin el latido, esto es verde.
+    const datos = {
+      minutosDesdeElAncla: 90,
+      minutosSinPulso: 3,
+      muestrasUltimaHora: 45,
+      peleasActivas: 12,
+      peleasConFilaViva: 6,
+      peleasSinCerrar: 1,
+      peleasConPelicula: 6,
+      muestrasDelEvento: 300,
+    };
+    // Control: con el latido fresco, ese mismo estado es verde. Si esta línea
+    // se pusiera roja, el test de abajo no probaría nada.
+    expect(camaraDe(guardia({ ...datos, minutosDesdeElLatidoDelBucle: 0.7 })).nivel).toBe("ok");
+
+    const c = guardia({ ...datos, minutosDesdeElLatidoDelBucle: 12 });
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("12 min sin latir");
+    expect(camaraDe(c).detalle).toContain("respaldo");
+  });
+
+  it("23. 🪤 un latido que todavía no existe NUNCA es rojo", () => {
+    // El día del despliegue la fila 'live-loop' aún no está escrita. Si un NULL
+    // fuera rojo, el panel se pondría en rojo con todo funcionando y el orden
+    // de despliegue importaría. Es el mismo criterio que el latido del
+    // microservicio de predicción: sin noticias no es lo mismo que caído.
+    //
+    // Y el caso «nadie ha lanzado el bucle» no se queda sin cubrir: lo caza la
+    // rama del pulso NULL, que sigue dando rojo.
+    const c = guardia({
+      minutosDesdeElAncla: 90,
+      minutosSinPulso: 3,
+      muestrasUltimaHora: 45,
+      peleasActivas: 12,
+      peleasConFilaViva: 6,
+      peleasSinCerrar: 1,
+      peleasConPelicula: 6,
+      muestrasDelEvento: 300,
+      minutosDesdeElLatidoDelBucle: null,
+    });
+    expect(camaraDe(c).nivel).toBe("ok");
+
+    // Sin latido Y sin pulso sigue siendo rojo, por la otra rama.
+    const sinNada = guardia({
+      minutosDesdeElAncla: 90,
+      minutosSinPulso: null,
+      minutosDesdeElLatidoDelBucle: null,
+    });
+    expect(camaraDe(sinNada).nivel).toBe("mal");
+    expect(camaraDe(sinNada).valor).toBe("sin señal");
+  });
+
+  it("24. el latido no se cuela por delante de lo que ya funcionaba", () => {
+    // El latido SUMA rojo, no lo quita. Con el bucle latiendo tan campante pero
+    // el pulso parado 26 min, manda el pulso: el bucle podría estar vivo y sin
+    // conseguir escribir nada, que es otro fallo distinto.
+    const c = guardia({ ...ESCENARIOS[8].datos, minutosDesdeElLatidoDelBucle: 0.4 });
+    expect(camaraDe(c).nivel).toBe("mal");
+    expect(camaraDe(c).valor).toBe("26 min sin escribir");
   });
 });

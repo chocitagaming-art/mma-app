@@ -515,6 +515,13 @@ export type DatosGuardia = {
   peleasConPelicula: number;
   /** Muestras TOTALES del evento en marcha, desde el principio de la velada. */
   muestrasDelEvento: number;
+  /**
+   * Minutos desde el último latido del BUCLE en `service_heartbeats`.
+   * A diferencia del pulso, esto SÍ prueba que el bucle de 20 s está vivo: lo
+   * escribe `run_bounded_loop` y sólo él, nunca el cron de respaldo.
+   * null = todavía no ha latido nunca, y eso NUNCA es rojo (ver la rama 3-bis).
+   */
+  minutosDesdeElLatidoDelBucle: number | null;
 };
 
 // El centinela arranca 15 minutos antes del primer combate (ADELANTO_MINUTOS en
@@ -566,15 +573,19 @@ function horaCorta(iso: string | null): string {
 // pulso NUNCA da el visto bueno él solo: **sólo puede sumar rojo**. Quien de
 // verdad separa al bucle del cron es el RITMO, y por eso se sigue mirando.
 //
-// Y el precio de eso, dicho también: el ritmo se mide sobre una hora, así que
-// un bucle muerto TAPADO por el respaldo puede tardar hasta 60 min en salir en
-// rojo (antes si el cron se retrasa más de los 25 min de silencio). En ese
-// hueco se pierden dos o tres peleas de película. Si algún día eso resulta
-// inaceptable, la solución NO está en este panel: está en que el bucle escriba
-// su propio latido en `service_heartbeats` —como ya hace el microservicio de
-// predicción, migración 026—. Eso sí sería una prueba, y es una línea en el
-// bucle. Con sólo la base delante, «alguien escribe» es demostrable y «el bucle
-// de 20 s está vivo» no lo es.
+// El precio de eso era que el ritmo se mide sobre una hora, así que un bucle
+// muerto TAPADO por el respaldo tardaba hasta 60 min en salir en rojo (antes si
+// el cron se retrasaba más de los 25 min de silencio), y en ese hueco se
+// pierden dos o tres peleas de película.
+//
+// HECHO EL 17-AGO-2026, y por eso este párrafo ya no dice «si algún día».
+// El bucle escribe su PROPIO latido en `service_heartbeats` (migración 026,
+// servicio 'live-loop'), como ya hacía el microservicio de predicción. Lo
+// escribe `run_bounded_loop` y sólo él: el cron de respaldo ejecuta el mismo
+// programa por otra rama y no pasa por ahí, así que el latido sí es una prueba.
+// La rama 3-bis de `juzgarLaCamara` lo mira, y baja el peor caso de 60 min a
+// los 10 del umbral. El ritmo se sigue mirando: cubre el caso de un bucle vivo
+// que escribe poco, que el latido no ve.
 
 // Cuánto puede callar el PULSO con una velada en marcha y el cartel a medias.
 //
@@ -618,6 +629,18 @@ const GRACIA_ARRANQUE_MIN = 25;
 // minuto: una cartelera corta de finalizaciones rápidas puede dar horas más
 // flojas. Revisar tras la velada del 22-ago.
 const MUESTRAS_MIN_POR_HORA = 10;
+
+// Cuánto puede callar el LATIDO del bucle antes de darlo por muerto.
+//
+// El bucle late como mucho una vez por minuto (LATIDO_CADA_SEGUNDOS = 60 en
+// espn_live_results.py), con un acelerador que evita abrir 705 conexiones a
+// Neon por noche. Así que 10 min son DIEZ intentos seguidos sin conseguirlo.
+//
+// Por qué 10 y no menos: el runner tarda ~90 s en arrancar (el número está en
+// live_watchdog.py) y el relevo A→B tiene su propio hueco de arranque. Por qué
+// no más: 10 min es el hueco máximo que se está dispuesto a perder de película,
+// y ya es seis veces mejor que los 60 min del ritmo, que era el único aviso.
+const LATIDO_MAX_MIN = 10;
 
 // 🪤 CUÁNTAS MUESTRAS POR PELEA HACEN FALTA PARA PODER DECIR «PELÍCULA».
 //
@@ -776,9 +799,31 @@ export function juzgarLaCamara(d: DatosGuardia): VeredictoCamara {
     };
   }
 
-  // 4. ESCRIBE ALGUIEN, PERO NO AL RITMO DEL BUCLE. Es la rama que cierra el
-  // agujero de hoy: con la regla vieja bastaba UNA muestra en la última hora
-  // para pintar verde, y el cron de respaldo las pone él solo.
+  // 3-bis. EL BUCLE HA DEJADO DE LATIR. La única prueba directa de que el
+  // bucle de 20 s está vivo: esta fila la escribe `run_bounded_loop` y sólo
+  // él, mientras que el pulso y las muestras los escribe también el respaldo.
+  //
+  // 🪤 NULL NUNCA ES ROJO, y no es pereza: (a) el día que esto se despliega la
+  // fila 'live-loop' todavía no existe y el panel entero se pondría rojo con
+  // todo bien —mismo criterio que `comprobarPrediccion` con su latido—; y (b)
+  // el caso «nadie ha lanzado el bucle» YA lo cubre la rama de arriba,
+  // `minutosSinPulso == null`. Así el orden de despliegue deja de importar.
+  if (
+    d.minutosDesdeElLatidoDelBucle != null &&
+    d.minutosDesdeElLatidoDelBucle > LATIDO_MAX_MIN
+  ) {
+    const min = Math.round(d.minutosDesdeElLatidoDelBucle);
+    return {
+      nivel: "mal",
+      valor: `${min} min sin latir`,
+      detalle: `El bucle del directo («Live event loop») no da señales desde hace ${min} min. Late cada minuto mientras vive, así que esto son ${Math.floor(min / (LATIDO_MAX_MIN / 10))} pasadas seguidas sin conseguirlo. Si aun así entran muestras, las está poniendo el cron de respaldo (*/10), que graba una de cada treinta.`,
+    };
+  }
+
+  // 4. ESCRIBE ALGUIEN, PERO NO AL RITMO DEL BUCLE. Sigue haciendo falta con
+  // el latido puesto: cubre el caso de un bucle VIVO que escribe poco, que el
+  // latido no puede ver. Con la regla vieja bastaba UNA muestra en la última
+  // hora para pintar verde, y el cron de respaldo las pone él solo.
   const exigidas = muestrasExigidas(d.minutosDesdeElAncla);
   if (d.muestrasUltimaHora < exigidas) {
     return {

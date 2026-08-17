@@ -255,6 +255,11 @@ type FilaGuardia = {
   peleas_con_pelicula: string;
   /** Muestras totales del evento en marcha, desde el principio de la velada. */
   muestras_del_evento: string;
+  /**
+   * Minutos desde el último latido del BUCLE del directo (`service_heartbeats`,
+   * servicio 'live-loop'). NULL = todavía no ha latido nunca, que NO es rojo.
+   */
+  minutos_desde_el_latido_del_bucle: string | null;
 };
 
 // El ancla del directo, calculada IGUAL que en scripts/live_sentinel.py:
@@ -368,7 +373,16 @@ const GUARDIA_SQL = `
        from live_fight_stat_samples s
        join fights f on f.id = s.fight_id
        join en_marcha m on m.id = f.event_id
-      where f.status is distinct from 'cancelled') as muestras_del_evento`;
+      where f.status is distinct from 'cancelled') as muestras_del_evento,
+    -- EL LATIDO DEL BUCLE (026). Lo que el pulso NO puede demostrar: quien
+    -- escribe esta fila es SOLO el bucle acotado (run_bounded_loop), nunca el
+    -- cron de respaldo, que ejecuta el mismo programa por otra rama. Ver
+    -- mma-ingesta/src/scrapers/repositories/service_heartbeats.py.
+    -- Sin fila da NULL, y NULL NO es rojo: el dia del despliegue todavia no
+    -- existe, y "nadie lanzo el bucle" ya lo cubre minutos_sin_pulso.
+    (select extract(epoch from (now() - last_ok_at)) / 60
+       from service_heartbeats
+      where service = 'live-loop') as minutos_desde_el_latido_del_bucle`;
 
 export type Apunte = {
   hora: string;
@@ -532,6 +546,11 @@ export async function obtenerEstado(): Promise<Estado> {
         // significa «ni una muestra», que es lo que hay que creerse.
         peleasConPelicula: num(guardia.peleas_con_pelicula),
         muestrasDelEvento: num(guardia.muestras_del_evento),
+        // 🪤 numOrNull otra vez, y por la MISMA trampa que minutosSinPulso:
+        // `num(null)` sería 0, o sea «ha latido hace 0 minutos», o sea verde
+        // con el bucle muerto. Justo lo contrario de lo que este dato existe
+        // para detectar.
+        minutosDesdeElLatidoDelBucle: numOrNull(guardia.minutos_desde_el_latido_del_bucle),
       }),
     });
   }
