@@ -45,6 +45,14 @@ const LOCAL_HEADSHOTS: Record<string, string> = {
   // La BD y Tapology lo llaman Stan; el alias cubre que ufc.com lo publique
   // como Stanley antes del sábado.
   "stanley dorsainvil": "/fighters/stan-dorsainvil.jpg",
+  // 🪤 EL CUARTO, y el que casi se queda fuera. El parte hablaba de "tres
+  // debutantes", pero el 1086 creó CUATRO fichas nuevas y las cuatro tenían
+  // headshot_url a NULL. Wint se salvó de aparecer en la lista porque SÍ tiene
+  // full_body_url, y SIN_FOTO_SQL exige que falten las tres fotos a la vez
+  // (cara, cuerpo y cuerpo de pie) para contar a alguien: era invisible para su
+  // propio chivato. Si algún día se busca "quién sale con la cabeza vacía", la
+  // pregunta es por headshot_url a secas.
+  "anthony wint": "/fighters/anthony-wint.jpg",
 };
 
 // Overrides de headshot con PRIORIDAD sobre la BD (espejo de local-bodies): para

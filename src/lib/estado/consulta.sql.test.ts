@@ -38,6 +38,7 @@ function guardiaEnMarcha(cambios: FilaGuardiaCruda = {}): FilaGuardiaCruda {
     peleas_sin_cerrar: "1",
     peleas_con_pelicula: "0",
     muestras_del_evento: "0",
+    minutos_desde_el_latido_del_bucle: "0.4",
     ...cambios,
   };
 }
@@ -172,6 +173,42 @@ describe("obtenerEstado · qué le pregunta el turno de guardia a la base", () =
       peleas_sin_cerrar: "0",
     });
     expect(await nivelDelTurnoDeGuardia()).toBe("mal");
+  });
+
+  it("🔴 el latido del bucle viaja de verdad desde el SQL hasta el veredicto", async () => {
+    // SIN ESTE TEST, UN TYPO APAGA EL LATIDO PARA SIEMPRE Y EN SILENCIO. La
+    // consulta lo cablea con `numOrNull`, y un alias mal escrito en el SELECT
+    // llegaría como `undefined` → null → y un latido null NUNCA es rojo por
+    // diseño. O sea: la comprobación quedaría muerta y la suite seguiría verde.
+    // Es exactamente el fallo silencioso que este fichero existe para vigilar.
+    filaGuardia = guardiaEnMarcha({
+      minutos_desde_el_latido_del_bucle: "12",
+      minutos_sin_pulso: "3",
+      muestras_ultima_hora: "45",
+      minutos_desde_el_ancla: "90",
+      peleas_con_fila_viva: "6",
+      peleas_con_pelicula: "6",
+    });
+    expect(await nivelDelTurnoDeGuardia()).toBe("mal");
+  });
+
+  it("y la consulta pregunta por el servicio 'live-loop', que es quien late", async () => {
+    // El nombre del servicio es una cadena escrita a mano a los dos lados: aquí
+    // y en mma-ingesta/src/scrapers/repositories/service_heartbeats.py. Si se
+    // renombra en un lado, este SELECT deja de encontrar la fila y el latido se
+    // apaga sin que nada falle.
+    await obtenerEstado();
+    const q = consultaDeGuardia();
+    expect(q).toContain("service_heartbeats");
+    expect(q).toContain("'live-loop'");
+    // 🪤 Y EL ALIAS EXACTO, que es lo que de verdad se rompe. El test de arriba
+    // no puede cazar un typo aquí: el mock devuelve la fila que se le da, mire
+    // el SQL lo que mire. Con el alias mal escrito, `guardia.minutos_..._bucle`
+    // sería `undefined` → `numOrNull` → null → y un latido null NUNCA es rojo.
+    // La comprobación quedaría apagada para siempre sin una línea en rojo.
+    // Con `toContain` no bastaría: un typo que AÑADE letras al final
+    // (`..._buclee`) contiene la cadena buena. Hace falta el límite de palabra.
+    expect(q).toMatch(/as minutos_desde_el_latido_del_bucle\b/);
   });
 
   it("los minutos desde el ancla tampoco se convierten en cero", async () => {
