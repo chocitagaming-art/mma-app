@@ -2,6 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ sql: vi.fn() }));
 
+// unstable_cache necesita el contexto de petición de Next, que aquí no existe
+// (environment: "node", sin servidor). Se sustituye por un paso directo: lo que
+// este fichero prueba es el mapeo de filas, no la caché. Sin este mock,
+// getAllGyms lanzaría, su try/catch lo convertiría en [] y el test fallaría
+// hablando de longitudes en vez de decir la verdad.
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: (...args: never[]) => unknown) => fn,
+}));
+
 import { sql } from "@/lib/db";
 import { getAllGyms, getGymsNearby } from "@/lib/queries/gyms";
 

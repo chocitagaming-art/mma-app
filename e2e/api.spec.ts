@@ -13,12 +13,25 @@ test.beforeEach(({}, testInfo) => {
 // debe reportar la BD arriba. Los POST se prueban a nivel de CONTRATO (petición
 // inválida → 4xx) para NO gastar tokens de Anthropic ni depender del microservicio.
 
-test("GET /api/health → 200 y BD arriba", async ({ request }) => {
-  const res = await request.get("/api/health");
+// /api/health tiene DOS niveles desde el 21-ago-2026: el superficial no toca
+// Neon (para que el monitor pueda sondear cada 15 min sin despertar la base) y
+// ?deep=1 sí. Se comprueban los dos, porque cada uno protege algo distinto.
+test("GET /api/health?deep=1 → 200 y BD arriba", async ({ request }) => {
+  const res = await request.get("/api/health?deep=1");
   expect(res.status()).toBe(200);
   const body = await res.json();
   expect(body.ok).toBe(true);
   expect(body.db).toBe("up");
+});
+
+test("GET /api/health → 200 sin consultar la BD", async ({ request }) => {
+  const res = await request.get("/api/health");
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.ok).toBe(true);
+  // "skipped" y no "up": este 200 no afirma nada sobre Neon. Si alguien vuelve a
+  // meter el `select 1` en el camino superficial, este test lo caza.
+  expect(body.db).toBe("skipped");
 });
 
 // PRESUPUESTO DEL LIMITADOR (fase 13). El freno es 5 peticiones/10 s + 20/60 s

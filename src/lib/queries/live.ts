@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { sql } from "@/lib/db";
 
 import {
@@ -35,7 +37,7 @@ type LiveEventRow = {
 // que getNextEventHero (FE1): el evento no completado cuyo inicio (o su día
 // natural si no hay hora) todavía no queda más de 10 h atrás. La fase concreta
 // (none/pre/live) la decide resolveLivePhase con estos horarios.
-export async function getLiveEventCandidate(): Promise<LiveEventCandidate | null> {
+async function getLiveEventCandidateUncached(): Promise<LiveEventCandidate | null> {
   const rows = await sql<LiveEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date,
             e.start_time::text AS start_time,
@@ -68,6 +70,24 @@ export async function getLiveEventCandidate(): Promise<LiveEventCandidate | null
     broadcast: row.broadcast,
     mainEventFinished: row.main_event_finished,
   };
+}
+
+// 60 s. Esta consulta era la que impedía que Neon se durmiera NUNCA: el chip
+// "EN VIVO" del header vive en TODAS las páginas y sondea /api/live/now cada 5
+// minutos, que es exactamente el autosuspend de Neon. Con una sola pestaña
+// abierta en cualquier parte del sitio, el compute no llegaba a suspenderse.
+//
+// 60 s no cambia nada de lo que se ve: la ventana del criterio es de ±10 h y lo
+// único con resolución fina es mainEventFinished — que el chip se apague un
+// minuto más tarde al acabar la velada es imperceptible.
+const getLiveEventCandidateCached = unstable_cache(
+  getLiveEventCandidateUncached,
+  ["live-event-candidate"],
+  { revalidate: 60, tags: ["events"] },
+);
+
+export function getLiveEventCandidate(): Promise<LiveEventCandidate | null> {
+  return getLiveEventCandidateCached();
 }
 
 type LiveFightStatsRow = {

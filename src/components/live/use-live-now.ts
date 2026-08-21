@@ -31,15 +31,17 @@ export function useLiveNow(pollMs?: number): LiveNowPayload | null {
       // Sin sessionStorage (modo privado estricto): solo fetch.
     }
 
-    const load = async () => {
+    // Devuelve la fase leída, para que el planificador de abajo decida si merece
+    // la pena volver a preguntar.
+    const load = async (): Promise<LiveNowPayload | null> => {
       try {
         const response = await fetch("/api/live/now");
         if (!response.ok) {
-          return;
+          return null;
         }
         const data = (await response.json()) as LiveNowPayload;
         if (cancelled) {
-          return;
+          return null;
         }
         setPayload(data);
         try {
@@ -47,28 +49,75 @@ export function useLiveNow(pollMs?: number): LiveNowPayload | null {
         } catch {
           // Caché opcional: si falla, seguimos con el estado en memoria.
         }
+        return data;
       } catch {
         // Sin red o BD caída: el consumidor simplemente no se pinta.
+        return null;
       }
     };
 
-    void load();
-
     if (!pollMs) {
+      void load();
       return () => {
         cancelled = true;
       };
     }
 
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void load();
+    // SONDEO QUE SE APAGA SOLO, y no un setInterval ciego. Este hook lo monta el
+    // chip del header, o sea que vive en TODAS las páginas: con un intervalo fijo,
+    // una sola pestaña abierta en cualquier rincón del sitio bastaba para que Neon
+    // no se durmiera nunca (el autosuspend es a los 5 min). Eso fue una de las
+    // causas de que la cuota de cómputo se fundiera el 18-ago-2026.
+    //
+    // Ahora la respuesta decide si hay siguiente pregunta: solo se re-programa
+    // mientras la fase sea "pre" o "live", es decir, en día de velada — que es
+    // justo cuando sondear sale gratis, porque el bucle del directo ya está
+    // escribiendo en la base cada 20 s y Neon está despierta igualmente.
+    //
+    // setTimeout encadenado y no setInterval: así la decisión de continuar se
+    // toma DESPUÉS de conocer la respuesta, no antes.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const programarSiguiente = () => {
+      timer = setTimeout(() => {
+        void tick();
+      }, pollMs);
+    };
+
+    const tick = async () => {
+      // Pestaña en segundo plano: no se consulta, pero se sigue vigilando por si
+      // vuelve al frente.
+      if (document.visibilityState !== "visible") {
+        if (!cancelled) programarSiguiente();
+        return;
       }
-    }, pollMs);
+      const data = await load();
+      if (cancelled) {
+        return;
+      }
+      // Sin velada a la vista no hay nada que refrescar: se para. La fase se
+      // recalcula igualmente en la siguiente carga de página.
+      if (data && data.phase !== "none") {
+        programarSiguiente();
+      }
+    };
+
+    // La PRIMERA lectura va siempre, esté la pestaña al frente o no: es la que
+    // pinta el chip al montar. Solo a partir de ahí manda la visibilidad.
+    void load().then((data) => {
+      if (cancelled) {
+        return;
+      }
+      if (data && data.phase !== "none") {
+        programarSiguiente();
+      }
+    });
 
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
     };
   }, [pollMs]);
 

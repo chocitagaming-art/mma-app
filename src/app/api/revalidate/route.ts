@@ -51,12 +51,18 @@ export async function POST(request: Request) {
   // las queries pasaron de ISR a unstable_cache (que el path por sí solo no invalida).
   // { expire: 0 } = expiración inmediata (el caso "webhook" del doc de Next 16: la
   // ingesta llama a este endpoint y la próxima visita debe ver datos frescos ya).
-  revalidateTag("home", { expire: 0 });
-  revalidateTag("news", { expire: 0 });
+  // "events", "fights", "fighters" y "gyms" se añadieron el 21-ago-2026, a la vez
+  // que las cachés de las fichas de detalle. Sin ellos una ingesta podía escribir
+  // en la base y la web seguir enseñando lo anterior hasta que venciera el TTL.
+  //
+  // Ojo al alcance real: hoy el ÚNICO que llama a este endpoint es
+  // refresh-news.yml (3 veces al día). El bucle del directo NO lo llama, y por eso
+  // las fichas de evento y de combate se cachean solo 60 s. Si algún día el bucle
+  // empieza a llamar aquí al sellar un combate, esos dos TTL se pueden subir.
+  const tags = ["home", "news", "events", "fights", "fighters", "gyms"];
+  for (const tag of tags) {
+    revalidateTag(tag, { expire: 0 });
+  }
   revalidatePath("/");
-  return NextResponse.json({
-    revalidated: true,
-    path: "/",
-    tags: ["home", "news"],
-  });
+  return NextResponse.json({ revalidated: true, path: "/", tags });
 }

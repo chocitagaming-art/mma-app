@@ -32,8 +32,14 @@ export async function GET() {
     };
 
     return NextResponse.json(payload, {
-      // El estado cambia con el reloj: ni el CDN ni el navegador deben retenerlo.
-      headers: { "cache-control": "no-store, max-age=0" },
+      // El navegador no lo retiene (max-age=0), pero el CDN sí durante 60 s
+      // (s-maxage). Sin esto, cada pestaña abierta del sitio traía su propia
+      // consulta a Neon y el compute no se suspendía nunca. La consulta de
+      // debajo ya está cacheada 60 s en getLiveEventCandidate; esta cabecera
+      // evita además ejecutar la lambda entera.
+      headers: {
+        "cache-control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+      },
     });
   } catch {
     // Fallo de BD: el chip simplemente no se pinta (los clientes tratan

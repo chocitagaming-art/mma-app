@@ -70,7 +70,7 @@ type EventListRow = {
 // tampoco entraba aquí (su event_date es HOY, no < hoy): no salía en NINGUNA
 // pestaña hasta medianoche. Quien toque una de las dos condiciones tiene que
 // mirar la otra.
-export async function getPastEvents(
+async function getPastEventsUncached(
   page: number,
   year?: number,
 ): Promise<EventListResult> {
@@ -118,6 +118,27 @@ export async function getPastEvents(
   }));
 
   return { events, total, page: currentPage, totalPages };
+}
+
+// 1 h: el historial de eventos pasados es casi inmutable — solo cambia cuando
+// termina una velada, y eso revalida por tag. Cachear por (page, year) es seguro
+// porque unstable_cache mete los argumentos en la clave.
+const getPastEventsCached = unstable_cache(
+  getPastEventsUncached,
+  ["past-events"],
+  { revalidate: 3600, tags: ["events"] },
+);
+
+export async function getPastEvents(
+  page: number,
+  year?: number,
+): Promise<EventListResult> {
+  try {
+    return await getPastEventsCached(page, year);
+  } catch (error) {
+    console.error("getPastEvents: no se pudo leer el historial de eventos:", error);
+    return { events: [], total: 0, page: Math.max(1, page), totalPages: 0 };
+  }
 }
 
 // FE7: años con eventos ya celebrados (DESC) para el <select> de la vista
@@ -191,7 +212,7 @@ type UpcomingEventRow = {
   fight_count: string;
 };
 
-export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
+async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
   const rows = await sql<UpcomingEventRow>(
     `SELECT e.id, e.name, e.headliner, e.event_date::text AS event_date,
             e.start_time::text AS start_time, e.location, e.image_url,
@@ -232,6 +253,26 @@ export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
     tagline: row.tagline,
     fightCount: Number(row.fight_count),
   }));
+}
+
+// 10 min. La cartelera futura la reescribe refresh-upcoming.yml (06:00), pero
+// también cambia SOLA al terminar una velada: el evento deja de ser "próximo" en
+// cuanto cae el estelar. Como nada revalida el tag en ese momento, el TTL es lo
+// único que lo arregla, y 10 min es el retraso máximo tolerable para que un
+// evento ya terminado no siga anunciándose como próximo.
+const getUpcomingEventsCached = unstable_cache(
+  getUpcomingEventsUncached,
+  ["upcoming-events"],
+  { revalidate: 600, tags: ["events"] },
+);
+
+export async function getUpcomingEvents(): Promise<UpcomingEventItem[]> {
+  try {
+    return await getUpcomingEventsCached();
+  } catch (error) {
+    console.error("getUpcomingEvents: no se pudo leer la cartelera:", error);
+    return [];
+  }
 }
 
 type EventRow = {
@@ -465,11 +506,9 @@ async function fetchEventBouts(
   }));
 }
 
-// cache(): la página de detalle ejecuta esta misma query dos veces por request
-// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
-export const getEventDetail = cache(async (
+async function getEventDetailUncached(
   id: number,
-): Promise<EventDetail | null> => {
+): Promise<EventDetail | null> {
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url, faceoff_video_id,
@@ -550,7 +589,33 @@ export const getEventDetail = cache(async (
     bouts,
     cancelledBouts,
   };
-});
+}
+
+// 60 s, Y EL NUMERO IMPORTA. La ficha de evento hace 4 consultas y es de las
+// rutas más pedidas, así que cachearla es obligatorio. Pero durante una velada
+// esta página es donde se ven caer los resultados, y NADA la revalida por tag:
+// el bucle del directo escribe en la base y no avisa a la web (el único que
+// llama a /api/revalidate es refresh-news.yml, 3 veces al día).
+//
+// Con 60 s, un resultado tarda como mucho un minuto en aparecer — y durante la
+// velada eso no cuesta nada, porque el bucle está escribiendo cada 20 s y Neon
+// está despierta de todas formas. Fuera de velada, 60 s siguen absorbiendo el
+// tráfico repetido, que es de donde viene el gasto.
+//
+// ⚠️ NO SUBIR ESTE TTL sin que antes el bucle del directo revalide el tag
+// "events" al sellar cada combate. Si se sube sin eso, la web se queda muda en
+// mitad de una velada, que es el peor momento posible.
+const getEventDetailCached = unstable_cache(
+  getEventDetailUncached,
+  ["event-detail"],
+  { revalidate: 60, tags: ["events"] },
+);
+
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getEventDetail = cache(
+  (id: number): Promise<EventDetail | null> => getEventDetailCached(id),
+);
 
 type NextEventRow = {
   id: number;

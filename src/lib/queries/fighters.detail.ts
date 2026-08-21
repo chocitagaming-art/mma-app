@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
@@ -62,11 +63,9 @@ type UfcRecordRow = {
   draws: string | null;
 };
 
-// cache(): la página de detalle ejecuta esta misma query dos veces por request
-// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
-export const getFighterDetail = cache(async (
+async function getFighterDetailUncached(
   id: number,
-): Promise<FighterDetail | null> => {
+): Promise<FighterDetail | null> {
   const fighterRows = await sql<FighterRow>(
     `select
       f.*,
@@ -477,7 +476,26 @@ export const getFighterDetail = cache(async (
     ufcRecord,
     ranking,
   };
-});
+}
+
+// La ficha de luchador es la ruta más visitada y la más cara: 14 consultas por
+// render. Sin unstable_cache cada visita (y cada bot) las mandaba enteras a Neon,
+// que es lo que mantenía el compute despierto 24/7 hasta fundir la cuota.
+//
+// 30 min: los datos de un luchador solo cambian cuando pelea, y la ingesta llama
+// a /api/revalidate con el tag "fighters" cuando eso pasa, así que el TTL solo
+// cubre el caso de que la revalidación por tag no llegue.
+const getFighterDetailCached = unstable_cache(
+  getFighterDetailUncached,
+  ["fighter-detail"],
+  { revalidate: 1800, tags: ["fighters"] },
+);
+
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getFighterDetail = cache(
+  (id: number): Promise<FighterDetail | null> => getFighterDetailCached(id),
+);
 
 export async function getFighterComparisonDetail(
   fighterAId: number,

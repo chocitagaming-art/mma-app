@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
@@ -200,11 +201,9 @@ function mapLastFightEspn(row?: LastFightEspnRow): FightLastResult | null {
   };
 }
 
-// cache(): la página de detalle ejecuta esta misma query dos veces por request
-// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
-export const getFightDetail = cache(async (
+async function getFightDetailUncached(
   id: number,
-): Promise<FightDetail | null> => {
+): Promise<FightDetail | null> {
   const rows = await sql<FightRow>(
     `select
       fi.id,
@@ -407,7 +406,34 @@ export const getFightDetail = cache(async (
       }),
     ),
   };
-});
+}
+
+// 4 consultas por render y es de las rutas más visitadas: sin caché, cada visita
+// iba entera a Neon.
+//
+// 60 s, Y EL NÚMERO IMPORTA. Durante una velada esta página es donde se ve el
+// resultado de cada combate, y NADA la revalida por tag: el bucle del directo
+// escribe en la base sin avisar a la web (el único que llama a /api/revalidate
+// es refresh-news.yml, tres veces al día). Con 60 s, un resultado tarda como
+// mucho un minuto en aparecer, y durante la velada eso no cuesta nada porque el
+// bucle está escribiendo cada 20 s y Neon está despierta igualmente. Fuera de
+// velada, 60 s siguen absorbiendo el tráfico repetido, que es de donde sale el
+// gasto de verdad.
+//
+// ⚠️ NO SUBIR ESTE TTL mientras el bucle del directo no revalide el tag "fights"
+// al sellar cada combate. Subirlo sin eso deja la web muda en mitad de la velada,
+// que es el peor momento posible.
+const getFightDetailCached = unstable_cache(
+  getFightDetailUncached,
+  ["fight-detail"],
+  { revalidate: 60, tags: ["fights"] },
+);
+
+// cache(): la página de detalle ejecuta esta misma query dos veces por request
+// (generateMetadata + render). Dedupe intra-request sin cambiar firma ni resultado (#7).
+export const getFightDetail = cache(
+  (id: number): Promise<FightDetail | null> => getFightDetailCached(id),
+);
 
 // BE4: stats por asalto de AMBOS luchadores (fight_stats_rounds), ordenadas
 // por asalto. Devuelve [] para peleas sin desglose (antiguas o próximas): el

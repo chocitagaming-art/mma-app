@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { sql } from "@/lib/db";
 import {
   gymDescription,
@@ -68,8 +70,13 @@ type GymDirectoryRow = GymRow & { province: string | null };
 
 // TODOS los gimnasios registrados (directorio bajo el mapa), ordenados por
 // nombre. Sin bounding-box ni distancia: son ≤250 filas en toda España, así que
-// una lectura completa es barata. La página lo sirve con ISR (revalidate diario).
-export async function getAllGyms(): Promise<GymDirectoryItem[]> {
+// una lectura completa es barata.
+//
+// El `export const revalidate = 86400` de la página NO cachea nada (el nonce de
+// la CSP en el layout raíz hace dinámico todo el árbol), así que esta consulta
+// iba a Neon en CADA visita pese a que el directorio cambia una vez por semana.
+// La caché de verdad tiene que estar aquí.
+async function getAllGymsUncached(): Promise<GymDirectoryItem[]> {
   const rows = await sql<GymDirectoryRow>(
     `SELECT osm_id, name, lat, lon, sports, address, city, province, website, phone
        FROM gyms
@@ -92,4 +99,21 @@ export async function getAllGyms(): Promise<GymDirectoryItem[]> {
       phone: row.phone,
     };
   });
+}
+
+// 24 h: refresh-gyms.yml repuebla la tabla una vez por semana (lunes 04:30).
+// El try/catch va FUERA de unstable_cache, como en rankings.ts: un fallo de Neon
+// se degrada a directorio vacío sin dejarlo cacheado un día entero.
+const getAllGymsCached = unstable_cache(getAllGymsUncached, ["all-gyms"], {
+  revalidate: 86400,
+  tags: ["gyms"],
+});
+
+export async function getAllGyms(): Promise<GymDirectoryItem[]> {
+  try {
+    return await getAllGymsCached();
+  } catch (error) {
+    console.error("getAllGyms: no se pudo leer el directorio de gimnasios:", error);
+    return [];
+  }
 }

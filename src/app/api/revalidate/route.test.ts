@@ -77,10 +77,17 @@ describe("POST /api/revalidate", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ revalidated: true, path: "/", tags: ["home", "news"] });
+    // Los cuatro últimos se añadieron el 21-ago-2026 con las cachés de las fichas
+    // de detalle: sin ellos, una ingesta escribía en la base y la web seguía
+    // enseñando lo anterior hasta que venciera el TTL.
+    const TAGS = ["home", "news", "events", "fights", "fighters", "gyms"];
+
+    expect(body).toEqual({ revalidated: true, path: "/", tags: TAGS });
     expect(revalidatePathMock).toHaveBeenCalledTimes(1);
     expect(revalidatePathMock).toHaveBeenCalledWith("/");
-    expect(revalidateTagMock).toHaveBeenCalledWith("home", { expire: 0 });
-    expect(revalidateTagMock).toHaveBeenCalledWith("news", { expire: 0 });
+    for (const tag of TAGS) {
+      expect(revalidateTagMock).toHaveBeenCalledWith(tag, { expire: 0 });
+    }
+    expect(revalidateTagMock).toHaveBeenCalledTimes(TAGS.length);
   });
 });

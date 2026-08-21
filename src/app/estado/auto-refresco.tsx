@@ -10,10 +10,19 @@ import { useRouter } from "next/navigation";
 // `router.refresh()` y no `location.reload()`: Next vuelve a pedir solo el árbol
 // de servidor y reconcilia, así que no parpadea la página ni se pierde el scroll
 // — y sin parpadeo el reloj de al lado se puede leer mientras se actualiza.
-// En reposo, cada minuto sobra. Con una velada en marcha el panel es una
-// retransmisión: el bucle escribe cada 20 s, así que a 15 s el registro se ve
-// moverse de verdad y el watchdog se nota trabajando.
-const EN_REPOSO = 60;
+// Con una velada en marcha el panel es una retransmisión: el bucle escribe cada
+// 20 s, así que a 15 s el registro se ve moverse de verdad y el watchdog se nota
+// trabajando. Eso NO se toca: durante una velada la base está despierta de todas
+// formas porque el bucle está escribiendo, así que el panel no cuesta nada extra.
+//
+// En reposo es otra historia. `obtenerEstado()` lanza NUEVE consultas por
+// refresco, varias de ellas agregaciones sobre el catálogo entero. A 60 s, una
+// pestaña del panel abierta y olvidada eran 540 consultas por hora y, peor aún,
+// impedía que Neon se suspendiera nunca: el autosuspend es a los 5 minutos y el
+// panel llamaba cada uno. 300 s deja el hueco de inactividad por encima del
+// umbral, que es justo lo que hay que conseguir. Para un panel en reposo, cinco
+// minutos de antigüedad no cambian ninguna decisión.
+const EN_REPOSO = 300;
 const EN_VELADA = 15;
 
 export function AutoRefresco({ enVelada = false }: { enVelada?: boolean }) {

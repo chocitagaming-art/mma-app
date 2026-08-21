@@ -35,7 +35,12 @@ function createPool() {
     // ceiling has to stay conservative (see the production followup about the
     // Neon -pooler / PgBouncer endpoint, which would let us raise it further).
     max: 3,
-    idleTimeoutMillis: 10_000,
+    // 60 s y no 10. Con 10 s, en tráfico intermitente cada petición pagaba un
+    // handshake TLS + autenticación + el `SET statement_timeout` del evento
+    // `connect` — trabajo real de Postgres, no gratis. 60 s deja la conexión
+    // caliente entre visitas seguidas sin acercarse al autosuspend de Neon (5
+    // min), que es el umbral que de verdad importa no cruzar.
+    idleTimeoutMillis: 60_000,
     connectionTimeoutMillis: 10_000,
     // Corta en Postgres cualquier consulta que pase de 8 s. Sin esto no había
     // tope en NINGUNA capa: una consulta lenta retiene 1 de las 3 conexiones de
