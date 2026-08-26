@@ -16,6 +16,7 @@ vi.mock("@/lib/db", () => ({ sql: vi.fn() }));
 
 import { sql } from "@/lib/db";
 import { obtenerEstado } from "@/lib/estado/consulta";
+import { eventoPrincipalSql } from "@/lib/event-tier";
 
 const sqlMock = vi.mocked(sql);
 
@@ -114,6 +115,41 @@ async function nivelDelTurnoDeGuardia(): Promise<string> {
 
 const consultaDeGuardia = () =>
   sqlMock.mock.calls.map(([query]) => query).find((q) => q.includes("velada_en_marcha"));
+
+// EL FILTRO DEL EVENTO DESTACADO, y por qué se cuenta en vez de mirarlo.
+//
+// El 26-ago-2026 un "Road To UFC" del viernes —id 1094, 2 combates, sin sede y
+// sin póster— se coló como «la próxima velada» y desplazó al UFC Fight Night
+// del sábado (id 1065, 13 combates) en la portada, en /eventos, en /en-vivo, en
+// /ufc-hoy y también en ESTE panel. Los dos son `promotion_id = 1`, así que la
+// promotora NO los distingue: las consultas ordenaban por fecha y nada más, y
+// el viernes va antes que el sábado. El arreglo vive en `events.tier`
+// (migración 028) y lo lee `eventoPrincipalSql`.
+//
+// ⚠️ POR QUÉ UN RECUENTO Y NO UN `toContain` SUELTO. La pregunta «¿cuál es EL
+// evento?» está copiada CINCO veces en este fichero y las cinco tienen que
+// contestar lo mismo. Con un `toContain` bastaría con que UNA lo llevara para
+// dejar el test verde, y el panel se contradiría consigo mismo en la MISMA
+// pantalla: la cabecera hablando del Fight Night del sábado mientras el bloque
+// de fotos cuenta las cuatro esquinas del Road To UFC. Es la misma técnica que
+// el `toHaveLength(7)` de los `join` de aquí arriba, y por el mismo motivo:
+// subconsulta copiada = recuento, nunca presencia.
+
+/**
+ * El predicado tal y como lo escribe `eventoPrincipalSql`, pero SIN el alias:
+ * cada consulta lo pide con el suyo, y lo que hay que contar es la CONDICIÓN,
+ * no el prefijo. Se deriva del módulo a propósito — si mañana se añade un tipo
+ * secundario a la lista, este fichero sigue contando lo que hay, no lo que
+ * había el día que se escribió.
+ */
+const NUCLEO_TIER = eventoPrincipalSql("e").replace(/^e\./, "");
+
+/** Cuántas veces aparece el predicado en un SQL. La regex se construye aquí
+ *  dentro para que cada llamada empiece limpia y no comparta estado con otra. */
+function vecesElPredicado(query: string): number {
+  const escapado = NUCLEO_TIER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return (query.match(new RegExp(escapado, "gi")) ?? []).length;
+}
 
 describe("obtenerEstado · qué le pregunta el turno de guardia a la base", () => {
   beforeEach(() => {
@@ -249,5 +285,85 @@ describe("obtenerEstado · qué le pregunta el turno de guardia a la base", () =
     // Sale de la MISMA columna que el veredicto de la cámara: si divergieran,
     // el panel podría refrescarse cada minuto diciendo que no hay velada.
     expect((await obtenerEstado()).veladaEnMarcha).toBe(true);
+  });
+});
+
+describe("obtenerEstado · qué evento mira el panel", () => {
+  beforeEach(() => {
+    filaGuardia = guardiaEnMarcha();
+    sqlMock.mockReset();
+    sqlMock.mockImplementation((query: string) =>
+      Promise.resolve(responder(query) as never),
+    );
+  });
+
+  it("🔴 el filtro del evento destacado va en las CINCO consultas que eligen «el evento»", async () => {
+    await obtenerEstado();
+    const consultas = sqlMock.mock.calls.map(([query]) => query);
+
+    // Las nueve del `Promise.all`. Si un día son diez, el recuento de la línea
+    // siguiente deja de significar lo que dice y hay que mirar la nueva.
+    expect(consultas).toHaveLength(9);
+
+    // CINCO. Ni cuatro (una consulta se quedó sin filtro y el panel se
+    // contradice) ni seis (se le puso a una que pregunta «qué eventos existen»,
+    // y entonces hay datos de la UFC que dejan de verse).
+    const total = consultas.reduce((n, q) => n + vecesElPredicado(q), 0);
+    expect(total).toBe(5);
+  });
+
+  it("y cae exactamente donde toca: dos veces en la guardia y una en las otras tres", async () => {
+    // El 5 de arriba se puede cumplir con el reparto mal: sobra uno en la
+    // última velada, falta el de la cartelera, y sigue sumando 5. Cada consulta
+    // se localiza por un trozo suyo que no aparece en ninguna otra.
+    const reparto: [string, string, number][] = [
+      ["la última velada", "horas_desde_el_final", 1],
+      ["la próxima velada", "sin_foto_cuerpo_en_la_base", 1],
+      ["las fotos de la cartelera", "tiene_cuerpo", 1],
+      // DOS, y no es un descuido: el CTE `proxima` (de dónde sale la hora del
+      // arranque que enseña el panel) y el CTE `en_marcha` (qué velada se está
+      // grabando AHORA) son dos preguntas distintas sobre la misma tabla. Con
+      // el filtro en una sola, el panel contaría las horas que faltan para el
+      // evento bueno mientras vigila el malo — o al revés, que es peor: la
+      // cámara en verde grabando dos combates que no mira nadie.
+      ["el turno de guardia", "velada_en_marcha", 2],
+    ];
+
+    await obtenerEstado();
+    const consultas = sqlMock.mock.calls.map(([query]) => query);
+
+    for (const [nombre, marca, esperadas] of reparto) {
+      const consulta = consultas.find((q) => q.includes(marca));
+      expect(consulta, `no se encontró la consulta de ${nombre}`).toBeDefined();
+      expect(vecesElPredicado(consulta as string), nombre).toBe(esperadas);
+    }
+  });
+
+  it("🪤 pero NO en el catálogo, y ahí ponerlo sería el fallo", async () => {
+    // CATALOGO_SQL es un `count(*)` de COBERTURA HISTÓRICA: cuántos eventos ya
+    // pasados siguen con combates sin resultado. Su pregunta no es «cuál es EL
+    // evento» sino «qué nos falta por rellenar», y un Road To UFC a medias es
+    // justo lo que esa alarma existe para gritar. Con el predicado puesto esos
+    // eventos dejarían de contarse y el panel diría "0 pendientes" con la base
+    // incompleta: una alarma apagada, que es peor que no tenerla.
+    await obtenerEstado();
+    const catalogo = sqlMock.mock.calls
+      .map(([query]) => query)
+      .find((q) => q.includes("eventos_pasados_incompletos"));
+
+    expect(catalogo).toBeDefined();
+    expect(vecesElPredicado(catalogo as string)).toBe(0);
+  });
+
+  it("y lo que el predicado tapa es el Road To UFC, nunca el Fight Night", () => {
+    // El recuento solo vale si la lista de tapados es la que creemos. Los dos
+    // nombres son los dos eventos del incidente: el 1094 del viernes, que se
+    // coló, y el 1065 del sábado, al que empujó.
+    expect(NUCLEO_TIER).toContain("'road_to_ufc'");
+    expect(NUCLEO_TIER).not.toContain("'fight_night'");
+    expect(NUCLEO_TIER).not.toContain("'numbered'");
+    // 🪤 Y `not in`, jamás `in`. Invertido, el panel enseñaría SOLO los eventos
+    // que hay que esconder y los cinco recuentos de arriba seguirían dando 5.
+    expect(NUCLEO_TIER).toMatch(/^tier not in \(/i);
   });
 });

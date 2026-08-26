@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { eventoPrincipalSql } from "@/lib/event-tier";
 
 // EL CONTROL ROOM DEL DIRECTO. Todo SELECT.
 //
@@ -177,6 +178,7 @@ const EVENTO_SQL = `
   FROM events
   WHERE event_date BETWEEN (NOW() - INTERVAL '1 day')::date
                        AND (NOW() + INTERVAL '2 day')::date
+    AND ${eventoPrincipalSql("")}
   ORDER BY ABS(EXTRACT(EPOCH FROM (COALESCE(start_time, event_date::timestamptz) - NOW())))
   LIMIT 1`;
 

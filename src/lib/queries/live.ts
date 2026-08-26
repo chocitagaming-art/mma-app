@@ -8,6 +8,7 @@ import {
 } from "@/lib/fight-timeline";
 import type { LiveEventTimes } from "@/lib/live-event";
 import { mapLiveFightStatsRow, type LiveFightStats } from "@/lib/live-stats";
+import { eventoPrincipalSql } from "@/lib/event-tier";
 import { MAIN_EVENT_FINISHED_SQL } from "@/lib/queries/events";
 
 export type LiveEventCandidate = LiveEventTimes & {
@@ -51,6 +52,11 @@ async function getLiveEventCandidateUncached(): Promise<LiveEventCandidate | nul
              (e.event_date + interval '1 day')::timestamptz
            ) > now() - interval '10 hours'
        AND e.status IS DISTINCT FROM 'completed'
+       -- Alimenta /api/live/now, /en-vivo, /ufc-hoy y el chip EN VIVO del
+       -- header. Sin este filtro, el viernes 28-ago-2026 la web se habría
+       -- declarado EN DIRECTO de 10:30 a 19:00 para una cartelera de dos
+       -- combates sin cuotas. Ver src/lib/event-tier.ts y la migración 028.
+       AND ${eventoPrincipalSql("e")}
      ORDER BY e.event_date ASC, e.id ASC
      LIMIT 1`,
   );

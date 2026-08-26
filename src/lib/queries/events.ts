@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
+import { eventoPrincipalSql, type EventTier } from "@/lib/event-tier";
 import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   EventBout,
@@ -210,13 +211,19 @@ type UpcomingEventRow = {
   ticket_url: string | null;
   tagline: string | null;
   fight_count: string;
+  tier: EventTier;
 };
 
+// ⚠️ AQUÍ NO SE FILTRA POR TIER, Y ES A PROPÓSITO. Esto es una LISTA ("¿qué
+// eventos hay?"), no una elección ("¿cuál destaco?"): no tiene LIMIT. El Road To
+// UFC sale el primero porque ES el primero por fecha, y eso es cierto. Sacarlo
+// de aquí dejaría un evento de la UFC inaccesible desde la navegación, que es
+// peor que el problema que arreglamos. Solo se trae `tier` para poder rotularlo.
 async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
   const rows = await sql<UpcomingEventRow>(
     `SELECT e.id, e.name, e.headliner, e.event_date::text AS event_date,
             e.start_time::text AS start_time, e.location, e.image_url,
-            e.broadcast, e.ticket_url, e.tagline,
+            e.broadcast, e.ticket_url, e.tagline, e.tier,
             count(f.id)::text AS fight_count
      FROM events e
      -- BE7: las canceladas fuera del conteo, igual que en getPastEvents.
@@ -236,7 +243,8 @@ async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
        AND (e.event_date >= CURRENT_DATE OR e.event_date IS NULL)
        AND NOT ${MAIN_EVENT_FINISHED_SQL}
      GROUP BY e.id, e.name, e.headliner, e.event_date, e.start_time,
-              e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline
+              e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline,
+              e.tier
      ORDER BY e.event_date ASC, e.id ASC`,
   );
 
@@ -252,6 +260,7 @@ async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
     ticketUrl: row.ticket_url,
     tagline: row.tagline,
     fightCount: Number(row.fight_count),
+    tier: row.tier,
   }));
 }
 
@@ -758,6 +767,11 @@ async function getNextEventHeroUncached(): Promise<NextEventHero | null> {
        -- "Último evento" (getLastEventResults) aunque el cron aún no lo haya
        -- marcado completed. Sin esto la home seguía con "¡ES HOY!/Ver en directo".
        AND NOT ${MAIN_EVENT_FINISHED_SQL}
+       -- Un Road To UFC / Contender Series / TUF NO puede ser el hero, aunque
+       -- caiga antes por fecha. El 26-ago-2026 el "Road To UFC" del viernes
+       -- (2 combates, sin sede ni póster) desplazó de la portada al UFC Fight
+       -- Night del sábado. Ver src/lib/event-tier.ts y la migración 028.
+       AND ${eventoPrincipalSql("e")}
      ORDER BY e.event_date ASC, e.id ASC
      LIMIT 1`,
   );
@@ -888,8 +902,12 @@ async function getLastEventResultsUncached(): Promise<LastEventResults | null> {
   const rows = await sql<LastEventRow>(
     `SELECT e.id, e.name, e.event_date::text AS event_date, e.location
      FROM events e
-     WHERE (e.event_date < CURRENT_DATE AND e.status = 'completed')
-        OR ${MAIN_EVENT_FINISHED_SQL}
+     -- Los paréntesis del OR son obligatorios: sin ellos el AND del tier se
+     -- ataría solo a la segunda rama y un Road To UFC recién terminado podría
+     -- ocupar el bloque "Último evento" de la portada.
+     WHERE ((e.event_date < CURRENT_DATE AND e.status = 'completed')
+        OR ${MAIN_EVENT_FINISHED_SQL})
+       AND ${eventoPrincipalSql("e")}
      -- NULLS LAST: la rama OR readmite eventos sin fecha (event_date NULL); sin
      -- esto, el DESC los pondría los PRIMEROS (NULLS FIRST por defecto en PG) y
      -- un evento histórico sin fecha se colaría como "Último evento".

@@ -1,3 +1,5 @@
+import type { EventTier } from "@/lib/event-tier";
+
 export type Fighter = {
   id: number;
   name: string;
@@ -488,6 +490,10 @@ export type UpcomingEventItem = {
   ticketUrl: string | null;
   tagline: string | null;
   fightCount: number;
+  // El tipo de velada (migración 028). Aquí NO se usa para filtrar —la lista de
+  // "Próximos" los enseña TODOS— sino para poder rotular "Road To UFC" en la
+  // tarjeta y que un torneo de cantera no parezca la velada de la semana.
+  tier: EventTier;
 };
 
 // --- Módulo "Up Next" de la home (FE1) ---

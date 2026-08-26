@@ -7,6 +7,7 @@ import { EventosYearFilter } from "@/components/eventos-year-filter";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
 import { Card, CardContent } from "@/components/ui/card";
+import { ETIQUETA_TIER } from "@/lib/event-tier";
 import { formatDate } from "@/lib/format";
 import {
   getEventYears,
@@ -121,6 +122,15 @@ export default async function EventosPage({ searchParams }: EventosPageProps) {
 
                 <div className="flex flex-1 flex-col gap-3 p-5">
                   <div className="space-y-1">
+                    {/* El rótulo del formato secundario. Estos eventos SIGUEN
+                        saliendo en la lista —sacarlos sería dejarlos
+                        inaccesibles—, pero rotulados: un torneo de cantera de
+                        dos combates no debe parecer la velada de la semana. */}
+                    {ETIQUETA_TIER[event.tier] ? (
+                      <p className="font-mono text-[0.65rem] uppercase tracking-widest text-muted-foreground">
+                        {ETIQUETA_TIER[event.tier]}
+                      </p>
+                    ) : null}
                     <Link
                       href={`/eventos/${event.id}`}
                       className="font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground transition-colors after:absolute after:inset-0 group-hover:text-primary"

@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { eventoPrincipalSql } from "@/lib/event-tier";
 import { resueltoSqlPredicate } from "@/lib/fight-result";
 import {
   comprobarCatalogo,
@@ -69,6 +70,7 @@ const ULTIMA_VELADA_SQL = `
     extract(epoch from (now() - e.start_time)) / 3600 as horas_desde_el_final
   from events e
   where e.start_time is not null and e.start_time < now()
+    and ${eventoPrincipalSql("e")}
   order by e.start_time desc
   limit 1`;
 
@@ -99,6 +101,7 @@ const PROXIMA_VELADA_SQL = `
       extract(epoch from (e.start_time - now())) / 86400 as dias_que_faltan
     from events e
     where e.start_time is not null and e.start_time >= now()
+      and ${eventoPrincipalSql("e")}
     order by e.start_time asc
     limit 1
   ), esquinas as (
@@ -148,6 +151,7 @@ const CARTELERA_SQL = `
   with proxima as (
     select id from events
      where start_time is not null and start_time >= now()
+       and ${eventoPrincipalSql("")}
      order by start_time asc limit 1
   ), esquinas as (
     select unnest(array[f.fighter_red_id, f.fighter_blue_id]) as fighter_id
@@ -296,6 +300,7 @@ const GUARDIA_SQL = `
                     e.start_time - interval '4 hours') as ancla
     from events e
     where e.start_time is not null and e.start_time >= now()
+      and ${eventoPrincipalSql("e")}
     order by e.start_time asc limit 1
   ), en_marcha as (
     -- MISMO criterio que scripts/live_watchdog.py: se entra por la HORA y se
@@ -312,6 +317,7 @@ const GUARDIA_SQL = `
     where coalesce(e.early_prelims_time, e.prelims_time,
                    e.start_time - interval '4 hours') <= now()
       and coalesce(e.start_time, e.prelims_time) + interval '5 hours' >= now()
+      and ${eventoPrincipalSql("e")}
       and exists (
         select 1 from fights f
         where f.event_id = e.id and f.status is distinct from 'cancelled'
