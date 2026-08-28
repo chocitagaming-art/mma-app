@@ -319,7 +319,11 @@ describe("obtenerEstado · qué evento mira el panel", () => {
     const reparto: [string, string, number][] = [
       ["la última velada", "horas_desde_el_final", 1],
       ["la próxima velada", "sin_foto_cuerpo_en_la_base", 1],
-      ["las fotos de la cartelera", "tiene_cuerpo", 1],
+      // Se localiza por su CTE `esquinas`, no por el alias `tiene_cuerpo`: desde
+      // que la consulta de fotos del catálogo también devuelve `tiene_cuerpo`
+      // (28-ago-2026), ese trozo ya no es único y localizaba la consulta
+      // equivocada. El CTE sí lo es.
+      ["las fotos de la cartelera", "esquinas as (", 1],
       // DOS, y no es un descuido: el CTE `proxima` (de dónde sale la hora del
       // arranque que enseña el panel) y el CTE `en_marcha` (qué velada se está
       // grabando AHORA) son dos preguntas distintas sobre la misma tabla. Con

@@ -218,6 +218,8 @@ const CATALOGO_SQL = `
 type FilaSinFoto = {
   name: string | null;
   start_time: string | Date | null;
+  tiene_cara: boolean | null;
+  tiene_cuerpo: boolean | null;
 };
 
 // Los que la BASE ve sin ninguna foto y tienen combate anunciado, POR NOMBRE.
@@ -228,14 +230,51 @@ type FilaSinFoto = {
 // no se puede saber cuáles ya están resueltos, y la alarma se quedaba encendida
 // para siempre. Se piden las filas y se descuenta en TypeScript, que es donde
 // vive el mapa de fotos locales.
+// 🪤 ANTES ESTO EXIGÍA QUE FALTARAN LAS TRES FOTOS A LA VEZ, Y ASÍ NO VE LA MITAD
+// DE LO QUE SE ROMPE. La web pinta DOS cosas distintas y cada hueco da un
+// defecto propio:
+//   · sin `headshot_url`         -> la fila de cartelera pinta una SILUETA negra
+//                                   (event-bout-row.tsx solo usa ese campo)
+//   · sin ninguna foto de cuerpo -> la ficha de enfrentamiento degrada al retrato
+//                                   y sale un BUSTO junto a un cuerpo entero
+// Con el "and" de antes, para contar hacía falta que faltasen las dos Y ADEMÁS
+// la tercera columna. O sea: quien tuviera una sola de las tres era invisible.
+//
+// Lo pagamos dos veces, en los dos sentidos:
+//   · Anthony Wint (9116, velada del 22-ago): tenía cuerpo y no cara -> salía con
+//     silueta, y el commit 8f7a20a dejó escrito el agujero... sin cerrarlo.
+//   · Francesco Nuzzi (9122) y Héctor Santiago (9123), velada del 29-ago: tenían
+//     cara de ESPN y ninguna foto de cuerpo -> iban a salir con un busto al lado
+//     de un rival de cuerpo entero, y esta alarma no dijo NADA. Los vio el dueño
+//     mirando la web, que es exactamente lo que el guardián existe para evitar.
+//
+// Ahora se pregunta por cada mitad y basta con que falte UNA. Medido contra Neon
+// el 28-ago-2026, el criterio nuevo NO añade ruido: los mismos 6 luchadores que
+// el viejo (los 6 no tienen ninguna de las dos), y 0 de ellos pelean en 3 días.
+// Las direccionales `_l`/`_r` entran porque son las que lee `pickCornerBodyPhoto`:
+// Nuzzi acabó con `standing_body_url_r` y nada más, y eso YA es un cuerpo válido.
 const SIN_FOTO_SQL = `
-  select fi.name, e.start_time
+  select fi.name,
+         e.start_time,
+         (fi.headshot_url is not null) as tiene_cara,
+         (coalesce(
+            fi.standing_body_url_l,
+            fi.standing_body_url_r,
+            fi.standing_body_url,
+            fi.full_body_url
+          ) is not null) as tiene_cuerpo
     from fighters fi
     join fights f on (f.fighter_red_id = fi.id or f.fighter_blue_id = fi.id)
     join events e on e.id = f.event_id
-   where fi.headshot_url is null
-     and fi.full_body_url is null
-     and fi.standing_body_url is null
+   where (
+           fi.headshot_url is null
+           or coalesce(
+                fi.standing_body_url_l,
+                fi.standing_body_url_r,
+                fi.standing_body_url,
+                fi.full_body_url
+              ) is null
+         )
      and f.status is distinct from 'cancelled'
      and e.start_time >= now()`;
 
@@ -592,15 +631,21 @@ export async function obtenerEstado(): Promise<Estado> {
         luchadores: num(catalogo.luchadores),
         sinFotoCuerpo: num(catalogo.sin_foto_cuerpo),
         sinFotoCabeza: num(catalogo.sin_foto_cabeza),
-        // Los que ya tienen su foto puesta a mano en `local-headshots.ts` NO
-        // cuentan: la web les pinta la cara aunque la BD siga a NULL, y el
-        // flujo oficial (`add_manual_fighter --photo-only`) nunca escribe ahí.
+        // Los que ya tienen su foto puesta a mano NO cuentan: la web se la pinta
+        // aunque la BD siga a NULL, y el flujo oficial
+        // (`add_manual_fighter --photo-only`) nunca escribe ahí. Se pasan los DOS
+        // mapas porque tapan huecos distintos —`local-headshots` la cara,
+        // `local-bodies` el cuerpo— y descontar una mitad con el mapa de la otra
+        // es como volver a no mirar.
         ...descontarFotosLocales(
           (sinFoto ?? []).map((f) => ({
             nombre: f.name ?? "",
             arranqueUtc: aIso(f.start_time) ?? "",
+            tieneCara: f.tiene_cara === true,
+            tieneCuerpo: f.tiene_cuerpo === true,
           })),
           (nombre) => localHeadshot(nombre) !== null,
+          (nombre) => localBody(nombre) !== null,
           new Date(),
         ),
         eventosPasadosIncompletos: num(catalogo.eventos_pasados_incompletos),

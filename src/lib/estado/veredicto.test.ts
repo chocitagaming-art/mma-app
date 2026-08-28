@@ -338,6 +338,7 @@ describe("comprobarCatalogo", () => {
     sinFotoCabeza: 576,
     sinNingunaFotoYCompiten: 0,
     diasHastaElPrimeroSinFoto: null,
+    aMediaFotoYCompiten: 0,
     eventosPasadosIncompletos: 0,
   };
 
@@ -433,16 +434,30 @@ describe("descontar las fotos que ya están puestas a mano", () => {
   const ahora = new Date("2026-08-06T17:00:00Z");
   const conFotoLocal = new Set(["gigi canuto", "jessie rosas"]);
   const tieneFotoLocal = (n: string) => conFotoLocal.has(n.trim().toLowerCase());
+  // `local-bodies.ts` tapa el hueco del CUERPO y hoy solo tiene una entrada
+  // (Forrest Griffin). Se simula igual que el de caras, por la misma razón: la
+  // prueba fija la regla, no el contenido del mapa de hoy.
+  const conCuerpoLocal = new Set(["forrest griffin"]);
+  const tieneCuerpoLocal = (n: string) => conCuerpoLocal.has(n.trim().toLowerCase());
 
-  const fila = (nombre: string, arranqueUtc: string): FilaSinFotoEnLaBase => ({
+  // Por defecto, sin cara y sin cuerpo: es el caso que estos tests venían
+  // probando cuando la consulta solo sabía mirar "no tiene NINGUNA foto".
+  const fila = (
+    nombre: string,
+    arranqueUtc: string,
+    fotos: { tieneCara?: boolean; tieneCuerpo?: boolean } = {},
+  ): FilaSinFotoEnLaBase => ({
     nombre,
     arranqueUtc,
+    tieneCara: fotos.tieneCara ?? false,
+    tieneCuerpo: fotos.tieneCuerpo ?? false,
   });
 
   it("sin filas, no hay nada que contar", () => {
-    expect(descontarFotosLocales([], tieneFotoLocal, ahora)).toEqual({
+    expect(descontarFotosLocales([], tieneFotoLocal, tieneCuerpoLocal, ahora)).toEqual({
       sinNingunaFotoYCompiten: 0,
       diasHastaElPrimeroSinFoto: null,
+      aMediaFotoYCompiten: 0,
     });
   });
 
@@ -453,6 +468,7 @@ describe("descontar las fotos que ya están puestas a mano", () => {
         fila("Jessie Rosas", "2026-08-09T00:00:00Z"),
       ],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(0);
@@ -463,6 +479,7 @@ describe("descontar las fotos que ya están puestas a mano", () => {
     const r = descontarFotosLocales(
       [fila("Alguien Sin Foto", "2026-08-09T00:00:00Z")],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(1);
@@ -479,6 +496,7 @@ describe("descontar las fotos que ya están puestas a mano", () => {
         fila("Alguien Sin Foto", "2026-09-05T19:00:00Z"), // en 30, este es el real
       ],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(1);
@@ -492,6 +510,7 @@ describe("descontar las fotos que ya están puestas a mano", () => {
     const r = descontarFotosLocales(
       [fila("  GIGI CANUTO  ", "2026-08-09T00:00:00Z")],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(0);
@@ -506,6 +525,7 @@ describe("descontar las fotos que ya están puestas a mano", () => {
         fila("Alguien Sin Foto", "2026-08-09T00:00:00Z"),
       ],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(1);
@@ -516,10 +536,100 @@ describe("descontar las fotos que ya están puestas a mano", () => {
     const r = descontarFotosLocales(
       [fila("Alguien Sin Foto", "no-es-una-fecha")],
       tieneFotoLocal,
+      tieneCuerpoLocal,
       ahora,
     );
     expect(r.sinNingunaFotoYCompiten).toBe(1);
     expect(r.diasHastaElPrimeroSinFoto).toBeNull();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Los dos huecos que esta alarma NO veía, uno en cada sentido. Los dos llegaron
+  // a producción y los dos los cazó una persona mirando la web, que es justo lo
+  // que el guardián existe para ahorrar.
+
+  it("🔴 EL CASO NUZZI/SANTIAGO (29-ago): con cara pero SIN CUERPO, sale un busto", () => {
+    // Tenían retrato de ESPN y ninguna foto de cuerpo. La ficha de enfrentamiento
+    // degrada al retrato, así que salían como un busto pequeño al lado de un
+    // rival de cuerpo entero. Con el criterio viejo —faltar las TRES fotos— eran
+    // invisibles EN TODO EL PANEL: tenían una, luego no contaban en ningún sitio.
+    const r = descontarFotosLocales(
+      [fila("Francesco Nuzzi", "2026-08-29T10:00:00Z", { tieneCara: true, tieneCuerpo: false })],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.aMediaFotoYCompiten).toBe(1);
+    // Y NO en la de "ninguna foto": tiene cara, así que no sale con silueta. Son
+    // dos defectos distintos y contarlo en el rojo lo volvería inapagable.
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+  });
+
+  it("🔴 EL CASO WINT (22-ago), el mismo agujero al revés: con cuerpo pero SIN CARA", () => {
+    // Anthony Wint (9116) tenía `full_body_url` y no tenía `headshot_url`, así
+    // que la fila de cartelera le pintaba una silueta negra. El commit 8f7a20a
+    // dejó el agujero descrito por escrito y siguió abierto seis días más.
+    const r = descontarFotosLocales(
+      [fila("Anthony Wint", "2026-08-22T22:00:00Z", { tieneCara: false, tieneCuerpo: true })],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.aMediaFotoYCompiten).toBe(1);
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+  });
+
+  it("quien tiene las dos cosas no cuenta en ninguna de las dos", () => {
+    const r = descontarFotosLocales(
+      [fila("Umar Nurmagomedov", "2026-08-29T10:00:00Z", { tieneCara: true, tieneCuerpo: true })],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+    expect(r.aMediaFotoYCompiten).toBe(0);
+    expect(r.diasHastaElPrimeroSinFoto).toBeNull();
+  });
+
+  it("🪤 quien no tiene NADA cuenta una vez, en el rojo, y no también en el ámbar", () => {
+    // Dos avisos por el mismo luchador serían ruido, y el ámbar diría "se le ve a
+    // medias" de alguien al que no se le ve nada.
+    const r = descontarFotosLocales(
+      [fila("Alguien Sin Foto", "2026-08-09T00:00:00Z")],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(1);
+    expect(r.aMediaFotoYCompiten).toBe(0);
+  });
+
+  it("🪤 cada mitad se descuenta con SU mapa: el de caras no tapa un cuerpo que falta", () => {
+    // El error fácil al arreglar esto: descontar por `tieneFotoLocal` a secas.
+    // Gigi Canuto tiene retrato local, así que YA no sale con silueta —por eso no
+    // está en el rojo—, pero le sigue faltando el cuerpo y se ve descuadrada.
+    // `add_manual_fighter --photo-only` solo sabe poner cara: esto es lo que hay.
+    const r = descontarFotosLocales(
+      [fila("Gigi Canuto", "2026-08-09T00:00:00Z", { tieneCara: false, tieneCuerpo: false })],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+    expect(r.aMediaFotoYCompiten).toBe(1);
+  });
+
+  it("y al revés: con cuerpo local puesto a mano, ese hueco sí queda tapado", () => {
+    // Forrest Griffin es hoy la única entrada de `local-bodies.ts`: la BD no
+    // tiene su cuerpo, pero la web se lo pinta igual, así que no está roto.
+    const r = descontarFotosLocales(
+      [fila("Forrest Griffin", "2026-09-05T19:00:00Z", { tieneCara: true, tieneCuerpo: false })],
+      tieneFotoLocal,
+      tieneCuerpoLocal,
+      ahora,
+    );
+    expect(r.sinNingunaFotoYCompiten).toBe(0);
+    expect(r.aMediaFotoYCompiten).toBe(0);
   });
 });
 

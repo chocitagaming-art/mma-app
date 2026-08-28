@@ -925,6 +925,18 @@ export type DatosCatalogo = {
   sinNingunaFotoYCompiten: number;
   /** Días hasta el combate del más inminente de esos. Decide si urge. */
   diasHastaElPrimeroSinFoto: number | null;
+  /**
+   * Con combate futuro y SOLO LA MITAD: tienen una de las dos fotos y les falta
+   * la otra, así que se ven mal, pero no se ven vacíos.
+   *
+   * Es una métrica APARTE de `sinNingunaFotoYCompiten`, y no un ensanche de
+   * aquélla, porque son dos defectos con dos gravedades: una silueta negra es un
+   * hueco y un busto es un encuadre feo. Mezclarlos deja la alarma inapagable —
+   * `add_manual_fighter --photo-only` SOLO sabe poner cara, nunca cuerpo, así que
+   * cada foto puesta a mano crea para siempre un "le falta el cuerpo" que nadie
+   * puede cerrar. Ese es el fallo que ya costó el Issue #24.
+   */
+  aMediaFotoYCompiten: number;
   /** Eventos ya celebrados a los que les falta algún resultado. */
   eventosPasadosIncompletos: number;
 };
@@ -953,11 +965,15 @@ export type DatosCatalogo = {
 // es donde se mira cuando hay tiempo de arreglarlo.
 const DIAS_PARA_URGIR_FOTOS = 3;
 
-/** Un luchador que la BASE ve sin ninguna foto y que tiene combate anunciado. */
+/** Un luchador con combate anunciado al que la BASE ve algún hueco de foto. */
 export type FilaSinFotoEnLaBase = {
   nombre: string;
   /** Arranque del evento, en ISO UTC. */
   arranqueUtc: string;
+  /** `headshot_url`. Sin esto la fila de cartelera pinta una silueta negra. */
+  tieneCara: boolean;
+  /** Cualquier foto de cuerpo. Sin esto el enfrentamiento sale con un busto. */
+  tieneCuerpo: boolean;
 };
 
 // La base no es la última palabra sobre si un luchador se ve con foto.
@@ -977,23 +993,47 @@ export type FilaSinFotoEnLaBase = {
 // `tieneFotoLocal` entra por parámetro en vez de importar `localHeadshot` aquí:
 // mantiene este módulo puro (no arrastra el mapa de fotos al panel) y deja que
 // la prueba fije la regla sin depender de qué fotos haya puestas hoy.
+//
+// Y son DOS mapas, no uno, porque son dos huecos distintos: `local-headshots.ts`
+// tapa la cara y `local-bodies.ts` tapa el cuerpo. Descontar a alguien por tener
+// retrato local cuando lo que le falta es el cuerpo lo haría invisible otra vez
+// —el mismo agujero, un piso más abajo—, así que cada mitad se descuenta con su
+// propio mapa y basta con que quede una sin tapar para seguir contando.
 export function descontarFotosLocales(
   filas: FilaSinFotoEnLaBase[],
   tieneFotoLocal: (nombre: string) => boolean,
+  tieneCuerpoLocal: (nombre: string) => boolean,
   ahora: Date,
-): Pick<DatosCatalogo, "sinNingunaFotoYCompiten" | "diasHastaElPrimeroSinFoto"> {
+): Pick<
+  DatosCatalogo,
+  "sinNingunaFotoYCompiten" | "diasHastaElPrimeroSinFoto" | "aMediaFotoYCompiten"
+> {
   // Por PERSONA, no por fila: la consulta une `fights`, así que quien tenga dos
   // combates anunciados sale dos veces y contar filas inflaría la alarma.
   // La clave se normaliza igual que en `local-headshots.ts` (trim + minúsculas).
   const pendientes = new Map<string, number | null>();
+  // Y los de media foto en su propio saco: se ven mal, pero no se ven vacíos.
+  const aMedias = new Set<string>();
 
   for (const f of filas) {
-    if (tieneFotoLocal(f.nombre)) continue;
+    const leFaltaLaCara = !f.tieneCara && !tieneFotoLocal(f.nombre);
+    const leFaltaElCuerpo = !f.tieneCuerpo && !tieneCuerpoLocal(f.nombre);
+    if (!leFaltaLaCara && !leFaltaElCuerpo) continue;
+
+    const clave = f.nombre.trim().toLowerCase();
+
+    // Le falta UNA de las dos: la web le pinta algo, solo que descuadrado. Es el
+    // caso de Nuzzi y Santiago (cara sin cuerpo, salían de busto) y el de Wint
+    // (cuerpo sin cara, salía con silueta en la fila). Antes NINGUNO de los tres
+    // contaba en ningún sitio.
+    if (!(leFaltaLaCara && leFaltaElCuerpo)) {
+      aMedias.add(clave);
+      continue;
+    }
 
     const t = Date.parse(f.arranqueUtc);
     const dias = Number.isNaN(t) ? null : (t - ahora.getTime()) / 86_400_000;
 
-    const clave = f.nombre.trim().toLowerCase();
     const previo = pendientes.get(clave);
     if (previo === undefined || (dias !== null && (previo === null || dias < previo))) {
       pendientes.set(clave, dias);
@@ -1008,6 +1048,9 @@ export function descontarFotosLocales(
   return {
     sinNingunaFotoYCompiten: pendientes.size,
     diasHastaElPrimeroSinFoto: dias.length > 0 ? Math.min(...dias) : null,
+    // Quien no tiene NADA no se cuenta además aquí: sale ya en la comprobación
+    // de al lado, que es más grave. Dos avisos por el mismo luchador serían ruido.
+    aMediaFotoYCompiten: [...aMedias].filter((clave) => !pendientes.has(clave)).length,
   };
 }
 
@@ -1093,6 +1136,27 @@ export function comprobarCatalogo(d: DatosCatalogo): Comprobacion[] {
                 ? ` El primero pelea en ${Math.max(0, Math.round(d.diasHastaElPrimeroSinFoto))} días.`
                 : ""
             }`
+          : undefined,
+    },
+    {
+      // 🪤 LA COMPROBACIÓN QUE NO EXISTÍA, Y POR ESO LA VELADA LLEGÓ ROTA.
+      // La de arriba solo cuenta a quien no tiene NINGUNA foto, así que un
+      // luchador con una de las dos era invisible para el panel entero — y se ve
+      // mal igual: sin cara, la fila de cartelera le pinta una silueta negra; sin
+      // cuerpo, la ficha de enfrentamiento le pinta un busto al lado de un rival
+      // entero. Pasó dos veces en agosto de 2026, una en cada sentido (Wint el
+      // 22, Nuzzi y Santiago el 29) y las dos las cazó el dueño mirando la web.
+      //
+      // NUNCA es roja, a propósito. Estas medias fotos se resuelven solas cuando
+      // ufc.com publica el juego de la semana, y además `add_manual_fighter`
+      // solo sabe poner cara: si esto pudiera ponerse rojo, cada foto puesta a
+      // mano dejaría un rojo que nadie puede apagar. Eso ya costó el Issue #24.
+      titulo: "Compiten pronto y se les ve a medias",
+      valor: `${d.aMediaFotoYCompiten}`,
+      nivel: d.aMediaFotoYCompiten === 0 ? "ok" : "aviso",
+      detalle:
+        d.aMediaFotoYCompiten > 0
+          ? "Tienen una de las dos fotos: salen con silueta en la cartelera o con un busto en el enfrentamiento. Suele arreglarlo el pase de fotos de la semana de velada."
           : undefined,
     },
     {
