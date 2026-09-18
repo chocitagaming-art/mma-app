@@ -226,6 +226,12 @@ export default async function LivePage() {
   // cuando llega la gente. Ahora se define una vez y se usa en las tres fases;
   // lo que cambia es dónde: antes del evento preside, y una vez arrancado pasa
   // debajo de la cartelera, porque en directo manda el resultado.
+  //
+  // 🪤 «Careo oficial» rotula la SECCIÓN; lo que es el vídeo lo dice su TÍTULO
+  // REAL, debajo del reproductor (migración 029). Mismo criterio que la ficha
+  // del evento: el short de 17 s que se coló en el UFC 331 iba rotulado «Careo
+  // oficial» sin que nada lo desmintiera. Sin título —los 29 careos anteriores a
+  // la migración— se queda como estaba.
   const faceoff = event.faceoffVideoId ? (
     <div className="w-full max-w-2xl">
       <p className="mb-2 text-center font-mono text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-primary">
@@ -233,8 +239,13 @@ export default async function LivePage() {
       </p>
       <FightVideoPlayer
         videoId={event.faceoffVideoId}
-        title={`Careo · ${event.name}`}
+        title={event.faceoffVideoTitle ?? `Careo · ${event.name}`}
       />
+      {event.faceoffVideoTitle ? (
+        <p className="mt-2 text-center text-sm font-medium text-balance">
+          {event.faceoffVideoTitle}
+        </p>
+      ) : null}
     </div>
   ) : null;
   // Revisión adversarial: la cuenta atrás apunta al PRIMER tramo (23:00) pero
@@ -448,8 +459,14 @@ export default async function LivePage() {
 
       {/* Pesaje oficial, encargo del dueño: existía solo en la ficha del evento
           y esta es la página donde está la gente la noche de la velada. La
-          sección se oculta sola si no hay filas. */}
-      <EventWeighInsSection weighIns={weighIns} />
+          sección se oculta sola si no hay filas ni vídeo. El vídeo del pesaje
+          (migración 029) va con ella, encima de la tabla. */}
+      <EventWeighInsSection
+        weighIns={weighIns}
+        videoId={event.weighinVideoId}
+        videoTitle={event.weighinVideoTitle}
+        eventName={event.name}
+      />
 
       <p className="mt-8 font-mono text-xs text-muted-foreground">
         Los resultados en directo son provisionales (fuente ESPN) y se

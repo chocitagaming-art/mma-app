@@ -438,6 +438,11 @@ export type EventDetail = {
   imageUrl: string | null;
   // Careo oficial de UFC (face-off) en YouTube: solo el video id (migración 022).
   faceoffVideoId: string | null;
+  // El título REAL del vídeo del careo (migración 029). Mismo motivo que en el
+  // directo: un rótulo escrito a mano no sabe QUÉ es el vídeo. Puede ser NULL en
+  // los careos que ya estaban casados antes de la migración, y por eso la ficha
+  // mantiene el rótulo de siempre cuando falta.
+  faceoffVideoTitle: string | null;
   // El directo que la UFC emite EN ABIERTO la noche de la velada (migración 027).
   //
   // ⚠️ NO es el combate estelar: ese es de pago (Paramount+ / DAZN según el
@@ -448,6 +453,15 @@ export type EventDetail = {
   // combate estelar delante de una tertulia.
   liveVideoId: string | null;
   liveVideoTitle: string | null;
+  // El vídeo del PESAJE oficial (migración 029), que acompaña a la tabla de
+  // pesos.
+  //
+  // ⚠️ NO SIEMPRE ES DE LA UFC: el pesaje lo suben también canales de terceros
+  // (el del UFC 331 es de TheMacLife). Por eso la web no rotula la fuente como
+  // oficial y enseña el título real del vídeo, que es lo único que dice de
+  // verdad qué se está viendo.
+  weighinVideoId: string | null;
+  weighinVideoTitle: string | null;
   broadcast: string | null;
   ticketUrl: string | null;
   tagline: string | null;

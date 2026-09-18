@@ -293,6 +293,13 @@ type EventRow = {
   start_time: string | null;
   image_url: string | null;
   faceoff_video_id: string | null;
+  // Migración 029. El título REAL del vídeo del careo. NULL en los careos
+  // casados antes de la migración: la ficha del evento sigue funcionando sin él.
+  faceoff_video_title: string | null;
+  // Migración 029. El vídeo del pesaje oficial y su título real. NULL = no hay
+  // vídeo y no se pinta nada (ni hueco ni «no disponible»).
+  weighin_video_id: string | null;
+  weighin_video_title: string | null;
   // Migración 027. El vídeo que la UFC emite EN ABIERTO la noche de la velada,
   // que NO es el combate estelar: ese es de pago. Suele ser la previa. NULL =
   // no hay directo y no se pinta nada.
@@ -521,6 +528,7 @@ async function getEventDetailUncached(
   const eventRows = await sql<EventRow>(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url, faceoff_video_id,
+            faceoff_video_title, weighin_video_id, weighin_video_title,
             live_video_id, live_video_title,
             broadcast, ticket_url, tagline, headliner, source, source_id,
             early_prelims_time::text AS early_prelims_time,
@@ -585,6 +593,9 @@ async function getEventDetailUncached(
     startTime: event.start_time,
     imageUrl: absolutePoster(event.image_url),
     faceoffVideoId: event.faceoff_video_id,
+    faceoffVideoTitle: event.faceoff_video_title,
+    weighinVideoId: event.weighin_video_id,
+    weighinVideoTitle: event.weighin_video_title,
     liveVideoId: event.live_video_id,
     liveVideoTitle: event.live_video_title,
     broadcast: event.broadcast,
