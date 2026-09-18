@@ -366,7 +366,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* Careo oficial (face-off): su propia sección, debajo de las peleas
           canceladas y justo antes del pesaje. El video id lo casa match_faceoffs
           (mma-ingesta) desde el RSS del canal de UFC y se rellena solo por cron
-          para los eventos futuros. */}
+          para los eventos futuros.
+
+          🪤 «Careo oficial» es el rótulo de la SECCIÓN, no del vídeo: debajo se
+          lee el TÍTULO REAL de lo que se va a reproducir (migración 029). El día
+          que el matcher casó un short de 17 s titulado «what are these faceoffs
+          saying?! #ufc331», la ficha del UFC 331 seguía diciendo «Careo oficial»
+          tan tranquila. Con el título a la vista, un vídeo equivocado se delata
+          solo. Los 29 careos casados antes de la migración no tienen título: ahí
+          se mantiene el comportamiento de siempre. */}
       {event.faceoffVideoId ? (
         <section className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -376,14 +384,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <div className="w-full max-w-3xl">
             <FightVideoPlayer
               videoId={event.faceoffVideoId}
-              title={`Careo · ${event.name}`}
+              title={event.faceoffVideoTitle ?? `Careo · ${event.name}`}
             />
+            {event.faceoffVideoTitle ? (
+              <p className="mt-2 text-sm font-medium text-balance">
+                {event.faceoffVideoTitle}
+              </p>
+            ) : null}
           </div>
         </section>
       ) : null}
 
-      {/* BE2: pesaje oficial (solo pinta si hay filas). */}
-      <EventWeighInsSection weighIns={weighIns} />
+      {/* BE2: pesaje oficial (solo pinta si hay filas o vídeo). El vídeo del
+          pesaje (migración 029) viaja con la sección, encima de la tabla. */}
+      <EventWeighInsSection
+        weighIns={weighIns}
+        videoId={event.weighinVideoId}
+        videoTitle={event.weighinVideoTitle}
+        eventName={event.name}
+      />
     </div>
   );
 }
