@@ -74,32 +74,66 @@ export function EventLiveEmbed({
 
   return (
     <section className={className}>
-      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
-        <Radio className="size-4" aria-hidden />
-        Retransmisión oficial
-      </h2>
+      {/* 🪤 EL CENTRADO VA EN ESTA COLUMNA, NO EN EL <iframe>. El reproductor ya
+          estaba acotado a max-w-3xl, así que centrar solo el marco habría dejado
+          el rótulo y el título pegados al borde izquierdo y el vídeo en medio:
+          descuadrado. Se centra la COLUMNA entera y el texto sigue alineado a la
+          izquierda dentro de ella, que es como se lee un bloque, no como se lee
+          un cartel.
 
-      {/* El título real, y la fuente al lado. «Canal oficial de la UFC» importa:
-          deja claro de quién es la señal y que esta web solo la enmarca. */}
-      <p className="mb-2 text-sm font-medium text-balance">{videoTitle}</p>
-      <p className="mb-3 font-mono text-[0.7rem] text-muted-foreground">
-        En abierto en el canal oficial de la UFC (fuente YouTube)
-      </p>
+          Y el ancho vive aquí ahora: si vuelve al <div> del iframe, el rótulo se
+          vuelve a escapar a lo ancho del contenedor padre. */}
+      <div className="mx-auto w-full max-w-3xl">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
+          <Radio className="size-4" aria-hidden />
+          Retransmisión oficial
+        </h2>
 
-      {/* 🪤 EL MARCO NO SE TOCA sin mirar los TRES sitios donde vive: /en-vivo,
-          la ficha del evento y la portada. Al arreglar la portada estuvo a punto
-          de cambiarse aquí el tamaño y las esquinas, y eso habría movido las
-          otras dos, que ya estaban bien. Lo que fallaba era la franja que lo
-          envolvía en la portada, no el reproductor. */}
-      <div className="w-full max-w-3xl">
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${videoId}`}
-          title={`${videoTitle} · ${eventName}`}
-          loading="lazy"
-          allow="accelerated-rotation; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
-          className="aspect-video w-full rounded-lg border border-border bg-muted"
-        />
+        {/* El título real, y la fuente al lado. «Canal oficial de la UFC» importa:
+            deja claro de quién es la señal y que esta web solo la enmarca. */}
+        <p className="mb-2 text-sm font-medium text-balance">{videoTitle}</p>
+        <p className="mb-3 font-mono text-[0.7rem] text-muted-foreground">
+          En abierto en el canal oficial de la UFC (fuente YouTube)
+        </p>
+
+        {/* 🪤 EL MARCO NO SE TOCA sin mirar los TRES sitios donde vive: /en-vivo,
+            la ficha del evento y la portada. Al arreglar la portada estuvo a punto
+            de cambiarse aquí el tamaño y las esquinas, y eso habría movido las
+            otras dos, que ya estaban bien. Lo que fallaba era la franja que lo
+            envolvía en la portada, no el reproductor.
+
+            🪤 ARRANCA SOLO, Y ARRANCA MUDO — las dos cosas son obligatorias, no
+            una preferencia. `autoplay=1` sin `mute=1` NO arranca: Chrome y Safari
+            bloquean por su cuenta cualquier vídeo que empiece con sonido, así que
+            el resultado sería un reproductor parado y la sensación de que el
+            arreglo no funcionó. Y `autoplay` tiene que estar ADEMÁS en el
+            atributo `allow`, o la política de permisos del iframe lo corta antes
+            de que YouTube lea el parámetro.
+
+            `playsinline=1` es para iOS: sin él, Safari de iPhone se lleva el
+            vídeo a pantalla completa él solo en cuanto arranca.
+
+            Sigue con `loading="lazy"` a propósito: así no arranca al cargar la
+            página, sino cuando el bloque entra en pantalla. Es lo que evita que
+            la portada se ponga a consumir datos de alguien que nunca baja hasta
+            aquí.
+
+            ⚠️ LO QUE ESTO NO HACE: no respeta `prefers-reduced-motion`. No se
+            puede desde aquí — el src se fija al renderizar y esto es un
+            componente de SERVIDOR, así que para leer la preferencia del
+            navegador habría que convertirlo en cliente (lo que hace VideoHero).
+            Lo que sí se cumple es la WCAG 2.2.2: el reproductor de YouTube trae
+            su propio botón de pausa, que es el mecanismo que la norma exige. */}
+        <div className="w-full">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
+            title={`${videoTitle} · ${eventName}`}
+            loading="lazy"
+            allow="autoplay; accelerated-rotation; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            className="aspect-video w-full rounded-lg border border-border bg-muted"
+          />
+        </div>
       </div>
     </section>
   );
