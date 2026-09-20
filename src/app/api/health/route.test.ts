@@ -47,6 +47,22 @@ describe("GET /api/health?deep=1", () => {
     expect(body.db).toBe("down");
   });
 
+  // El 503 TIENE que llevar version, y este test es su única red. Quien lo
+  // consume es el DIAGNÓSTICO de smoke-prod.yml —no su bucle, que pide el
+  // health superficial y nunca ve un 503—: cuando el bucle se agota llama a
+  // `?deep=1`, y si la base está caída necesita saber qué commit sirve la web
+  // para decidir si hay que volver a desplegar.
+  it("el 503 también dice qué commit está desplegado", async () => {
+    sqlMock.mockRejectedValueOnce(new Error("connection refused"));
+    vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "abcdef1234567890");
+
+    const body = await (
+      await GET(peticion("https://mmastatus.app/api/health?deep=1"))
+    ).json();
+
+    expect(body.version).toBe("abcdef1");
+  });
+
   it("usa 'dev' como versión fuera de Vercel", async () => {
     sqlMock.mockResolvedValueOnce([]);
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", undefined);
