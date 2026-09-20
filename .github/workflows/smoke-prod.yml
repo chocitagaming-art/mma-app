@@ -31,6 +31,13 @@ on:
 permissions:
   contents: read
   issues: write
+  # 20-sep-2026: el bucle de espera ya no se limita a mirar el reloj, tambien
+  # pregunta a GitHub en que estado quedo el despliegue de ESTE commit.
+  # OJO CON LO QUE PASA SI FALTA: `gh api` devuelve 403, el diagnostico se
+  # queda sin saber del deployment y cae en AMBAR, no en rojo. El ambar deja
+  # aviso propio, asi que no es mudo, pero un 403 permanente degradaria el
+  # smoke a "no verificado" en cada push sin que el color lo delate.
+  deployments: read
 
 concurrency:
   group: smoke-prod
@@ -68,16 +75,73 @@ jobs:
       # (VERCEL_GIT_COMMIT_SHA), y hasta que no coincida con el que disparó este
       # job, no se comprueba nada. En los disparos que no son push (cron,
       # dispatch) no hay SHA que esperar y basta con el 200 de siempre.
+      #
+      # 20-sep-2026: EL PLAZO NO ERA EL PROBLEMA. EL DIAGNOSTICO SI.
+      #
+      # Medido sobre 79 despliegues entre el 20-jul y el 19-sep: la mediana de
+      # push -> el dominio sirve el SHA es 57 s y el p90 es 65 s. Este bucle ya
+      # espera SIETE VECES el p90. Alargarlo seria dimensionar para 1 caso de
+      # 79, y no arreglaria nada de lo que duele.
+      #
+      # Lo que duele es que este paso solo sabia decir una cosa —"no ha
+      # llegado"— y de ahi salia un Issue titulado "Produccion rota". Eso tiene
+      # un coste medido: cada Issue abierto amordaza el canal hasta el siguiente
+      # verde, porque GitHub manda email al ABRIR y no al comentar (lo dice el
+      # propio cuerpo del aviso, mas abajo). El #21 tardo 56 horas en cerrarse,
+      # y DOS roturas reales llegaron como comentarios mudos porque una falsa
+      # alarma tenia el hilo abierto.
+      #
+      # 🪤 LA TRAMPA QUE CASI SE LLEVA ESTE ARREGLO POR DELANTE: el atajo obvio
+      # era "si el dominio responde sano, esto es solo lentitud: aviso y sigo".
+      # ES FALSO, y hay fecha. El 15-ago el dominio respondia 200 sirviendo el
+      # commit ANTERIOR porque el despliegue de 74d6f48 habia FALLADO en Vercel
+      # ("Deployment has failed", state=failure a los 28 s del push). Un dominio
+      # sano sirviendo el commit viejo es EXACTAMENTE el sintoma de un commit
+      # que no va a llegar nunca. Lo que separa un caso del otro no es la salud
+      # del dominio: es el estado del deployment. Con el atajo, ese aviso —el
+      # unico que hubo— se habria callado.
+      #
+      # Asi que ahora hay TRES veredictos donde habia dos:
+      #   🔴 el dominio no responde sano   -> produccion rota de verdad. Issue.
+      #   🔴 el deployment esta en failure -> el commit no llegara. Issue.
+      #   🟠 el deployment falta, sigue en vuelo, o termino y el dominio aun va
+      #      por detras -> NO VERIFICADO. Aviso, sin Issue, y las pruebas NO se
+      #      ejecutan: correrlas contra el SHA viejo daria el verde vacio que ya
+      #      costo caro el 30-jul (ver el comentario de arriba).
+      #
+      # Y "no verificado" NO puede colarse como "verde". Por eso este paso
+      # publica `verificado`, y de el cuelgan los dos pasos de pruebas Y el
+      # cierre del aviso: sin esa guarda, un ambar cerraria un Issue de
+      # produccion rota sin haber comprobado una sola ruta.
       - name: Esperar a que producción sirva ESTE commit
+        id: esperar
         env:
           SHA_ESPERADO: ${{ github.event_name == 'push' && github.sha || '' }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           esperado="${SHA_ESPERADO:0:7}"
-          # 45 intentos (~7,5 min) y no 30: ahora no se espera un 200 cualquiera
-          # sino el despliegue entero, que tarda más. El job corta a los 15 min.
+          # 45 intentos y no 30: ahora no se espera un 200 cualquiera sino el
+          # despliegue entero, que tarda más. El job corta a los 15 min.
+          #
+          # El plazo REAL de este bucle, medido en los tres agotamientos que ha
+          # habido, es de 7 min 48 s a 8 min 19 s (45 × sleep 10 más lo que
+          # tarden los dos curl). Aquí abajo ponía "tras 5 minutos" desde que el
+          # 30-jul se subió de 30 a 45 intentos sin tocar la cadena, y de ahí lo
+          # copió STATE.md en cinco sitios. Una trampa mal escrita cuesta más
+          # que no escribirla.
+          #
+          # Los tres últimos códigos de la portada, que ANTES se tiraban. Son la
+          # prueba de si la web está viva, y el diagnóstico de abajo los
+          # necesita: sin ellos, 45 respuestas 500 seguidas acababan en ámbar
+          # porque /api/health superficial contesta ok:true aunque la portada
+          # esté rota. Tres y no uno, para que un 500 suelto en el intento 45
+          # no se convierta en un Issue de "producción rota".
+          ult1="" ; ult2="" ; ult3=""
           for attempt in $(seq 1 45); do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$PLAYWRIGHT_BASE_URL/" || echo "000")
+            ult3="$ult2" ; ult2="$ult1" ; ult1="$code"
             if [ "$code" != "200" ]; then
               echo "[$attempt] $PLAYWRIGHT_BASE_URL -> $code"
               sleep 10
@@ -85,21 +149,170 @@ jobs:
             fi
             if [ -z "$esperado" ]; then
               echo "[$attempt] 200 y sin SHA que esperar (disparo $GITHUB_EVENT_NAME): adelante."
+              echo "verificado=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             desplegado=$(curl -sS --max-time 30 "$PLAYWRIGHT_BASE_URL/api/health" \
               | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || echo "?")
             echo "[$attempt] 200 · desplegado=$desplegado · esperado=$esperado"
-            [ "$desplegado" = "$esperado" ] && exit 0
+            if [ "$desplegado" = "$esperado" ]; then
+              echo "verificado=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             sleep 10
           done
-          echo "::error::Producción no sirve el commit ${esperado:-(cualquiera)} tras 5 minutos."
-          exit 1
+
+          # ── El bucle se ha agotado. Antes de gritar, averiguar POR QUÉ. ─────
+          echo "verificado=false" >> "$GITHUB_OUTPUT"
+
+          # (a) ¿SIGUE VIVA LA WEB QUE SÍ HAY? Con los códigos que el bucle
+          # acaba de medir, no con una pregunta nueva al endpoint más
+          # complaciente que tenemos. Es rojo si los TRES últimos intentos
+          # fallaron: uno suelto puede ser un hipo de red, tres seguidos es la
+          # portada caída ahora mismo.
+          echo "últimos códigos de la portada -> $ult3 $ult2 $ult1"
+          portada_viva=false
+          for c in "$ult1" "$ult2" "$ult3"; do
+            [ "$c" = "200" ] && portada_viva=true
+          done
+
+          # (b) ¿Y LA BASE? Aquí SÍ se pregunta al nivel profundo, y es la única
+          # llamada a ?deep=1 de todo el workflow. El coste de despertar el
+          # compute de Neon que documenta route.ts se paga solo cuando el bucle
+          # se agota — tres veces en dos meses, no en cada push. A cambio
+          # separa "Neon caído" de "la app arrancó", que es exactamente lo que
+          # el nivel superficial NO puede decir: su `db: "skipped"` está puesto
+          # a propósito para que nadie lea ese 200 como "Neon va bien".
+          salud=$(curl -sS --max-time 30 "$PLAYWRIGHT_BASE_URL/api/health?deep=1" 2>/dev/null || echo "")
+          base_viva=false
+          case "$salud" in *'"db":"up"'*) base_viva=true ;; esac
+          echo "salud profunda -> ${salud:-(sin respuesta)}"
+
+          # (c) ¿EN QUÉ QUEDÓ EL DESPLIEGUE DE ESTE COMMIT? Se mira el
+          # deployment MÁS RECIENTE del SHA y su último status. El endpoint los
+          # devuelve del más nuevo al más viejo, así que `.[0]` basta: quedarse
+          # con "el primer success que aparezca" preferiría un intento viejo que
+          # salió bien sobre el reintento nuevo que acaba de fallar.
+          #
+          # 🪤 `ids=$(gh ... || echo "")` NO limpia nada: si `gh` falla escribe
+          # el JSON del error por STDOUT, la sustitución ya lo capturó y el
+          # `||` de dentro nunca corrige la variable. El `||` tiene que ir
+          # FUERA, sobre la asignación.
+          estado_deploy="ausente"
+          fin_deploy=""
+          if [ -n "$esperado" ]; then
+            id=$(gh api "repos/$REPO/deployments?sha=$SHA_ESPERADO&per_page=100" \
+                   --jq 'map(select(.environment | ascii_downcase == "production")) | .[0].id // empty' 2>/dev/null) || id=""
+            if [ -n "$id" ]; then
+              linea=$(gh api "repos/$REPO/deployments/$id/statuses?per_page=100" \
+                        --jq '.[0] | select(.) | "\(.state) \(.created_at)"' 2>/dev/null) || linea=""
+              if [ -n "$linea" ]; then
+                echo "deployment $id -> $linea"
+                case "${linea%% *}" in
+                  success)       estado_deploy="success"; fin_deploy="${linea#* }" ;;
+                  failure|error) estado_deploy="failure"; fin_deploy="${linea#* }" ;;
+                  # En este repo esta rama es código muerto y conviene saberlo:
+                  # de los 83 deployments de Production desde el 20-jul, CERO
+                  # han tenido un status pending/in_progress/queued. El objeto
+                  # `deployment` no existe hasta que el build ya ha resuelto,
+                  # así que un build en vuelo no sale "pendiente": sale
+                  # "ausente". Se deja por si Vercel cambia de comportamiento.
+                  *)             estado_deploy="pendiente" ;;
+                esac
+              fi
+            fi
+          fi
+          echo "estado del deployment -> $estado_deploy ${fin_deploy:-}"
+
+          # (d) SI NO HAY DEPLOYMENT, ¿ES QUE ESTE BUILD VA LARGO, O ES QUE LA
+          # INTEGRACIÓN ESTÁ MUERTA? Sin esto, una integración Vercel↔GitHub
+          # desconectada haría que TODOS los push cayeran en ámbar verde
+          # indefinidamente, desplegando a ciegas, y nada más lo vigila:
+          # monitor.yml (mma-ingesta) comprueba que las URLs respondan, nunca
+          # QUÉ commit sirven. Si en 48 h no se ha registrado ni un despliegue
+          # de producción, eso no es un build lento.
+          #
+          # 🪤 Y OJO CON EL FALSO POSITIVO QUE ESTO SE TRAE PUESTO: "no he
+          # encontrado despliegues" y "no he podido preguntar" son cosas
+          # distintas. Si se tratan igual, un hipo de la API de GitHub abre un
+          # Issue de "producción rota" con producción intacta — exactamente la
+          # falsa alarma que este arreglo existe para quitar. Sólo se declara
+          # muerta la integración cuando la consulta SALE BIEN y dice que no
+          # hay nada; si la consulta falla, ámbar.
+          integracion_viva=true
+          if [ "$estado_deploy" = "ausente" ] && [ -n "$esperado" ]; then
+            if ultimo=$(gh api "repos/$REPO/deployments?environment=Production&per_page=1" \
+                          --jq '.[0].created_at // empty' 2>/dev/null); then
+              echo "último deployment de producción del repo -> ${ultimo:-(ninguno)}"
+              limite=$(date -u -d '48 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
+              if [ -z "$ultimo" ] || { [ -n "$limite" ] && [ "$ultimo" \< "$limite" ]; }; then
+                integracion_viva=false
+              fi
+            else
+              echo "::notice::No se ha podido consultar los deployments del repo. Eso no dice nada sobre Vercel, así que no cuenta como integración muerta."
+            fi
+          fi
+
+          # ── LOS VEREDICTOS ─────────────────────────────────────────────────
+          motivo=""
+          if [ "$portada_viva" != true ]; then
+            motivo="la portada no responde (últimos códigos: $ult3 $ult2 $ult1)"
+          elif [ "$base_viva" != true ]; then
+            motivo="la app responde pero /api/health?deep=1 no dice db:up — la base está caída"
+          elif [ "$estado_deploy" = "failure" ]; then
+            motivo="el despliegue de $esperado FALLÓ en Vercel (${fin_deploy:-sin fecha}); el dominio está sano porque sigue sirviendo el commit anterior, así que este commit NO llegará solo"
+          elif [ "$integracion_viva" != true ]; then
+            motivo="Vercel no ha registrado NINGÚN despliegue de producción en 48 h: la integración con GitHub puede estar desconectada y el repo estaría desplegando a ciegas"
+          fi
+
+          if [ -n "$motivo" ]; then
+            echo "::error::$motivo"
+            exit 1
+          fi
+
+          # 🟠 Ámbar: el commit aún no está en el dominio, pero la web responde,
+          # la base responde y el despliegue no ha fallado. NO se ejecutan las
+          # pruebas —contra el commit anterior no significarían nada— y NO se
+          # abre el aviso ROJO. Pero tampoco se calla: el paso de abajo deja un
+          # aviso ÁMBAR en su propio hilo, para que esto llegue por correo sin
+          # amordazar el canal de "producción rota".
+          if [ "$estado_deploy" = "success" ]; then
+            por_que="el despliegue terminó (${fin_deploy:-sin fecha}) y el dominio todavía sirve otro commit"
+          elif [ "$estado_deploy" = "pendiente" ]; then
+            por_que="el despliegue sigue en vuelo"
+          else
+            # Sin coletillas: aquí se llega tanto porque el build va largo como
+            # porque no se ha podido preguntar a la API de GitHub. Afirmar "la
+            # integración vive" cuando la consulta falló sería inventarse un
+            # dato en un canal de alarma, que es como empezó todo esto.
+            por_que="Vercel todavía no ha registrado el despliegue de este commit"
+          fi
+          echo "ambar=$por_que" >> "$GITHUB_OUTPUT"
+          echo "::warning title=Despliegue sin verificar::El commit $esperado no ha llegado al dominio en ~8 min: $por_que. La web y la base responden, así que NO se abre aviso de producción rota. Las pruebas se SALTAN: pasarlas contra el commit anterior daría un verde que no significa nada."
+          {
+            echo "## 🟠 Despliegue sin verificar"
+            echo ""
+            echo "El commit \`$esperado\` no llegó al dominio dentro del plazo (~8 min)."
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Portada | responde 200 (últimos códigos: \`$ult3 $ult2 $ult1\`) |"
+            echo "| Base de datos | \`db:up\` en /api/health?deep=1 |"
+            echo "| Deployment | \`$estado_deploy\` ${fin_deploy:+(\`$fin_deploy\`)} |"
+            echo "| Pruebas | **no ejecutadas** — contra el commit anterior no significarían nada |"
+            echo ""
+            echo "Esto **no** es producción rota: si lo fuera, este paso estaría en rojo."
+            echo "Queda un aviso ámbar abierto hasta que un smoke verifique un commit."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
       # Un solo proyecto: los proyectos de playwright.config son combinaciones de
       # viewport y tema, y estas pruebas son de contrato de API, no de
       # renderizado. Correr los seis repetiría las mismas 10 llamadas seis veces.
       - name: Smoke de las APIs desplegadas
+        # Sólo si el dominio sirve ESTE commit. Contra el anterior, un verde
+        # aquí no significa nada — es el fallo del 30-jul, pero al revés.
+        if: steps.esperar.outputs.verificado == 'true'
         run: npx playwright test e2e/api.spec.ts --project=escritorio-light
 
       # SEO (fase 6): canónicas y datos estructurados de las rutas dinámicas.
@@ -111,6 +324,7 @@ jobs:
       # Cabe aquí sin coste: 12 de sus 13 pruebas son peticiones HTTP sin
       # navegador, y el chromium que necesita la restante ya está instalado.
       - name: Comprobar canónicas y datos estructurados en producción
+        if: steps.esperar.outputs.verificado == 'true'
         run: npx playwright test e2e/seo.spec.ts --project=escritorio-light
 
       - name: Guardar el informe si algo falla
@@ -144,10 +358,10 @@ jobs:
       # tres runs con el JOB en `cancelled`:
       #   - 31117459183 (15:48:08 -> 15:54:44Z): expulsado al segundo exacto en
       #     que arrancaba el run siguiente, o sea el `cancel-in-progress`
-      #     de :35-37.
+      #     de :42-44.
       #   - 31117890269 (15:54:44 -> 16:09:46Z) y 31125432909
       #     (18:13:27 -> 18:28:29Z): 15m02s clavados los dos, que es el
-      #     `timeout-minutes: 15` de :42.
+      #     `timeout-minutes: 15` de :49.
       # Los tres salen de la API con `steps: []` Y ADEMAS `runs/<id>/logs`
       # devuelve un zip VACIO de 22 bytes: no se ejecuto ni un solo paso. No fue
       # que el bucle de espera al SHA diera vueltas; es que el job nunca llego a
@@ -161,7 +375,7 @@ jobs:
       #
       # LO QUE SI ARREGLA: el job que YA esta ejecutando pasos y muere a mitad,
       # expulsado por un push nuevo o por el `timeout-minutes` mientras el bucle
-      # de espera al SHA de :71-97 hace sus 45 intentos (~7,5 min, y antes van
+      # de espera al SHA de :116-307 hace sus 45 intentos (~7,5 min, y antes van
       # `npm ci` y el `playwright install`). Ahi el aviso ahora sale, y antes no.
       #
       # SI, esto avisara alguna vez de una cancelacion que era rutina (dos push
@@ -214,10 +428,73 @@ jobs:
             gh issue create --repo "$REPO" --title "$TITULO" --label produccion-rota --body "$BODY"
           fi
 
+      # EL AVISO AMBAR, EN SU PROPIO HILO. Anadido el 20-sep-2026 junto con los
+      # tres veredictos del paso de espera, y no es un extra: sin el, el ambar
+      # sale con exit 0, los pasos de prueba quedan en `skipped`, el job queda
+      # en `success` — y un job verde no dispara el aviso rojo de arriba, que
+      # exige `job.status != 'success'`. O sea que el ambar seria MUDO.
+      #
+      # Y mudo importa en el caso concreto que este arreglo tenia que cubrir:
+      # el 18-sep el deployment de 45ca7b7 no se registro hasta 41 minutos
+      # despues del push. El bucle se agota en el minuto 8 con el deployment
+      # todavia "ausente" -> ambar -> run terminado. Si ese build largo acabara
+      # en `failure` (ha pasado: 74d6f48 el 15-ago), produccion se queda con el
+      # commit viejo y NADIE lo dice: no hay reintento, y monitor.yml del repo
+      # hermano comprueba que las URLs respondan, nunca QUE commit sirven.
+      #
+      # TITULO DISTINTO AL DEL ROJO, Y ESA ES LA CLAVE. El paso de arriba busca
+      # por titulo exacto precisamente para que un hilo no silencie al otro. Un
+      # ambar abierto NO amordaza el canal de "produccion rota": si la web se
+      # cae de verdad mientras hay un ambar abierto, el rojo abre SU Issue y
+      # manda SU correo.
+      #
+      # NO SE PROMETE QUE EL CRON LO REPASE, y la primera version de esto si lo
+      # prometia. Es falso dos veces: (1) en un disparo por `schedule` no hay
+      # SHA que esperar, asi que el bucle sale al primer 200 sin mirar `version`
+      # — el cron no comprueba QUE commit sirve produccion, solo que responda;
+      # (2) el `cron:` declara 08:30 UTC pero GitHub retrasa los crons de repos
+      # poco activos: los 34 runs programados de los dos ultimos meses han
+      # salido entre las 12:35 y las 15:06 UTC. Prometer un repaso a una hora
+      # que no es, de algo que no se comprueba, es la clase de frase que manda a
+      # buscar la averia donde no esta.
+      - name: Dejar aviso ambar si el despliegue no se ha podido verificar
+        if: >-
+          ${{ always() && steps.esperar.outputs.verificado == 'false'
+              && job.status == 'success'
+              && github.event_name != 'pull_request'
+              && contains(fromJSON('["https://mmastatus.app","https://mmastatus.app/"]'),
+                          env.PLAYWRIGHT_BASE_URL) }}
+        # Nunca convierte un no-veredicto en un fallo.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          MOTIVO: ${{ steps.esperar.outputs.ambar }}
+        run: |
+          set -uo pipefail
+          # TITULO_AMBAR y no TITULO: son dos canales distintos y el test de
+          # src/lib/smoke-prod-workflow.test.ts empareja cada uno con su cierre
+          # por el nombre de la variable. Si los dos se llamaran igual, un
+          # despiste podria hacer que el ambar buscase el hilo rojo y lo
+          # cerrase, que es justo lo que no puede pasar.
+          TITULO_AMBAR="🟠 Despliegue sin verificar — el commit no llego al dominio"
+          BODY=$(printf '🟠 **%s** — el commit `%s` no habia llegado a mmastatus.app ~8 minutos despues del push, asi que **el smoke no ha comprobado nada**.\n\nMotivo: %s\n\n[Ver el run](%s)\n\n**Esto NO es produccion rota.** La portada responde 200 y `/api/health?deep=1` dice `db:up`; si alguna de las dos fallara, este aviso seria rojo y se llamaria de otra forma.\n\nQue mirar:\n- `curl -s https://mmastatus.app/api/health` — ¿sirve ya el commit?\n- El build en Vercel: si acabo en error, produccion se ha quedado con el commit ANTERIOR y hay que volver a desplegar.\n\n_Este hilo es independiente del de "Produccion rota": tenerlo abierto NO silencia aquel aviso. Se cierra solo en cuanto un smoke verifique un commit._' \
+            "$(date -u +'%Y-%m-%d %H:%M UTC')" "${SHA:0:7}" "${MOTIVO:-sin detalle}" "$RUN_URL")
+          ISSUE=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
+            | jq -r --arg t "$TITULO_AMBAR" '[.[] | select(.title == $t)] | .[0].number // empty')
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "$BODY"
+          else
+            gh label create despliegue-sin-verificar --repo "$REPO" --color D93F0B --description "El smoke no pudo comprobar el commit desplegado" --force || true
+            gh issue create --repo "$REPO" --title "$TITULO" --label despliegue-sin-verificar --body "$BODY"
+          fi
+
       # EL RELEVO: cerrar el aviso cuando produccion vuelve a estar en pie.
       #
       # Anadido el 16-ago-2026, y llega tarde. Este fichero ABRIA Issues y no
-      # cerraba NINGUNO, y su propio cuerpo (:206) explica por que eso es grave:
+      # cerraba NINGUNO, y su propio cuerpo (:420) explica por que eso es grave:
       # "mientras siga abierto, los siguientes fallos seran comentarios y no te
       # llegara un email nuevo". GitHub manda correo al ABRIR, no al comentar.
       #
@@ -234,7 +511,7 @@ jobs:
       # notify-on-failure.yml en mma-ingesta, que NO se puede copiar tal cual:
       # alli el titulo lleva el nombre del workflow interpolado y la busqueda
       # filtra por etiqueta `cron-failure`. Aqui el titulo es FIJO y la busqueda
-      # de :208 no filtra por etiqueta, asi que el cierre tampoco lo hace. Si
+      # de :422 no filtra por etiqueta, asi que el cierre tampoco lo hace. Si
       # los dos lados no buscan igual, el cierre no encuentra lo que abrio el
       # otro y volvemos al punto de partida sin enterarnos.
       #
@@ -249,7 +526,7 @@ jobs:
       #   1. El guard del base_url necesita `env.PLAYWRIGHT_BASE_URL`, y el
       #      contexto `env` NO existe en el `if:` de un job (solo github, needs,
       #      vars e inputs). Como job habria que reescribir a mano el `||` de
-      #      :44 y mantener dos copias de la misma regla.
+      #      :51 y mantener dos copias de la misma regla.
       #   2. El de apertura es un paso. Dos mitades del mismo mecanismo en
       #      sitios distintos acaban divergiendo.
       #   3. Un job aparte paga un runner nuevo y una fila mas en la UI de cada
@@ -267,9 +544,18 @@ jobs:
       # mismo que razona el bloque "SOBRE EL RELEVO A+B" de live-event-loop.yml):
       # el correo ya se mando, el dueno ya se entero, y dejarlo abierto
       # amordazaria el aviso de manana.
+      #
+      # 20-sep-2026, LA GUARDA NUEVA Y POR QUE ES IMPRESCINDIBLE: desde hoy el
+      # paso de espera puede terminar en AMBAR —commit no llegado, produccion
+      # sana— y salir con 0 saltandose las pruebas. Con eso solo, `success()`
+      # seria cierto y este paso cerraria un aviso de produccion rota SIN HABER
+      # COMPROBADO UNA SOLA RUTA, que es justo lo que el parrafo de arriba jura
+      # que no puede pasar. `steps.esperar.outputs.verificado` lo impide: un
+      # ambar deja el Issue abierto, que es lo prudente.
       - name: Cerrar el aviso si produccion vuelve a estar en pie
         if: >-
           ${{ success()
+              && steps.esperar.outputs.verificado == 'true'
               && github.event_name != 'pull_request'
               && contains(fromJSON('["https://mmastatus.app","https://mmastatus.app/"]'),
                           env.PLAYWRIGHT_BASE_URL) }}
@@ -283,24 +569,29 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -uo pipefail
-          # La MISMA cadena de :205, byte a byte: 🔴 (U+1F534), raya larga
+          # La MISMA cadena de :419, byte a byte: 🔴 (U+1F534), raya larga
           # (U+2014, no un guion), "Produccion" SIN tilde y "el smoke ha
           # fallado" en minusculas. Si esto no casa exacto, el cierre no
           # encuentra nada NUNCA y el fallo es invisible: el paso sale en verde
           # diciendo "nada que cerrar" mientras el Issue sigue abierto.
           TITULO="🔴 Produccion rota — el smoke ha fallado"
-          # Mismo emparejamiento que :208-209: `--state open` sin `--label`, y
+          # Mismo emparejamiento que :422-423: `--state open` sin `--label`, y
           # comparacion EXACTA con jq externo. Con `--search` la busqueda es
           # difusa y podria cerrar otro Issue del repo.
           ISSUE=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title,labels \
             | jq -r --arg t "$TITULO" '[.[] | select(.title == $t)] | .[0] | select(.) | @json')
 
+          # OJO: aqui NO se puede salir con exit 0 y olvidarse. Aunque no haya
+          # aviso ROJO abierto puede haber uno AMBAR, y el cierre del ambar
+          # vive al final de este mismo paso. Un `exit 0` aqui lo dejaria
+          # abierto para siempre en el caso mas comun de todos: ambar el lunes,
+          # verde el martes, sin rojo por medio.
           if [ -z "$ISSUE" ]; then
-            echo "No hay aviso de produccion abierto. Nada que cerrar."
-            exit 0
+            echo "No hay aviso rojo de produccion abierto."
+            NUM=""
+          else
+            NUM=$(echo "$ISSUE" | jq -r '.number')
           fi
-
-          NUM=$(echo "$ISSUE" | jq -r '.number')
 
           # SALVAVIDAS, calcado del job `cerrar` de notify-on-failure.yml (repo
           # hermano) para que los dos cierres se comporten IGUAL y no haya que
@@ -310,9 +601,9 @@ jobs:
           # en bucle, manda un correo cada vez y borra el rastro de los fallos
           # anteriores. Con la etiqueta puesta a mano, el hilo se queda abierto
           # y los fallos se acumulan como comentarios en un solo sitio.
-          if echo "$ISSUE" | jq -e '.labels[]? | select(.name == "no-cerrar-solo")' >/dev/null; then
+          if [ -n "$NUM" ] && echo "$ISSUE" | jq -e '.labels[]? | select(.name == "no-cerrar-solo")' >/dev/null; then
             echo "::notice title=Relevo::El Issue #$NUM lleva 'no-cerrar-solo'. Se deja abierto a proposito."
-            exit 0
+            NUM=""
           fi
 
           STAMP=$(date -u +'%Y-%m-%d %H:%M UTC')
@@ -326,10 +617,31 @@ jobs:
           # ultima linea. Se anota con `::error` para que se vea en la pagina del
           # run, y el `continue-on-error` impide que produccion parezca rota por
           # no haber podido cerrar un aviso.
-          if gh issue close "$NUM" --repo "$REPO" --reason completed --comment "$(printf '✅ **%s** — el smoke contra produccion ha vuelto a pasar entero sobre el commit `%s`, asi que este aviso se cierra solo.\n\n[Ver el run](%s)\n\n_Se cierra para que el PROXIMO fallo vuelva a abrir un Issue nuevo y te llegue un email. Mientras un aviso sigue abierto, los fallos siguientes son comentarios mudos._\n\n_Si este aviso no debe cerrarse aunque el smoke pase, ponle la etiqueta `no-cerrar-solo`._' \
+          if [ -z "$NUM" ]; then
+            echo "Nada que cerrar en el canal rojo."
+          elif gh issue close "$NUM" --repo "$REPO" --reason completed --comment "$(printf '✅ **%s** — el smoke contra produccion ha vuelto a pasar entero sobre el commit `%s`, asi que este aviso se cierra solo.\n\n[Ver el run](%s)\n\n_Se cierra para que el PROXIMO fallo vuelva a abrir un Issue nuevo y te llegue un email. Mientras un aviso sigue abierto, los fallos siguientes son comentarios mudos._\n\n_Si este aviso no debe cerrarse aunque el smoke pase, ponle la etiqueta `no-cerrar-solo`._' \
               "$STAMP" "${SHA:0:7}" "$RUN_URL")"; then
             echo "Issue #$NUM cerrado."
           else
             echo "::error title=Relevo::No se ha podido cerrar el aviso #$NUM. Sigue ABIERTO, y mientras lo este el proximo fallo de produccion sera un comentario sin email. Cierralo a mano."
             exit 1
+          fi
+
+          # Y el AMBAR tambien, por lo mismo: si este run ha verificado un
+          # commit de verdad, el aviso de "no se pudo verificar" ya no describe
+          # la realidad y dejarlo abierto convertiria los siguientes en
+          # comentarios mudos. Se busca por su propio titulo, igual que el rojo
+          # por el suyo. No tumba el paso si falla: el rojo ya esta cerrado y
+          # eso es lo que importaba.
+          # La MISMA cadena que la del paso de apertura, byte a byte: 🟠 es
+          # U+1F7E0, la raya es U+2014 y "llego" va sin tilde. Si no casa
+          # exacto, el cierre no encuentra nada NUNCA y el hilo ambar se queda
+          # abierto convirtiendo los siguientes avisos en comentarios mudos.
+          TITULO_AMBAR="🟠 Despliegue sin verificar — el commit no llego al dominio"
+          AMBAR=$(gh issue list --repo "$REPO" --state open --limit 100 --json number,title \
+            | jq -r --arg t "$TITULO_AMBAR" '[.[] | select(.title == $t)] | .[0].number // empty')
+          if [ -n "$AMBAR" ]; then
+            gh issue close "$AMBAR" --repo "$REPO" --reason completed --comment "$(printf '✅ **%s** — el smoke ha verificado el commit `%s` contra produccion, asi que este aviso ambar se cierra.\n\n[Ver el run](%s)' \
+              "$STAMP" "${SHA:0:7}" "$RUN_URL")" && echo "Aviso ambar #$AMBAR cerrado." \
+              || echo "::warning title=Relevo::No se ha podido cerrar el aviso ambar #$AMBAR. Cierralo a mano."
           fi

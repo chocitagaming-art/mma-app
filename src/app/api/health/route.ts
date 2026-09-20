@@ -35,6 +35,15 @@ export async function GET(request: Request) {
     await sql("select 1");
     return NextResponse.json({ ok: true, db: "up", version: version() });
   } catch {
-    return NextResponse.json({ ok: false, db: "down" }, { status: 503 });
+    // `version` TAMBIÉN aquí (20-sep-2026). Cuidado con el motivo, porque el
+    // que primero se escribió era falso: el BUCLE de espera de smoke-prod.yml
+    // pide el health SUPERFICIAL, que no llega nunca a esta rama y nunca
+    // devuelve 503. Quien lo necesita es el DIAGNÓSTICO de ese mismo workflow,
+    // que cuando el bucle se agota llama a `?deep=1` para separar "Neon caído"
+    // de "la app arrancó": sin `version` aquí, ese 503 no puede decir qué
+    // commit está sirviendo la web tocada, que es lo que hace falta para
+    // decidir si hay que volver a desplegar. El SHA lo pone Vercel en el
+    // proceso, así que se conoce aunque la base no conteste.
+    return NextResponse.json({ ok: false, db: "down", version: version() }, { status: 503 });
   }
 }
