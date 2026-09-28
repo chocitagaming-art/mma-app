@@ -105,6 +105,12 @@ export default function HomeLoading() {
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-8 w-80" />
         </div>
+        {/* Pestañas Masculino / Femenino (P4PTabs): reservan su alto para que
+            la rejilla no salte cuando llega la página. */}
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-32 rounded-full" />
+          <Skeleton className="h-9 w-28 rounded-full" />
+        </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div

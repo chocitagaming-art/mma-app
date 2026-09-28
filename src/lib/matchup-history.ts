@@ -1,4 +1,5 @@
 import { isNoContestMethod } from "@/lib/fight-result";
+import { formatWeightClass } from "@/lib/format";
 import type { DirectMatchupFight } from "@/lib/types";
 
 // Helpers puros para el historial directo de /enfrentamiento. Convención de la
@@ -50,7 +51,7 @@ export function splitDirectMatchups(
   const scheduled: DirectMatchupFight[] = [];
 
   for (const fight of fights) {
-    if (fight.winnerId === null && fight.method === null) {
+    if (isScheduledBout(fight)) {
       scheduled.push(fight);
     } else {
       completed.push(fight);
@@ -58,6 +59,47 @@ export function splitDirectMatchups(
   }
 
   return { completed, scheduled };
+}
+
+// Programado = sin ganador Y sin método. Una victoria con el método aún en NULL
+// (espn_live_results la noche de la velada) ya está disputada.
+function isScheduledBout(fight: Pick<DirectMatchupFight, "winnerId" | "method">): boolean {
+  return fight.winnerId === null && fight.method === null;
+}
+
+/**
+ * Si el cara a cara es un «Enfrentamiento hipotético»: dos categorías distintas
+ * y ningún combate FIRMADO entre los dos.
+ *
+ * Divisiones distintas → no se daría en la realidad y hay que avisarlo (dueño,
+ * 11-jul). Solo con las DOS categorías conocidas (con NULL no se puede afirmar
+ * nada), y comparadas NORMALIZADAS: "Lightweight Title Bout" y "Lightweight" son
+ * la misma división.
+ *
+ * 🪤 Un combate programado entre los dos lo anula siempre. La categoría de cada
+ * esquina sale de la regla única (ranking > último disputado > programado,
+ * current-weight-class.ts), que al que sube o baja de peso le deja la categoría
+ * de ANTES de su próximo combate. Sin esta condición el aviso saltaba en 6 de
+ * las 52 peleas programadas del 29-sep-2026 (0 con la regla vieja), dos del
+ * UFC 332 de ese sábado: Walker (#13 del semipesado) contra Parkin en el pesado,
+ * y Dos Anjos (último combate en el wélter) contra Hernandez en el ligero. La
+ * página decía a la vez «Combate programado» y «no se daría en la realidad».
+ *
+ * Un combate YA DISPUTADO no lo anula, a propósito: el aviso habla de hoy, y la
+ * revancha de dos que ya no comparten división sigue siendo inventada.
+ */
+export function isHypotheticalMatchup(
+  weightClassA: string | null,
+  weightClassB: string | null,
+  directMatchups: Pick<DirectMatchupFight, "winnerId" | "method">[],
+): boolean {
+  if (!weightClassA || !weightClassB) {
+    return false;
+  }
+  if (formatWeightClass(weightClassA) === formatWeightClass(weightClassB)) {
+    return false;
+  }
+  return !directMatchups.some(isScheduledBout);
 }
 
 export type DirectMatchupSummary = {

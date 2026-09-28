@@ -40,7 +40,9 @@ export type FighterRow = {
   // pg podría entregarlo como Date, así que solo el detalle debe consumirlo.
   birth_place?: string | null;
   octagon_debut?: string | null;
-  fight_count?: string;
+  // Peleas UFC DISPUTADAS (count con resueltoSqlPredicate). Solo la traen las
+  // consultas que lo calculan; el total de carrera sale de wins/losses/draws.
+  ufc_fight_count?: string | null;
   latest_weight_class?: string | null;
   // S2-E (migración 015): Fighter Facts + Q&A en español. pg parsea JSONB a
   // JSON automáticamente; `unknown` porque la forma se valida en el mapper.

@@ -2,7 +2,11 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
 import { sql } from "@/lib/db";
-import { fightResultCaseSql, noContestSqlPredicate } from "@/lib/fight-result";
+import {
+  fightResultCaseSql,
+  noContestSqlPredicate,
+  resueltoSqlPredicate,
+} from "@/lib/fight-result";
 import { containsPattern } from "@/lib/sql-like";
 import type {
   DirectMatchupFight,
@@ -27,6 +31,7 @@ import type {
   StrikeBreakdownRow,
   WinMethodRow,
 } from "./fighters.types";
+import { currentWeightClassSql } from "./current-weight-class";
 import {
   computeControlShare,
   mapAggregate,
@@ -72,24 +77,16 @@ async function getFighterDetailUncached(
       -- BE5: DATE llega como Date de JS vía f.*; el alias ::text (posterior en
       -- la lista, pisa al de f.*) fija el ISO "YYYY-MM-DD" que espera la UI.
       f.octagon_debut::text as octagon_debut,
+      -- Peleas UFC ya DISPUTADAS: el respaldo de fightCount cuando falta el
+      -- récord (mismo criterio que la tarjeta de la portada, fight-count.ts).
       (
         select count(*)::text
         from fights fi
         where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
           and fi.status is distinct from 'cancelled'
-      ) as fight_count,
-      (
-        select fi2.weight_class
-        from fights fi2
-        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
-          and fi2.status is distinct from 'cancelled'
-          and fi2.weight_class is not null
-        -- catch/open weight no es división real (misma semántica que
-        -- division-history.ts): solo gana si el luchador no tiene otra
-        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
-          fi2.updated_at desc nulls last, fi2.id desc
-        limit 1
-      ) as latest_weight_class
+          and ${resueltoSqlPredicate("fi")}
+      ) as ufc_fight_count,
+      ${currentWeightClassSql("f")} as latest_weight_class
     from fighters f
     where f.id = $1`,
     [id],
@@ -460,10 +457,13 @@ async function getFighterDetailUncached(
     draws: Number(ufcRecordRow?.draws ?? 0),
   };
 
+  const mappedFighter = mapFighter(fighterRow);
+
   return {
-    fighter: mapFighter(fighterRow),
+    fighter: mappedFighter,
     latestWeightClass: fighterRow.latest_weight_class ?? null,
-    fightCount: Number(fighterRow.fight_count ?? 0),
+    fightCount: mappedFighter.fightCount,
+    ufcFightCount: mappedFighter.ufcFightCount,
     history,
     espnHistory,
     aggregateStats,
@@ -507,24 +507,16 @@ export async function getFighterComparisonDetail(
       -- BE5: mismo cast que getFighterDetail para que octagon_debut nunca
       -- llegue como Date de JS a mapFighter.
       f.octagon_debut::text as octagon_debut,
+      -- Peleas UFC ya DISPUTADAS: el respaldo de fightCount cuando falta el
+      -- récord (mismo criterio que la tarjeta de la portada, fight-count.ts).
       (
         select count(*)::text
         from fights fi
         where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
           and fi.status is distinct from 'cancelled'
-      ) as fight_count,
-      (
-        select fi2.weight_class
-        from fights fi2
-        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
-          and fi2.status is distinct from 'cancelled'
-          and fi2.weight_class is not null
-        -- catch/open weight no es división real (misma semántica que
-        -- division-history.ts): solo gana si el luchador no tiene otra
-        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
-          fi2.updated_at desc nulls last, fi2.id desc
-        limit 1
-      ) as latest_weight_class
+          and ${resueltoSqlPredicate("fi")}
+      ) as ufc_fight_count,
+      ${currentWeightClassSql("f")} as latest_weight_class
     from fighters f
     where f.id in ($1, $2)`,
     [fighterAId, fighterBId],

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sql } from "@/lib/db";
+import { resueltoSqlPredicate } from "@/lib/fight-result";
 
 // Aislamos del acceso real a la BD: el guard a===b no debe consultar nada.
 const { getFighterComparisonDetailMock, getFighterRankingHistoryMock } =
@@ -128,7 +129,7 @@ const FICHA_ROW = {
   wins: 34,
   losses: 15,
   draws: 2,
-  fight_count: "10",
+  ufc_fights_disputed: "10",
   latest_weight_class: "Middleweight",
 };
 
@@ -254,5 +255,30 @@ describe("el récord tiene UNA forma, no tres", () => {
     const json = JSON.stringify(await runMaestroTool("buscar_luchador", { nombre: "Alguien" }));
 
     expect(json).toContain('"record":"20-0-0"');
+  });
+});
+
+// 28-sep-2026: `ficha_y_stats` entregaba `peleas_registradas`, que eran las filas
+// de `fights` —solo UFC y con los combates PROGRAMADOS dentro—. Con eso el
+// Maestro podía contestar «Volkanovski tiene 19 peleas registradas» un mes antes
+// de pelear la 19.ª. El número se queda, pero dice en el nombre lo que es y
+// cuenta solo lo que ya se peleó.
+describe("ficha_y_stats · el conteo de peleas dice lo que cuenta", () => {
+  beforeEach(() => {
+    sqlMock.mockReset();
+  });
+
+  it("🔴 entrega `peleas_ufc_disputadas`, contadas sin programados ni canceladas", async () => {
+    sqlMock
+      .mockResolvedValueOnce([{ ...FICHA_ROW, ufc_fights_disputed: "18" }])
+      .mockResolvedValueOnce([agregado()]);
+
+    const json = JSON.stringify(await runMaestroTool("ficha_y_stats", { id: 8899 }));
+    const consulta = String(sqlMock.mock.calls[0][0]);
+
+    expect(json).toContain('"peleas_ufc_disputadas":18');
+    expect(json).not.toContain("peleas_registradas");
+    expect(consulta).toContain(resueltoSqlPredicate("fi"));
+    expect(consulta).toContain("fi.status is distinct from 'cancelled'");
   });
 });

@@ -9,6 +9,7 @@ import type {
   StrikeZoneStat,
   NewsArticle,
 } from "@/lib/types";
+import { recordFightTotal } from "@/lib/fight-count";
 import { decodeHtmlEntitiesOrNull } from "@/lib/html-entities";
 import type {
   AggregateRow,
@@ -49,7 +50,9 @@ export function mapFighter(row: FighterRow): FighterCardData {
     sourceId: row.source_id ?? null,
     birthPlace: decodeHtmlEntitiesOrNull(row.birth_place),
     octagonDebut: row.octagon_debut ?? null,
-    fightCount: Number(row.fight_count ?? 0),
+    // Del MISMO récord que se mapea arriba: la tarjeta pinta los dos juntos.
+    fightCount: recordFightTotal(row.wins, row.losses, row.draws),
+    ufcFightCount: row.ufc_fight_count == null ? null : Number(row.ufc_fight_count),
     latestWeightClass: row.latest_weight_class ?? null,
     winsByKo: row.wins_by_ko ?? null,
     winsBySubmission: row.wins_by_submission ?? null,

@@ -51,6 +51,24 @@ export async function expectNoHorizontalOverflow(page: Page, label: string): Pro
   ).toBeLessThanOrEqual(clientWidth + 1);
 }
 
+// next-themes escribe en <html> la clase del tema resuelto al montar en el
+// cliente: el HTML servido NO la trae. Esperar a que aparezca es la puerta de
+// hidratación fiable — sin ella, un clic pre-hidratación se pierde y el test
+// sale rojo de forma intermitente (que es justo lo que avisó el revisor).
+//
+// Vivía dentro de interfaz.spec.ts; se trae aquí el 28-sep-2026 para que la
+// usen también las pestañas del libra por libra (portada-p4p.spec.ts).
+export async function esperarHidratacion(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const clases = document.documentElement.classList;
+        return clases.contains("dark") || clases.contains("light");
+      }),
+    )
+    .toBe(true);
+}
+
 export type ObservadorCsp = {
   // Array VIVO: se llena según van llegando los mensajes de consola.
   readonly violaciones: string[];

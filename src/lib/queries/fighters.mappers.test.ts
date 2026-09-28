@@ -54,6 +54,20 @@ describe("mapFighter", () => {
     );
   });
 
+  // 28-sep-2026: el contador del pie de la tarjeta decía «19 peleas» junto a un
+  // récord 29-1-0, porque contaba filas de `fights` (solo UFC y con programados).
+  it("fightCount es V+D+E del MISMO récord que se mapea, no las filas de `fights`", () => {
+    const f = mapFighter(fila({ wins: 29, losses: 1, draws: 0, fight_count: "19" } as Partial<FighterRow>));
+
+    expect(f.fightCount).toBe(30);
+    expect(f.fightCount).toBe(f.wins + f.losses + f.draws);
+  });
+
+  it("ufcFightCount lee las UFC disputadas; null si la consulta no las calcula", () => {
+    expect(mapFighter(fila({ ufc_fight_count: "18" })).ufcFightCount).toBe(18);
+    expect(mapFighter(fila()).ufcFightCount).toBeNull();
+  });
+
   it("sigue mapeando el resto de la fila sin cambios", () => {
     const f = mapFighter(fila({ height_cm: "177.8", nickname: "Do Bronxs" }));
 

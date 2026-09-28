@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyDirectMatchup,
   describeMatchupTies,
+  isHypotheticalMatchup,
   splitDirectMatchups,
   summarizeDirectMatchups,
 } from "@/lib/matchup-history";
@@ -188,5 +189,62 @@ describe("describeMatchupTies", () => {
     expect(
       describeMatchupTies({ redWins: 1, blueWins: 0, draws: 1, noContests: 1 }),
     ).toBe("1 empate · 1 sin resultado");
+  });
+});
+
+// El aviso «Enfrentamiento hipotético» de /enfrentamiento. Desde el 28-sep-2026
+// la categoría de cada esquina sale de la regla única (ranking > último
+// disputado > programado, current-weight-class.ts), y esa regla le da al que
+// sube o baja de peso la categoría de ANTES de su próximo combate. Sin mirar el
+// combate real, el aviso saltaba en 6 de las 52 peleas programadas (0 con la
+// regla vieja), dos de ellas del UFC 332 del 3-oct: la página decía a la vez
+// «Combate programado» y «esta pelea no se daría en la realidad».
+describe("isHypotheticalMatchup", () => {
+  it("different divisions with no bout between them → hypothetical", () => {
+    expect(isHypotheticalMatchup("Welterweight", "Bantamweight", [])).toBe(true);
+  });
+
+  // Johnny Walker (6836) es #13 del semipesado y pelea en el PESADO contra Mick
+  // Parkin (7054), fight 15816, UFC 332. Hay combate firmado: no es hipotético.
+  it("different divisions but a SCHEDULED bout between them → not hypothetical (Walker–Parkin)", () => {
+    const booked = fight({ fightId: 15816, winnerId: null, method: null, weightClass: "Heavyweight" });
+    expect(isHypotheticalMatchup("Light Heavyweight", "Heavyweight", [booked])).toBe(false);
+  });
+
+  // Rafael Dos Anjos (7141): su último combate DISPUTADO fue en el wélter y el
+  // del sábado contra Alexander Hernandez (6691), fight 17153, es en el ligero.
+  it("the one moving back down to a booked bout does not trigger it either (Dos Anjos–Hernandez)", () => {
+    const booked = fight({ fightId: 17153, winnerId: null, method: null, weightClass: "Lightweight" });
+    const old = fight({ fightId: 900, winnerId: 7141, method: "KO/TKO", weightClass: "Lightweight" });
+    expect(isHypotheticalMatchup("Welterweight", "Lightweight", [old, booked])).toBe(false);
+  });
+
+  // Solo lo quita un combate FIRMADO. Uno ya disputado no: el aviso habla de
+  // hoy («no se daría»), y la revancha de dos que ya no comparten división
+  // sigue siendo inventada aunque se cruzaran hace años.
+  it("an old COMPLETED bout does not cancel it: a rematch across today's divisions is still invented", () => {
+    const past = fight({ winnerId: RED_ID, method: "Decision - Unanimous", weightClass: "Light Heavyweight" });
+    expect(isHypotheticalMatchup("Heavyweight", "Middleweight", [past])).toBe(true);
+  });
+
+  // Una victoria con el método aún en NULL (espn_live_results, la noche de la
+  // velada) ya es un combate disputado, no uno programado.
+  it("a win still missing its method is completed, not booked", () => {
+    const justWon = fight({ winnerId: RED_ID, method: null });
+    expect(isHypotheticalMatchup("Heavyweight", "Middleweight", [justWon])).toBe(true);
+  });
+
+  // Shevchenko (6260) contra Natalia Silva (7003): las dos, peso mosca.
+  it("same division → never hypothetical (Shevchenko–Silva)", () => {
+    expect(isHypotheticalMatchup("Women's Flyweight", "Women's Flyweight", [])).toBe(false);
+  });
+
+  it("compares NORMALISED labels: a title bout is the same division", () => {
+    expect(isHypotheticalMatchup("Lightweight Title Bout", "Lightweight", [])).toBe(false);
+  });
+
+  it("with an unknown division it cannot claim anything", () => {
+    expect(isHypotheticalMatchup(null, "Lightweight", [])).toBe(false);
+    expect(isHypotheticalMatchup("Lightweight", null, [])).toBe(false);
   });
 });

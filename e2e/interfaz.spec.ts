@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { esperarHidratacion } from "./helpers";
+
 // ── Fase 13B · tema, navegación, modales y acordeón ────────────────────────
 //
 // Es el ÚNICO fichero nuevo de la fase 13 que corre en varios proyectos, y es a
@@ -23,21 +25,9 @@ test.beforeEach(async ({ page }) => {
 
 const esEscritorio = (nombre: string) => nombre.startsWith("escritorio");
 
-// next-themes escribe en <html> la clase del tema resuelto al montar en el
-// cliente: el HTML servido NO la trae. Esperar a que aparezca es la puerta de
-// hidratación fiable — sin ella, un clic pre-hidratación se pierde y el test
-// sale rojo de forma intermitente (que es justo lo que avisó el revisor).
-async function esperarHidratacion(page: Page) {
-  await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const clases = document.documentElement.classList;
-        return clases.contains("dark") || clases.contains("light");
-      }),
-    )
-    .toBe(true);
-}
-
+// La puerta de hidratación vive en helpers.ts desde el 28-sep-2026, porque
+// e2e/portada-p4p.spec.ts la necesita igual (el clic en una pestaña antes de
+// hidratar se pierde).
 const esOscuro = (page: Page) =>
   page.evaluate(() => document.documentElement.classList.contains("dark"));
 
