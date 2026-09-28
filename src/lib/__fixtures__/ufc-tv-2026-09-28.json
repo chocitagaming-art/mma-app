@@ -1,0 +1,6388 @@
+{
+ "measuredAt": "2026-09-28T19:20:00Z",
+ "source": "videos.list part=snippet,liveStreamingDetails,contentDetails,status sobre las 600 ultimas subidas de cada canal",
+ "channels": {
+  "ufc": [
+   {
+    "id": "uXf5Da2QkR8",
+    "snippet": {
+     "title": "🔴 UFC 332: Post-Fight Press Conference",
+     "publishedAt": "2026-09-28T17:56:47Z",
+     "liveBroadcastContent": "upcoming"
+    },
+    "contentDetails": {
+     "duration": "P0D"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-10-04T04:15:00Z"
+    }
+   },
+   {
+    "id": "AWfWwkQz0yc",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 8",
+     "publishedAt": "2026-09-28T17:55:17Z",
+     "liveBroadcastContent": "upcoming"
+    },
+    "contentDetails": {
+     "duration": "P0D"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-30T01:30:00Z"
+    }
+   },
+   {
+    "id": "YVQeQxGEHM8",
+    "snippet": {
+     "title": "TOP 3 PAYTON TALBOTT FINISHES 🚨 #ufc332",
+     "publishedAt": "2026-09-28T12:30:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT41S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "z1PhY6ix2XY",
+    "snippet": {
+     "title": "GREATEST UFC RISING STARS | UFC 332",
+     "publishedAt": "2026-09-23T01:07:20Z",
+     "liveBroadcastContent": "live"
+    },
+    "contentDetails": {
+     "duration": "P0D"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-28T12:15:00Z",
+     "actualStartTime": "2026-09-28T12:15:15Z"
+    }
+   },
+   {
+    "id": "M7ITlJGdTes",
+    "snippet": {
+     "title": "TOP 3 KING GREEN FINISHES 👑 #ufc332",
+     "publishedAt": "2026-09-27T19:27:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT41S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "IuRvqcEmJr0",
+    "snippet": {
+     "title": "Raul Rosas Jr. finishes Barcelos #ufcvegas121",
+     "publishedAt": "2026-09-27T02:43:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "JtN02hQDRD8",
+    "snippet": {
+     "title": "Tina Black gets the KNOCKOUT #ufcvegas121",
+     "publishedAt": "2026-09-27T00:32:49Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "IJthGLks6Hc",
+    "snippet": {
+     "title": "the fights over!! #ufcvegas121",
+     "publishedAt": "2026-09-26T23:12:28Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT16S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "7f80TdPwfus",
+    "snippet": {
+     "title": "Zuffa Boxing 11: Fisher vs. Pirotton | Pre-Show + 1st Prelim",
+     "publishedAt": "2026-09-26T16:46:20Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT37M42S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AS",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CA",
+       "CL",
+       "CO",
+       "CR",
+       "CU",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GU",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "UM",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG",
+       "VI"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-26T16:00:00Z",
+     "actualStartTime": "2026-09-26T16:00:20Z",
+     "actualEndTime": "2026-09-26T16:37:57Z"
+    }
+   },
+   {
+    "id": "qY9YV30VNuE",
+    "snippet": {
+     "title": "UFC Fight Night Preview Show | Rosas Jr, vs Barcelos",
+     "publishedAt": "2026-09-25T22:40:50Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT38M12S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-25T22:00:00Z",
+     "actualStartTime": "2026-09-25T21:59:57Z",
+     "actualEndTime": "2026-09-25T22:38:24Z"
+    }
+   },
+   {
+    "id": "4jCfhpKS4Wg",
+    "snippet": {
+     "title": "King Green vs Daniel Zellhuber | Full Fight",
+     "publishedAt": "2026-09-24T11:45:12Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT12M2S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "qhucudYRwrI",
+    "snippet": {
+     "title": "GREATEST UFC MOMENTS WITH NO COMMENTARY 🔇",
+     "publishedAt": "2026-09-24T11:09:21Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11H55M"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-23T19:00:00Z",
+     "actualStartTime": "2026-09-23T19:00:22Z",
+     "actualEndTime": "2026-09-24T09:50:18Z"
+    }
+   },
+   {
+    "id": "ag2DmZQO7MM",
+    "snippet": {
+     "title": "Raoni Barcelos vs Khalid Taha | FULL FIGHT | UFC Vegas 121",
+     "publishedAt": "2026-09-23T16:00:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT17M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "a4Q81kbvOXk",
+    "snippet": {
+     "title": "Payton Talbott vs Henry Cejudo | FULL FIGHT | UFC 332",
+     "publishedAt": "2026-09-23T14:00:30Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M55S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "xKaCagWeuFc",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 7",
+     "publishedAt": "2026-09-23T03:12:28Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H14M35S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-23T01:30:00Z",
+     "actualStartTime": "2026-09-23T01:43:24Z",
+     "actualEndTime": "2026-09-23T03:06:59Z"
+    }
+   },
+   {
+    "id": "PGmYd-0yBwQ",
+    "snippet": {
+     "title": "Insane Fights From Dana White's Contender Series Episode 7",
+     "publishedAt": "2026-09-23T01:54:53Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT20M15S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "UyefH8J8oWE",
+    "snippet": {
+     "title": "UFC 331 GREATEST MOMENTS in SLOW MOTION 👀 | Fight Motion",
+     "publishedAt": "2026-09-22T21:38:53Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "_3gKbsCRtEc",
+    "snippet": {
+     "title": "Deiveson Figueiredo vs Brandon Moreno 3 | FULL FIGHT | UFC 332",
+     "publishedAt": "2026-09-22T14:00:30Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT27M40S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "FOjU3X4GFKU",
+    "snippet": {
+     "title": "Deiveson Figueiredo vs Payton Talbott | Full Fight Marathon",
+     "publishedAt": "2026-09-22T11:45:13Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H32M59S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Li9Ge7oDxWM",
+    "snippet": {
+     "title": "Raul Rosas Jr vs Ricky Turcios | FULL FIGHT | UFC Vegas 121",
+     "publishedAt": "2026-09-21T16:00:15Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M18S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "A09GMoVm9S8",
+    "snippet": {
+     "title": "Wang Cong vs Tracy Cortez | FULL FIGHT | UFC 332",
+     "publishedAt": "2026-09-21T14:00:16Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "ZejN0UzIfKE",
+    "snippet": {
+     "title": "Natalia Silva vs Rose Namajunas | FULL FIGHT | UFC 332",
+     "publishedAt": "2026-09-20T14:15:34Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M39S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "WyAQXKrNDL0",
+    "snippet": {
+     "title": "Ciryl Gane vs Josh Hokit 🚨 | Full Fight Marathon",
+     "publishedAt": "2026-09-20T11:45:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H21M8S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-20T11:45:00Z",
+     "actualStartTime": "2026-09-20T11:45:06Z",
+     "actualEndTime": "2026-09-20T13:08:14Z"
+    }
+   },
+   {
+    "id": "yqHXlPThZ9M",
+    "snippet": {
+     "title": "🔴 Crypto.com UFC 331: Post-Fight Press Conference",
+     "publishedAt": "2026-09-20T05:32:53Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H10M41S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-20T04:15:00Z",
+     "actualStartTime": "2026-09-20T04:18:46Z",
+     "actualEndTime": "2026-09-20T05:29:12Z"
+    }
+   },
+   {
+    "id": "yspd_ZxYZQM",
+    "snippet": {
+     "title": "Crypto.com UFC 331: Van vs Pantoja 2 | September 19",
+     "publishedAt": "2026-09-20T04:34:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3H9M11S",
+     "regionRestriction": {
+      "blocked": [
+       "AD",
+       "AE",
+       "AF",
+       "AG",
+       "AI",
+       "AL",
+       "AM",
+       "AO",
+       "AQ",
+       "AR",
+       "AS",
+       "AT",
+       "AU",
+       "AW",
+       "AX",
+       "AZ",
+       "BA",
+       "BB",
+       "BD",
+       "BE",
+       "BF",
+       "BG",
+       "BH",
+       "BI",
+       "BJ",
+       "BL",
+       "BM",
+       "BN",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BT",
+       "BV",
+       "BW",
+       "BY",
+       "BZ",
+       "CA",
+       "CC",
+       "CD",
+       "CF",
+       "CG",
+       "CH",
+       "CI",
+       "CK",
+       "CL",
+       "CM",
+       "CN",
+       "CO",
+       "CR",
+       "CU",
+       "CV",
+       "CW",
+       "CX",
+       "CY",
+       "CZ",
+       "DE",
+       "DJ",
+       "DK",
+       "DM",
+       "DO",
+       "DZ",
+       "EC",
+       "EE",
+       "EG",
+       "EH",
+       "ER",
+       "ES",
+       "ET",
+       "FI",
+       "FJ",
+       "FK",
+       "FM",
+       "FO",
+       "FR",
+       "GA",
+       "GB",
+       "GD",
+       "GE",
+       "GF",
+       "GG",
+       "GH",
+       "GI",
+       "GL",
+       "GM",
+       "GN",
+       "GP",
+       "GQ",
+       "GR",
+       "GS",
+       "GT",
+       "GU",
+       "GW",
+       "GY",
+       "HK",
+       "HM",
+       "HN",
+       "HR",
+       "HT",
+       "HU",
+       "ID",
+       "IE",
+       "IL",
+       "IM",
+       "IN",
+       "IO",
+       "IQ",
+       "IR",
+       "IS",
+       "IT",
+       "JE",
+       "JM",
+       "JO",
+       "JP",
+       "KE",
+       "KG",
+       "KH",
+       "KI",
+       "KM",
+       "KN",
+       "KP",
+       "KR",
+       "KW",
+       "KY",
+       "KZ",
+       "LA",
+       "LB",
+       "LC",
+       "LI",
+       "LK",
+       "LR",
+       "LS",
+       "LT",
+       "LU",
+       "LV",
+       "LY",
+       "MA",
+       "MC",
+       "MD",
+       "ME",
+       "MF",
+       "MG",
+       "MH",
+       "MK",
+       "ML",
+       "MM",
+       "MN",
+       "MO",
+       "MP",
+       "MQ",
+       "MR",
+       "MS",
+       "MT",
+       "MU",
+       "MV",
+       "MW",
+       "MX",
+       "MY",
+       "MZ",
+       "NA",
+       "NC",
+       "NE",
+       "NF",
+       "NG",
+       "NI",
+       "NL",
+       "NO",
+       "NP",
+       "NR",
+       "NU",
+       "NZ",
+       "OM",
+       "PA",
+       "PE",
+       "PF",
+       "PG",
+       "PH",
+       "PK",
+       "PL",
+       "PM",
+       "PN",
+       "PR",
+       "PS",
+       "PT",
+       "PW",
+       "PY",
+       "QA",
+       "RE",
+       "RO",
+       "RS",
+       "RU",
+       "RW",
+       "SA",
+       "SB",
+       "SC",
+       "SD",
+       "SE",
+       "SG",
+       "SH",
+       "SI",
+       "SJ",
+       "SK",
+       "SL",
+       "SM",
+       "SN",
+       "SO",
+       "SR",
+       "SS",
+       "ST",
+       "SV",
+       "SX",
+       "SY",
+       "SZ",
+       "TC",
+       "TD",
+       "TF",
+       "TG",
+       "TH",
+       "TJ",
+       "TK",
+       "TL",
+       "TM",
+       "TN",
+       "TO",
+       "TR",
+       "TT",
+       "TV",
+       "TW",
+       "TZ",
+       "UA",
+       "UG",
+       "UM",
+       "US",
+       "UY",
+       "UZ",
+       "VA",
+       "VC",
+       "VE",
+       "VG",
+       "VI",
+       "VN",
+       "VU",
+       "WF",
+       "WS",
+       "YE",
+       "YT",
+       "ZA",
+       "ZM",
+       "ZW"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-20T01:00:00Z",
+     "actualStartTime": "2026-09-20T01:03:38Z",
+     "actualEndTime": "2026-09-20T04:12:15Z"
+    }
+   },
+   {
+    "id": "D9gmLIscwlI",
+    "snippet": {
+     "title": "Every Knockout and Submission From UFC 331 | UFC Highlights",
+     "publishedAt": "2026-09-20T04:22:48Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT14M24S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "e920mIf3ZpM",
+    "snippet": {
+     "title": "Crypto.com UFC 331: Free Fight Marathon",
+     "publishedAt": "2026-09-19T23:03:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11H29M56S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-19T10:00:00Z",
+     "actualStartTime": "2026-09-19T10:00:20Z",
+     "actualEndTime": "2026-09-19T21:30:16Z"
+    }
+   },
+   {
+    "id": "UF3vj3ri0jw",
+    "snippet": {
+     "title": "Crypto.com UFC 331: Ceremonial Weigh-In",
+     "publishedAt": "2026-09-19T00:56:09Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT51M11S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-19T00:00:00Z",
+     "actualStartTime": "2026-09-19T00:00:06Z",
+     "actualEndTime": "2026-09-19T00:51:01Z"
+    }
+   },
+   {
+    "id": "DQ2_X7Ksd98",
+    "snippet": {
+     "title": "UFC 333: Press Conference",
+     "publishedAt": "2026-09-18T23:30:27Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT22M56S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T23:00:00Z",
+     "actualStartTime": "2026-09-18T23:05:41Z",
+     "actualEndTime": "2026-09-18T23:28:21Z"
+    }
+   },
+   {
+    "id": "8mnBb_j45wg",
+    "snippet": {
+     "title": "Crypto.com UFC 331: Morning Weigh-In Show",
+     "publishedAt": "2026-09-18T18:29:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2H33M36S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T15:50:00Z",
+     "actualStartTime": "2026-09-18T15:50:06Z",
+     "actualEndTime": "2026-09-18T18:23:25Z"
+    }
+   },
+   {
+    "id": "2IXFWvikV5E",
+    "snippet": {
+     "title": "Arman Tsarukyan finishes Dan Hooker! #ufc331",
+     "publishedAt": "2026-09-18T14:45:00Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT54S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "RK5LLmmtkB0",
+    "snippet": {
+     "title": "Crypto.com UFC 331: Pre-Fight Press Conference",
+     "publishedAt": "2026-09-18T00:48:38Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT40M20S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T00:00:00Z",
+     "actualStartTime": "2026-09-18T00:00:06Z",
+     "actualEndTime": "2026-09-18T00:46:01Z"
+    }
+   },
+   {
+    "id": "zzPB8_ypOI0",
+    "snippet": {
+     "title": "the GREATEST FLYWEIGHT FIGHT ever? #ufc331",
+     "publishedAt": "2026-09-17T17:30:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT55S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "X7dxDXsSLgc",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 6",
+     "publishedAt": "2026-09-16T02:20:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT56M30S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T01:30:00Z",
+     "actualStartTime": "2026-09-16T01:22:01Z",
+     "actualEndTime": "2026-09-16T02:18:17Z"
+    }
+   },
+   {
+    "id": "eHX2_5XKJ5Q",
+    "snippet": {
+     "title": "OUT OF THIS WORLD FINISHES 🚨 | Highlights From Dana White's Contender Series Episode 6",
+     "publishedAt": "2026-09-16T01:42:12Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT12M35S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "eIP7jrtoems",
+    "snippet": {
+     "title": "🔴 Noche UFC: Post-Fight Press Conference",
+     "publishedAt": "2026-09-13T02:06:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H17M20S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-13T00:15:00Z",
+     "actualStartTime": "2026-09-13T00:45:36Z",
+     "actualEndTime": "2026-09-13T02:02:43Z"
+    }
+   },
+   {
+    "id": "35QMmEPfbx8",
+    "snippet": {
+     "title": "Garcia vs Benn: Ceremonial Weigh-In",
+     "publishedAt": "2026-09-12T01:22:44Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H18M6S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-12T00:00:00Z",
+     "actualStartTime": "2026-09-12T00:00:01Z",
+     "actualEndTime": "2026-09-12T01:18:01Z"
+    }
+   },
+   {
+    "id": "jK78RqWLxxc",
+    "snippet": {
+     "title": "Noche UFC: Ceremonial Weigh-In",
+     "publishedAt": "2026-09-12T00:05:02Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT59M15S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-11T23:00:00Z",
+     "actualStartTime": "2026-09-11T23:00:31Z",
+     "actualEndTime": "2026-09-11T23:59:34Z"
+    }
+   },
+   {
+    "id": "Z2zN2w5tTaw",
+    "snippet": {
+     "title": "Garcia vs Benn: Pre-Fight Press Conference",
+     "publishedAt": "2026-09-11T00:46:35Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT43M51S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-11T00:00:00Z",
+     "actualStartTime": "2026-09-11T00:00:01Z",
+     "actualEndTime": "2026-09-11T00:43:36Z"
+    }
+   },
+   {
+    "id": "CwQelNxSYoQ",
+    "snippet": {
+     "title": "Alexa Grasso vs Maycee Barber | Full Fight",
+     "publishedAt": "2026-09-10T11:45:09Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M31S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "9nXqBaZO-rc",
+    "snippet": {
+     "title": "The Best of Jean Silva | Full Fight Marathon",
+     "publishedAt": "2026-09-10T02:32:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H10M36S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-09T11:45:00Z",
+     "actualStartTime": "2026-09-09T11:45:15Z",
+     "actualEndTime": "2026-09-10T01:52:25Z"
+    }
+   },
+   {
+    "id": "6kJcliSS8-U",
+    "snippet": {
+     "title": "Mauricio Ruffy vs Michael Chandler | FULL FIGHT | Crypto.com UFC 331",
+     "publishedAt": "2026-09-09T14:00:32Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M47S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "cDY37MA2ha0",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 5",
+     "publishedAt": "2026-09-09T02:24:20Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT47M51S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-09T01:30:00Z",
+     "actualStartTime": "2026-09-09T01:33:56Z",
+     "actualEndTime": "2026-09-09T02:21:31Z"
+    }
+   },
+   {
+    "id": "AtJS6onpjaQ",
+    "snippet": {
+     "title": "NASTY FINISHES! 🚨 | Highlights From Dana White's Contender Series Episode 5",
+     "publishedAt": "2026-09-09T01:51:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M12S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "0y3QqTW_cyQ",
+    "snippet": {
+     "title": "NEVER take a punch to the gut like this 💀 #ufc #mma #knockout",
+     "publishedAt": "2026-09-09T00:20:55Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "aRf-F-pIfEM",
+    "snippet": {
+     "title": "still one of the craziest knockouts we've ever seen #nocheufc",
+     "publishedAt": "2026-09-08T16:06:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "CXv0za9tuAA",
+    "snippet": {
+     "title": "KNEE KNOCKOUT 🤬 | Jose Delgado vs Hyder Amil | FULL FIGHT | Noche UFC",
+     "publishedAt": "2026-09-08T16:00:15Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M20S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "0re18oQPShU",
+    "snippet": {
+     "title": "Arman Tsarukyan vs Dan Hooker | FULL FIGHT | Crypto.com UFC 331",
+     "publishedAt": "2026-09-08T14:00:29Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M36S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "9fMmIw0LakY",
+    "snippet": {
+     "title": "HE PUT HIM TO SLEEP | Jean Silva vs Bryce Mitchell | Full Fight",
+     "publishedAt": "2026-09-08T11:45:35Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT12M3S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "LmdnDSV66dE",
+    "snippet": {
+     "title": "Jean Silva vs Arnold Allen | FULL FIGHT | Noche UFC",
+     "publishedAt": "2026-09-07T16:00:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT16M16S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "H3DtCTuAnyY",
+    "snippet": {
+     "title": "Alexandre Pantoja vs Kai Asakura | FULL FIGHT | Crypto.com UFC 331",
+     "publishedAt": "2026-09-07T14:00:18Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M46S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "NJPZ53NvBNM",
+    "snippet": {
+     "title": "GREATEST FLYWEIGHT FIGHT OF ALL TIME? | Joshua Van vs Tatsuro Taira",
+     "publishedAt": "2026-09-06T14:00:38Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT25M42S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "OraJxNt3BdM",
+    "snippet": {
+     "title": "Greatest Mexican Fighters Of All Time 🇲🇽 | Noche UFC",
+     "publishedAt": "2026-09-06T11:45:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2H11M5S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "XCNaLgqYJ8E",
+    "snippet": {
+     "title": "🔴 UFC Paris: Post-Fight Press Conference",
+     "publishedAt": "2026-09-05T22:54:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT43M10S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-05T22:00:00Z",
+     "actualStartTime": "2026-09-05T22:08:41Z",
+     "actualEndTime": "2026-09-05T22:51:35Z"
+    }
+   },
+   {
+    "id": "u1ljLp6E5L4",
+    "snippet": {
+     "title": "Every Knockout and Submission From UFC Paris| UFC Highlights",
+     "publishedAt": "2026-09-05T22:11:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M32S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "rcG5OCkk3wg",
+    "snippet": {
+     "title": "OH MY WHAT A KNOCKOUT #ufcparis",
+     "publishedAt": "2026-09-05T21:33:23Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT20S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "6BjCAdvINu4",
+    "snippet": {
+     "title": "Wemby reacting to the nasty KNOCKOUT #ufcparis",
+     "publishedAt": "2026-09-05T19:30:04Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "GSz_o7MpFXs",
+    "snippet": {
+     "title": "UFC Paris: Ceremonial Weigh-In",
+     "publishedAt": "2026-09-04T17:16:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H12M30S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-04T16:00:00Z",
+     "actualStartTime": "2026-09-04T16:00:11Z",
+     "actualEndTime": "2026-09-04T17:12:26Z"
+    }
+   },
+   {
+    "id": "8JyUdivi54w",
+    "snippet": {
+     "title": "Behind The Scenes of Jon Jones Coaching 🚨 | NO COMMENTARY",
+     "publishedAt": "2026-09-03T11:45:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M43S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-03T11:45:00Z",
+     "actualStartTime": "2026-09-03T11:45:06Z",
+     "actualEndTime": "2026-09-03T11:54:49Z"
+    }
+   },
+   {
+    "id": "Jb6s-gb6l5Q",
+    "snippet": {
+     "title": "Brutal Finishes! | Highlights From Dana White's Contender Series Episode 4",
+     "publishedAt": "2026-09-02T02:36:04Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M18S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "VcV4Vnh6-vc",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 4",
+     "publishedAt": "2026-09-02T02:35:47Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H1M6S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-02T01:30:00Z",
+     "actualStartTime": "2026-09-02T01:31:46Z",
+     "actualEndTime": "2026-09-02T02:32:40Z"
+    }
+   },
+   {
+    "id": "UiSb-M2SIHo",
+    "snippet": {
+     "title": "Reactions to Sanchez's knockout #dwcs",
+     "publishedAt": "2026-09-02T00:52:04Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Vo3HM8Ihq3Q",
+    "snippet": {
+     "title": "Crazy Knockouts & Rare Submissions | Best of August",
+     "publishedAt": "2026-09-01T11:45:32Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT53M50S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "nmcIprB95R0",
+    "snippet": {
+     "title": "CRAZY ANGLE of Song Yadong's knockout #ufcshanghai",
+     "publishedAt": "2026-08-31T15:01:23Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT24S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Ht9emLnMNrQ",
+    "snippet": {
+     "title": "Jean Silva vs Jose Delgado | Full Fight Marathon",
+     "publishedAt": "2026-08-30T14:06:54Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H17M10S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "pDU5GVl2usQ",
+    "snippet": {
+     "title": "🔴 UFC Shanghai: Post-Fight Press Conference",
+     "publishedAt": "2026-08-29T14:26:35Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H10M20S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-29T13:15:00Z",
+     "actualStartTime": "2026-08-29T13:12:51Z",
+     "actualEndTime": "2026-08-29T14:22:56Z"
+    }
+   },
+   {
+    "id": "qLd73j9EDUo",
+    "snippet": {
+     "title": "All 10 Finishes From UFC Shanghai | UFC Highlights",
+     "publishedAt": "2026-08-29T14:22:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M40S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "FGGcTwXl6wA",
+    "snippet": {
+     "title": "Song Yadong knockout Umar Nurmagomedov #ufcshanghai",
+     "publishedAt": "2026-08-29T13:04:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT23S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "9x3qCmdTMZs",
+    "snippet": {
+     "title": "The GREATEST ROOKIES in the UFC!",
+     "publishedAt": "2026-08-28T11:45:28Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H25M2S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "ZEv1a6VFV9g",
+    "snippet": {
+     "title": "UFC Fight Night Preview Show | Nurmagomedov vs Yadong",
+     "publishedAt": "2026-08-28T04:21:08Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT48M15S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-28T03:30:00Z",
+     "actualStartTime": "2026-08-28T03:30:11Z",
+     "actualEndTime": "2026-08-28T04:18:09Z"
+    }
+   },
+   {
+    "id": "3QtmWgXrIIs",
+    "snippet": {
+     "title": "Jon Jones vs Stipe Miocic | FULL FIGHT",
+     "publishedAt": "2026-08-27T11:45:36Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT17M43S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "fUzCtd9Amec",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 3",
+     "publishedAt": "2026-08-26T02:39:30Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H15M1S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-26T01:30:00Z",
+     "actualStartTime": "2026-08-26T01:21:41Z",
+     "actualEndTime": "2026-08-26T02:36:29Z"
+    }
+   },
+   {
+    "id": "ECUNDqFIcy8",
+    "snippet": {
+     "title": "So Many Finishes! | Highlights From Dana White's Contender Series Episode 3",
+     "publishedAt": "2026-08-26T01:27:28Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M12S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "39dMa3RhavM",
+    "snippet": {
+     "title": "Song Yadong vs Deiveson Figueiredo | FULL FIGHT | UFC Shanghai",
+     "publishedAt": "2026-08-25T14:00:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "3KK27jf1hJI",
+    "snippet": {
+     "title": "Bilal Hasan's First Round KNOCKOUT | DWCS",
+     "publishedAt": "2026-08-25T11:45:34Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M52S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "03hLrU6s-Kk",
+    "snippet": {
+     "title": "Umar Nurmagomedov vs Cory Sandhagen | FULL FIGHT | UFC Shanghai",
+     "publishedAt": "2026-08-24T14:00:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M44S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "135PnZFXmic",
+    "snippet": {
+     "title": "Sean O'Malley vs Petr Yan | FULL FIGHT",
+     "publishedAt": "2026-08-24T11:45:18Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M24S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "gAN_EOl0XLo",
+    "snippet": {
+     "title": "Joshua Van vs Alexandre Pantoja 2 🏆 | Full Fight Marathon",
+     "publishedAt": "2026-08-23T11:45:36Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H48M18S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "tofFShfJMsQ",
+    "snippet": {
+     "title": "🔴 UFC Sacramento: Post-Fight Press Conference",
+     "publishedAt": "2026-08-23T03:58:29Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT48M25S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-23T03:15:00Z",
+     "actualStartTime": "2026-08-23T03:07:16Z",
+     "actualEndTime": "2026-08-23T03:55:33Z"
+    }
+   },
+   {
+    "id": "0SoZuckMbJk",
+    "snippet": {
+     "title": "Every Knockout and Submission From UFC Sacramento | UFC Highlights",
+     "publishedAt": "2026-08-23T03:15:05Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT16M32S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Ebi5zDrbtz0",
+    "snippet": {
+     "title": "UFC Sacramento: Ceremonial Weigh-In",
+     "publishedAt": "2026-08-22T00:09:42Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H5M5S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-21T23:00:00Z",
+     "actualStartTime": "2026-08-21T23:00:06Z",
+     "actualEndTime": "2026-08-22T00:04:57Z"
+    }
+   },
+   {
+    "id": "gtzfvi5M_b0",
+    "snippet": {
+     "title": "INSANE KNOCKOUT! | Kaik Brito vs Namo Fazil | DWCS",
+     "publishedAt": "2026-08-19T13:00:20Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT13M39S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "OZsA4Uemy_g",
+    "snippet": {
+     "title": "🔵 DWCS: Post-Fight Press Conference | Season 10 - Week 2",
+     "publishedAt": "2026-08-19T02:56:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H13M21S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-19T01:30:00Z",
+     "actualStartTime": "2026-08-19T01:29:01Z",
+     "actualEndTime": "2026-08-19T02:52:30Z"
+    }
+   },
+   {
+    "id": "X4KBLBWajHI",
+    "snippet": {
+     "title": "Crazy Knockouts & Rare Submissions | Best of July",
+     "publishedAt": "2026-08-18T22:29:15Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT45M59S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AU",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "wP3Xm2kYwjk",
+    "snippet": {
+     "title": "INSANE KNOCKOUT | Gregory Rodrigues vs Brunno Ferreira 2 | FULL FIGHT",
+     "publishedAt": "2026-08-18T14:00:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "8WGYLzHURl4",
+    "snippet": {
+     "title": "Anthony Hernandez vs Michel Pereira | FULL FIGHT | UFC Sacramento",
+     "publishedAt": "2026-08-17T14:30:35Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT25M43S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "RyawL4B5rQg",
+    "snippet": {
+     "title": "2 HOURS of the GREATEST UFC FIGHTS!",
+     "publishedAt": "2026-08-17T11:45:33Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2H10M23S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "sUJwR6CctH4",
+    "snippet": {
+     "title": "Arman Tsarukyan vs Mauricio Ruffy 🏆 | Full Fight Marathon",
+     "publishedAt": "2026-08-16T11:45:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H9M3S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "rVkePUj_KBk",
+    "snippet": {
+     "title": "🔴 UFC 330: Post-Fight Press Conference",
+     "publishedAt": "2026-08-16T05:55:40Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT58M27S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-16T04:15:00Z",
+     "actualStartTime": "2026-08-16T04:36:31Z",
+     "actualEndTime": "2026-08-16T05:52:38Z"
+    }
+   },
+   {
+    "id": "oyva13Tm2Ec",
+    "snippet": {
+     "title": "UFC 330: Makhachev vs Machado Garry | August 15",
+     "publishedAt": "2026-08-16T04:41:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3H28M26S",
+     "regionRestriction": {
+      "blocked": [
+       "AD",
+       "AE",
+       "AF",
+       "AG",
+       "AI",
+       "AL",
+       "AM",
+       "AO",
+       "AQ",
+       "AR",
+       "AS",
+       "AT",
+       "AU",
+       "AW",
+       "AX",
+       "AZ",
+       "BA",
+       "BB",
+       "BD",
+       "BE",
+       "BF",
+       "BG",
+       "BH",
+       "BI",
+       "BJ",
+       "BL",
+       "BM",
+       "BN",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BT",
+       "BV",
+       "BW",
+       "BY",
+       "BZ",
+       "CA",
+       "CC",
+       "CD",
+       "CF",
+       "CG",
+       "CH",
+       "CI",
+       "CK",
+       "CL",
+       "CM",
+       "CN",
+       "CO",
+       "CR",
+       "CU",
+       "CV",
+       "CW",
+       "CX",
+       "CY",
+       "CZ",
+       "DE",
+       "DJ",
+       "DK",
+       "DM",
+       "DO",
+       "DZ",
+       "EC",
+       "EE",
+       "EG",
+       "EH",
+       "ER",
+       "ES",
+       "ET",
+       "FI",
+       "FJ",
+       "FK",
+       "FM",
+       "FO",
+       "FR",
+       "GA",
+       "GB",
+       "GD",
+       "GE",
+       "GF",
+       "GG",
+       "GH",
+       "GI",
+       "GL",
+       "GM",
+       "GN",
+       "GP",
+       "GQ",
+       "GR",
+       "GS",
+       "GT",
+       "GU",
+       "GW",
+       "GY",
+       "HK",
+       "HM",
+       "HN",
+       "HR",
+       "HT",
+       "HU",
+       "ID",
+       "IE",
+       "IL",
+       "IM",
+       "IN",
+       "IO",
+       "IQ",
+       "IR",
+       "IS",
+       "IT",
+       "JE",
+       "JM",
+       "JO",
+       "JP",
+       "KE",
+       "KG",
+       "KH",
+       "KI",
+       "KM",
+       "KN",
+       "KP",
+       "KR",
+       "KW",
+       "KY",
+       "KZ",
+       "LA",
+       "LB",
+       "LC",
+       "LI",
+       "LK",
+       "LR",
+       "LS",
+       "LT",
+       "LU",
+       "LV",
+       "LY",
+       "MA",
+       "MC",
+       "MD",
+       "ME",
+       "MF",
+       "MG",
+       "MH",
+       "MK",
+       "ML",
+       "MM",
+       "MN",
+       "MO",
+       "MP",
+       "MQ",
+       "MR",
+       "MS",
+       "MT",
+       "MU",
+       "MV",
+       "MW",
+       "MX",
+       "MY",
+       "MZ",
+       "NA",
+       "NC",
+       "NE",
+       "NF",
+       "NG",
+       "NI",
+       "NL",
+       "NO",
+       "NP",
+       "NR",
+       "NU",
+       "NZ",
+       "OM",
+       "PA",
+       "PE",
+       "PF",
+       "PG",
+       "PH",
+       "PK",
+       "PL",
+       "PM",
+       "PN",
+       "PR",
+       "PS",
+       "PT",
+       "PW",
+       "PY",
+       "QA",
+       "RE",
+       "RO",
+       "RS",
+       "RU",
+       "RW",
+       "SA",
+       "SB",
+       "SC",
+       "SD",
+       "SE",
+       "SG",
+       "SH",
+       "SI",
+       "SJ",
+       "SK",
+       "SL",
+       "SM",
+       "SN",
+       "SO",
+       "SR",
+       "SS",
+       "ST",
+       "SV",
+       "SX",
+       "SY",
+       "SZ",
+       "TC",
+       "TD",
+       "TF",
+       "TG",
+       "TH",
+       "TJ",
+       "TK",
+       "TL",
+       "TM",
+       "TN",
+       "TO",
+       "TR",
+       "TT",
+       "TV",
+       "TW",
+       "TZ",
+       "UA",
+       "UG",
+       "UM",
+       "US",
+       "UY",
+       "UZ",
+       "VA",
+       "VC",
+       "VE",
+       "VG",
+       "VI",
+       "VN",
+       "VU",
+       "WF",
+       "WS",
+       "YE",
+       "YT",
+       "ZA",
+       "ZM",
+       "ZW"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-16T01:00:00Z",
+     "actualStartTime": "2026-08-16T01:01:13Z",
+     "actualEndTime": "2026-08-16T04:29:18Z"
+    }
+   },
+   {
+    "id": "HhzmqeLF7es",
+    "snippet": {
+     "title": "Every Knockout and Submission From UFC 330 | UFC Highlights",
+     "publishedAt": "2026-08-16T04:29:04Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT12M1S",
+     "regionRestriction": {
+      "allowed": [
+       "AG",
+       "AI",
+       "AR",
+       "AW",
+       "BB",
+       "BO",
+       "BQ",
+       "BR",
+       "BS",
+       "BZ",
+       "CL",
+       "CO",
+       "CR",
+       "CW",
+       "DM",
+       "DO",
+       "EC",
+       "GD",
+       "GT",
+       "GY",
+       "HN",
+       "HT",
+       "JM",
+       "KN",
+       "KY",
+       "LC",
+       "MS",
+       "MX",
+       "NI",
+       "PA",
+       "PE",
+       "PR",
+       "PY",
+       "SR",
+       "SV",
+       "TC",
+       "TT",
+       "US",
+       "UY",
+       "VC",
+       "VE",
+       "VG"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   }
+  ],
+  "ufc-es": [
+   {
+    "id": "nSSVl_Dnayk",
+    "snippet": {
+     "title": "#UFCVegas121 Resumen Completo del Evento",
+     "publishedAt": "2026-09-28T00:44:09Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT49M11S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-28T00:43:50Z",
+     "actualStartTime": "2026-09-28T00:44:09Z",
+     "actualEndTime": "2026-09-28T01:35:18Z"
+    }
+   },
+   {
+    "id": "yLuMxIVAIaI",
+    "snippet": {
+     "title": "#UFCVegas121: Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-09-27T09:02:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-26T20:00:00Z",
+     "actualStartTime": "2026-09-26T20:00:26Z",
+     "actualEndTime": "2026-09-26T21:00:22Z"
+    }
+   },
+   {
+    "id": "XUULNoJcBRo",
+    "snippet": {
+     "title": "#UFCVegas121 Raul Rosas Jr. Entrevista en el Octágono",
+     "publishedAt": "2026-09-27T03:17:38Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M22S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-27T03:17:22Z",
+     "actualStartTime": "2026-09-27T03:17:38Z",
+     "actualEndTime": "2026-09-27T03:23:02Z"
+    }
+   },
+   {
+    "id": "q14WU18DWeo",
+    "snippet": {
+     "title": "#UFCVegas121 Yazmin Jauregui: Noquea Brutal a Round 1",
+     "publishedAt": "2026-09-26T21:31:14Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M36S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-26T21:30:55Z",
+     "actualStartTime": "2026-09-26T21:31:14Z",
+     "actualEndTime": "2026-09-26T21:35:48Z"
+    }
+   },
+   {
+    "id": "HqgQC0pe3MA",
+    "snippet": {
+     "title": "#UFCVegas121 Melissa Amaya: La próxima Ultimate Fighter? 🇲🇽",
+     "publishedAt": "2026-09-25T13:00:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M5S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-25T13:00:00Z",
+     "actualStartTime": "2026-09-25T13:00:07Z",
+     "actualEndTime": "2026-09-25T13:05:11Z"
+    }
+   },
+   {
+    "id": "oBW7-XpOITo",
+    "snippet": {
+     "title": "#Polymarket #UFC334 Juan Díaz Tiene Nueva Fecha 🗽",
+     "publishedAt": "2026-09-24T16:00:08Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M50S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-24T16:00:00Z",
+     "actualStartTime": "2026-09-24T16:00:08Z",
+     "actualEndTime": "2026-09-24T16:06:56Z"
+    }
+   },
+   {
+    "id": "YHOcqN735kM",
+    "snippet": {
+     "title": "#UFCVegas121 Yazmin Jauregui Hace Su Regreso 🇲🇽",
+     "publishedAt": "2026-09-24T14:00:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M5S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-24T14:00:00Z",
+     "actualStartTime": "2026-09-24T14:00:07Z",
+     "actualEndTime": "2026-09-24T14:05:11Z"
+    }
+   },
+   {
+    "id": "RVOwc0I790Y",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Chito Vera Entrevista en el Octágono",
+     "publishedAt": "2026-09-20T01:09:30Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M23S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-20T01:09:15Z",
+     "actualStartTime": "2026-09-20T01:09:30Z",
+     "actualEndTime": "2026-09-20T01:13:55Z"
+    }
+   },
+   {
+    "id": "qtK4PPNx4YA",
+    "snippet": {
+     "title": "#CryptoCom #UFC331: Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-09-19T21:52:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT39M40S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-19T20:30:00Z",
+     "actualStartTime": "2026-09-19T20:50:46Z",
+     "actualEndTime": "2026-09-19T21:30:21Z"
+    }
+   },
+   {
+    "id": "Ji69g7Oiq90",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Marlon Vera Confía En Su Experiencia 🇪🇨",
+     "publishedAt": "2026-09-18T20:33:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T20:33:37Z",
+     "actualStartTime": "2026-09-18T20:33:56Z",
+     "actualEndTime": "2026-09-18T20:39:26Z"
+    }
+   },
+   {
+    "id": "G7punueHl4A",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Robelis Despaigne Comienza Un Nuevo Capítulo 🇨🇺",
+     "publishedAt": "2026-09-18T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M59S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T14:00:00Z",
+     "actualStartTime": "2026-09-18T14:00:06Z",
+     "actualEndTime": "2026-09-18T14:04:04Z"
+    }
+   },
+   {
+    "id": "MQLCbgV5rhc",
+    "snippet": {
+     "title": "#CryptoCom #UFC331: Careos Conferencia de Prensa",
+     "publishedAt": "2026-09-18T01:20:31Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M16S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-18T01:20:15Z",
+     "actualStartTime": "2026-09-18T01:20:31Z",
+     "actualEndTime": "2026-09-18T01:25:46Z"
+    }
+   },
+   {
+    "id": "jml-ZFIj2OI",
+    "snippet": {
+     "title": "#UFCConectado: Ep 907",
+     "publishedAt": "2026-09-17T22:05:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT20M42S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-17T22:05:31Z",
+     "actualStartTime": "2026-09-17T22:05:51Z",
+     "actualEndTime": "2026-09-17T22:28:34Z"
+    }
+   },
+   {
+    "id": "ycoYjEDRLgM",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Embedded Español: Episodio 4",
+     "publishedAt": "2026-09-17T21:26:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M39S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-17T21:25:55Z",
+     "actualStartTime": "2026-09-17T21:26:07Z",
+     "actualEndTime": "2026-09-17T21:36:49Z"
+    }
+   },
+   {
+    "id": "_ZBlcmUPuKI",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Embedded Español: Episodio 3",
+     "publishedAt": "2026-09-16T21:39:19Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M6S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T21:39:03Z",
+     "actualStartTime": "2026-09-16T21:39:19Z",
+     "actualEndTime": "2026-09-16T21:49:24Z"
+    }
+   },
+   {
+    "id": "5Yre6XXfgZ4",
+    "snippet": {
+     "title": "#NocheUFC Ignacio Bahamondes Brilla en Peso Wélter 🇨🇱",
+     "publishedAt": "2026-09-16T19:37:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M5S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T19:36:56Z",
+     "actualStartTime": "2026-09-16T19:37:11Z",
+     "actualEndTime": "2026-09-16T19:42:17Z"
+    }
+   },
+   {
+    "id": "MIbrYAn3R6U",
+    "snippet": {
+     "title": "#NocheUFC David Martínez Consigue Otra Gran Victoria 🇲🇽",
+     "publishedAt": "2026-09-16T18:23:16Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M57S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T18:22:57Z",
+     "actualStartTime": "2026-09-16T18:23:16Z",
+     "actualEndTime": "2026-09-16T18:28:06Z"
+    }
+   },
+   {
+    "id": "64WA5HpMOoE",
+    "snippet": {
+     "title": "#NocheUFC Regina Tarín Se Mantiene Invicta 🇲🇽",
+     "publishedAt": "2026-09-16T16:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT5M3S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T16:00:00Z",
+     "actualStartTime": "2026-09-16T16:00:06Z",
+     "actualEndTime": "2026-09-16T16:07:08Z"
+    }
+   },
+   {
+    "id": "gzkWwRYM8ok",
+    "snippet": {
+     "title": "#NocheUFC Alexa Grasso Ejecutó Su Plan 🇲🇽",
+     "publishedAt": "2026-09-16T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M8S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-16T14:00:00Z",
+     "actualStartTime": "2026-09-16T14:00:06Z",
+     "actualEndTime": "2026-09-16T14:04:14Z"
+    }
+   },
+   {
+    "id": "WkOnHlY09d0",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Embedded Español: Episodio 2",
+     "publishedAt": "2026-09-15T22:45:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-15T22:45:37Z",
+     "actualStartTime": "2026-09-15T22:45:56Z",
+     "actualEndTime": "2026-09-15T22:56:05Z"
+    }
+   },
+   {
+    "id": "Puj-vgtTXbk",
+    "snippet": {
+     "title": "#NocheUFC Brandon Moreno Disfruta de su Victoria 🇲🇽",
+     "publishedAt": "2026-09-15T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M8S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-15T14:00:00Z",
+     "actualStartTime": "2026-09-15T14:00:06Z",
+     "actualEndTime": "2026-09-15T14:06:13Z"
+    }
+   },
+   {
+    "id": "RTNLFNxzNxc",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Conteo Regresivo: Van vs Pantoja 2",
+     "publishedAt": "2026-09-15T00:24:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT24M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-15T00:23:51Z",
+     "actualStartTime": "2026-09-15T00:24:06Z",
+     "actualEndTime": "2026-09-15T00:50:14Z"
+    }
+   },
+   {
+    "id": "mkMWR20YYU8",
+    "snippet": {
+     "title": "#CryptoCom #UFC331 Embedded Español: Episodio 1",
+     "publishedAt": "2026-09-14T23:55:48Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-14T23:55:32Z",
+     "actualStartTime": "2026-09-14T23:55:48Z",
+     "actualEndTime": "2026-09-15T00:06:49Z"
+    }
+   },
+   {
+    "id": "JMOnn2A8raQ",
+    "snippet": {
+     "title": "#NocheUFC Alexa Grasso: Entrevista en el Octágono",
+     "publishedAt": "2026-09-12T23:10:16Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M13S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-12T23:09:56Z",
+     "actualStartTime": "2026-09-12T23:10:16Z",
+     "actualEndTime": "2026-09-12T23:14:29Z"
+    }
+   },
+   {
+    "id": "8ZVs6VK_qwQ",
+    "snippet": {
+     "title": "#NocheUFC Nacho Bahamondes: Entrevista Octágono",
+     "publishedAt": "2026-09-12T21:53:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M46S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-12T21:53:06Z",
+     "actualStartTime": "2026-09-12T21:53:26Z",
+     "actualEndTime": "2026-09-12T21:57:12Z"
+    }
+   },
+   {
+    "id": "SrgV76OixAY",
+    "snippet": {
+     "title": "#NocheUFCF Regina Tarín: Entrevista Octágono",
+     "publishedAt": "2026-09-12T18:45:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-12T18:45:31Z",
+     "actualStartTime": "2026-09-12T18:45:51Z",
+     "actualEndTime": "2026-09-12T18:49:50Z"
+    }
+   },
+   {
+    "id": "IFxE1pcOh1g",
+    "snippet": {
+     "title": "#NocheUFC: Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-09-12T18:10:22Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H20S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-12T17:00:00Z",
+     "actualStartTime": "2026-09-12T17:00:06Z",
+     "actualEndTime": "2026-09-12T18:00:13Z"
+    }
+   },
+   {
+    "id": "m4hjml5OeZs",
+    "snippet": {
+     "title": "Noche UFC: Pesaje Ceremonial | EN VIVO",
+     "publishedAt": "2026-09-11T23:42:40Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT36M43S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-11T23:00:27Z",
+     "actualStartTime": "2026-09-11T23:00:40Z",
+     "actualEndTime": "2026-09-11T23:37:16Z"
+    }
+   },
+   {
+    "id": "EvS1cIbvObg",
+    "snippet": {
+     "title": "#NocheUFC Evento Completo: Lopes vs. Silva",
+     "publishedAt": "2026-09-11T19:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2H59M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-11T19:00:00Z",
+     "actualStartTime": "2026-09-11T19:00:06Z",
+     "actualEndTime": "2026-09-11T22:01:34Z"
+    }
+   },
+   {
+    "id": "oFRbt1tMnIg",
+    "snippet": {
+     "title": "#NocheUFC Waldo Cortes Acosta Pelea Ante Su Gente 🌵",
+     "publishedAt": "2026-09-11T03:11:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT5M8S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-11T03:10:48Z",
+     "actualStartTime": "2026-09-11T03:11:01Z",
+     "actualEndTime": "2026-09-11T03:18:12Z"
+    }
+   },
+   {
+    "id": "XiJdGkUCkn0",
+    "snippet": {
+     "title": "#NocheUFC Alexa Grasso y Brandon Moreno: Los Campeones son Eternos",
+     "publishedAt": "2026-09-10T23:56:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-10T23:55:44Z",
+     "actualStartTime": "2026-09-10T23:56:11Z",
+     "actualEndTime": "2026-09-11T00:01:16Z"
+    }
+   },
+   {
+    "id": "ripw60F-znw",
+    "snippet": {
+     "title": "#NocheUFC Evento Completo: O'Malley vs. Dvalishvili",
+     "publishedAt": "2026-09-10T23:18:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4H19M40S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-10T23:17:39Z",
+     "actualStartTime": "2026-09-10T23:18:06Z",
+     "actualEndTime": "2026-09-11T03:39:37Z"
+    }
+   },
+   {
+    "id": "pUCxFCKbn-c",
+    "snippet": {
+     "title": "#NocheUFC Reporte: Jóvenes Talentos, Esquinas Históricas",
+     "publishedAt": "2026-09-10T16:37:31Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M31S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-10T16:37:18Z",
+     "actualStartTime": "2026-09-10T16:37:31Z",
+     "actualEndTime": "2026-09-10T16:42:04Z"
+    }
+   },
+   {
+    "id": "msSjiTqxKR4",
+    "snippet": {
+     "title": "#NocheUFC Alexa Grasso: En Busca del KO Perfecto",
+     "publishedAt": "2026-09-09T21:35:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M31S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-09T21:35:32Z",
+     "actualStartTime": "2026-09-09T21:35:46Z",
+     "actualEndTime": "2026-09-09T21:42:16Z"
+    }
+   },
+   {
+    "id": "2obrE5MMoPI",
+    "snippet": {
+     "title": "#NocheUFC José Miguel Delgado: En la Misión Rumbo a la Grandeza 🇲🇽",
+     "publishedAt": "2026-09-09T18:23:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M40S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-09T18:23:23Z",
+     "actualStartTime": "2026-09-09T18:23:41Z",
+     "actualEndTime": "2026-09-09T18:30:20Z"
+    }
+   },
+   {
+    "id": "ITRfP8j_-FU",
+    "snippet": {
+     "title": "#NocheUFC Arranca Fight Week Oficial",
+     "publishedAt": "2026-09-09T16:32:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M37S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-09T16:31:42Z",
+     "actualStartTime": "2026-09-09T16:32:01Z",
+     "actualEndTime": "2026-09-09T16:36:40Z"
+    }
+   },
+   {
+    "id": "2pNHgNIG8Jc",
+    "snippet": {
+     "title": "#NocheUFC Regina Tarín Viene Con Más Hambre Que Nunca 🇲🇽",
+     "publishedAt": "2026-09-08T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M46S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-08T14:00:00Z",
+     "actualStartTime": "2026-09-08T14:00:06Z",
+     "actualEndTime": "2026-09-08T14:08:52Z"
+    }
+   },
+   {
+    "id": "ymybYMacLnU",
+    "snippet": {
+     "title": "#NocheUFC David Martínez: Buscando Una Gran Victoria Más 🇲🇽",
+     "publishedAt": "2026-09-07T20:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M53S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-07T20:00:00Z",
+     "actualStartTime": "2026-09-07T20:00:06Z",
+     "actualEndTime": "2026-09-07T20:06:59Z"
+    }
+   },
+   {
+    "id": "dQ2IT9YbEaY",
+    "snippet": {
+     "title": "#NocheUFC Édgar Cháirez Promete la Finalización 🇲🇽",
+     "publishedAt": "2026-09-07T16:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M11S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-07T16:00:00Z",
+     "actualStartTime": "2026-09-07T16:00:06Z",
+     "actualEndTime": "2026-09-07T16:06:17Z"
+    }
+   },
+   {
+    "id": "Zt3ZVcsj5mk",
+    "snippet": {
+     "title": "#NocheUFC Day Off: Alexa Grasso",
+     "publishedAt": "2026-09-07T15:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT23M47S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-07T15:00:00Z",
+     "actualStartTime": "2026-09-07T15:00:06Z",
+     "actualEndTime": "2026-09-07T15:25:52Z"
+    }
+   },
+   {
+    "id": "O22Vb-TmXEE",
+    "snippet": {
+     "title": "#NocheUFC Brandon Moreno Dejará el Corazón en el Octágono 🇲🇽",
+     "publishedAt": "2026-09-07T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M48S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-07T14:00:00Z",
+     "actualStartTime": "2026-09-07T14:00:06Z",
+     "actualEndTime": "2026-09-07T14:06:54Z"
+    }
+   },
+   {
+    "id": "tOlqX0v8BX4",
+    "snippet": {
+     "title": "#NocheUFC Maratón: Silva vs Delgado",
+     "publishedAt": "2026-09-06T15:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H17M10S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-06T15:00:00Z",
+     "actualStartTime": "2026-09-06T15:00:06Z",
+     "actualEndTime": "2026-09-06T16:19:16Z"
+    }
+   },
+   {
+    "id": "ADKPkJKMN9I",
+    "snippet": {
+     "title": "#NocheUFC Maratón: Nacho Bahamondes",
+     "publishedAt": "2026-09-06T13:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT55M56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-06T13:00:00Z",
+     "actualStartTime": "2026-09-06T13:00:06Z",
+     "actualEndTime": "2026-09-06T13:58:03Z"
+    }
+   },
+   {
+    "id": "vTdfc42-ick",
+    "snippet": {
+     "title": "#NocheUFC Evento Completo: Grasso vs. Shevchenko",
+     "publishedAt": "2026-09-05T21:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3H2M50S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-05T21:00:00Z",
+     "actualStartTime": "2026-09-05T21:00:06Z",
+     "actualEndTime": "2026-09-06T00:04:55Z"
+    }
+   },
+   {
+    "id": "dH-mYfF1mkU",
+    "snippet": {
+     "title": "#NocheUFC Maratón: Alexa Grasso",
+     "publishedAt": "2026-09-05T17:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2H11M34S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-05T17:00:00Z",
+     "actualStartTime": "2026-09-05T17:00:06Z",
+     "actualEndTime": "2026-09-05T19:13:39Z"
+    }
+   },
+   {
+    "id": "O1EiI0IXGkg",
+    "snippet": {
+     "title": "UFC Paris | Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-09-05T16:24:09Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-05T15:00:00Z",
+     "actualStartTime": "2026-09-05T14:59:41Z",
+     "actualEndTime": "2026-09-05T16:00:19Z"
+    }
+   },
+   {
+    "id": "HlqxelJdzyk",
+    "snippet": {
+     "title": "#UFCParis Fabia Sintes: Otro Español Más En UFC 🇪🇸",
+     "publishedAt": "2026-09-03T05:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-03T05:00:00Z",
+     "actualStartTime": "2026-09-03T05:00:06Z",
+     "actualEndTime": "2026-09-03T05:04:17Z"
+    }
+   },
+   {
+    "id": "-xSeXB1Ct1o",
+    "snippet": {
+     "title": "#UFCParis Fabia Sintes vs Davi Santos",
+     "publishedAt": "2026-09-02T20:21:31Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT42M32S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-02T20:21:19Z",
+     "actualStartTime": "2026-09-02T20:21:31Z",
+     "actualEndTime": "2026-09-02T21:06:04Z"
+    }
+   },
+   {
+    "id": "T9hD8gqi8eY",
+    "snippet": {
+     "title": "#UFCParis Fabia Sintes vs Amir Malekpour",
+     "publishedAt": "2026-09-02T20:10:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT31M12S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-02T20:10:18Z",
+     "actualStartTime": "2026-09-02T20:10:41Z",
+     "actualEndTime": "2026-09-02T20:43:51Z"
+    }
+   },
+   {
+    "id": "jM5PjCeVtB0",
+    "snippet": {
+     "title": "#UFCParis Fabia Sintes vs Abdul Karim Badakhshi",
+     "publishedAt": "2026-09-02T20:10:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21M5S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-02T20:10:21Z",
+     "actualStartTime": "2026-09-02T20:10:41Z",
+     "actualEndTime": "2026-09-02T20:33:47Z"
+    }
+   },
+   {
+    "id": "fL4m0VoppWo",
+    "snippet": {
+     "title": "#DWCS Silvestre Sánchez Finaliza 🇲🇽",
+     "publishedAt": "2026-09-02T00:43:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M22S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-02T00:42:44Z",
+     "actualStartTime": "2026-09-02T00:43:01Z",
+     "actualEndTime": "2026-09-02T00:47:25Z"
+    }
+   },
+   {
+    "id": "I03hNdFC7W4",
+    "snippet": {
+     "title": "#DWCS Cristian \"Puas\" Perez \"Poniendo a Ensenada en el mapa\"",
+     "publishedAt": "2026-09-01T18:30:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M55S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-01T18:30:13Z",
+     "actualStartTime": "2026-09-01T18:30:26Z",
+     "actualEndTime": "2026-09-01T18:35:23Z"
+    }
+   },
+   {
+    "id": "A8n4q32YeA0",
+    "snippet": {
+     "title": "#DWCS Silvestre Sánchez Busca su Pase a UFC 🇲🇽",
+     "publishedAt": "2026-09-01T15:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT35S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-01T15:00:00Z",
+     "actualStartTime": "2026-09-01T15:00:06Z",
+     "actualEndTime": "2026-09-01T15:02:41Z"
+    }
+   },
+   {
+    "id": "mCB5ODZdtrs",
+    "snippet": {
+     "title": "#UFCParis Sofía Montenegro: Debut Argentino 🇦🇷",
+     "publishedAt": "2026-09-01T13:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-09-01T13:00:00Z",
+     "actualStartTime": "2026-09-01T13:00:06Z",
+     "actualEndTime": "2026-09-01T13:08:15Z"
+    }
+   },
+   {
+    "id": "khDe_nu_Oh0",
+    "snippet": {
+     "title": "#NocheUFC Maratón: José Miguel Delgado",
+     "publishedAt": "2026-08-31T19:17:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT53M42S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-31T19:17:35Z",
+     "actualStartTime": "2026-08-31T19:17:56Z",
+     "actualEndTime": "2026-08-31T20:13:38Z"
+    }
+   },
+   {
+    "id": "5xit032tCzw",
+    "snippet": {
+     "title": "#UFCShanghai Nilson Rojas Llega a UFC 🇵🇪",
+     "publishedAt": "2026-08-27T23:00:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M51S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-27T23:00:33Z",
+     "actualStartTime": "2026-08-27T23:00:56Z",
+     "actualEndTime": "2026-08-27T23:04:37Z"
+    }
+   },
+   {
+    "id": "eolk1_qxI28",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Delgado vs. Juárez",
+     "publishedAt": "2026-08-27T22:45:23Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M43S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "NcCPNVPx3O4",
+    "snippet": {
+     "title": "#UFCShanghai Pelea Gratis: Nurmagomedov vs Sandhagen",
+     "publishedAt": "2026-08-27T20:30:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M44S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "lTlVAMHMYRE",
+    "snippet": {
+     "title": "#UFCShanghai Kevin Borjas: Confiado y Listo 🇵🇪",
+     "publishedAt": "2026-08-27T00:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M17S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-27T00:00:00Z",
+     "actualStartTime": "2026-08-27T00:00:06Z",
+     "actualEndTime": "2026-08-27T00:04:22Z"
+    }
+   },
+   {
+    "id": "iLrxkawSM1Q",
+    "snippet": {
+     "title": "#UFCSacramento Recapitulación del Evento",
+     "publishedAt": "2026-08-23T04:36:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT50M56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-23T04:36:27Z",
+     "actualStartTime": "2026-08-23T04:36:41Z",
+     "actualEndTime": "2026-08-23T05:29:37Z"
+    }
+   },
+   {
+    "id": "X7k1eTCC3_w",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Garcia vs. Maheshate",
+     "publishedAt": "2026-08-23T04:03:18Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M33S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "n3TSfUrKZ0E",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Garcia vs Hernandez",
+     "publishedAt": "2026-08-23T03:05:36Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "fj31VqWrlqg",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Delgado vs Fili",
+     "publishedAt": "2026-08-23T03:03:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M31S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Ky4CacuBJ8E",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Delgado vs. Bashi",
+     "publishedAt": "2026-08-23T02:39:23Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M47S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "m3vyekt_E6M",
+    "snippet": {
+     "title": "#NocheUFC Silva vs. Delgado: Estelar 12 de Sep.",
+     "publishedAt": "2026-08-22T21:03:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT58S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-22T21:03:33Z",
+     "actualStartTime": "2026-08-22T21:03:56Z",
+     "actualEndTime": "2026-08-22T21:06:49Z"
+    }
+   },
+   {
+    "id": "7f-0GBIDH20",
+    "snippet": {
+     "title": "#DWCS Bella Mir vs Alex Apodaca Previa",
+     "publishedAt": "2026-08-22T02:32:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M1S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "ksB7hE9OrBQ",
+    "snippet": {
+     "title": "#NocheUFC Dentro del Campamento de Ignacio Bahamondes 🇨🇱",
+     "publishedAt": "2026-08-21T16:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-21T16:00:00Z",
+     "actualStartTime": "2026-08-21T16:00:06Z",
+     "actualEndTime": "2026-08-21T16:12:15Z"
+    }
+   },
+   {
+    "id": "-CbPu-VyUiE",
+    "snippet": {
+     "title": "#NocheUFC Waldo Cortes Acosta Peleará en Su Segundo Hogar",
+     "publishedAt": "2026-08-18T16:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M3S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-18T16:00:00Z",
+     "actualStartTime": "2026-08-18T16:00:06Z",
+     "actualEndTime": "2026-08-18T16:05:09Z"
+    }
+   },
+   {
+    "id": "p1Ydt7sHEGw",
+    "snippet": {
+     "title": "#NocheUFC Brandon Moreno Tiene Historia en Arizona 🌵",
+     "publishedAt": "2026-08-17T14:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M29S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-17T14:00:00Z",
+     "actualStartTime": "2026-08-17T14:00:06Z",
+     "actualEndTime": "2026-08-17T14:04:35Z"
+    }
+   },
+   {
+    "id": "jgA5Yo9MbTQ",
+    "snippet": {
+     "title": "#UFC330 Mackenzie Dern: Entrevista en el Octágono",
+     "publishedAt": "2026-08-16T03:33:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M24S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-16T03:33:35Z",
+     "actualStartTime": "2026-08-16T03:33:51Z",
+     "actualEndTime": "2026-08-16T03:38:11Z"
+    }
+   },
+   {
+    "id": "HYTHGoEG2AU",
+    "snippet": {
+     "title": "#UFC330 Esteban Ribovics: Entrevista en el Octágono",
+     "publishedAt": "2026-08-16T01:50:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M51S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-16T01:49:54Z",
+     "actualStartTime": "2026-08-16T01:50:06Z",
+     "actualEndTime": "2026-08-16T01:53:57Z"
+    }
+   },
+   {
+    "id": "qM-h-OudTqM",
+    "snippet": {
+     "title": "UFC 330 | Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-08-15T21:42:29Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-15T20:30:00Z",
+     "actualStartTime": "2026-08-15T20:30:31Z",
+     "actualEndTime": "2026-08-15T21:30:15Z"
+    }
+   },
+   {
+    "id": "GloiC4dM34s",
+    "snippet": {
+     "title": "#UFC330 Careos Ceremoniales",
+     "publishedAt": "2026-08-14T23:02:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M27S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-14T23:02:31Z",
+     "actualStartTime": "2026-08-14T23:02:46Z",
+     "actualEndTime": "2026-08-14T23:13:16Z"
+    }
+   },
+   {
+    "id": "_e7wHTjhDQE",
+    "snippet": {
+     "title": "#UFC330 Embedded Español: Episodio 5",
+     "publishedAt": "2026-08-14T19:52:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M8S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-14T19:52:28Z",
+     "actualStartTime": "2026-08-14T19:52:51Z",
+     "actualEndTime": "2026-08-14T20:02:53Z"
+    }
+   },
+   {
+    "id": "dwdpQNaNQ54",
+    "snippet": {
+     "title": "#UFC330 Careos Conferencia de Prensa",
+     "publishedAt": "2026-08-13T22:38:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M15S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-13T22:38:26Z",
+     "actualStartTime": "2026-08-13T22:38:41Z",
+     "actualEndTime": "2026-08-13T22:41:55Z"
+    }
+   },
+   {
+    "id": "ixGoyurbf3c",
+    "snippet": {
+     "title": "#UFC330 Embedded Español: Episodio 4",
+     "publishedAt": "2026-08-13T19:46:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M3S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-13T19:46:32Z",
+     "actualStartTime": "2026-08-13T19:46:51Z",
+     "actualEndTime": "2026-08-13T19:57:52Z"
+    }
+   },
+   {
+    "id": "xsPWjTg-N4Q",
+    "snippet": {
+     "title": "#UFC330 La Nueva Etapa de Vicente Luque 🇨🇱🇧🇷",
+     "publishedAt": "2026-08-13T16:46:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M14S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-13T16:46:40Z",
+     "actualStartTime": "2026-08-13T16:46:56Z",
+     "actualEndTime": "2026-08-13T16:52:10Z"
+    }
+   },
+   {
+    "id": "WwRycNQ2c1Q",
+    "snippet": {
+     "title": "#UFC330 Joel Álvarez: LISTO EN CUALQUIER MOMENTO 🇪🇸⁣⁣",
+     "publishedAt": "2026-08-13T07:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M36S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-13T07:00:00Z",
+     "actualStartTime": "2026-08-13T07:00:06Z",
+     "actualEndTime": "2026-08-13T07:04:42Z"
+    }
+   },
+   {
+    "id": "QuF1rwq1jy8",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Ribovics vs Brener",
+     "publishedAt": "2026-08-13T06:48:44Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M36S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "0SCdZCh8x1o",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Ribovics vs McKenney",
+     "publishedAt": "2026-08-13T06:46:09Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "dNT72Z_8UM4",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: McMillen vs Montes",
+     "publishedAt": "2026-08-13T06:04:22Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT22M26S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "vy3OgLYetGA",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Silva vs Allen",
+     "publishedAt": "2026-08-13T05:52:30Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT22M17S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Oad0G0U5tvs",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Chairez vs Silva",
+     "publishedAt": "2026-08-13T05:52:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M1S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "-41lOqmirMA",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: McMillen vs Zecchini",
+     "publishedAt": "2026-08-13T05:49:02Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M20S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "nyhnSyAVgrU",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Grasso vs Barber",
+     "publishedAt": "2026-08-13T05:32:18Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M58S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "bdcFomiwoRU",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Robertson vs Lemos",
+     "publishedAt": "2026-08-13T05:19:48Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21M15S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "WWhUu-BU6W4",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Garry vs Muhammad",
+     "publishedAt": "2026-08-13T05:10:42Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT19M23S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Z2q_BWF3GD4",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Robertson vs Rodriguez",
+     "publishedAt": "2026-08-13T04:56:50Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M53S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "puVoiIwTTUI",
+    "snippet": {
+     "title": "#UFC330 Esteban Ribovics TIENE MUCHO POR DEMOSTRAR 🇦🇷",
+     "publishedAt": "2026-08-13T00:08:36Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-13T00:08:23Z",
+     "actualStartTime": "2026-08-13T00:08:36Z",
+     "actualEndTime": "2026-08-13T00:12:48Z"
+    }
+   },
+   {
+    "id": "kp0r54EcS48",
+    "snippet": {
+     "title": "#UFC330 Embedded Español: Episodio 3",
+     "publishedAt": "2026-08-12T19:15:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-12T19:15:10Z",
+     "actualStartTime": "2026-08-12T19:15:26Z",
+     "actualEndTime": "2026-08-12T19:26:39Z"
+    }
+   },
+   {
+    "id": "tTFNOkXiwaU",
+    "snippet": {
+     "title": "#NocheUFC Yair Rodríguez Busca Dar un Espectáculo 🇲🇽",
+     "publishedAt": "2026-08-12T14:00:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M19S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-12T14:00:00Z",
+     "actualStartTime": "2026-08-12T14:00:07Z",
+     "actualEndTime": "2026-08-12T14:06:25Z"
+    }
+   },
+   {
+    "id": "JhkHq-gCUMg",
+    "snippet": {
+     "title": "#UFC330 Embedded Español: Episodio 2",
+     "publishedAt": "2026-08-11T19:08:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M57S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-11T19:08:32Z",
+     "actualStartTime": "2026-08-11T19:08:46Z",
+     "actualEndTime": "2026-08-11T19:18:43Z"
+    }
+   },
+   {
+    "id": "tnd66YRnoRg",
+    "snippet": {
+     "title": "#UFC330 Embedded Español: Episodio 1",
+     "publishedAt": "2026-08-10T22:49:11Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M4S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-10T22:48:52Z",
+     "actualStartTime": "2026-08-10T22:49:11Z",
+     "actualEndTime": "2026-08-10T23:00:13Z"
+    }
+   },
+   {
+    "id": "j8khRRxACjk",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Makhachev vs Della Maddalena",
+     "publishedAt": "2026-08-09T16:03:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT28M25S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "shL7SIgFsv8",
+    "snippet": {
+     "title": "#UFC330 Pelea Gratis: Dern vs Jandiroba II",
+     "publishedAt": "2026-08-09T15:44:17Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT28M6S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "xjzNozm1hDI",
+    "snippet": {
+     "title": "#UFC330 Conteo Regresivo: Makhachev vs Machado Garry",
+     "publishedAt": "2026-08-09T12:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT48M40S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-09T12:00:00Z",
+     "actualStartTime": "2026-08-09T12:00:06Z",
+     "actualEndTime": "2026-08-09T12:50:46Z"
+    }
+   },
+   {
+    "id": "5SnFY40sXO0",
+    "snippet": {
+     "title": "UFC Vegas 120 | Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-08-08T21:02:45Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT56M2S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-08T20:00:23Z",
+     "actualStartTime": "2026-08-08T20:00:32Z",
+     "actualEndTime": "2026-08-08T20:56:33Z"
+    }
+   },
+   {
+    "id": "Q_ogeCc0AV4",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Cortes Acosta vs. Lewis",
+     "publishedAt": "2026-08-05T22:25:13Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11M23S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "KHIcHq0ZGPI",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Cortes Acosta vs. Delija",
+     "publishedAt": "2026-08-05T19:02:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11M",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Bvmbn95-2cA",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Pantera vs. Emmett",
+     "publishedAt": "2026-08-05T19:01:48Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT13M59S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "qTt5HDAJoSY",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Pantera vs Ortega I",
+     "publishedAt": "2026-08-05T18:38:37Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Y_5OwTnr8Nk",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Salsa Boy vs Gaziev",
+     "publishedAt": "2026-08-05T18:22:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M55S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "uvs5Ml6IYrE",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Pantera vs Pitbull",
+     "publishedAt": "2026-08-04T17:14:37Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT20M1S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-04T17:14:20Z",
+     "actualStartTime": "2026-08-04T17:14:37Z",
+     "actualEndTime": "2026-08-04T17:36:38Z"
+    }
+   },
+   {
+    "id": "d0l2DUvXyPM",
+    "snippet": {
+     "title": "#UFCVegas120 Pelea Gratis: Salkilld vs Dariush",
+     "publishedAt": "2026-08-03T20:12:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M48S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "vIy-dU-sfzg",
+    "snippet": {
+     "title": "#UFCVegas120 Pelea Gratis: Gamrot vs. Ribovics",
+     "publishedAt": "2026-08-03T20:11:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "bSgKiY37Bto",
+    "snippet": {
+     "title": "#UFCBelgrade Post Show Resumen",
+     "publishedAt": "2026-08-01T21:30:56Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT40M18S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-01T21:30:39Z",
+     "actualStartTime": "2026-08-01T21:30:56Z",
+     "actualEndTime": "2026-08-01T22:13:14Z"
+    }
+   },
+   {
+    "id": "zroN76QcdkQ",
+    "snippet": {
+     "title": "#UFCBelgrade Entrevista en el Octágono: Gilbert Urbina 🇲🇽🇺🇸",
+     "publishedAt": "2026-08-01T21:12:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M45S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-01T21:12:35Z",
+     "actualStartTime": "2026-08-01T21:12:51Z",
+     "actualEndTime": "2026-08-01T21:17:36Z"
+    }
+   },
+   {
+    "id": "IdQp0CQArFo",
+    "snippet": {
+     "title": "UFC Belgrade | Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-08-01T14:25:38Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT56M54S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-08-01T13:00:00Z",
+     "actualStartTime": "2026-08-01T13:01:52Z",
+     "actualEndTime": "2026-08-01T14:00:27Z"
+    }
+   },
+   {
+    "id": "85f-smHx8AU",
+    "snippet": {
+     "title": "Power Slap 22: Bathory vs. Montes Prelims | Julio 30",
+     "publishedAt": "2026-07-31T06:30:24Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M12S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-07-30T18:00:00Z",
+     "actualStartTime": "2026-07-30T18:00:21Z",
+     "actualEndTime": "2026-07-30T18:26:57Z"
+    }
+   },
+   {
+    "id": "5gSXLMxg6zk",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Grasso vs. Shevchenko II",
+     "publishedAt": "2026-07-29T19:52:15Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M12S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "KtS9Uer9rbQ",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Chairez vs. Vergara",
+     "publishedAt": "2026-07-29T19:35:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M2S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "A2VbU_bmS-Y",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Grasso vs Kowalkiewicz",
+     "publishedAt": "2026-07-29T19:28:58Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M18S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "GT1STdzJ8MY",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Chairez vs Lacerda",
+     "publishedAt": "2026-07-29T19:28:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M39S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "gou__GnXCeE",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Grasso vs. Shevchenko I",
+     "publishedAt": "2026-07-29T18:37:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT22M47S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "2snmQ63Mdlo",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Moreno vs. Erceg",
+     "publishedAt": "2026-07-29T16:02:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT32M19S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "-Paax69Dl6M",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Martinez vs Chito",
+     "publishedAt": "2026-07-29T07:47:55Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT19M38S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "7KX3HHBGhbY",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Tarin vs. Kareckaite",
+     "publishedAt": "2026-07-28T23:24:53Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT20M19S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "eFqHxxFZFd0",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Bahamondes vs. Torres",
+     "publishedAt": "2026-07-28T23:24:10Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M10S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "3hm_ldMqyFw",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Grasso vs. Araujo",
+     "publishedAt": "2026-07-28T22:56:15Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT32M11S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "72gc53cv9BU",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Gastelum vs. Stoltzfus",
+     "publishedAt": "2026-07-28T21:47:42Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M37S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Ykwu9pbL_ko",
+    "snippet": {
+     "title": "#NocheUFC Pelea Gratis: Martinez vs Font",
+     "publishedAt": "2026-07-28T21:47:36Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT18M23S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "FUPftNhKbJo",
+    "snippet": {
+     "title": "#UFCAbuDhabi Pelea Gratis: Guskov vs Krylov",
+     "publishedAt": "2026-07-21T20:45:27Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M4S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "g528rgiXojc",
+    "snippet": {
+     "title": "#UFCAbuDhabi Pelea Gratis: Ankalaev vs Pereira",
+     "publishedAt": "2026-07-21T20:42:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT28M16S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "j9yqA7p7q-w",
+    "snippet": {
+     "title": "#UFCOKC Pelea Gratis: Usman Buckley",
+     "publishedAt": "2026-07-14T21:05:21Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT27M30S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "DHuCtbJcjHw",
+    "snippet": {
+     "title": "#UFCOKC Pelea Gratis: Du Plessis vs. Adesanya",
+     "publishedAt": "2026-07-14T20:02:20Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT22M49S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "y52t4QJJLvo",
+    "snippet": {
+     "title": "#UFC329 Tracy Cortez Entrevista Previa",
+     "publishedAt": "2026-07-11T22:18:01Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M33S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Gn3XCZ_O7ZI",
+    "snippet": {
+     "title": "#UFC329 Los KOs de Conor 'The Notorious' McGregor",
+     "publishedAt": "2026-07-10T15:54:51Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT21M4S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-07-10T15:54:32Z",
+     "actualStartTime": "2026-07-10T15:54:51Z",
+     "actualEndTime": "2026-07-10T16:17:57Z"
+    }
+   },
+   {
+    "id": "5_xdGlzOA30",
+    "snippet": {
+     "title": "#UFC329 Maratón: 'The Notorious' Conor McGregor",
+     "publishedAt": "2026-07-06T13:04:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H39M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "8TRq9S3WgQw",
+    "snippet": {
+     "title": "#UFC325 Pelea Gratis: Saint Denis vs. Hooker",
+     "publishedAt": "2026-07-06T09:43:12Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT11M49S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "5xCjIqZnqzs",
+    "snippet": {
+     "title": "#UFC329 Pelea Gratis: Pimblett vs. Chandler",
+     "publishedAt": "2026-07-06T09:41:44Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "gTlh6uRfq6U",
+    "snippet": {
+     "title": "#UFC329 Pelea Gratis: McGregor vs. Cerrone",
+     "publishedAt": "2026-07-06T09:37:03Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M57S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "LFMWLXqV9y0",
+    "snippet": {
+     "title": "#UFC329 Pelea Gratis: Holloway vs. Poirier 2",
+     "publishedAt": "2026-07-06T09:35:17Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT28M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Bi2FvBeHuSg",
+    "snippet": {
+     "title": "#UFC329 Pelea Gratis: Pimblett vs. Chandler",
+     "publishedAt": "2026-07-06T09:30:35Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "qL1-GXw0VCw",
+    "snippet": {
+     "title": "UFC Baku | Previa del Evento ¡EN VIVO!",
+     "publishedAt": "2026-06-27T13:22:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT59M26S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-06-27T12:00:49Z",
+     "actualStartTime": "2026-06-27T12:00:57Z",
+     "actualEndTime": "2026-06-27T13:00:20Z"
+    }
+   },
+   {
+    "id": "fmaxznXvZpA",
+    "snippet": {
+     "title": "#UFCBaku DWCS Pelea Gratis: Reyes vs. Torres",
+     "publishedAt": "2026-06-25T11:15:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "IoRoQrCzUd8",
+    "snippet": {
+     "title": "#UFCBaku Asu Almabayev: Entrevista Previa",
+     "publishedAt": "2026-06-24T12:00:19Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M26S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "mwi7YnlKk7g",
+    "snippet": {
+     "title": "#UFCBaku Rafael Fiziev: Entrevista Previa",
+     "publishedAt": "2026-06-24T11:58:31Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT5M2S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "PAdnLuxRI8U",
+    "snippet": {
+     "title": "#UFCBaku Shara Magomedov: Entrevista Previa",
+     "publishedAt": "2026-06-24T11:55:44Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M56S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "82eKd7QUOYM",
+    "snippet": {
+     "title": "#UFCBaku Pelea Gratis: Reyes vs. Andrade",
+     "publishedAt": "2026-06-24T10:19:59Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M16S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "pYzslbGkLrs",
+    "snippet": {
+     "title": "#UFCBaku Pelea Gratis: Torres vs. Dawson",
+     "publishedAt": "2026-06-24T10:04:13Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "mhNtVx2LMxM",
+    "snippet": {
+     "title": "#UFCWhiteHouse Aiemann Zahabi Entrevista Previa",
+     "publishedAt": "2026-06-10T13:04:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT2M10S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "aGm0ezvwdhk",
+    "snippet": {
+     "title": "#UFCWhiteHouse Derrick Lewis Entrevista Previa",
+     "publishedAt": "2026-06-10T02:19:23Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1M46S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "hL7PKLz504U",
+    "snippet": {
+     "title": "#UFCWhiteHouse: Maratón de la Cartelera",
+     "publishedAt": "2026-06-05T17:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H51M59S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-06-05T17:00:00Z",
+     "actualStartTime": "2026-06-05T17:00:06Z",
+     "actualEndTime": "2026-06-05T18:54:04Z"
+    }
+   },
+   {
+    "id": "V8CoiJEkJro",
+    "snippet": {
+     "title": "#UFCWhiteHouse Maratón: Topuria vs Gaethje",
+     "publishedAt": "2026-06-04T12:00:13Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H30M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "VBZeQl1ZtK0",
+    "snippet": {
+     "title": "#UFCWhiteHouse Maratón: Gane vs Pereira",
+     "publishedAt": "2026-06-02T21:07:16Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT1H16M57S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "fBQaoiItVBc",
+    "snippet": {
+     "title": "UFC BJJ 8: Musumeci vs Dantzler | Prelims (ESPAÑOL)",
+     "publishedAt": "2026-05-22T00:58:47Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT52M41S"
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-05-22T00:00:00Z",
+     "actualStartTime": "2026-05-21T23:58:14Z",
+     "actualEndTime": "2026-05-22T00:50:43Z"
+    }
+   },
+   {
+    "id": "GpAkHnZcUh4",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Hokit vs Blaydes",
+     "publishedAt": "2026-05-20T19:50:54Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT17M34S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "ilqIYT6U15I",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Lewis vs. Teixeira",
+     "publishedAt": "2026-05-20T19:31:40Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M31S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "900H6ElMxsg",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Lopes vs. Silva",
+     "publishedAt": "2026-05-20T19:29:29Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT13M10S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "UFvf1LZ8t_4",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Chandler vs. Ferguson",
+     "publishedAt": "2026-05-20T19:26:18Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M52S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "jS_WDU48zaM",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Garcia vs. Onama",
+     "publishedAt": "2026-05-20T19:25:28Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M20S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "5PoK1CsbnxQ",
+    "snippet": {
+     "title": "#UFCWhiteHouse Pelea Gratis: Daukaus vs. Meerschaert",
+     "publishedAt": "2026-05-19T21:18:48Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M27S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "5IaFFbJw7cM",
+    "snippet": {
+     "title": "#UFCVegas117 Pelea Gratis: Costa vs. Ige",
+     "publishedAt": "2026-05-13T19:46:08Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT8M39S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "Wjr8jQuAZ78",
+    "snippet": {
+     "title": "#UFCVegas117 Pelea Gratis: Allen vs. Hooker",
+     "publishedAt": "2026-05-13T19:18:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT4M13S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "wqKDXVHkSvk",
+    "snippet": {
+     "title": "#UFCPerth Pelea Gratis: Dariush vs Moicano",
+     "publishedAt": "2026-04-27T22:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT16M50S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-27T22:00:00Z",
+     "actualStartTime": "2026-04-27T22:00:06Z",
+     "actualEndTime": "2026-04-27T22:18:56Z"
+    }
+   },
+   {
+    "id": "4WBFVtE5E9E",
+    "snippet": {
+     "title": "#UFCPerth Pelea Gratis: Prates vs Edwards",
+     "publishedAt": "2026-04-27T19:00:07Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M11S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-27T19:00:00Z",
+     "actualStartTime": "2026-04-27T19:00:07Z",
+     "actualEndTime": "2026-04-27T19:11:17Z"
+    }
+   },
+   {
+    "id": "fkuuE0MDieU",
+    "snippet": {
+     "title": "#UFCPerth Pelea Gratis: Della Maddalena vs Muhammad",
+     "publishedAt": "2026-04-27T16:00:06Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT28M24S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-27T16:00:00Z",
+     "actualStartTime": "2026-04-27T16:00:06Z",
+     "actualEndTime": "2026-04-27T16:30:30Z"
+    }
+   },
+   {
+    "id": "Xljc-kyMzdk",
+    "snippet": {
+     "title": "#UFCVegas116 Victor Valenzuela Pelea Gratis",
+     "publishedAt": "2026-04-23T17:13:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT7M11S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-23T17:13:35Z",
+     "actualStartTime": "2026-04-23T17:13:46Z",
+     "actualEndTime": "2026-04-23T17:22:58Z"
+    }
+   },
+   {
+    "id": "AaJz4fFDbi8",
+    "snippet": {
+     "title": "#UFCVegas116 Pelea Gratis: Sterling vs Ortega",
+     "publishedAt": "2026-04-21T19:22:46Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M50S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-21T19:22:30Z",
+     "actualStartTime": "2026-04-21T19:22:46Z",
+     "actualEndTime": "2026-04-21T19:51:38Z"
+    }
+   },
+   {
+    "id": "64eTWP_STxw",
+    "snippet": {
+     "title": "#UFCWinnipeg Pelea Gratis: Burns vs Woodley",
+     "publishedAt": "2026-04-12T19:00:00Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT26M5S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "9Oco_8WGc88",
+    "snippet": {
+     "title": "#UFC327 Pelea Gratis: Ulberg vs. Reyes",
+     "publishedAt": "2026-04-06T15:00:00Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT9M36S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "KiBdlvdQa0s",
+    "snippet": {
+     "title": "#UFC327 Pelea Gratis: Prochazka vs. Rountree",
+     "publishedAt": "2026-04-03T19:00:00Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT17M32S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "7iZAXvfKdDU",
+    "snippet": {
+     "title": "UFC BJJ 7: Tackett vs Rocha | Prelims (ESPAÑOL)",
+     "publishedAt": "2026-04-03T00:44:47Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT45M46S",
+     "regionRestriction": {
+      "blocked": [
+       "AE",
+       "AF",
+       "AM",
+       "AU",
+       "AZ",
+       "BH",
+       "BR",
+       "BY",
+       "CA",
+       "CN",
+       "DJ",
+       "DZ",
+       "EG",
+       "GE",
+       "IL",
+       "IQ",
+       "IR",
+       "JO",
+       "KG",
+       "KW",
+       "KZ",
+       "LB",
+       "LY",
+       "MA",
+       "MD",
+       "MR",
+       "OM",
+       "PS",
+       "PT",
+       "QA",
+       "RU",
+       "SA",
+       "SO",
+       "SS",
+       "SY",
+       "TD",
+       "TJ",
+       "TM",
+       "TN",
+       "UZ",
+       "YE"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-04-03T00:00:00Z",
+     "actualStartTime": "2026-04-02T23:55:03Z",
+     "actualEndTime": "2026-04-03T00:40:48Z"
+    }
+   },
+   {
+    "id": "--axaAtb68M",
+    "snippet": {
+     "title": "#UFCVegas115 Pelea Gratis: Moicano vs. Saint Denis",
+     "publishedAt": "2026-04-01T22:31:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT15M13S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "W-Bo-yiSUP8",
+    "snippet": {
+     "title": "#UFCVegas115 Pelea Gratis: Duncan vs. McKinney",
+     "publishedAt": "2026-04-01T22:21:08Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT6M6S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "dR5QC9X3M1w",
+    "snippet": {
+     "title": "#UFCSeattle Pelea Gratis: Pyfer vs. Magomedov",
+     "publishedAt": "2026-03-24T20:55:43Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M54S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "dNFrMIFdI-0",
+    "snippet": {
+     "title": "#UFCSeattle Pelea Gratis: Adesanya vs. Pereira 2",
+     "publishedAt": "2026-03-24T20:55:02Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT13M9S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "im68-82w37s",
+    "snippet": {
+     "title": "#UFCSeattle Pelea Gratis: Grasso vs Shevchenko 2",
+     "publishedAt": "2026-03-23T09:07:04Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT23M39S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "ACmmXx_YpjI",
+    "snippet": {
+     "title": "#UFCSeattle Pelea Gratis: Barber vs Ribas",
+     "publishedAt": "2026-03-23T08:43:25Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT10M50S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "K46Msu1e-64",
+    "snippet": {
+     "title": "UFC BJJ 6: Fowler vs Machado | Prelims (ESPAÑOL)",
+     "publishedAt": "2026-03-13T01:02:13Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT55M28S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "PT"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    },
+    "liveStreamingDetails": {
+     "scheduledStartTime": "2026-03-13T00:00:00Z",
+     "actualStartTime": "2026-03-13T00:00:13Z",
+     "actualEndTime": "2026-03-13T00:55:38Z"
+    }
+   },
+   {
+    "id": "s14M_U5fFgM",
+    "snippet": {
+     "title": "#UFC326 Caio Boralho Entrevista Previa",
+     "publishedAt": "2026-03-05T20:47:26Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M58S",
+     "regionRestriction": {
+      "blocked": [
+       "BR",
+       "KR"
+      ]
+     }
+    },
+    "status": {
+     "embeddable": true
+    }
+   },
+   {
+    "id": "gKeETgxUoDM",
+    "snippet": {
+     "title": "#UFC326 Max Holloway Entrevista Previa",
+     "publishedAt": "2026-03-05T17:50:41Z",
+     "liveBroadcastContent": "none"
+    },
+    "contentDetails": {
+     "duration": "PT3M7S"
+    },
+    "status": {
+     "embeddable": true
+    }
+   }
+  ]
+ },
+ "events": [
+  {
+   "id": 1063,
+   "name": "UFC Fight Night: Medic vs. Rodriguez",
+   "location": "Belgrade Arena, BG, Serbia",
+   "eventDate": "2026-08-01",
+   "startTime": "2026-08-01 17:00:00+00",
+   "prelimsTime": "2026-08-01 14:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1087,
+   "name": "UFC Fight Night: Gamrot vs. Salkilld",
+   "location": "Meta APEX, Las Vegas, NV, United States",
+   "eventDate": "2026-08-08",
+   "startTime": "2026-08-09 00:00:00+00",
+   "prelimsTime": "2026-08-08 21:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1064,
+   "name": "UFC 330: Makhachev vs. Machado Garry",
+   "location": "Xfinity Mobile Arena, Philadelphia, PA, United States",
+   "eventDate": "2026-08-15",
+   "startTime": "2026-08-16 01:00:00+00",
+   "prelimsTime": "2026-08-15 23:00:00+00",
+   "earlyPrelimsTime": "2026-08-15 21:30:00+00"
+  },
+  {
+   "id": 1086,
+   "name": "UFC Fight Night: Hernandez vs. Rodrigues",
+   "location": "Golden 1 Center, Sacramento, CA, United States",
+   "eventDate": "2026-08-22",
+   "startTime": "2026-08-23 00:00:00+00",
+   "prelimsTime": "2026-08-22 21:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1094,
+   "name": "Road To UFC: Maheshate vs. Flowers",
+   "location": null,
+   "eventDate": "2026-08-28",
+   "startTime": "2026-08-28 09:00:00+00",
+   "prelimsTime": null,
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1065,
+   "name": "UFC Fight Night: Nurmagomedov vs. Song",
+   "location": "Oriental Sports Center, Pudong District, China",
+   "eventDate": "2026-08-29",
+   "startTime": "2026-08-29 10:00:00+00",
+   "prelimsTime": "2026-08-29 07:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1085,
+   "name": "UFC Fight Night: Hooker vs. Parnasse",
+   "location": "Accor Arena, Paris, France",
+   "eventDate": "2026-09-05",
+   "startTime": "2026-09-05 19:00:00+00",
+   "prelimsTime": "2026-09-05 16:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1088,
+   "name": "Noche UFC: Silva vs. Delgado",
+   "location": "Desert Diamond Arena, Glendale, AZ, United States",
+   "eventDate": "2026-09-12",
+   "startTime": "2026-09-12 21:00:00+00",
+   "prelimsTime": "2026-09-12 18:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1090,
+   "name": "Crypto.com UFC 331: Van vs. Pantoja 2",
+   "location": "Crypto.com Arena, Los Angeles, CA, United States",
+   "eventDate": "2026-09-19",
+   "startTime": "2026-09-20 01:00:00+00",
+   "prelimsTime": "2026-09-19 23:00:00+00",
+   "earlyPrelimsTime": "2026-09-19 21:30:00+00"
+  },
+  {
+   "id": 1091,
+   "name": "UFC Fight Night: Rosas Jr. vs. Barcelos",
+   "location": "Meta APEX, Las Vegas, NV, United States",
+   "eventDate": "2026-09-26",
+   "startTime": "2026-09-27 00:00:00+00",
+   "prelimsTime": "2026-09-26 21:00:00+00",
+   "earlyPrelimsTime": null
+  },
+  {
+   "id": 1092,
+   "name": "UFC 332: Silva vs. Wang",
+   "location": "Delta Center, Salt Lake City, UT, United States",
+   "eventDate": "2026-10-03",
+   "startTime": "2026-10-04 00:00:00+00",
+   "prelimsTime": "2026-10-03 22:00:00+00",
+   "earlyPrelimsTime": "2026-10-03 20:00:00+00"
+  },
+  {
+   "id": 1098,
+   "name": "UFC Fight Night: Allen vs. Duncan",
+   "location": "Meta APEX, Las Vegas, NV, United States",
+   "eventDate": "2026-10-10",
+   "startTime": "2026-10-11 00:00:00+00",
+   "prelimsTime": null,
+   "earlyPrelimsTime": null
+  }
+ ]
+}

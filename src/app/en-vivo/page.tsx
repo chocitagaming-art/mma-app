@@ -29,6 +29,7 @@ import {
   getLiveFightStats,
 } from "@/lib/queries/live";
 import { isCancelledLiveStatus, type LiveFightStats } from "@/lib/live-stats";
+import { getLivePick, needsLiveDetection, resolveEventVideo } from "@/lib/ufc-tv";
 import { cn } from "@/lib/utils";
 import type { EventBout } from "@/lib/types";
 
@@ -197,6 +198,26 @@ export default async function LivePage() {
   }
 
   const live = phase === "live" && !over;
+  // El vídeo del bloque «Retransmisión oficial»: el escrito a mano en
+  // events.live_video_id si lo hay (la columna manda, y 'off' lo apaga todo) y,
+  // si no, el directo de la velada que haya detectado UFC TV en YouTube para
+  // ESTE evento (lib/ufc-tv.ts).
+  //
+  // Se pregunta en fase 'pre' y 'live', no solo en 'live': la previa en
+  // español arranca ~1 h antes del primer tramo, y la fase 'live' no se abre
+  // hasta 30 min antes. Con el evento terminado no se pregunta: el bloque ya
+  // no se pintaría (eventOver). Y no se repite el careo ni el pesaje.
+  //
+  // 🪤 Va con `await` directo, sin <Suspense>: la primera petición de cada
+  // tramo de 120 s espera a YouTube (como mucho 3 s: son dos tandas de dos
+  // llamadas en paralelo, ~0,2 s cada una medida el 28-sep); las
+  // demás del tramo leen la caché. Ver liveBucket en lib/ufc-tv.ts.
+  const detectedLive =
+    needsLiveDetection(event.liveVideoId) && !over ? (await getLivePick(event)).evento : undefined;
+  const eventVideo = resolveEventVideo(event.liveVideoId, event.liveVideoTitle, detectedLive, [
+    event.faceoffVideoId,
+    event.weighinVideoId,
+  ]);
   // "Evento de hoy" se pintaba en TODA la fase `pre`, que son las 24 h previas:
   // el viernes por la noche esta página rotulaba como "de hoy" la velada del
   // sábado, mientras /ufc-hoy decía "dentro de 1 día". Mismo criterio que el
@@ -424,11 +445,13 @@ export default async function LivePage() {
       {/* El directo en abierto de la UFC, entre la cartelera y el pesaje. Esta
           es LA página de la noche de la velada, así que aquí importa más que en
           ningún otro sitio. Va antes del careo por lo mismo que en la ficha del
-          evento: el careo es de la víspera y esto es de ahora. */}
-      {event.liveVideoId ? (
+          evento: el careo es de la víspera y esto es de ahora. Con 'off' en la
+          columna no se pinta: resolveEventVideo devuelve 'off', no un vídeo. */}
+      {eventVideo && eventVideo !== "off" ? (
         <EventLiveEmbed
-          videoId={event.liveVideoId}
-          videoTitle={event.liveVideoTitle}
+          videoId={eventVideo.videoId}
+          videoTitle={eventVideo.title}
+          channel={eventVideo.channel}
           eventName={event.name}
           // 🪤 SIN ESTO LA PÁGINA SE CONTRADICE A SÍ MISMA: la cabecera ya dice
           // «Finalizado» (`over`, se calcula arriba con isMainEventFinished) y

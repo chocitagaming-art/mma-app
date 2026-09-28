@@ -11,6 +11,7 @@ con `import x from "@/lib/__fixtures__/…json"` (ver
 |---|---|
 | `predict-response.json` | Respuesta del servicio de predicción, byte a byte |
 | `grip-live-*.json` | Series de muestras del directo para T3 (variante B del reparto de agarre) |
+| `ufc-tv-2026-09-28.json` | Vídeos de los canales UFC y UFC Español (videos.list) + los eventos de esas semanas, para UFC TV |
 
 ---
 
@@ -145,3 +146,62 @@ Y al revés: 14232 completo **no** distingue el filtro por `state` (su `post`
 final repite el `ctrl` de la muestra anterior, 169/231). Ese medio invariante lo
 cazan 12872 (227/18 → 226/17), 14022 (10/121 → 10/123) y 12873/12880, donde
 quitar las `post` deja el combate entero sin ninguna muestra.
+
+---
+
+## `ufc-tv-2026-09-28.json` — lo que emitían los canales de la UFC
+
+La usa `src/lib/ufc-tv.test.ts` para probar la clasificación de UFC TV (qué
+directo es la velada, qué es un directo de peleas y qué no se enseña) y el
+bucle de peleas completas, con títulos reales y no inventados.
+
+**Forma:**
+
+```ts
+{
+  measuredAt: "2026-09-28T19:20:00Z",
+  source: "…",
+  channels: { ufc: YouTubeVideoItem[], "ufc-es": YouTubeVideoItem[] },
+  events: UfcTvEvent & { id: number }[],
+}
+```
+
+- `channels.*` son elementos de **videos.list** tal cual los devuelve la API
+  (`part=snippet,liveStreamingDetails,contentDetails,status`), recortados a los
+  campos que lee `toLiveCandidate` (`src/lib/ufc-tv.ts`): `id`,
+  `snippet.{title,publishedAt,liveBroadcastContent}`,
+  `liveStreamingDetails.{scheduledStartTime,actualStartTime,actualEndTime}`,
+  `contentDetails.{duration,regionRestriction}` y `status.embeddable`. Las
+  listas de `regionRestriction` van **enteras**, sin resumir.
+- `events` son las filas de `events` con los horarios como `timestamptz::text`
+  (`"2026-09-27 00:00:00+00"`), que es como llegan a `getEventDetail` y a
+  `getNextEventHero`.
+
+**Cómo se generó** (2026-09-28, ~19:20Z, solo lectura):
+
+1. Las 600 últimas subidas de cada canal: `playlistItems` sobre
+   `UUvgfXK4nTYKudb0rFR6noLA` (UFC) y `UUYXJFtx4SUkrb2p_8mhLPzQ` (UFC Español),
+   12 páginas de 50, y `videos.list` por lotes de 50 con las cuatro `part`.
+   24 + 24 = 48 unidades de cuota.
+2. Se conservan: **todos** los de título de pelea (`full fight`, `pelea gratis`,
+   `marathon`/`maratón`, `evento completo`, `greatest`, `knockout`, `prelims`,
+   `previa`…) y, de los que traen `liveStreamingDetails`, los publicados desde el
+   1-ago-2026 (el primer evento de la lista). Los estrenos anteriores de UFC
+   Español son promos de 2-5 min y solo inflaban el fichero (pasaba de 200 KB).
+   Queda en **263 vídeos** (91 + 172) y ~135 KB.
+3. Los eventos, del 1063 (UFC Belgrade, 1-ago) al 1098 (10-oct).
+
+Lo que **no** trae: `contentDetails.contentRating`. La API lo devuelve con
+`part=contentDetails`, pero el script de extracción no lo guardó, así que la fixture no sabe qué vídeos tienen restricción de edad; ese caso se
+prueba con un candidato modificado a mano en el test (`ageRestricted: true`).
+
+Detalles que NO hay que "arreglar" al leerla:
+
+- `z1PhY6ix2XY` («GREATEST UFC RISING STARS | UFC 332») está **en directo**
+  (`liveBroadcastContent: "live"`, `duration: "P0D"`, sin `actualEndTime`): era
+  el directo en el aire al medir, y el test lo usa tal cual.
+- Los demás directos ya acabaron (llevan `actualEndTime` y su duración real).
+  Para probarlos «en el aire» el test los reproduce (`enDirecto`, `enEstreno`):
+  les quita el final y, si era un directo de verdad, les pone `P0D`.
+- `uXf5Da2QkR8` y `AWfWwkQz0yc` son ruedas de prensa **programadas**
+  (`upcoming`): tienen que quedar fuera.
