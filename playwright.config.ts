@@ -54,6 +54,19 @@ export default defineConfig({
           url: "http://localhost:3100/api/health",
           reuseExistingServer: true,
           timeout: 300_000,
+          // UFC TV (portada) con datos ENLATADOS y sin red: el bucle de peleas
+          // de siempre, con ids reales, pase lo que pase ese día en YouTube.
+          // Ver readFixtureMode en src/lib/ufc-tv.ts y e2e/ufc-tv.spec.ts.
+          //
+          // Playwright MEZCLA esto sobre process.env, no lo sustituye
+          // (node_modules/playwright/lib/runner/index.js: `...process.env,
+          // ...this._options.env`): DATABASE_URL y compañía siguen llegando al
+          // server.
+          //
+          // ⚠️ Solo vale para el server que arranca Playwright. Con
+          // PLAYWRIGHT_BASE_URL, o si reuseExistingServer reutiliza uno ya vivo
+          // en :3100, la variable no está y la portada enseña lo de verdad.
+          env: { UFC_TV_FIXTURE: "loop" },
         },
       }
     : {}),

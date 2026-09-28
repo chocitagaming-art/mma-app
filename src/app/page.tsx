@@ -1,9 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { EventLiveEmbed } from "@/components/event-live-embed";
 import { FavoritesStrip } from "@/components/home/favorites-strip";
 import { FighterCard } from "@/components/fighter-card";
+import { HomeLiveSlot } from "@/components/home/home-live-slot";
 import { LastEventSection } from "@/components/home/last-event-section";
 import { LiveBanner } from "@/components/live/live-banner";
 import { UpNextHero } from "@/components/home/up-next-hero";
@@ -124,21 +125,29 @@ export default async function HomePage() {
           Si no hay eventos futuros en la BD, la sección no se pinta. */}
       {nextEvent ? <UpNextHero event={nextEvent} /> : null}
 
-      {/* El directo en abierto de la UFC, entre el hero y los contadores.
+      {/* El hueco de directos, entre el hero y los contadores: el directo de la
+          velada si está en el aire, y si no UFC TV (peleas en directo o el
+          bucle de peleas completas). El orden y el interruptor 'off' viven en
+          components/home/home-live-slot.tsx.
           🪤 SIN franja propia: la primera versión lo metió en una <section> con
           `border-b bg-card` a todo lo ancho, y el resultado no se leía como un
-          vídeo sino como un cajón enorme cruzando la página. Ahora va en el
-          mismo carril que el resto del contenido y el vídeo manda su tamaño.
-          Solo existe cuando el evento tiene vídeo: sin él no queda ni el hueco. */}
-      {nextEvent?.liveVideoId ? (
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <EventLiveEmbed
-            videoId={nextEvent.liveVideoId}
-            videoTitle={nextEvent.liveVideoTitle}
-            eventName={nextEvent.name}
-          />
-        </div>
-      ) : null}
+          vídeo sino como un cajón enorme cruzando la página. Va en el mismo
+          carril que el resto del contenido y el vídeo manda su tamaño; el
+          carril lo pone el propio hueco, así que sin vídeo no queda ni el hueco.
+          🪤 EN <Suspense> Y FUERA DEL Promise.all: pregunta a YouTube (con 3 s de
+          tope y caché de 120 s), y si YouTube va lento el resto de la portada
+          no puede quedarse esperándole. El fallback es null: mientras llega, no
+          hay nada, que es exactamente lo que habría si no hubiera vídeo.
+          ⚠️ PRECIO ACEPTADO: un salto de maquetación. Cuando el hueco llega
+          por streaming empuja hacia abajo los contadores y todo lo de debajo
+          (~300-560 px). A 390×844 y a 1280×800 el hueco cae por debajo del
+          pliegue (el hero ocupa ~750 px) y no se ve; se nota con pantallas
+          muy altas o si se baja antes de que llegue. Reservar el alto con un
+          esqueleto dejaría el hueco vacío los días sin vídeo, que es lo que
+          la regla de arriba prohíbe: lo decide el dueño. */}
+      <Suspense fallback={null}>
+        <HomeLiveSlot nextEvent={nextEvent} />
+      </Suspense>
 
       {/* Stat strip */}
       <section className="border-b border-border bg-card">

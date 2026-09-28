@@ -411,6 +411,25 @@ describe("el chip «EN VIVO» de la cabecera cumple WCAG 1.4.3", () => {
     // Cualquier utilidad de fondo en hover vuelve a mover el ratio del texto.
     expect(clases).not.toMatch(/hover:bg-/);
   });
+
+  it("el distintivo EN DIRECTO de UFC TV (home/ufc-tv.tsx) es ESTE mismo chip, no otra mezcla", () => {
+    // UFC TV reutiliza la combinación del chip de la cabecera —texto --primary
+    // sobre un 5 % de --primary— en vez de estrenar una. Vive sobre el fondo de
+    // la página (--background), el mismo contra el que se mide arriba, así que
+    // los números de este bloque valen para los dos. Si alguien le sube el
+    // tinte o le pone hover de fondo, deja de estar medido y cae aquí.
+    const tv = readFileSync(
+      fileURLToPath(new URL("../components/home/ufc-tv.tsx", import.meta.url)),
+      "utf8",
+    );
+    const distintivo = [...tv.matchAll(/className="([^"]+)"/g)]
+      .map((m) => m[1])
+      .find((clases) => clases.includes("rounded-full") && clases.includes("text-primary"));
+    expect(distintivo, "no encontré el distintivo de UFC TV").toBeDefined();
+    expect(distintivo).toContain("bg-primary/5");
+    expect(distintivo).not.toMatch(/\bbg-primary\/(?!5\b)/);
+    expect(distintivo).not.toMatch(/hover:bg-/);
+  });
 });
 
 // ---------------------------------------------------------------------------

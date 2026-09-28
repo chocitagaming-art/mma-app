@@ -20,6 +20,7 @@ import { getEventDetail, getEventWeighIns } from "@/lib/queries/events";
 import { getLiveFightStats } from "@/lib/queries/live";
 import { parseId } from "@/lib/route-params";
 import { buildEventJsonLd, serializeJsonLd } from "@/lib/structured-data";
+import { getLivePick, needsLiveDetection, resolveEventVideo } from "@/lib/ufc-tv";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -106,6 +107,30 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   // en directo" aunque la ventana horaria 'live' (main+8h) siga abierta — misma
   // señal que apaga el modo directo en la home y en /en-vivo.
   const eventOver = isMainEventFinished(event.bouts, liveFinishedIds);
+
+  // El vídeo del bloque «Retransmisión oficial»: el escrito a mano en
+  // events.live_video_id si lo hay (la columna manda, y 'off' lo apaga todo) y,
+  // si no, el directo de la velada que haya detectado UFC TV en YouTube para
+  // ESTE evento. Ver resolveEventVideo en lib/ufc-tv.ts.
+  //
+  // Solo se pregunta a YouTube con la ventana abierta (fase 'pre' o 'live') y
+  // el evento sin terminar: la ficha se abre en cualquier evento del
+  // histórico, y en uno de hace meses no hay nada que detectar. Y no se repite
+  // un vídeo que la ficha ya enseña más abajo como careo o como pesaje.
+  //
+  // 🪤 Va con `await` directo, sin <Suspense>: la primera petición de cada
+  // tramo de 120 s espera a YouTube (como mucho 3 s: son dos tandas de dos
+  // llamadas en paralelo, ~0,2 s cada una medida el 28-sep); las
+  // demás del tramo leen la caché. Ver liveBucket en lib/ufc-tv.ts.
+  const liveWindowOpen = livePhase !== "none" && !eventOver && event.status !== "completed";
+  const detectedLive =
+    needsLiveDetection(event.liveVideoId) && liveWindowOpen
+      ? (await getLivePick(event)).evento
+      : undefined;
+  const eventVideo = resolveEventVideo(event.liveVideoId, event.liveVideoTitle, detectedLive, [
+    event.faceoffVideoId,
+    event.weighinVideoId,
+  ]);
 
   // FE5b: hora de inicio de cada segmento para su encabezado de sección.
   const sectionTimes: Record<string, string | null> = {
@@ -338,11 +363,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       {/* El directo de la UFC, entre las peleas y el pesaje. Va ANTES del careo
           a propósito: el careo es de la víspera y esto es de esta noche, así que
           lo más actual queda arriba. Si el evento no tiene directo, no se pinta
-          nada — ni un hueco ni un «no disponible». */}
-      {event.liveVideoId ? (
+          nada — ni un hueco ni un «no disponible». Con 'off' en la columna,
+          tampoco: resolveEventVideo devuelve 'off' y 'off' no es un vídeo. */}
+      {eventVideo && eventVideo !== "off" ? (
         <EventLiveEmbed
-          videoId={event.liveVideoId}
-          videoTitle={event.liveVideoTitle}
+          videoId={eventVideo.videoId}
+          videoTitle={eventVideo.title}
+          channel={eventVideo.channel}
           eventName={event.name}
           // 🪤 NO BASTA CON isMainEventFinished, y lo cazó un control positivo:
           // se puso el vídeo en UFC 306 (2024, completed) y la sección SE PINTÓ.
