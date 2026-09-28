@@ -4,6 +4,7 @@ import { ArrowRightLeft } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { fightCountLabel } from "@/lib/fight-count";
 import { formatRecord, formatStance, formatWeight, formatWeightClass } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
 
@@ -23,8 +24,13 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function FighterCard({ fighter }: FighterCardProps) {
+  const fightLabel = fightCountLabel(fighter);
+
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(190,30,20,0.05),0_10px_28px_-14px_rgba(140,35,25,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/15 dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-foreground/5">
+    <div
+      data-fighter-card
+      className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(190,30,20,0.05),0_10px_28px_-14px_rgba(140,35,25,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/15 dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-foreground/5"
+    >
       {/* Corner accent */}
       <div className="absolute inset-x-0 top-0 z-10 h-1 bg-corner-red transition-[height] duration-200 group-hover:h-1.5" />
 
@@ -76,9 +82,23 @@ export function FighterCard({ fighter }: FighterCardProps) {
         </div>
       </Link>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground">
-        <span className="tabular">{fighter.fightCount} peleas</span>
-        <div className="flex items-center gap-4">
+      <div
+        data-card-footer
+        className="flex items-center justify-between gap-3 border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground"
+      >
+        {/* El total sale del MISMO récord que se pinta arriba (29-1-0 → «30
+            peleas»): cuadra por construcción. Sin récord cae a «N en UFC», y
+            sin eso no se pinta. Ver src/lib/fight-count.ts.
+            whitespace-nowrap: el número no se separa nunca de su «peleas». Si
+            el pie no cupiera, cederían los enlaces, y eso lo caza
+            e2e/portada-p4p.spec.ts midiendo el alto del pie. */}
+        {fightLabel ? (
+          <span data-fight-count className="tabular whitespace-nowrap">
+            {fightLabel}
+          </span>
+        ) : null}
+        {/* ml-auto: sin contador, los enlaces siguen a la derecha. */}
+        <div className="ml-auto flex items-center gap-4">
           <Link
             href={`/enfrentamiento?red=${fighter.id}`}
             className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-primary"

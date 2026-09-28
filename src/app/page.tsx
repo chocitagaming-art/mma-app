@@ -6,6 +6,7 @@ import { FavoritesStrip } from "@/components/home/favorites-strip";
 import { FighterCard } from "@/components/fighter-card";
 import { HomeLiveSlot } from "@/components/home/home-live-slot";
 import { LastEventSection } from "@/components/home/last-event-section";
+import { P4PTabs } from "@/components/home/p4p-tabs";
 import { LiveBanner } from "@/components/live/live-banner";
 import { UpNextHero } from "@/components/home/up-next-hero";
 import { RecentNewsGrid } from "@/components/recent-news-grid";
@@ -16,7 +17,9 @@ import { VideoHero } from "@/components/video-hero";
 import { Button } from "@/components/ui/button";
 import { getLastEventResults, getNextEventHero } from "@/lib/queries/events";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
+import { p4pDescription } from "@/lib/p4p-description";
 import { getRecentNews } from "@/lib/queries/news";
+import type { FighterCardData } from "@/lib/types";
 
 // Home data (stats, destacados, noticias) cambia como mucho a diario, no en vivo.
 // ISR: servir estático y revalidar cada 30 minutos en vez de consultar la BD en
@@ -32,19 +35,48 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+// Rejilla de tarjetas de un libra por libra. Se pinta en SERVIDOR y, si hay
+// masculino y femenino, P4PTabs solo decide cuál se ve.
+function FighterGrid({ fighters }: { fighters: FighterCardData[] }) {
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {fighters.map((fighter) => (
+        <FighterCard key={fighter.id} fighter={fighter} />
+      ))}
+    </div>
+  );
+}
+
 export default async function HomePage() {
   // Noticias recientes (12; RecentNewsGrid escoge de ese conjunto sus 6 con
   // foto, paridad visual exacta). Con ISR la consulta solo corre al revalidar,
   // así que el coste es irrelevante (#68/#33).
-  const [stats, featuredFighters, recentNews, nextEvent, lastEvent] =
+  const [stats, featuredMen, featuredWomen, recentNews, nextEvent, lastEvent] =
     await Promise.all([
       getHomeStats(),
-      getFeaturedFighters(),
+      getFeaturedFighters(6, "mens_pound_for_pound"),
+      // El femenino NO tiene plan B: si su ranking no llega, devuelve [] y el
+      // bloque se queda en el masculino, sin pestañas (fighters.list.ts).
+      getFeaturedFighters(6, "womens_pound_for_pound"),
       getRecentNews(12),
       // FE1/FE10: próximo evento (Up Next) y resultados del último completado.
       getNextEventHero(),
       getLastEventResults(),
     ]);
+
+  // Pestañas solo si hay algo que alternar. Con una sola rejilla (el femenino
+  // vacío) se pinta tal cual, sin una pestaña «Masculino» huérfana.
+  const p4pPanels = (
+    [
+      { key: "masculino", label: "Masculino", ...featuredMen },
+      { key: "femenino", label: "Femenino", ...featuredWomen },
+    ] as const
+  ).filter((panel) => panel.fighters.length > 0);
+  // «Sin distinción de categoría» dejó de ser verdad el 28-sep-2026: ahora hay
+  // un libra por libra de cada sexo. El texto dice QUÉ paneles hay y de dónde
+  // salen (ranking o plan B «los de más peleas»), no cuál se está viendo: se
+  // pinta aquí, en servidor, y no cambia al alternar pestaña.
+  const p4pText = p4pDescription(p4pPanels) ?? undefined;
 
   const statItems = [
     { value: stats.fighters.toLocaleString(), label: "Luchadores" },
@@ -215,7 +247,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Libra por libra"
             title="Mejores libra por libra"
-            description="Los mejores peleadores del ranking oficial de UFC, sin distinción de categoría."
+            description={p4pText}
           />
           <Link href="/clasificacion" className="hidden shrink-0 sm:inline-flex">
             <Button
@@ -230,11 +262,18 @@ export default async function HomePage() {
             </Button>
           </Link>
         </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {featuredFighters.map((fighter) => (
-            <FighterCard key={fighter.id} fighter={fighter} />
-          ))}
-        </div>
+        {p4pPanels.length > 1 ? (
+          <P4PTabs
+            label="Libra por libra"
+            panels={p4pPanels.map((panel) => ({
+              key: panel.key,
+              label: panel.label,
+              content: <FighterGrid fighters={panel.fighters} />,
+            }))}
+          />
+        ) : p4pPanels.length === 1 ? (
+          <FighterGrid fighters={p4pPanels[0].fighters} />
+        ) : null}
       </section>
     </div>
   );

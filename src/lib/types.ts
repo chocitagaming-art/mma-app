@@ -45,7 +45,14 @@ export type Fighter = {
 };
 
 export type FighterCardData = Fighter & {
-  fightCount: number;
+  // Peleas profesionales SEGÚN EL RÉCORD que se enseña (V+D+E), para que el pie
+  // de la tarjeta cuadre con él por construcción. null = sin récord. Ver
+  // src/lib/fight-count.ts. Hasta el 28-sep-2026 eran filas de `fights`: solo
+  // UFC y con los programados dentro.
+  fightCount: number | null;
+  // Peleas UFC ya DISPUTADAS (sin programados ni canceladas): el respaldo del
+  // pie cuando falta el récord. null = la consulta no lo calcula (/fighters).
+  ufcFightCount: number | null;
   latestWeightClass: string | null;
 };
 
@@ -243,7 +250,8 @@ export type FighterComparisonAverages = {
 };
 
 export type FighterComparisonProfile = Fighter & {
-  fightCount: number;
+  fightCount: number | null;
+  ufcFightCount: number | null;
   latestWeightClass: string | null;
   aggregateStats: FighterComparisonAverages;
   // Silueta de golpes (ofensa + defensa) para el cara a cara (#45).
@@ -293,7 +301,10 @@ export type FighterQaItem = {
 export type FighterDetail = {
   fighter: Fighter;
   latestWeightClass: string | null;
-  fightCount: number;
+  // Mismo criterio que FighterCardData (récord; respaldo UFC disputadas). Hoy
+  // no se pinta: la ficha enseña su propio «N peleas registradas».
+  fightCount: number | null;
+  ufcFightCount: number | null;
   history: FighterHistoryItem[];
   // S3-G: historial no-UFC (fight_history_espn). SOLO para la tabla del
   // historial (fusionado allí con `history`); las stats/racha/forma de la

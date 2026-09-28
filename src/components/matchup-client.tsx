@@ -16,6 +16,7 @@ import { formatDate, formatMethod, formatWeightClass } from "@/lib/format";
 import {
   classifyDirectMatchup,
   describeMatchupTies,
+  isHypotheticalMatchup,
   splitDirectMatchups,
   summarizeDirectMatchups,
 } from "@/lib/matchup-history";
@@ -114,18 +115,6 @@ export function MatchupClient({
       ? ("standing-first" as const)
       : ("full-first" as const);
 
-  // Divisiones distintas → enfrentamiento hipotético: no se daría en la
-  // realidad y hay que avisarlo (dueño, 11-jul). Solo cuando AMBAS divisiones
-  // son conocidas (con NULL no se puede afirmar nada). Se comparan las
-  // etiquetas NORMALIZADAS (formatWeightClass), no el string crudo de la BD:
-  // "Lightweight Title Bout" y "Lightweight" son la misma división.
-  const hypothetical = Boolean(
-    detail?.fighterA.latestWeightClass &&
-      detail?.fighterB.latestWeightClass &&
-      formatWeightClass(detail.fighterA.latestWeightClass) !==
-        formatWeightClass(detail.fighterB.latestWeightClass),
-  );
-
   // Separa los combates programados (winner y method NULL) de los disputados:
   // el resumen y las tarjetas normales solo miran los disputados, y los
   // programados tienen su propia tarjeta "Combate programado".
@@ -136,6 +125,19 @@ export function MatchupClient({
         : { completed: [], scheduled: [] },
     [detail],
   );
+
+  // Divisiones distintas → enfrentamiento hipotético: no se daría en la
+  // realidad y hay que avisarlo (dueño, 11-jul). 🪤 Salvo que los dos tengan un
+  // combate FIRMADO: con la regla única de categoría (28-sep), el que sube o
+  // baja de peso conserva la de antes hasta pelear, y el aviso salía en peleas
+  // del mismo sábado. La regla entera, con sus casos, en isHypotheticalMatchup.
+  const hypothetical = detail
+    ? isHypotheticalMatchup(
+        detail.fighterA.latestWeightClass,
+        detail.fighterB.latestWeightClass,
+        detail.directMatchups,
+      )
+    : false;
 
   const matchupSummary = useMemo(() => {
     if (!detail) {

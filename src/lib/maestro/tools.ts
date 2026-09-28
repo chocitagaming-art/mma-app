@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { sql } from "@/lib/db";
-import { fightResultCaseSql } from "@/lib/fight-result";
+import { fightResultCaseSql, resueltoSqlPredicate } from "@/lib/fight-result";
+import { currentWeightClassSql } from "@/lib/queries/current-weight-class";
 import { getFighterComparisonDetail } from "@/lib/queries/fighters";
 import { getFighterRankingHistory } from "@/lib/queries/rankings";
 import { buildRankingTrajectory } from "@/lib/ranking-trajectory";
@@ -95,10 +96,9 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
             f.stance, f.weight_grams, f.wins, f.losses, f.draws,
             (select count(*) from fights fi
               where (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
-                and fi.status is distinct from 'cancelled') as fight_count,
-            (select fi2.weight_class from fights fi2
-              where fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id
-              order by fi2.updated_at desc nulls last, fi2.id desc limit 1) as latest_weight_class
+                and fi.status is distinct from 'cancelled'
+                and ${resueltoSqlPredicate("fi")}) as ufc_fights_disputed,
+            ${currentWeightClassSql("f")} as latest_weight_class
      from fighters f where f.id = $1`,
     [id],
   );
@@ -139,8 +139,15 @@ async function fichaYStats(input: unknown): Promise<ToolResult> {
       alcance_cm: fighter.reach_cm,
       peso_gramos: fighter.weight_grams,
       guardia: fighter.stance,
+      // La MISMA regla que la ficha y que `comparar` (current-weight-class.ts):
+      // hasta el 28-sep-2026 esta copia ordenaba por `updated_at` y ni siquiera
+      // descartaba las canceladas, así que el Maestro podía dar dos categorías
+      // distintas para la misma persona según la herramienta que llamase.
       categoria: fighter.latest_weight_class,
-      peleas_registradas: num(fighter.fight_count),
+      // 🪤 Antes `peleas_registradas`: filas de `fights`, solo UFC y con los
+      // combates PROGRAMADOS dentro. El nombre dice ahora lo que cuenta, y solo
+      // cuenta lo ya peleado. El total de su carrera está en `record`.
+      peleas_ufc_disputadas: num(fighter.ufc_fights_disputed),
     },
     stats_carrera: {
       golpes_sig_conectados: sl,

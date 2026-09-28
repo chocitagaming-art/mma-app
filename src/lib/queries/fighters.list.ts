@@ -1,6 +1,8 @@
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
+import { resueltoSqlPredicate } from "@/lib/fight-result";
+import type { P4PSource } from "@/lib/p4p-description";
 import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   FavoriteUpcomingBout,
@@ -19,6 +21,7 @@ import type {
   SearchRow,
   UpcomingBoutRow,
 } from "./fighters.types";
+import { currentWeightClassSql } from "./current-weight-class";
 import { mapFighter } from "./fighters.mappers";
 
 async function getHomeStatsUncached(): Promise<HomeStats> {
@@ -38,61 +41,78 @@ async function getHomeStatsUncached(): Promise<HomeStats> {
   };
 }
 
+/** Los dos libra por libra oficiales, tal cual los escribe la ingesta en `rankings.division`. */
+export type PoundForPoundDivision = "mens_pound_for_pound" | "womens_pound_for_pound";
+
+/**
+ * Los destacados y DE DÓNDE salen: del ranking oficial o del plan B «los de más
+ * peleas UFC». La portada necesita saberlo para no llamar «ranking oficial» a
+ * Jim Miller y compañía (src/lib/p4p-description.ts).
+ */
+export type FeaturedFighters = {
+  fighters: FighterCardData[];
+  source: P4PSource;
+};
+
 async function getFeaturedFightersUncached(
   limit = 6,
-): Promise<FighterCardData[]> {
-  const latestWeightClass = `(
-        select fi2.weight_class
-        from fights fi2
-        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
-          and fi2.status is distinct from 'cancelled'
-          and fi2.weight_class is not null
-        -- catch/open weight no es división real (misma semántica que
-        -- division-history.ts): solo gana si el luchador no tiene otra
-        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
-          fi2.updated_at desc nulls last, fi2.id desc
-        limit 1
-      ) as latest_weight_class`;
+  division: PoundForPoundDivision = "mens_pound_for_pound",
+): Promise<FeaturedFighters> {
+  // `ufc_fight_count` son las peleas UFC ya DISPUTADAS: el respaldo del pie de
+  // la tarjeta cuando falta el récord. 🪤 Sin `resueltoSqlPredicate` contaba
+  // también los combates PROGRAMADOS (Volkanovski 19 en vez de 18 un mes antes
+  // de pelear). El total de carrera que se pinta NO sale de aquí: sale de
+  // wins/losses/draws, en mapFighter.
+  const ufcFightsJoin = `left join fights fi
+      on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
+     and fi.status is distinct from 'cancelled'
+     and ${resueltoSqlPredicate("fi")}`;
 
-  // Destacados = los mejores libra por libra (hombres) del último ranking oficial.
-  let rows = await sql<FighterRow>(
+  // Destacados = los mejores del libra por libra pedido, en la última foto del
+  // ranking oficial. La división va por parámetro: hasta el 28-sep-2026 estaba
+  // escrita a mano ('mens_pound_for_pound') y la portada no tenía mujeres.
+  const rows = await sql<FighterRow>(
     `with latest as (select max(snapshot_date) as d from rankings)
     select
       f.*,
-      count(fi.id)::text as fight_count,
-      ${latestWeightClass}
+      count(fi.id)::text as ufc_fight_count,
+      ${currentWeightClassSql("f")} as latest_weight_class
     from rankings r
     join fighters f on f.id = r.fighter_id
-    left join fights fi
-      on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
-     and fi.status is distinct from 'cancelled'
+    ${ufcFightsJoin}
     where r.snapshot_date = (select d from latest)
-      and r.division = 'mens_pound_for_pound'
+      and r.division = $2
       and r.rank_position between 1 and $1
     group by f.id, r.rank_position
     order by r.rank_position`,
-    [limit],
+    [limit, division],
   );
 
-  // Fallback si la tabla rankings aún no está poblada: por nº de peleas históricas.
-  if (rows.length === 0) {
-    rows = await sql<FighterRow>(
-      `select
-        f.*,
-        count(fi.id)::text as fight_count,
-        ${latestWeightClass}
-      from fighters f
-      left join fights fi
-        on (fi.fighter_red_id = f.id or fi.fighter_blue_id = f.id)
-       and fi.status is distinct from 'cancelled'
-      group by f.id
-      order by count(fi.id) desc, f.updated_at desc nulls last, f.id desc
-      limit $1`,
-      [limit],
-    );
+  if (rows.length > 0) {
+    return { fighters: rows.map(mapFighter), source: "ranking" };
   }
 
-  return rows.map(mapFighter);
+  // Fallback si la última foto de rankings no trae este libra por libra: por nº
+  // de peleas UFC. 🪤 SOLO para el masculino. Este plan B no sabe de sexos (la
+  // tabla fighters no lo guarda): para el femenino devolvería hombres. Sin
+  // ranking femenino, la portada pinta el masculino sin pestañas.
+  if (division !== "mens_pound_for_pound") {
+    return { fighters: [], source: "ranking" };
+  }
+  const mostFights = await sql<FighterRow>(
+    `select
+      f.*,
+      count(fi.id)::text as ufc_fight_count,
+      ${currentWeightClassSql("f")} as latest_weight_class
+    from fighters f
+    ${ufcFightsJoin}
+    group by f.id
+    order by count(fi.id) desc, f.updated_at desc nulls last, f.id desc
+    limit $1`,
+    [limit],
+  );
+  // Y lo dice: estos NO son un ranking, y la portada no puede llamarlos así.
+  return { fighters: mostFights.map(mapFighter), source: "most-fights" };
 }
 
 // Cacheadas con unstable_cache para no pegar a Neon en cada visita a la home: la
@@ -104,6 +124,10 @@ export const getHomeStats = unstable_cache(getHomeStatsUncached, ["home-stats"],
   tags: ["home"],
 });
 
+// La clave lleva los argumentos, así que masculino y femenino se cachean por
+// separado. 🪤 Y lleva el TEXTO de getFeaturedFightersUncached, no el de los
+// helpers que importa: un retoque SOLO de current-weight-class.ts no cambia la
+// clave y necesita POST /api/revalidate tras desplegar (ver ese fichero).
 export const getFeaturedFighters = unstable_cache(
   getFeaturedFightersUncached,
   ["featured-fighters"],
@@ -231,19 +255,9 @@ export async function getFighters(
     )
     select
       f.*,
-      coalesce(fc.n, 0)::text as fight_count,
-      (
-        select fi2.weight_class
-        from fights fi2
-        where (fi2.fighter_red_id = f.id or fi2.fighter_blue_id = f.id)
-          and fi2.status is distinct from 'cancelled'
-          and fi2.weight_class is not null
-        -- catch/open weight no es división real (misma semántica que
-        -- division-history.ts): solo gana si el luchador no tiene otra
-        order by (fi2.weight_class ~* '(catch|open)\\s*weight') asc,
-          fi2.updated_at desc nulls last, fi2.id desc
-        limit 1
-      ) as latest_weight_class
+      -- fight_counts solo ORDENA (relevancia): no se pinta. El total de peleas
+      -- que se enseña sale del récord, en mapFighter.
+      ${currentWeightClassSql("f")} as latest_weight_class
     from fighters f
     left join rel on rel.fighter_id = f.id
     left join fight_counts fc on fc.fighter_id = f.id

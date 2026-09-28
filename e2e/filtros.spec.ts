@@ -149,7 +149,8 @@ test("elegir una nacionalidad en el desplegable filtra de verdad", async ({ page
 // pinta, y no es un descuido. El filtro es un `exists(... fights.weight_class = $n)`
 // sobre TODO el historial (fighters.list.ts:175-182) mientras la columna muestra
 // `latest_weight_class`, que además excluye las canceladas y despriorizsa los
-// catch weight. Medido en producción: con ?weightClass=Welterweight, 3 de las 12
+// catch weight (y desde el 28-sep-2026 manda la división de su RANKING si está
+// rankeado: src/lib/queries/current-weight-class.ts). Medido en producción: con ?weightClass=Welterweight, 3 de las 12
 // filas de la primera página muestran otra categoría. Assertar "todas las filas
 // dicen Peso Welter" sería un test rojo por una diferencia INTENCIONADA.
 
