@@ -138,8 +138,13 @@ export function FighterFullBody({
       );
     }
 
+    // Tope de 400 px salvo en lg (29-sep-2026): la foto de ufc.com es vertical
+    // (460×700) y, con object-cover a todo el ancho de una tablet (691 px a
+    // 820), se ampliaba hasta enseñar solo la cabeza (el 46 %). A 400 px se ve
+    // de la cabeza a la cintura (el 79 %), como en móvil y en escritorio. En lg
+    // ya la limita su columna (minmax 300-400 px): ahí no cambia nada.
     return (
-      <div className="relative h-[420px] w-full sm:h-[480px] lg:h-[540px]">
+      <div className="relative mx-auto h-[420px] w-full max-w-[400px] sm:h-[480px] lg:h-[540px] lg:max-w-none">
         {/* "Suelo" sutil bajo el atleta para asentarlo, como en ufc.com */}
         <div
           aria-hidden

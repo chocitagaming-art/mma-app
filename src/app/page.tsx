@@ -91,17 +91,37 @@ export default async function HomePage() {
           aparece con un evento en marcha — la fase previa ya la cubre Up Next. */}
       <LiveBanner />
 
-      {/* Hero */}
+      {/* Hero. Tres maquetas con UN SOLO vídeo en el DOM (dos lo descargarían
+          dos veces). Aprobadas por el dueño el 29-sep-2026 con vistas previas:
+          · Escritorio (lg): la de siempre. Texto a la izquierda, vídeo de 330 px
+            a la derecha.
+          · Tablet (md): igual, en dos columnas, con el vídeo a 280 px. Antes era
+            una sola columna y el vídeo, ENCIMA del titular, llenaba la pantalla.
+          · Móvil: el titular primero y el vídeo pequeño (7.5rem, 9:16) a su
+            derecha, junto al titular y la descripción; debajo, a todo el ancho,
+            el buscador y los botones. Cabe todo en la primera pantalla.
+          El truco del móvil: el div del texto es `contents`, así que sus hijos
+          son elementos de ESTA rejilla y se colocan uno a uno. El orden del DOM
+          sigue siendo texto → vídeo, que es el que oye un lector de pantalla.
+          🪤 La columna del texto es `1fr` y NO `minmax(0,1fr)` a propósito: así
+          nunca baja del ancho de «INTELIGENCIA» y el vídeo no puede taparlo.
+          La que cede es la del vídeo (`minmax(0,7.5rem)`): por debajo de ~348 px,
+          o a 360-390 mientras la fuente del titular aún no ha cargado (la de
+          reserva mide un 14 % más), el vídeo encoge en vez de desbordar la
+          rejilla y recortar el buscador y los botones. Medido en el banco. */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
-          {/* Copy */}
-          <div className="relative z-10 order-2 lg:order-1">
-            <p className="animate-rise flex items-center gap-2.5 font-mono text-xs font-semibold uppercase tracking-[0.25em] text-primary">
+        <div className="mx-auto grid max-w-7xl grid-cols-[1fr_minmax(0,7.5rem)] items-start gap-x-3.5 gap-y-0 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
+          {/* Copy. ⚠️ En móvil, con `contents`, su «relative z-10» no se aplica:
+              el desplegable del buscador sube por su propio z-20. */}
+          <div className="relative z-10 contents md:col-start-1 md:row-start-1 md:block">
+            <p className="animate-rise col-span-2 row-start-1 flex items-center gap-2.5 font-mono text-xs font-semibold uppercase tracking-[0.25em] text-primary">
               <span className="live-dot inline-block size-2 rounded-full bg-primary shadow-[0_0_12px_2px_var(--primary)]" />
               Base de datos UFC en vivo
             </p>
+            {/* El tamaño del móvil va por el ancho de pantalla con tope: a 360 px
+                «INTELIGENCIA» tiene que caber en su columna, al lado del vídeo. */}
             <h1
-              className="animate-rise mt-4 font-display text-6xl font-extrabold uppercase leading-[0.86] tracking-tight text-foreground sm:text-7xl lg:text-8xl"
+              className="animate-rise col-start-1 row-start-2 mt-4 font-display text-[clamp(2.4rem,11.5vw,3rem)] font-extrabold uppercase leading-[0.86] tracking-tight text-foreground sm:text-7xl lg:text-8xl"
               style={{ animationDelay: "80ms" }}
             >
               Inteligencia
@@ -109,7 +129,7 @@ export default async function HomePage() {
               de <span className="text-primary">combate</span>
             </h1>
             <p
-              className="animate-rise mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg"
+              className="animate-rise col-start-1 row-start-3 mt-6 max-w-xl text-[0.95rem] leading-6 text-muted-foreground sm:text-lg sm:leading-7"
               style={{ animationDelay: "160ms" }}
             >
               Perfiles de peleadores UFC, historial de peleas, comparativas
@@ -117,13 +137,13 @@ export default async function HomePage() {
               datos reales de eventos.
             </p>
             <div
-              className="animate-rise relative z-20 mt-7 max-w-xl"
+              className="animate-rise relative z-20 col-span-2 row-start-4 mt-7 max-w-xl"
               style={{ animationDelay: "240ms" }}
             >
               <SearchHero />
             </div>
             <div
-              className="animate-rise mt-4 flex flex-wrap gap-3"
+              className="animate-rise col-span-2 row-start-5 mt-4 flex flex-wrap gap-3"
               style={{ animationDelay: "320ms" }}
             >
               <Link href="/maestro">
@@ -146,8 +166,10 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Hero reel — vídeos de momentos icónicos (sustituye al arte estático) */}
-          <div className="order-1 flex items-center justify-center lg:order-2">
+          {/* Hero reel — vídeos de momentos icónicos (sustituye al arte estático).
+              En móvil ocupa las filas del titular y la descripción, con el mismo
+              margen de arriba que el titular para que sus bordes coincidan. */}
+          <div className="col-start-2 row-span-2 row-start-2 mt-4 flex items-center justify-center md:row-span-1 md:row-start-1 md:mt-0">
             <VideoHero className="animate-rise" />
           </div>
         </div>
