@@ -57,12 +57,18 @@ export function VideoModal({
         >
           <X className="size-5" />
         </button>
+        {/* At least 200px tall INSIDE the border (YouTube's minimum player
+            size is 200x200; on a 360px phone the 16:9 box was 183px). 202
+            because the 1px border sits inside the box (border-box). It goes
+            on the iframe, not on the wrapper: there the min-height carried
+            over into the width through the 16:9 ratio and the box grew wider
+            than its slot. The wrapper just grows with it. */}
         <iframe
           src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
           title={title}
-          allow="accelerated-rotation; autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           allowFullScreen
-          className="size-full rounded-lg border border-border bg-black shadow-2xl"
+          className="size-full min-h-[202px] rounded-lg border border-border bg-black shadow-2xl"
         />
       </div>
     </div>,

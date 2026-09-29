@@ -1,6 +1,7 @@
 import { Tv } from "lucide-react";
 
 import { UfcTvPlayer } from "@/components/home/ufc-tv-player";
+import { LIVE_PLAYER_COLUMN } from "@/lib/live-player-column";
 import {
   isRealLive,
   liveEmbedUrl,
@@ -70,8 +71,11 @@ export function UfcTv(props: UfcTvProps) {
   return (
     <section className={props.className} data-ufc-tv={props.mode}>
       {/* El centrado va en la COLUMNA, no en el <iframe>: mismo motivo que en
-          event-live-embed.tsx (rótulo y vídeo alineados, no descuadrados). */}
-      <div className="mx-auto w-full max-w-3xl">
+          event-live-embed.tsx (rótulo y vídeo alineados, no descuadrados). Y
+          la columna es la de la portada, la única página donde vive UFC TV:
+          crece con el alto de la ventana hasta 1024 px (ver
+          lib/live-player-column.ts). */}
+      <div className={`mx-auto w-full ${LIVE_PLAYER_COLUMN.home}`}>
         <h2 className="mb-3 flex flex-wrap items-center gap-2 font-display text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
           <Tv className="size-4" aria-hidden />
           {live ? "UFC TV" : "UFC TV · Peleas completas"}

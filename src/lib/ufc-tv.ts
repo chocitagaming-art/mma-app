@@ -174,7 +174,9 @@ export type YouTubeVideoItem = {
     regionRestriction?: RegionRestriction;
     contentRating?: { ytRating?: string };
   };
-  status?: { embeddable?: boolean };
+  // madeForKids no está en la fixture (se guardó solo embeddable), pero la API
+  // sí lo manda con part=status: 50 de 50 vídeos en la medida del 29-sep-2026.
+  status?: { embeddable?: boolean; madeForKids?: boolean };
 };
 
 // Un vídeo en directo o programado, CRUDO: sin clasificar. La clasificación
@@ -192,6 +194,10 @@ export type LiveCandidate = {
   // vídeo. Es lo que distingue uno de otro.
   duration: string;
   embeddable: boolean;
+  // 🪤 Una foto de directos cacheada antes de existir este campo no lo trae
+  // (undefined). Se lee siempre con `!== true` (isPlayableInSpain), así que esa
+  // foto pasa igual que antes.
+  madeForKids: boolean;
   regionRestriction: RegionRestriction | null;
   ageRestricted: boolean;
 };
@@ -473,7 +479,7 @@ function toVideoDetail(c: LiveCandidate): VideoDetail {
       regionRestriction: c.regionRestriction ?? undefined,
       contentRating: c.ageRestricted ? { ytRating: "ytAgeRestricted" } : undefined,
     },
-    status: { embeddable: c.embeddable },
+    status: { embeddable: c.embeddable, madeForKids: c.madeForKids },
   };
 }
 
@@ -483,7 +489,8 @@ function toVideoDetail(c: LiveCandidate): VideoDetail {
 //              preliminares), en su ventana. Va al bloque del evento.
 //   'peleas' → algo que son peleas y está en el aire. Va a UFC TV.
 //   null     → nada que enseñar: rueda de prensa, pesaje, otro deporte, algo
-//              que no se ve en España, ya terminado, o programado y lejos.
+//              que no se ve en España o marcado para niños, ya terminado, o
+//              programado y lejos.
 export function classifyLive(
   c: LiveCandidate,
   event: UfcTvEvent | null,
@@ -811,6 +818,7 @@ export function toLiveCandidate(item: YouTubeVideoItem, channel: UfcChannel): Li
     actualEndTime: live?.actualEndTime ?? null,
     duration: item.contentDetails?.duration ?? "",
     embeddable: item.status?.embeddable !== false,
+    madeForKids: item.status?.madeForKids === true,
     regionRestriction: item.contentDetails?.regionRestriction ?? null,
     ageRestricted: item.contentDetails?.contentRating?.ytRating === "ytAgeRestricted",
   };
@@ -928,6 +936,9 @@ export async function fetchUfcLiveNow(
             fetchImpl,
             apiKey,
             batch,
+            // 🪤 status es lo que trae embeddable y madeForKids. Sin él no
+            // llegan, toLiveCandidate los da por buenos y se elegiría un
+            // directo que no se puede embeber o marcado para niños.
             "snippet,liveStreamingDetails,contentDetails,status",
             signal,
           ),
@@ -1032,6 +1043,7 @@ export async function fetchFullFightPool(opts: FetchOptions = {}): Promise<FullF
         fetchImpl,
         apiKey,
         ids.slice(i, i + VIDEOS_PER_CALL),
+        // 🪤 status trae embeddable y madeForKids, igual que en los directos.
         "snippet,contentDetails,status",
         detailsSignal,
       );
@@ -1142,6 +1154,7 @@ function fixtureLive(
     actualEndTime: null,
     duration: "P0D",
     embeddable: true,
+    madeForKids: false,
     regionRestriction: null,
     ageRestricted: false,
   };

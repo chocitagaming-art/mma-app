@@ -70,6 +70,9 @@ export async function HomeLiveSlot({ nextEvent }: { nextEvent: NextEventHero | n
           videoTitle={plan.video.title}
           channel={plan.video.channel}
           eventName={nextEvent.name}
+          // La columna de la portada, la misma de UFC TV: el hueco no cambia
+          // de tamaño al pasar del bucle de peleas al directo de la velada.
+          column="home"
         />
       </Carril>
     );

@@ -84,6 +84,25 @@ describe("isPlayableInSpain", () => {
       }),
     ).toBe(true);
   });
+
+  it("rechaza los vídeos marcados para niños (madeForKids); sin el campo, pasan", () => {
+    expect(
+      isPlayableInSpain({
+        id: "e",
+        status: { embeddable: true, madeForKids: true },
+        contentDetails: { duration: "PT5M" },
+      }),
+    ).toBe(false);
+    expect(
+      isPlayableInSpain({
+        id: "f",
+        status: { embeddable: true, madeForKids: false },
+        contentDetails: { duration: "PT5M" },
+      }),
+    ).toBe(true);
+    // Una respuesta sin el campo no tira el vídeo, igual que sin embeddable.
+    expect(isPlayableInSpain({ id: "g", contentDetails: { duration: "PT5M" } })).toBe(true);
+  });
 });
 
 describe("YOUTUBE_CATEGORIES", () => {
@@ -109,6 +128,19 @@ function snippet(videoId: string, title: string, publishedAt: string) {
     snippet: { resourceId: { videoId }, title, publishedAt, thumbnails: {} },
   };
 }
+// videos.list como la API de verdad: de cada vídeo llegan el id y SOLO los
+// parts que pide la URL. Con una respuesta fija, quitar status del part no
+// ponía ningún test en rojo: embeddable y madeForKids seguían llegando.
+function videosList(items: VideoDetail[]) {
+  return async (input: unknown) => {
+    const parts = new Set(new URL(String(input)).searchParams.get("part")?.split(","));
+    return json({
+      items: items.map((it) =>
+        Object.fromEntries(Object.entries(it).filter(([k]) => k === "id" || parts.has(k))),
+      ),
+    });
+  };
+}
 
 describe("getUfcVideos (con API key)", () => {
   beforeEach(() => {
@@ -119,7 +151,7 @@ describe("getUfcVideos (con API key)", () => {
     delete process.env.YOUTUBE_API_KEY;
   });
 
-  it("descarta Shorts, geo-bloqueados, no-embebibles y age-restricted", async () => {
+  it("descarta Shorts, geo-bloqueados, no-embebibles, age-restricted y los marcados para niños", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -129,29 +161,39 @@ describe("getUfcVideos (con API key)", () => {
             snippet("short1", "Short", "2026-06-21T00:00:00Z"),
             snippet("geo1", "Bloqueado", "2026-06-22T00:00:00Z"),
             snippet("age1", "Brutal KO", "2026-06-23T00:00:00Z"),
+            snippet("kids1", "Para niños", "2026-06-24T00:00:00Z"),
+            snippet("noembed1", "Sin embed", "2026-06-25T00:00:00Z"),
           ],
         }),
       )
-      .mockResolvedValueOnce(
-        json({
-          items: [
-            { id: "ok1", contentDetails: { duration: "PT10M" }, status: { embeddable: true } },
-            { id: "short1", contentDetails: { duration: "PT45S" }, status: { embeddable: true } },
-            {
-              id: "geo1",
-              contentDetails: { duration: "PT10M", regionRestriction: { blocked: ["ES"] } },
-              status: { embeddable: true },
+      .mockImplementationOnce(
+        videosList([
+          { id: "ok1", contentDetails: { duration: "PT10M" }, status: { embeddable: true } },
+          { id: "short1", contentDetails: { duration: "PT45S" }, status: { embeddable: true } },
+          {
+            id: "geo1",
+            contentDetails: { duration: "PT10M", regionRestriction: { blocked: ["ES"] } },
+            status: { embeddable: true },
+          },
+          {
+            id: "age1",
+            contentDetails: {
+              duration: "PT10M",
+              contentRating: { ytRating: "ytAgeRestricted" },
             },
-            {
-              id: "age1",
-              contentDetails: {
-                duration: "PT10M",
-                contentRating: { ytRating: "ytAgeRestricted" },
-              },
-              status: { embeddable: true },
-            },
-          ],
-        }),
+            status: { embeddable: true },
+          },
+          {
+            id: "kids1",
+            contentDetails: { duration: "PT10M" },
+            status: { embeddable: true, madeForKids: true },
+          },
+          {
+            id: "noembed1",
+            contentDetails: { duration: "PT10M" },
+            status: { embeddable: false },
+          },
+        ]),
       );
     vi.stubGlobal("fetch", fetchMock);
 

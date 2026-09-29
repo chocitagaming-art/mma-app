@@ -48,14 +48,18 @@ export function UfcTvPlayer({
   // parámetro. `loading="lazy"`: no arranca hasta que el bloque entra en
   // pantalla, así que no gasta datos de quien no baja hasta aquí. La red de
   // las cuatro cosas: lib/live-embed-callsites.test.ts.
+  //
+  // `min-h-[202px]`: al menos 200 px de alto DENTRO del borde, que es lo que
+  // pide YouTube. En un móvil de 360 px el 16:9 se quedaba en 183. Por qué 202
+  // y no 200, en event-live-embed.tsx.
   return (
     <iframe
       src={reducedMotion ? calmSrc : src}
       title={title}
       loading="lazy"
-      allow="autoplay; accelerated-rotation; encrypted-media; picture-in-picture; fullscreen"
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
       allowFullScreen
-      className="aspect-video w-full rounded-lg border border-border bg-muted"
+      className="aspect-video min-h-[202px] w-full rounded-lg border border-border bg-muted"
     />
   );
 }

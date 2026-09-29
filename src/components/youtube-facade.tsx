@@ -48,7 +48,7 @@ export function YouTubeFacade({
         ref={iframeRef}
         src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
         title={title}
-        allow="accelerated-rotation; autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
         className="aspect-video w-full rounded-lg border border-border"
       />
