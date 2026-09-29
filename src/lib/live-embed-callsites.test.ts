@@ -355,10 +355,12 @@ describe("el reproductor crece solo en la portada", () => {
     // Sin esto, la noche de la velada el hueco ENCOGERÍA al pasar del bucle de
     // UFC TV (1024 px) al directo del evento (768).
     const portada = etiquetaDelEmbed(leerFuente("components/home/home-live-slot.tsx"));
-    expect(portada, "el directo de la portada se queda en 768 px").toContain('column="home"');
+    // La prop tiene que abrir su línea: un `// column="home"` comentado dentro de
+    // la etiqueta pasaría un toContain y dejaría el directo a 768 px.
+    expect(portada, "el directo de la portada se queda en 768 px").toMatch(/\n\s*column="home"/);
     for (const ruta of ["app/en-vivo/page.tsx", "app/eventos/[id]/page.tsx"]) {
       expect(etiquetaDelEmbed(leerFuente(ruta)), `${ruta} crecería con la portada`).not.toMatch(
-        /\bcolumn=/,
+        /\n\s*column=/,
       );
     }
   });
