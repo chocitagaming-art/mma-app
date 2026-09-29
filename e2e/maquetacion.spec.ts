@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { expectNoHorizontalOverflow } from "./helpers";
 
-// ── Geometría del hero de la portada y de la foto de la ficha ───────────────
+// ── Geometría del hero de la portada, de UFC TV y de la foto de la ficha ────
 //
 // Los cambios de maquetación del 29-sep-2026, aprobados por el dueño con
 // vistas previas:
@@ -13,6 +13,8 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //   · Ficha, tablet: la foto de cuerpo entero con tope de 400 px. A todo el
 //     ancho (691 px a 820) la foto vertical de ufc.com se ampliaba hasta
 //     enseñar solo la cabeza.
+//   · Portada, UFC TV: más grande en escritorio, sin salirse de la pantalla,
+//     y en móvil con el alto mínimo que pide YouTube. Ver su sección, abajo.
 //
 // Nada de esto lo caza el desbordamiento de routes.spec: un vídeo encima del
 // titular o una foto a todo el ancho no desbordan nada. Aquí se mide la
@@ -328,3 +330,155 @@ test("ficha: la foto de cuerpo entero no pasa de 400 px en tablet, y en móvil y
     await expectNoHorizontalOverflow(page, `${FICHA} a ${width}×${height}`);
   }
 });
+
+// ── UFC TV: más grande en la portada, y entero en la pantalla ───────────────
+//
+// Hasta el 29-sep-2026 medía 768 px en todas las pantallas de escritorio: el
+// 63 % del carril de la portada. Ahora su columna depende del ALTO de la
+// ventana, clamp(48rem, (100vh − 10rem) × 16/9, 64rem), escrita en
+// src/lib/live-player-column.ts:
+//   · En una ventana de escritorio normal, 1024 px: el tope.
+//   · En una baja, lo que quepa: la cabecera, los rótulos y el vídeo entero
+//     tienen que entrar en la pantalla. Los 10rem son la cabecera y los rótulos,
+//     y aquí se mide que de verdad caben.
+//   · Nunca menos de 768, lo que medía antes.
+// Y en móvil, un visor de al menos 200 px de alto: la norma de YouTube.
+//
+// El webServer arranca con UFC_TV_FIXTURE=loop, así que es el bucle enlatado,
+// sin red. El directo del EVENTO usa la misma columna en la portada, pero aquí
+// no sale (depende de la ventana real de la velada): su ancho lo vigila
+// src/lib/live-embed-callsites.test.ts.
+
+type UfcTvMedido = {
+  ventana: number;
+  // La cabecera es sticky: al bajar, es lo que tapa la parte de arriba.
+  cabecera: number;
+  columna: { top: number; width: number };
+  iframe: { bottom: number; width: number; height: number };
+  // Lo de DENTRO del borde del iframe: el reproductor que mide YouTube.
+  visor: { width: number; height: number };
+};
+
+/** Carga la portada a ese tamaño y mide el bloque de UFC TV. */
+async function medirUfcTv(page: Page, width: number, height: number): Promise<UfcTvMedido> {
+  await page.setViewportSize({ width, height });
+  await page.goto("/");
+
+  // 🪤 El hueco llega por streaming (va en <Suspense>): se espera al bloque, no
+  // al `load`. Y se sale como en e2e/ufc-tv.spec.ts cuando la portada no pinta
+  // UFC TV por el estado de la base, que es decisión del dueño y no un fallo.
+  const bloque = page.locator("section[data-ufc-tv]");
+  const huecoEvento = page.getByRole("heading", { name: "Retransmisión oficial" });
+  const callado = page.locator("[data-live-slot]");
+  await expect(bloque.or(huecoEvento).or(callado).first()).toBeAttached();
+
+  const motivo = (await callado.count()) > 0 ? await callado.getAttribute("data-live-slot") : null;
+  test.skip(
+    motivo !== null,
+    `el hueco se calla a propósito (${motivo}): lo manda events.live_video_id, no UFC TV`,
+  );
+  test.skip(
+    (await huecoEvento.count()) > 0,
+    "el próximo evento tiene live_video_id a mano: la portada enseña ese directo, no UFC TV",
+  );
+
+  // 🪤 ESTAR EN EL DOM NO ES TENER CAJA. React mete lo que llega por streaming
+  // en un <div hidden> y solo después lo mueve a su sitio: medido nada más
+  // aparecer, la columna medía 0 (visto el 29-sep-2026).
+  await expect(bloque).toBeVisible();
+  // Los rótulos cambian de alto con la fuente (font-display: swap).
+  await page.evaluate(() => document.fonts.ready);
+  const cabecera = await page
+    .getByRole("banner")
+    .evaluate((el) => el.getBoundingClientRect().height);
+
+  const medida = await bloque.evaluate((seccion) => {
+    const columna = (seccion.firstElementChild as HTMLElement).getBoundingClientRect();
+    const iframe = seccion.querySelector("iframe") as HTMLIFrameElement;
+    const caja = iframe.getBoundingClientRect();
+    return {
+      ventana: window.innerHeight,
+      columna: { top: columna.top, width: columna.width },
+      iframe: { bottom: caja.bottom, width: caja.width, height: caja.height },
+      visor: { width: iframe.clientWidth, height: iframe.clientHeight },
+    };
+  });
+  return { cabecera, ...medida };
+}
+
+/** El vídeo llena su columna y es 16:9 (en escritorio no manda el mínimo). */
+function expectVideo169(m: UfcTvMedido, contexto: string) {
+  expect(
+    Math.abs(m.iframe.width - m.columna.width),
+    `${contexto}: el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+  ).toBeLessThanOrEqual(0.5);
+  expect(
+    Math.abs(m.iframe.height - (m.iframe.width * 9) / 16),
+    `${contexto}: el vídeo no es 16:9 (${m.iframe.width}×${m.iframe.height})`,
+  ).toBeLessThanOrEqual(1);
+}
+
+for (const [width, height, ancho, margen] of [
+  [1280, 800, 1024, 1],
+  [1366, 768, 1024, 1],
+  [1440, 900, 1024, 1],
+  [1920, 1080, 1024, 1],
+  // (640 − 160) × 16/9 = 853,3: aquí ya manda el alto de la ventana.
+  [1280, 640, 853.3, 2],
+] as const) {
+  test(`portada ${width}×${height}: UFC TV mide ${Math.round(ancho)} px y cabe entero bajo la cabecera`, async ({
+    page,
+  }) => {
+    const m = await medirUfcTv(page, width, height);
+    const contexto = `UFC TV a ${width}×${height}`;
+
+    expect(
+      Math.abs(m.columna.width - ancho),
+      `${contexto}: la columna mide ${m.columna.width} y no ${ancho}`,
+    ).toBeLessThanOrEqual(margen);
+    expectVideo169(m, contexto);
+    // Bajando hasta el bloque, la cabecera fija tapa su alto: lo que queda de
+    // ventana tiene que tener sitio para los rótulos y el vídeo entero.
+    const bloqueEntero = m.cabecera + (m.iframe.bottom - m.columna.top);
+    expect(
+      bloqueEntero,
+      `${contexto}: cabecera (${m.cabecera}) + rótulos + vídeo no caben en ${m.ventana} px`,
+    ).toBeLessThanOrEqual(m.ventana);
+    await expectNoHorizontalOverflow(page, `portada a ${width}×${height}`);
+  });
+}
+
+test("portada 1280×560: UFC TV nunca baja de los 768 px que medía antes", async ({ page }) => {
+  // (560 − 160) × 16/9 = 711 < 768: manda el suelo, así que aquí no se exige
+  // que quepa entero. En una ventana así, más pequeño que antes no.
+  const m = await medirUfcTv(page, 1280, 560);
+  expect(
+    Math.abs(m.columna.width - 768),
+    `la columna mide ${m.columna.width}: el suelo de 768 px no se respeta`,
+  ).toBeLessThanOrEqual(1);
+  expectVideo169(m, "UFC TV a 1280×560");
+  await expectNoHorizontalOverflow(page, "portada a 1280×560");
+});
+
+for (const [width, height] of [
+  [360, 800],
+  [390, 844],
+] as const) {
+  test(`portada ${width}×${height}: el visor de UFC TV mide al menos 200 px de alto`, async ({
+    page,
+  }) => {
+    // En 16:9 medía 183 px a 360 y 199 a 390, por debajo de los 200×200 que
+    // pide YouTube para un reproductor incrustado.
+    const m = await medirUfcTv(page, width, height);
+    expect(m.visor.height, `alto del visor de UFC TV, dentro del borde, a ${width}`).toBeGreaterThanOrEqual(
+      200,
+    );
+    expect(m.visor.width, `ancho del visor de UFC TV a ${width}`).toBeGreaterThanOrEqual(200);
+    // El mínimo le da alto, no ancho: sigue llenando su columna.
+    expect(
+      Math.abs(m.iframe.width - m.columna.width),
+      `a ${width}, el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+    ).toBeLessThanOrEqual(0.5);
+    await expectNoHorizontalOverflow(page, `portada a ${width}×${height}`);
+  });
+}

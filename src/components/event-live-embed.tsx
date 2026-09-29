@@ -1,5 +1,6 @@
 import { Radio } from "lucide-react";
 
+import { LIVE_PLAYER_COLUMN, type LivePlayerColumn } from "@/lib/live-player-column";
 import { isYouTubeVideoId, type UfcChannel } from "@/lib/ufc-tv";
 
 // El directo que la UFC emite EN ABIERTO la noche de la velada, incrustado.
@@ -49,6 +50,7 @@ export function EventLiveEmbed({
   channel = null,
   eventName,
   eventOver = false,
+  column = "page",
   className,
 }: {
   videoId: string;
@@ -73,6 +75,9 @@ export function EventLiveEmbed({
   // unstable_cache revalidate 1800, así que puede arrastrar el embed hasta 30
   // min. Es desfase de caché acotado, no falta de esta prop.
   eventOver?: boolean;
+  // El ancho de la columna (lib/live-player-column.ts). Por defecto los 768 px
+  // de la ficha y de /en-vivo; la portada pasa "home", la misma de UFC TV.
+  column?: LivePlayerColumn;
   className?: string;
 }) {
   // 🪤 DOS MOTIVOS PARA NO PINTAR NADA, y los dos son el mismo: no afirmar algo
@@ -105,15 +110,16 @@ export function EventLiveEmbed({
   return (
     <section className={className}>
       {/* 🪤 EL CENTRADO VA EN ESTA COLUMNA, NO EN EL <iframe>. El reproductor ya
-          estaba acotado a max-w-3xl, así que centrar solo el marco habría dejado
+          estaba acotado a 768 px, así que centrar solo el marco habría dejado
           el rótulo y el título pegados al borde izquierdo y el vídeo en medio:
           descuadrado. Se centra la COLUMNA entera y el texto sigue alineado a la
           izquierda dentro de ella, que es como se lee un bloque, no como se lee
           un cartel.
 
           Y el ancho vive aquí ahora: si vuelve al <div> del iframe, el rótulo se
-          vuelve a escapar a lo ancho del contenedor padre. */}
-      <div className="mx-auto w-full max-w-3xl">
+          vuelve a escapar a lo ancho del contenedor padre. La clase sale de
+          lib/live-player-column.ts, escrita entera allí: aquí no se monta. */}
+      <div className={`mx-auto w-full ${LIVE_PLAYER_COLUMN[column]}`}>
         <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold tracking-[0.12em] text-muted-foreground uppercase">
           <Radio className="size-4" aria-hidden />
           Retransmisión oficial
@@ -161,15 +167,22 @@ export function EventLiveEmbed({
             su propio botón de pausa, que es el mecanismo que la norma exige.
             UFC TV sí la respeta (ufc-tv-player.tsx, un iframe de cliente)
             porque arranca en CADA visita a la portada; este solo la noche de
-            la velada. Si se quiere aquí también, es reutilizar ese patrón. */}
+            la velada. Si se quiere aquí también, es reutilizar ese patrón.
+
+            🪤 AL MENOS 200 PX DE ALTO POR DENTRO (`min-h-[202px]`). YouTube
+            pide un reproductor de al menos 200×200, y en un móvil de 360 px
+            el 16:9 se quedaba en 183. Es 202 y no 200 porque el borde de 1 px
+            va por dentro de la caja (border-box): con 200, el visor medía 198.
+            Con una columna de menos de 359 px el marco deja de ser 16:9 y el
+            propio reproductor pone franjas arriba y abajo. */}
         <div className="w-full">
           <iframe
             src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
             title={`${videoTitle} · ${eventName}`}
             loading="lazy"
-            allow="autoplay; accelerated-rotation; encrypted-media; picture-in-picture; fullscreen"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
-            className="aspect-video w-full rounded-lg border border-border bg-muted"
+            className="aspect-video min-h-[202px] w-full rounded-lg border border-border bg-muted"
           />
         </div>
       </div>

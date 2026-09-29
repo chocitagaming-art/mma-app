@@ -84,6 +84,25 @@ describe("isPlayableInSpain", () => {
       }),
     ).toBe(true);
   });
+
+  it("rechaza los vídeos marcados para niños (madeForKids); sin el campo, pasan", () => {
+    expect(
+      isPlayableInSpain({
+        id: "e",
+        status: { embeddable: true, madeForKids: true },
+        contentDetails: { duration: "PT5M" },
+      }),
+    ).toBe(false);
+    expect(
+      isPlayableInSpain({
+        id: "f",
+        status: { embeddable: true, madeForKids: false },
+        contentDetails: { duration: "PT5M" },
+      }),
+    ).toBe(true);
+    // Una respuesta sin el campo no tira el vídeo, igual que sin embeddable.
+    expect(isPlayableInSpain({ id: "g", contentDetails: { duration: "PT5M" } })).toBe(true);
+  });
 });
 
 describe("YOUTUBE_CATEGORIES", () => {
@@ -119,7 +138,7 @@ describe("getUfcVideos (con API key)", () => {
     delete process.env.YOUTUBE_API_KEY;
   });
 
-  it("descarta Shorts, geo-bloqueados, no-embebibles y age-restricted", async () => {
+  it("descarta Shorts, geo-bloqueados, no-embebibles, age-restricted y los marcados para niños", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -129,6 +148,7 @@ describe("getUfcVideos (con API key)", () => {
             snippet("short1", "Short", "2026-06-21T00:00:00Z"),
             snippet("geo1", "Bloqueado", "2026-06-22T00:00:00Z"),
             snippet("age1", "Brutal KO", "2026-06-23T00:00:00Z"),
+            snippet("kids1", "Para niños", "2026-06-24T00:00:00Z"),
           ],
         }),
       )
@@ -149,6 +169,11 @@ describe("getUfcVideos (con API key)", () => {
                 contentRating: { ytRating: "ytAgeRestricted" },
               },
               status: { embeddable: true },
+            },
+            {
+              id: "kids1",
+              contentDetails: { duration: "PT10M" },
+              status: { embeddable: true, madeForKids: true },
             },
           ],
         }),

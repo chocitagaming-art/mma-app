@@ -11,6 +11,7 @@ vi.mock("next/cache", () => ({
 }));
 
 import { EventLiveEmbed } from "@/components/event-live-embed";
+import { UfcTv } from "@/components/home/ufc-tv";
 
 // 🪤 TRES SITIOS PINTAN <EventLiveEmbed> Y UNO SE QUEDÓ SIN `eventOver`.
 //
@@ -300,4 +301,136 @@ describe("los tres sitios eligen el vídeo con resolveEventVideo, no con la colu
       expect(etiqueta, `${ruta} no le pasa el canal al embed`).toMatch(/channel=\{/);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// El ancho: más grande en la portada, 768 px en la ficha y en /en-vivo
+// ---------------------------------------------------------------------------
+//
+// 🪤 LA CLASE DE LA PORTADA SOLO EXISTE SI ESTÁ ESCRITA ENTERA EN EL FUENTE.
+// Tailwind v4 saca el CSS leyendo el código, y una clase montada a trozos no la
+// ve: en producción desaparecería sin avisar y el vídeo ocuparía el carril
+// entero (1216 px). Por eso las dos columnas viven literales en
+// lib/live-player-column.ts y aquí se exige que los componentes las saquen de
+// ahí. Los píxeles de verdad los mide e2e/maquetacion.spec.ts, pero SOLO los de
+// UFC TV: el directo del evento depende de la ventana real de la velada y ese
+// e2e no puede provocarlo. Su ancho, en la portada, en la ficha y en /en-vivo,
+// solo lo vigila este fichero.
+
+const COLUMNA_PAGINA = "max-w-3xl";
+const COLUMNA_PORTADA = "max-w-[clamp(48rem,calc((100vh-10rem)*16/9),64rem)]";
+const TITULO = "UFC 330 | Previa del Evento ¡EN VIVO!";
+// Tres peleas completas reales del bucle enlatado (FIXTURE_LOOP, lib/ufc-tv.ts).
+const BUCLE = ["eolk1_qxI28", "NcCPNVPx3O4", "X7k1eTCC3_w"];
+
+describe("el reproductor crece solo en la portada", () => {
+  it("EventLiveEmbed sin `column` se queda en los 768 px de siempre (ficha y /en-vivo)", () => {
+    const html = renderToStaticMarkup(
+      EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" }),
+    );
+    expect(html).toContain(COLUMNA_PAGINA);
+    expect(html).not.toContain(COLUMNA_PORTADA);
+  });
+
+  it('con column="home" toma la columna de la portada', () => {
+    const html = renderToStaticMarkup(
+      EventLiveEmbed({
+        videoId: "qM-h-OudTqM",
+        videoTitle: TITULO,
+        eventName: "UFC 330",
+        column: "home",
+      }),
+    );
+    expect(html).toContain(COLUMNA_PORTADA);
+    expect(html).not.toContain(COLUMNA_PAGINA);
+  });
+
+  it("UFC TV, que solo se pinta en la portada, usa la de la portada", () => {
+    const html = renderToStaticMarkup(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }));
+    expect(html).toContain(COLUMNA_PORTADA);
+    expect(html).not.toContain(COLUMNA_PAGINA);
+  });
+
+  it('el hueco de la portada le pasa column="home" al directo; la ficha y /en-vivo, ninguna', () => {
+    // Sin esto, la noche de la velada el hueco ENCOGERÍA al pasar del bucle de
+    // UFC TV (1024 px) al directo del evento (768).
+    const portada = etiquetaDelEmbed(leerFuente("components/home/home-live-slot.tsx"));
+    expect(portada, "el directo de la portada se queda en 768 px").toContain('column="home"');
+    for (const ruta of ["app/en-vivo/page.tsx", "app/eventos/[id]/page.tsx"]) {
+      expect(etiquetaDelEmbed(leerFuente(ruta)), `${ruta} crecería con la portada`).not.toMatch(
+        /\bcolumn=/,
+      );
+    }
+  });
+
+  it("las dos clases están ENTERAS en lib/live-player-column.ts y los componentes no escriben la suya", () => {
+    const constante = leerFuente("lib/live-player-column.ts");
+    expect(constante).toContain(`"${COLUMNA_PAGINA}"`);
+    expect(constante).toContain(`"${COLUMNA_PORTADA}"`);
+    for (const ruta of ["components/event-live-embed.tsx", "components/home/ufc-tv.tsx"]) {
+      const fuente = leerFuente(ruta);
+      expect(fuente, `${ruta} ya no saca el ancho de LIVE_PLAYER_COLUMN`).toContain(
+        "LIVE_PLAYER_COLUMN",
+      );
+      expect(fuente, `${ruta} vuelve a fijar el ancho a mano`).not.toMatch(/\bmax-w-/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// `accelerated-rotation`, fuera de todos los iframes
+// ---------------------------------------------------------------------------
+//
+// 🪤 NO ES UNA DIRECTIVA DE PERMISOS QUE EXISTA. Venía copiada en el `allow` de
+// los cuatro reproductores (el código oficial de YouTube pide `accelerometer`),
+// y Chrome la ignora y avisa en la consola por cada iframe: «Unrecognized
+// feature: 'accelerated-rotation'.» (medido en Chromium el 29-sep-2026).
+// Quitarla no cambia nada de lo que se ve.
+
+describe("ningún iframe pide accelerated-rotation", () => {
+  it("no aparece en ningún .tsx de app/ ni de components/", () => {
+    const conElla = [...recorrerTsx("app/"), ...recorrerTsx("components/")].filter((ruta) =>
+      leerFuente(ruta).includes("accelerated-rotation"),
+    );
+    expect(conElla).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Al menos 200 px de alto: la norma de YouTube para un reproductor incrustado
+// ---------------------------------------------------------------------------
+//
+// YouTube pide un visor de al menos 200×200 px. En 16:9, con una pantalla de
+// 360 px de ancho el visor medía 183 px de alto, y con una de 390, 199.
+//
+// 🪤 202 Y NO 200: el visor es lo que queda DENTRO del borde. Los iframes
+// llevan 1 px de borde arriba y abajo con border-box, así que min-h-[200px]
+// deja un visor de 198 (medido en Chromium). Y el mínimo va en el <iframe>, no
+// en la caja que lo envuelve: en el modal, puesto en la caja, la ensanchaba 3 px
+// más allá de su hueco (el alto mínimo pasa al ancho a través del 16:9).
+
+const MINIMO = "min-h-[202px]";
+
+function etiquetaIframe(html: string): string | null {
+  return /<iframe\s[^>]*>/.exec(html)?.[0] ?? null;
+}
+
+describe("los reproductores miden al menos 200 px de alto por dentro", () => {
+  it("el directo del evento", () => {
+    const html = renderToStaticMarkup(
+      EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" }),
+    );
+    expect(etiquetaIframe(html)).toContain(MINIMO);
+  });
+
+  it("UFC TV", () => {
+    const html = renderToStaticMarkup(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }));
+    expect(etiquetaIframe(html)).toContain(MINIMO);
+  });
+
+  it("el modal de vídeo de /videos (va por un portal: en node no se pinta, se lee el fuente)", () => {
+    const encontrados = iframes(leerFuente("components/video-modal.tsx"));
+    expect(encontrados, "video-modal.tsx ya no pinta ningún iframe").toHaveLength(1);
+    expect(encontrados[0]).toContain(MINIMO);
+  });
 });

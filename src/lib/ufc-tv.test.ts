@@ -138,9 +138,22 @@ describe("la fixture del 28-sep-2026", () => {
       actualEndTime: null,
       duration: "P0D",
       embeddable: true,
+      madeForKids: false,
       regionRestriction: null,
       ageRestricted: false,
     });
+  });
+
+  it("toLiveCandidate lee madeForKids del status, y sin el campo lo da por false", () => {
+    // La fixture no lo guardó (su status solo trae embeddable), así que el
+    // true se pone aquí a mano. La API sí lo manda en el part=status que ya
+    // se pide.
+    const item = (fixture.channels.ufc as YouTubeVideoItem[]).find(
+      (v) => v.id === "z1PhY6ix2XY",
+    ) as YouTubeVideoItem;
+    const paraNinos = { ...item, status: { ...item.status, madeForKids: true } };
+    expect(toLiveCandidate(paraNinos, "ufc")?.madeForKids).toBe(true);
+    expect(toLiveCandidate(item, "ufc")?.madeForKids).toBe(false);
   });
 
   it("toLiveCandidate descarta lo que no trae id o título", () => {
@@ -478,6 +491,10 @@ describe("classifyLive · solo lo que se puede ver en España y sigue en el aire
 
   it("con restricción de edad → null", () => {
     expect(classifyLive(enDirecto(hoy, { ageRestricted: true }), null, MEDIDO)).toBeNull();
+  });
+
+  it("hecho para niños (madeForKids) → null", () => {
+    expect(classifyLive(enDirecto(hoy, { madeForKids: true }), null, MEDIDO)).toBeNull();
   });
 
   it("con actualEndTime → null (ya acabó, aunque diga 'live')", () => {
@@ -1023,15 +1040,17 @@ describe("fetchFullFightPool", () => {
     expect(urls.filter((u) => u.includes("/playlistItems")).length).toBeLessThanOrEqual(4);
   });
 
-  it("solo entran peleas que se ven en España, embebibles, sin edad, terminadas y de más de 2 min", async () => {
-    // Cinco peleas completas reales de UFC Español, cada una con UNA cosa que
-    // la deja fuera. Sin estos filtros el bucle metería un marco que no se ve.
+  it("solo entran peleas que se ven en España, embebibles, sin edad, no hechas para niños, terminadas y de más de 2 min", async () => {
+    // Seis peleas completas reales de UFC Español, cada una con UNA cosa que
+    // la deja fuera. Sin estos filtros el bucle metería un marco que no se ve,
+    // o un vídeo marcado para niños.
     const retoques: [string, (v: YouTubeVideoItem) => YouTubeVideoItem][] = [
       ["X7k1eTCC3_w", (v) => ({ ...v, contentDetails: { ...v.contentDetails, regionRestriction: { blocked: ["ES"] } } })],
       ["n3TSfUrKZ0E", (v) => ({ ...v, status: { ...v.status, embeddable: false } })],
       ["eolk1_qxI28", (v) => ({ ...v, contentDetails: { ...v.contentDetails, duration: "PT1M30S" } })],
       ["NcCPNVPx3O4", (v) => ({ ...v, snippet: { ...v.snippet, liveBroadcastContent: "upcoming" } })],
       ["jS_WDU48zaM", (v) => ({ ...v, contentDetails: { ...v.contentDetails, contentRating: { ytRating: "ytAgeRestricted" } } })],
+      ["fj31VqWrlqg", (v) => ({ ...v, status: { ...v.status, madeForKids: true } })],
     ];
     let es = fixture.channels["ufc-es"] as YouTubeVideoItem[];
     for (const [id, cambio] of retoques) {

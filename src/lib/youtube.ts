@@ -135,7 +135,7 @@ export type VideoDetail = {
     regionRestriction?: { blocked?: string[]; allowed?: string[] };
     contentRating?: { ytRating?: string };
   };
-  status?: { embeddable?: boolean };
+  status?: { embeddable?: boolean; madeForKids?: boolean };
 };
 
 // ── Helpers de filtrado (puros, testeables) ──────────────────────────────────
@@ -164,9 +164,13 @@ export function isShort(detail: VideoDetail): boolean {
   return dur > 0 && dur < MIN_DURATION_SECONDS;
 }
 
+// Filtra /videos y UFC TV (lib/ufc-tv.ts). Deja fuera también lo marcado para
+// niños (madeForKids): viene en el mismo part=status que ya se pide, así que
+// no cuesta cuota. Sin el campo, el vídeo pasa, igual que con embeddable.
 export function isPlayableInSpain(detail: VideoDetail): boolean {
   return (
     detail.status?.embeddable !== false &&
+    detail.status?.madeForKids !== true &&
     regionAllows(detail.contentDetails?.regionRestriction) &&
     !isAgeRestricted(detail)
   );
