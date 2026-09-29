@@ -78,10 +78,12 @@ export function VideoHero({ className }: { className?: string }) {
 
   const active = CLIPS[index];
 
+  // Width comes from the home hero grid: on mobile the frame fills its 7.5rem
+  // column; 280px on tablet (md) and 330px on desktop (lg), as before.
   return (
     <div
       className={cn(
-        "relative mx-auto w-full max-w-[300px] sm:max-w-[330px]",
+        "relative mx-auto w-full md:max-w-[280px] lg:max-w-[330px]",
         className,
       )}
     >
