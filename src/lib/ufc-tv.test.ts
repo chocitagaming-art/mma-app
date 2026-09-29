@@ -925,8 +925,16 @@ function apiFalsa({ paginas = 1, fallaEn, sinFin = false, canales = {} }: Opcion
     }
     if (u.pathname.endsWith("/videos")) {
       const ids = new Set((u.searchParams.get("id") ?? "").split(","));
+      // Como la API de verdad: de cada vídeo llegan el id y SOLO los parts que
+      // pide la URL. Devolviéndolo entero, quitar status del part no ponía
+      // ningún test en rojo: embeddable y madeForKids seguían llegando.
+      const parts = new Set((u.searchParams.get("part") ?? "").split(","));
       const todos = [...lista("ufc"), ...lista("ufc-es")];
-      return respuesta({ items: todos.filter((v) => v.id && ids.has(v.id)) });
+      return respuesta({
+        items: todos
+          .filter((v) => v.id && ids.has(v.id))
+          .map((v) => Object.fromEntries(Object.entries(v).filter(([k]) => k === "id" || parts.has(k)))),
+      });
     }
     return respuesta({}, 404);
   });
@@ -962,6 +970,26 @@ describe("fetchUfcLiveNow", () => {
     const { fetchImpl } = apiFalsa({ canales: { ufc: empujado } });
     const snap = await fetchUfcLiveNow({ fetchImpl, apiKey: "k", now: () => MEDIDO });
     expect(snap.items.map((c) => c.videoId)).toContain("z1PhY6ix2XY");
+  });
+
+  it("lo que filtra llega en los parts status y contentDetails: un directo no embebible, para niños o bloqueado en España no se elige", async () => {
+    // El filtro se aplica al elegir (pickLive), con lo que trajo videos.list.
+    // Si el part no pide status o contentDetails, esos campos no llegan y
+    // toLiveCandidate los da por buenos: el directo se elegiría igual.
+    const eligeCon = async (cambios: Partial<YouTubeVideoItem>) => {
+      const ufc = (fixture.channels.ufc as YouTubeVideoItem[]).map((v) =>
+        v.id === "z1PhY6ix2XY" ? { ...v, ...cambios } : v,
+      );
+      const { fetchImpl } = apiFalsa({ canales: { ufc } });
+      const snap = await fetchUfcLiveNow({ fetchImpl, apiKey: "k", now: () => MEDIDO });
+      return pickLive(snap.items, evento(1092), MEDIDO).peleas?.videoId;
+    };
+    expect(await eligeCon({})).toBe("z1PhY6ix2XY");
+    expect(await eligeCon({ status: { embeddable: false } })).toBeUndefined();
+    expect(await eligeCon({ status: { embeddable: true, madeForKids: true } })).toBeUndefined();
+    expect(
+      await eligeCon({ contentDetails: { duration: "P0D", regionRestriction: { blocked: ["ES"] } } }),
+    ).toBeUndefined();
   });
 
   it("sin clave no llama a nadie", async () => {

@@ -936,6 +936,9 @@ export async function fetchUfcLiveNow(
             fetchImpl,
             apiKey,
             batch,
+            // 🪤 status es lo que trae embeddable y madeForKids. Sin él no
+            // llegan, toLiveCandidate los da por buenos y se elegiría un
+            // directo que no se puede embeber o marcado para niños.
             "snippet,liveStreamingDetails,contentDetails,status",
             signal,
           ),
@@ -1040,6 +1043,7 @@ export async function fetchFullFightPool(opts: FetchOptions = {}): Promise<FullF
         fetchImpl,
         apiKey,
         ids.slice(i, i + VIDEOS_PER_CALL),
+        // 🪤 status trae embeddable y madeForKids, igual que en los directos.
         "snippet,contentDetails,status",
         detailsSignal,
       );

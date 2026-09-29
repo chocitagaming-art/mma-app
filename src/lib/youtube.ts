@@ -352,6 +352,8 @@ async function fetchCandidatesFromApi(
 
 // Detalles (duración/región/embed/edad) por lote (≤50 ids). Cacheado igual que el
 // resto; la clave depende del conjunto de ids (estable dentro de la ventana).
+// part=status es lo que trae embeddable y madeForKids: sin él no llegan, e
+// isPlayableInSpain deja pasar el vídeo.
 async function fetchVideoDetails(
   ids: string[],
   key: string,
