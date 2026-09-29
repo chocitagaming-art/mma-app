@@ -364,6 +364,19 @@ async function getFighterDetailUncached(
         h.is_title_fight
       from fight_history_espn h
       where h.fighter_id = $1
+        -- Fuera las que ya están en fights: ESPN publica algunos eventos de la
+        -- UFC (el Road to UFC) en su liga 3359, la de los regionales, y la
+        -- tabla los pintaba dos veces. ±1 día porque la ingesta guarda la fecha
+        -- de ESPN en hora del Este. Una fila con event_date NULL se queda: el
+        -- BETWEEN da NULL y el not exists no la tapa.
+        and not exists (
+          select 1
+          from fights fi
+          join events e on e.id = fi.event_id
+          where (fi.fighter_red_id = h.fighter_id or fi.fighter_blue_id = h.fighter_id)
+            and fi.status is distinct from 'cancelled'
+            and e.event_date between h.event_date - 1 and h.event_date + 1
+        )
       order by h.event_date desc nulls last, h.id desc`,
       [id],
     ),

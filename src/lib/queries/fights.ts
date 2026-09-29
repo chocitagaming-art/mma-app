@@ -176,15 +176,29 @@ function mapLastFight(row?: LastFightRow): FightLastResult | null {
 // su "última pelea" es el más reciente de fight_history_espn. Solo desenlaces
 // win/loss/draw (una 'nc' no encaja en el label de la fila del cara a cara).
 // fightId = null: no vive en `fights`, no hay ficha de combate a la que enlazar.
+//
+// 🪤 Con el mismo not exists que el historial de la ficha (fighters.detail.ts):
+// ESPN publica algunos eventos de la UFC (el Road to UFC) en su liga 3359, y sin
+// él la «Última pelea» de una esquina sin otro combate UFC era EL MISMO combate
+// que se estaba viendo (/fights/16146, 29-sep-2026). ±1 día por la fecha de
+// ESPN en hora del Este; una fila con event_date NULL se queda (BETWEEN da NULL).
 const LAST_FIGHT_ESPN_SQL = `select
-    event_name,
-    event_date,
-    result,
-    method
-  from fight_history_espn
-  where fighter_id = $1
-    and result in ('win', 'loss', 'draw')
-  order by event_date desc nulls last, id desc
+    h.event_name,
+    h.event_date,
+    h.result,
+    h.method
+  from fight_history_espn h
+  where h.fighter_id = $1
+    and h.result in ('win', 'loss', 'draw')
+    and not exists (
+      select 1
+      from fights fi
+      join events e on e.id = fi.event_id
+      where (fi.fighter_red_id = h.fighter_id or fi.fighter_blue_id = h.fighter_id)
+        and fi.status is distinct from 'cancelled'
+        and e.event_date between h.event_date - 1 and h.event_date + 1
+    )
+  order by h.event_date desc nulls last, h.id desc
   limit 1`;
 
 function mapLastFightEspn(row?: LastFightEspnRow): FightLastResult | null {

@@ -7,10 +7,11 @@
 // para que cuadre por construcción.
 //
 // 🪤 Por qué no se suma `fight_history_espn` a las de UFC, que da el mismo 30
-// para Makhachev: en toda la base solo cuadra con el récord en 1.511 de 2.884
-// luchadores. Se queda corta en 1.327 (sin historial ESPN, o con peleas del
-// Contender Series que el scraper salta) y se pasa en 46 (duplicados Road to
-// UFC). El récord de `fighters` es el que se enseña, y el que manda.
+// para Makhachev: el 28-sep-2026 solo cuadraba con el récord en 1.511 de 2.884
+// luchadores. Se quedaba corta en 1.327 (sin historial ESPN, o con peleas del
+// Contender Series, que el scraper saltó hasta el 29-sep-2026) y se pasaba en
+// 46 (solo 3 de ellos por duplicados Road to UFC, que la web esconde desde ese
+// día). El récord de `fighters` es el que se enseña, y el que manda.
 
 /**
  * Victorias + derrotas + empates del récord que se enseña.
