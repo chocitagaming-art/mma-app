@@ -118,10 +118,12 @@ type FetchOptions = {
 // WITHOUT the word boxing; UFC Español tags it #GarciaBenn), «Power Slap 22: …»
 // and «UFC BJJ 8: …» (which does carry the brand). Hashtags are glued after
 // normalizeTitle («#PowerSlap» → «powerslap»), hence the optional space.
-// 🪤 «boxing» also catches «kickboxing»: losing a short now and then is cheaper
-// than a boxing one on the home page.
+// 🪤 A bare «boxing» would also catch «kickboxing», a UFC fighter's background
+// and not another sport's card: the owner wants those in (30-sep-2026), so the
+// lookbehind lets «kickboxing», «kick boxing» and «kickboxeo» through while
+// «boxing» and «boxeo» on their own still go out.
 const SHORTS_BLACKLIST =
-  /power ?slap|zuffa|boxing|boxeo|garcia vs\.? benn|garciabenn|podcasts?|\bbjj\b|grappling/;
+  /power ?slap|zuffa|(?<!kick ?)box(?:ing|eo)|garcia vs\.? benn|garciabenn|podcasts?|\bbjj\b|grappling/;
 
 // The UFC brand: the WORD «ufc» in the normalized title. normalizeTitle
 // (lib/ufc-tv.ts) unglues the UFC hashtags, so «#ufc332», «#UFCVegas121»,

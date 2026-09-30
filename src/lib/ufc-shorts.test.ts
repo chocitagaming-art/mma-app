@@ -383,16 +383,25 @@ describe("isBlacklistedShort", () => {
     "The UFC Podcast #ufc",
     "UFC BJJ 8: Prelims",
     "boxeo de verdad #ufc",
+    // Kickboxing is let through, but boxing on its own in the same title is not.
+    "From kickboxing to boxing #ufc",
+    "Boxing legend meets a kickboxing champ #ufc",
   ])("out: %s", (title) => {
     expect(isBlacklistedShort(title)).toBe(true);
   });
 
-  it.each(["Raul Rosas Jr. finishes Barcelos #ufcvegas121", "AND STILL 🏆 #ufc331"])(
-    "in: %s",
-    (title) => {
-      expect(isBlacklistedShort(title)).toBe(false);
-    },
-  );
+  it.each([
+    "Raul Rosas Jr. finishes Barcelos #ufcvegas121",
+    "AND STILL 🏆 #ufc331",
+    // The owner's call (30-sep-2026): kickboxing is a UFC fighter's background,
+    // not another sport's card, so «boxing» must not swallow it.
+    "Kickboxing champ makes his UFC debut",
+    "Those #kickboxing roots showing #ufc332",
+    "Kick boxing base, UFC finish",
+    "Del kickboxeo al octágono #NocheUFC",
+  ])("in: %s", (title) => {
+    expect(isBlacklistedShort(title)).toBe(false);
+  });
 });
 
 describe("readShortsFixtureMode", () => {
