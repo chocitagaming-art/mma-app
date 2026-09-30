@@ -75,8 +75,11 @@ import { cn } from "@/lib/utils";
 //     thumbnail: the RMF wants any thumbnail that starts a playback at least
 //     120x70, and there it measured 99x74 (under 70 high while the headline's
 //     font loaded). Still the link to the short, with «Ver en YouTube». CSS
-//     does it before React runs (max-[339px]); React, once it has measured
-//     the box (tooSmall). From 340 px the thumbnail is 200 px wide or more.
+//     does it before React runs (max-[340px]: in Tailwind v4 that is «under
+//     340», the exact complement of page.tsx's min-[340px], which widens the
+//     column; max-[339px] left 339 px with the 120 px column and the
+//     thumbnail); React, once it has measured the box (tooSmall). From 340 px
+//     the thumbnail is 200 px wide or more.
 //   · The poster is a real link to that short on YouTube (poster-link.tsx):
 //     without the page's JavaScript, and under 200x200, it opens it there.
 //     Started with the keyboard, the focus goes into the short it mounts.
@@ -165,7 +168,7 @@ export function ShortsHeroPlaceholder() {
   return (
     <HeroFrame
       rising
-      below={<div aria-hidden className="invisible mt-2 h-8 max-[339px]:hidden md:hidden" />}
+      below={<div aria-hidden className="invisible mt-2 h-8 max-[340px]:hidden md:hidden" />}
     >
       <OwnPoster />
     </HeroFrame>
@@ -299,7 +302,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
       {/* Under 200x200 (a screen under 340 px): our poster, never the
           thumbnail, which would be under YouTube's 120x70 there. CSS hides the
           thumbnail before React runs; tooSmall drops it once it has measured. */}
-      <OwnPosterArt className={cn("hidden max-[339px]:block", tooSmall && "block")} />
+      <OwnPosterArt className={cn("hidden max-[340px]:block", tooSmall && "block")} />
       {tooSmall ? null : (
         <>
           {/* The official thumbnail, whole and untouched (4:3 with the short
@@ -311,7 +314,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
             width={480}
             height={360}
             decoding="async"
-            className="block aspect-[4/3] w-full shrink-0 bg-black object-contain max-[339px]:hidden"
+            className="block aspect-[4/3] w-full shrink-0 bg-black object-contain max-[340px]:hidden"
           />
         </>
       )}
@@ -320,8 +323,8 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
       </span>
       <span className="relative px-2 text-center font-mono text-[0.625rem] uppercase tracking-[0.14em] text-brand-ink-foreground/70">
         {/* Before React has measured, CSS says where a tap goes under 340 px. */}
-        <span className={cn(!tooSmall && "max-[339px]:hidden")}>{label}</span>
-        {tooSmall ? null : <span className="hidden max-[339px]:inline">Ver en YouTube</span>}
+        <span className={cn(!tooSmall && "max-[340px]:hidden")}>{label}</span>
+        {tooSmall ? null : <span className="hidden max-[340px]:inline">Ver en YouTube</span>}
       </span>
     </PosterLink>
   );
@@ -336,7 +339,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
       below={
         <div
           className={cn(
-            "mt-2 max-[339px]:hidden md:absolute md:inset-x-0 md:top-full md:mt-3",
+            "mt-2 max-[340px]:hidden md:absolute md:inset-x-0 md:top-full md:mt-3",
             tooSmall && "hidden",
           )}
         >

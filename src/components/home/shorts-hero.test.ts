@@ -42,13 +42,16 @@ describe("ShortsHero · server render", () => {
 
   it("under 340 px of screen CSS shows our poster and «Ver en YouTube», never the thumbnail (RMF: 120x70)", () => {
     // Before React has measured the box (tooSmall), only CSS can keep a
-    // ~99x74 thumbnail off the 120 px column.
+    // ~99x74 thumbnail off the 120 px column. In Tailwind v4 max-[340px] is
+    // «under 340», the exact complement of the column's min-[340px] (page.tsx);
+    // max-[339px] would leave 339 px with the 120 px column and the thumbnail.
     const thumbnail = /<img[^>]*\bsrc="https:\/\/i\.ytimg\.com\/[^"]*"[^>]*>/.exec(html)?.[0] ?? "";
-    expect(thumbnail).toMatch(/class="[^"]*\bmax-\[339px\]:hidden\b/);
+    expect(thumbnail).toMatch(/class="[^"]*\bmax-\[340px\]:hidden\b/);
     const own = /<span[^>]*\bdata-own-poster[^>]*>/.exec(html)?.[0] ?? "";
-    expect(own).toMatch(/class="[^"]*\bhidden max-\[339px\]:block\b/);
-    expect(html).toMatch(/<span class="hidden max-\[339px\]:inline">Ver en YouTube<\/span>/);
-    expect(html).toMatch(/<span class="max-\[339px\]:hidden">Toca para ver<\/span>/);
+    expect(own).toMatch(/class="[^"]*\bhidden max-\[340px\]:block\b/);
+    expect(html).toMatch(/<span class="hidden max-\[340px\]:inline">Ver en YouTube<\/span>/);
+    expect(html).toMatch(/<span class="max-\[340px\]:hidden">Toca para ver<\/span>/);
+    expect(html).not.toContain("max-[339px]");
   });
 
   it("without JavaScript the poster is a real link to that short on YouTube, in a new tab", () => {

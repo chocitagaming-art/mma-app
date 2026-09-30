@@ -271,17 +271,22 @@ test("a 320 px el póster del short no enseña la miniatura de YouTube sino la n
   await expect(poster).toContainText("Ver en YouTube");
 });
 
-test("a 320 px, sin los bundles (antes de hidratar), la miniatura tampoco se ve: la oculta el CSS", async ({
-  page,
-}) => {
-  await page.route(/\/_next\/static\/chunks\/.+\.js(\?.*)?$/, (route) => route.abort());
-  await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto("/");
-  const poster = posterOf(hero(page));
-  await expect(poster).toBeVisible();
-  await expect(heroThumbnail(page)).toBeHidden();
-  await expect(heroOwnPoster(page)).toBeVisible();
-});
+// 339 px too: the column only widens from 340 (min-[340px]), so the CSS that
+// hides the thumbnail has to cover everything under 340, not under 339.
+for (const width of [320, 339]) {
+  test(`a ${width} px, sin los bundles (antes de hidratar), la miniatura tampoco se ve: la oculta el CSS`, async ({
+    page,
+  }) => {
+    await page.route(/\/_next\/static\/chunks\/.+\.js(\?.*)?$/, (route) => route.abort());
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto("/");
+    const poster = posterOf(hero(page));
+    await expect(poster).toBeVisible();
+    await expect(heroThumbnail(page)).toBeHidden();
+    await expect(heroOwnPoster(page)).toBeVisible();
+    await expect(poster).toContainText("Ver en YouTube");
+  });
+}
 
 for (const fontArrives of [true, false]) {
   test(`de 340 px en adelante la miniatura del short mide al menos 120x70${fontArrives ? "" : ", también con la fuente del titular sin llegar"}`, async ({
