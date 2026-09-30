@@ -40,13 +40,15 @@ export const metadata: Metadata = {
 // (mmastatus.app) y se borra con sus datos. Por eso el punto 3 lo cuenta así
 // y no dice «medido en Chrome».
 //
-// Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): los shorts del
-// hero de la portada, UFC TV y el directo arrancan solos, de uno en uno, con
-// el turnero (playback-turn.ts), y con menos movimiento ninguno monta su
-// iframe hasta el toque; el careo oficial (/en-vivo y /eventos/[id]), el
-// pesaje (event-weigh-ins.tsx), /videos, /tendencias, la columna de la
-// portada y los combates esperan al clic. /gimnasios: api/gyms/route.ts manda
-// DESDE EL SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
+// Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): UFC TV y el
+// directo arrancan solos, de uno en uno, con el turnero (playback-turn.ts,
+// autoStart), y con menos movimiento ninguno monta su iframe hasta el toque.
+// Los shorts del hero de la portada esperan al toque desde el 30-sep-2026
+// (noche): solo se baja su miniatura (i.ytimg.com), y al acabar uno no se
+// monta otro. El careo oficial (/en-vivo y /eventos/[id]), el pesaje
+// (event-weigh-ins.tsx), /videos, /tendencias, la columna de la portada y los
+// combates esperan al clic. /gimnasios: api/gyms/route.ts manda DESDE EL
+// SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
 //
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
@@ -268,24 +270,22 @@ export default function PrivacidadPage() {
         </p>
         <ul className="ml-4 list-disc space-y-1.5">
           <li>
-            <strong>Lo que se carga solo.</strong> Los shorts de la UFC de la
-            cabecera de la portada, UFC TV (en la portada) y el directo de la
-            velada (en la portada, en /en-vivo y en la página del evento) cargan
-            el reproductor por sí mismos cuando se ve más de la mitad de él, y
-            arrancan sin sonido. Nunca hay más de uno a la vez. Los shorts van
-            uno tras otro, y cuando uno no se está reproduciendo se ve su
-            miniatura, que se descarga de un servidor de YouTube (i.ytimg.com).
+            <strong>Lo que se carga solo.</strong> UFC TV (en la portada) y el
+            directo de la velada (en la portada, en /en-vivo y en la página del
+            evento) cargan el reproductor por sí mismos cuando se ve más de la
+            mitad de él, y arrancan sin sonido. Nunca hay más de uno a la vez.
             Si tu sistema pide reducir el movimiento, no se carga ningún
             reproductor hasta que lo pulses.
           </li>
           <li>
-            <strong>Lo que espera a que pulses.</strong> En el careo oficial y
-            en el vídeo del pesaje (en /en-vivo y en la página de cada evento),
-            en /videos, en /tendencias, en la columna de vídeos de la portada y en
-            los vídeos de cada combate se ve primero una miniatura, y el
-            reproductor solo se
+            <strong>Lo que espera a que pulses.</strong> En los shorts de la UFC
+            de la cabecera de la portada, en el careo oficial y en el vídeo del
+            pesaje (en /en-vivo y en la página de cada evento), en /videos, en
+            /tendencias, en la columna de vídeos de la portada y en los vídeos de
+            cada combate se ve primero una miniatura, y el reproductor solo se
             carga cuando pulsas «play». La miniatura sí se descarga de un servidor
-            de YouTube (i.ytimg.com).
+            de YouTube (i.ytimg.com). Cuando un short acaba, no se carga otro por
+            sí solo: se ve la miniatura del siguiente.
           </li>
           <li>
             <strong>Lo que hace el reproductor al cargarse</strong> (medido el 29
