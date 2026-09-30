@@ -26,6 +26,27 @@ describe("promotionBadge", () => {
     });
   });
 
+  it("maps Contender Series to the violet badge", () => {
+    // Dana White's Contender Series: ESPN lo publica bajo la liga UFC, pero no
+    // es un combate UFC. Color propio para que no se confunda con un regional.
+    expect(
+      promotionBadge({ origin: "espn", promotion: "Contender Series" }),
+    ).toEqual({
+      label: "Contender Series",
+      className:
+        "bg-violet-500/15 text-violet-800 dark:bg-violet-400/15 dark:text-violet-300",
+    });
+  });
+
+  it("only the exact 'Contender Series' is violet, not look-alike regionals", () => {
+    // En la base hay 'BFC Contender Series', 'Contenders'… que son regionales.
+    for (const promotion of ["BFC Contender Series", "Contenders", "contender series"]) {
+      expect(promotionBadge({ origin: "espn", promotion }).className).toBe(
+        "bg-muted text-muted-foreground",
+      );
+    }
+  });
+
   it("maps other regionals to the muted badge with their short name", () => {
     expect(promotionBadge({ origin: "espn", promotion: "CFFC" })).toEqual({
       label: "CFFC",
