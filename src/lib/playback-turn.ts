@@ -23,13 +23,20 @@
 // 30-sep-2026: YouTube's rules are about autoplay, not about what the visitor
 // chose to watch). The visitor's player is one they started with a tap on a
 // poster, or an automatic one they touched inside (sound, pause, full screen,
-// PiP). It stays out of view, with the tab hidden and under an open menu, and
+// PiP). It stays out of view, with the tab hidden (a pagehide too: the page
+// may come back from the back/forward cache) and under an open menu, and
 // nothing automatic starts while it holds the turn. It only goes when the
 // visitor starts another player (one at a time still) or pauses it with the
 // site's control, or when it drops under the 200x200 minimum. Out of view is
 // the PiP case: the page cannot see a PiP inside a cross-origin iframe, the
 // visitor scrolls or changes tab while it plays, and removing the iframe would
 // close it.
+//
+// One more exit, the carousel's (timerAction): a short started with a tap
+// and never touched inside ends like any other. Its timer cannot tell the end
+// from a pause (no JS API), and the next short would be a new automatic
+// start: out of view that is the poster, and the turn is free. So a PiP
+// opened with the browser's own button, with no tap inside, closes there.
 //
 // No iframe_api, no enablejsapi, no postMessage (Developer Policies III.D.7:
 // no undocumented APIs): "stop" means removing the iframe, and the next short

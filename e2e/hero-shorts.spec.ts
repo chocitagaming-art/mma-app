@@ -15,10 +15,12 @@ import { fakeYouTubeEmbeds } from "./helpers";
 //     half or less in view below the sticky header, never one under 200x200;
 //   · «Pausar» stops the carousel, «Siguiente ›» moves it on, the timer moves
 //     it on by itself, and a short the visitor touched INSIDE stays theirs;
-//   · a hidden tab and the mobile menu take away the AUTOMATIC player only:
-//     what the visitor chose (a tap on a poster, or inside a player) stays,
-//     also out of view as in PiP, and nothing starts on its own meanwhile
-//     (DECISIONS.md, 30-sep-2026);
+//   · a hidden tab, a pagehide (the back/forward cache) and the mobile menu
+//     take away the AUTOMATIC player only: what the visitor chose (a tap on a
+//     poster, or inside a player) stays, also out of view as in PiP, and
+//     nothing starts on its own meanwhile (DECISIONS.md, 30-sep-2026);
+//   · the carousel's exception: a short started with a tap and never touched
+//     inside ends like any other, and out of view its timer frees the turn;
 //   · prefers-reduced-motion: only posters, until a tap.
 //
 // No network: the shorts are canned (UFC_SHORTS_FIXTURE=list, ids
@@ -117,6 +119,15 @@ async function setTabHidden(page: Page, hidden: boolean) {
     Object.defineProperty(document, "hidden", { configurable: true, get: () => isHidden });
     document.dispatchEvent(new Event("visibilitychange"));
   }, hidden);
+}
+
+// The page going into the back/forward cache and coming back as it was
+// (persisted: true), dispatched to the provider's real listeners. Playwright's
+// Chromium runs without that cache, so a real round trip cannot be made here.
+async function pageTransition(page: Page, type: "pagehide" | "pageshow") {
+  await page.evaluate((name) => {
+    window.dispatchEvent(new PageTransitionEvent(name, { persisted: true }));
+  }, type);
 }
 
 async function clickCenter(locator: Locator, page: Page) {
@@ -369,6 +380,38 @@ test("la pestaña oculta también desmonta UFC TV", async ({ page }) => {
   await expect(autoplaying(page)).toHaveCount(1);
 });
 
+// A pagehide that is not a real unload: the page goes into the back/forward
+// cache and may come back as it was. It is a hidden tab and nothing more.
+// UFC TV stands for the event's live broadcast: they are the same player.
+test("un pagehide hacia la caché de atrás/adelante solo quita el automático: UFC TV tocado por dentro sigue, el mismo iframe", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 800);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+
+  // Automatic: gone on pagehide, back on its own on pageshow.
+  await pageTransition(page, "pagehide");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await pageTransition(page, "pageshow");
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+
+  // Touched inside: the same iframe through pagehide and pageshow.
+  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  await clickCenter(tv(page).locator("iframe"), page);
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await markIframe(tv(page));
+  await pageTransition(page, "pagehide");
+  await page.waitForTimeout(1_500);
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(markedIframe(tv(page))).toHaveCount(1);
+  await pageTransition(page, "pageshow");
+  await page.waitForTimeout(1_000);
+  await expect(markedIframe(tv(page))).toHaveCount(1);
+  await expect(autoplaying(page)).toHaveCount(1);
+});
+
 // ── What the visitor chose is theirs (DECISIONS.md, 30-sep-2026) ───────────
 //
 // UFC TV and the event's live broadcast are the same player
@@ -398,6 +441,45 @@ test("el short que el visitante pone sigue montado fuera de la vista, y UFC TV e
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
   await expect(autoplaying(page)).toHaveCount(1);
+});
+
+// The carousel's exception (lib/playback-turn.ts): a short the visitor started
+// with a tap and never touched inside ends like any other. At its timer the
+// next short would be a new automatic start, and out of view that is the poster.
+test("la excepción del carrusel: el short puesto con el ▶ y sin tocar por dentro acaba como cualquiera; fuera de la vista, su temporizador lo devuelve al póster y UFC TV arranca solo", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openHome(page, 1280, 800);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  await expectHeroShort(page, FIRST_SHORT);
+
+  // «Pausar» and «Seguir»: the same 15 s short, now the visitor's, untouched.
+  await page.getByRole("button", { name: "Pausar", exact: true }).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await page.getByRole("button", { name: "Seguir", exact: true }).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expectHeroShort(page, FIRST_SHORT);
+  const started = Date.now();
+  await watchIframes(page);
+
+  // Out of view while it plays: it stays, and UFC TV waits.
+  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(1_500);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+
+  // Its timer (15 s + 2.5 s from the iframe's load): back to the poster, and
+  // UFC TV, in view, starts on its own in the same render.
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto", {
+    timeout: FIRST_TIMER_MS + 10_000,
+  });
+  expect(Date.now() - started, "UFC TV started before the short's timer").toBeGreaterThanOrEqual(
+    FIRST_TIMER_MS - 1_000,
+  );
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(1);
+  expect((await watched(page)).max, "two autoplaying iframes at once").toBeLessThanOrEqual(1);
 });
 
 test("UFC TV tocado por dentro es del visitante: sigue con la pestaña oculta y fuera de la vista, y el short no arranca solo", async ({

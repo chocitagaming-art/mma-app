@@ -450,6 +450,47 @@ describe("turn controller · the carousel timer", () => {
     expect(controller.getView("tv-bucle").mounted).toBe(true);
   });
 
+  // The carousel's exit of the visitor's player (lib/playback-turn.ts): a
+  // short they started with a tap and never touched inside ends like any
+  // other. Without the JS API its end looks like a pause, and the next short
+  // would be a new automatic start (rule 1). Out of view that is the poster,
+  // so a PiP opened with the browser's own button (no tap inside) closes at
+  // that moment.
+  it("started with a tap and never touched, out of view with the tab visible: it stays while it plays, and its timer frees the turn for UFC TV", () => {
+    const { controller, see, advance, hero, tv, mounts, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    see(hero, 0);
+    see(tv, 1);
+    advance(15_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: false });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(controller.timerFired("hero")).toBe("release");
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, owner: null });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(mounts).toEqual(["hero:user", "tv:auto"]);
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("the same short touched inside (a PiP from YouTube's own button) stays at its timer, and UFC TV keeps waiting", () => {
+    const { controller, see, advance, hero, tv, page, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    controller.windowBlurred();
+    advance(0);
+    see(hero, 0);
+    see(tv, 1);
+    advance(15_000);
+    expect(controller.timerFired("hero")).toBe("stay");
+    advance(5_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(worst.mounted).toBe(1);
+  });
+
   it("a timer of a player that no longer holds the turn does nothing", () => {
     const { controller } = setup();
     expect(controller.timerFired("hero")).toBeNull();
@@ -663,5 +704,24 @@ describe("source guards of the turn manager", () => {
     expect(provider).toMatch(/const onPointerDown = \(\) => controller\.pagePointerDown\(\);/);
     expect(provider).toMatch(/window\.addEventListener\("pointerdown", onPointerDown, true\);/);
     expect(provider).toMatch(/window\.removeEventListener\("pointerdown", onPointerDown, true\);/);
+  });
+
+  // pagehide may be the page going into the back/forward cache, to come back
+  // as it was: it has to stay a hidden tab and nothing more, so the visitor's
+  // player is still there on the way back (DECISIONS.md, 30-sep-2026). What a
+  // hidden tab does is tested above; this pins the wiring that leads there,
+  // and e2e/hero-shorts.spec.ts checks it in a real browser.
+  it("pagehide is a hidden tab and nothing more (the back/forward cache), and pageshow brings the automatic player back", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/const onPageHide = \(\) => controller\.setPageVisible\(false\);/);
+    expect(provider).toMatch(/window\.addEventListener\("pagehide", onPageHide\);/);
+    expect(provider).toMatch(
+      /const onPageShow = \(\) => \{\s*if \(document\.visibilityState === "visible"\) controller\.setPageVisible\(true\);\s*\};/,
+    );
+    expect(provider).toMatch(/window\.addEventListener\("pageshow", onPageShow\);/);
+    // One pagehide listener in the whole turn manager: no second one that
+    // takes the players away behind this one's back.
+    const listeners = files.flatMap(([, source]) => source.match(/addEventListener\("pagehide"/g) ?? []);
+    expect(listeners).toHaveLength(1);
   });
 });

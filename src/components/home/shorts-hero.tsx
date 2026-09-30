@@ -50,7 +50,8 @@ import { cn } from "@/lib/utils";
 //   · A short the visitor touched (a tap INSIDE the iframe: sound, pause, full
 //     screen) is theirs: the timer never changes it, «Siguiente ›» goes on.
 //     Theirs too, with a tap on the poster: out of view (PiP), with the tab
-//     hidden or under the menu it stays (DECISIONS.md, 30-sep-2026).
+//     hidden or under the menu it stays (DECISIONS.md, 30-sep-2026) until it
+//     ends; if they never touched it inside, the timer then goes on as ever.
 //   · prefers-reduced-motion: only the poster with ▶; nothing starts alone.
 //   · The poster is the short's own i.ytimg.com thumbnail, WHOLE (object-
 //     contain, not cropped: the thumbnail may not be altered) with the ▶

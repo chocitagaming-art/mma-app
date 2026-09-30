@@ -289,6 +289,15 @@ describe("timerAction", () => {
     expect(timerAction(s, "hero", false)).toBe("release");
   });
 
+  // The carousel's exit of the visitor's player: a short they started with a
+  // tap and never touched inside ends like any other. Out of view (scrolled
+  // away, maybe in a PiP opened with the browser's own button) the next short
+  // could not start on its own, so it is the poster.
+  it("started with a tap, untouched, out of view with the tab visible: back to the poster at its end", () => {
+    const s = state([player("hero", 0), player("tv-bucle", 1)], { current: { id: "hero", owner: "user" } });
+    expect(timerAction(s, "hero", false)).toBe("release");
+  });
+
   it("started with «Siguiente» and now at 30 %: back to the poster", () => {
     const s = state([player("hero", 0.3)], { current: { id: "hero", owner: "user" } });
     expect(timerAction(s, "hero", false)).toBe("release");
