@@ -23,6 +23,11 @@
 //     when it drops to half or less, with the tab hidden, with a blocker open
 //     (the mobile menu) or with prefers-reduced-motion.
 //   - Hidden tab, a blocker or prefers-reduced-motion: nothing starts on its own.
+//   - Nor a player with the keyboard focus inside its box (its poster): the
+//     poster is replaced by the iframe, and an automatic mount dropped the
+//     focus on <body> (final review of the shorts branch, 30-sep-2026). It
+//     starts when the focus leaves; Enter or Space on the poster start it as
+//     the visitor's, and then the focus goes into the player.
 //   - Two candidates at once: the larger visible area wins, then PRIORITY. No
 //     page has two today (the home's slot shows ONE of the three; /en-vivo and
 //     the event page, the broadcast): the tie-break keeps the rule defined.
@@ -88,6 +93,8 @@ export type TurnPlayer = {
   aboveSince: number | null;
   // Big enough for a legal player (fitsMinimum).
   eligible: boolean;
+  // The keyboard focus is inside its box (its poster): no automatic start.
+  focused?: boolean;
 };
 
 export type TurnState = {
@@ -110,6 +117,7 @@ function isAutoCandidate(p: TurnPlayer, now: number): boolean {
   return (
     p.autoStart &&
     p.eligible &&
+    !p.focused &&
     p.ratio > HALF &&
     p.aboveSince != null &&
     now - p.aboveSince >= DWELL_MS

@@ -327,6 +327,46 @@ test("con el ratón el foco no se mueve al reproductor", async ({ page }) => {
   expect(await focusIsOnPlayer(slot), "a mouse start moved the focus into the player").toBe(false);
 });
 
+// The poster is replaced by the iframe when the player mounts. With the
+// keyboard focus on UFC TV's poster, an AUTOMATIC mount dropped the focus on
+// <body> (in main those players were iframes from the start). Now nothing
+// starts on its own while the focus is inside its box; when it leaves, it does.
+test("con el foco del teclado en el póster de UFC TV, no arranca solo; al salir el foco, sí", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 600);
+  await needsUfcTvLoop(page);
+  const slot = tv(page);
+  const poster = slot.getByRole("button", { name: TV_POSTER });
+  // Below the fold at the top: nothing of it is seen yet.
+  expect(await slot.evaluate((el) => el.getBoundingClientRect().top >= window.innerHeight)).toBe(true);
+
+  // Tab to it: the browser brings it into view.
+  await poster.evaluate((el) => (el as HTMLElement).focus({ preventScroll: true }));
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  expect(
+    await poster.evaluate((el) => el === document.activeElement && el.matches(":focus-visible")),
+    "the poster did not get the keyboard focus",
+  ).toBe(true);
+  // Well over half of it in view (the header band aside), well over 400 ms.
+  await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(1_200);
+  await expect(slot).toHaveAttribute("data-turn-state", "poster");
+  await expect(slot.locator("iframe")).toHaveCount(0);
+  expect(
+    await poster.evaluate((el) => el === document.activeElement),
+    "the focus left the poster (on <body>?)",
+  ).toBe(true);
+
+  // Tab out: the focus is somewhere else, and UFC TV starts on its own.
+  await page.keyboard.press("Tab");
+  await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(slot).toHaveAttribute("data-turn-state", "playing-auto");
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  expect(await focusIsOnPlayer(slot), "an automatic mount took the focus").toBe(false);
+});
+
 test("un montaje automático nunca se lleva el foco", async ({ page }) => {
   await openHome(page);
   await needsUfcTvLoop(page);

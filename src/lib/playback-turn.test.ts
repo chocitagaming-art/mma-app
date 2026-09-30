@@ -38,7 +38,14 @@ function player(
     area = null,
     eligible = true,
     autoStart = id !== "hero",
-  }: { since?: number | null; area?: number | null; eligible?: boolean; autoStart?: boolean } = {},
+    focused = false,
+  }: {
+    since?: number | null;
+    area?: number | null;
+    eligible?: boolean;
+    autoStart?: boolean;
+    focused?: boolean;
+  } = {},
 ): TurnPlayer {
   return {
     id,
@@ -48,6 +55,7 @@ function player(
     area: area ?? Math.round(ratio * 100_000),
     aboveSince: since == null ? null : NOW - since,
     eligible,
+    focused,
   };
 }
 
@@ -72,6 +80,24 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   {
     name: "UFC TV more than half visible for 400 ms: it starts on its own",
     s: state([player("hero", 0), player("tv-bucle", 0.8, { since: 400 })]),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "UFC TV in view for a minute with the keyboard focus inside its box (its poster): it waits",
+    s: state([player("tv-bucle", 1, { since: 60_000, focused: true })]),
+    want: null,
+  },
+  {
+    name: "the focused one waits, and another automatic player in view may still start",
+    s: state([
+      player("evento", 1, { since: 1000, focused: true }),
+      player("tv-bucle", 0.8, { since: 1000 }),
+    ]),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "an automatic holder keeps the turn with the focus inside it (a tap inside makes it the visitor's elsewhere)",
+    s: state([player("tv-bucle", 1, { focused: true })], { current: { id: "tv-bucle", owner: "auto" } }),
     want: { id: "tv-bucle", owner: "auto" },
   },
   {

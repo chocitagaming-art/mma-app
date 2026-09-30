@@ -22,11 +22,19 @@ import {
 // plays when the visitor starts it (no autoStart: the owner's decision of
 // 30-sep-2026, night), and UFC TV, which starts on its own when it is seen.
 
-type FakeBox = Element & { size: { width: number; height: number } };
+type FakeBox = Element & { size: { width: number; height: number }; inside: unknown[] };
 
+// `inside`: what the box holds (its poster), for Element.contains.
 function box(width = 330, height = 587): FakeBox {
   const size = { width, height };
-  return { size, getBoundingClientRect: () => ({ ...size }) } as unknown as FakeBox;
+  const inside: unknown[] = [];
+  const el = {
+    size,
+    inside,
+    getBoundingClientRect: () => ({ ...size }),
+    contains: (node: unknown) => node === el || inside.includes(node),
+  };
+  return el as unknown as FakeBox;
 }
 
 type FakeIO = ObserverLike & {
@@ -191,6 +199,64 @@ describe("turn controller · UFC TV: more than half visible for 0.4 s", () => {
     expect(controller.getView("tv-bucle").mounted).toBe(true);
     see(tv, 0.5);
     expect(controller.getView("tv-bucle").mounted).toBe(false);
+  });
+});
+
+describe("turn controller · the keyboard focus inside a box holds its automatic start", () => {
+  // The poster (a link) is replaced by the iframe when the player mounts: an
+  // automatic mount under the keyboard focus dropped it on <body>. While the
+  // focus is inside the box nothing starts there on its own.
+  function focusPoster(browser: { page: { active: unknown } }, el: FakeBox) {
+    const poster = { poster: true };
+    el.inside.push(poster);
+    browser.page.active = poster;
+    return poster;
+  }
+
+  it("UFC TV in view with its poster focused: it waits, and starts as soon as the focus leaves", () => {
+    const t = setup();
+    focusPoster(t, t.tv);
+    t.see(t.tv, 1);
+    t.advance(2_000);
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.mounts).toEqual([]);
+    t.page.active = null;
+    t.controller.focusChanged();
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    t.advance(0);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  it("the focus on something else of the page (the hero's «Siguiente») does not hold UFC TV", () => {
+    const t = setup();
+    focusPoster(t, t.hero);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  it("Enter or a tap on the focused poster still plays it, as the visitor's", () => {
+    const t = setup();
+    focusPoster(t, t.tv);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.userStart("tv-bucle")).toBe("started");
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+  });
+
+  it("a focus change reaches the turn manager only through focusChanged, one task later", () => {
+    const t = setup();
+    t.see(t.tv, 1);
+    t.advance(300);
+    focusPoster(t, t.tv);
+    t.advance(1_000);
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    t.page.active = null;
+    t.controller.focusChanged();
+    t.controller.focusChanged();
+    t.advance(0);
+    expect(t.controller.getView("tv-bucle").mounted).toBe(true);
+    expect(t.mounts).toEqual(["tv:auto"]);
   });
 });
 
@@ -723,6 +789,15 @@ describe("source guards of the turn manager", () => {
   it("the hook hands the start result to the poster (too-small → YouTube)", () => {
     const provider = files[1][1];
     expect(provider).toMatch(/userStart: useCallback\(\(\): StartResult => controller\.userStart\(id\)/);
+  });
+
+  it("the provider hands every focus change to the controller (a focused poster holds its automatic start)", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/const onFocusChange = \(\) => controller\.focusChanged\(\);/);
+    for (const type of ["focusin", "focusout"]) {
+      expect(provider).toContain(`document.addEventListener("${type}", onFocusChange);`);
+      expect(provider).toContain(`document.removeEventListener("${type}", onFocusChange);`);
+    }
   });
 
   it("the provider hands every tap on the page to the controller, in the capture phase (before the focus moves)", () => {
