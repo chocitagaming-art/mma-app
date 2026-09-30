@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 // desactualizada es peor que no tenerla: aquí sí se está afirmando algo.
 //
 // Y volvió a pasar con YouTube. Revisado el 30-sep-2026 contra el código
-// (ufc-tv.ts, home/ufc-tv-player.tsx, event-live-embed.tsx, youtube-facade.tsx,
+// (ufc-tv.ts, playback/live-embed-player.tsx, event-live-embed.tsx,
+// home/shorts-hero.tsx, ufc-shorts.ts, playback-turn.ts, youtube-facade.tsx,
 // video-modal.tsx, security-headers.ts, next.config.ts `unoptimized`,
 // country-flag.tsx, map/leaflet-map.tsx, news-image.tsx) y contra lo medido:
 // maqueta-shorts/capturas/privacidad_medida.json (29-sep: 0 cookies, pero
@@ -39,8 +40,10 @@ export const metadata: Metadata = {
 // (mmastatus.app) y se borra con sus datos. Por eso el punto 3 lo cuenta así
 // y no dice «medido en Chrome».
 //
-// Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): UFC TV y el
-// directo arrancan solos; el careo oficial (/en-vivo y /eventos/[id]), el
+// Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): los shorts del
+// hero de la portada, UFC TV y el directo arrancan solos, de uno en uno, con
+// el turnero (playback-turn.ts), y con menos movimiento ninguno monta su
+// iframe hasta el toque; el careo oficial (/en-vivo y /eventos/[id]), el
 // pesaje (event-weigh-ins.tsx), /videos, /tendencias, la columna de la
 // portada y los combates esperan al clic. /gimnasios: api/gyms/route.ts manda
 // DESDE EL SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
@@ -234,8 +237,9 @@ export default function PrivacidadPage() {
           Europea o en el marco de adecuación aplicable.
         </p>
         <p>
-          <strong>Los vídeos: YouTube.</strong> UFC TV, el directo de la velada,
-          el careo oficial y el vídeo del pesaje (en /en-vivo y en la página de
+          <strong>Los vídeos: YouTube.</strong> Los shorts de la UFC de la
+          cabecera de la portada, UFC TV, el directo de la velada, el careo
+          oficial y el vídeo del pesaje (en /en-vivo y en la página de
           cada evento), /videos, /tendencias, la columna de vídeos de la portada y
           los vídeos de cada combate se ven con el reproductor de{" "}
           <strong>YouTube</strong>, un servicio de <strong>Google</strong> (en la
@@ -264,11 +268,15 @@ export default function PrivacidadPage() {
         </p>
         <ul className="ml-4 list-disc space-y-1.5">
           <li>
-            <strong>Lo que se carga solo.</strong> UFC TV (en la portada) y el
-            directo de la velada (en la portada, en /en-vivo y en la página del
-            evento) cargan el reproductor por sí mismos cuando su bloque entra en
-            pantalla, y arrancan sin sonido. Si tu sistema pide reducir el
-            movimiento, UFC TV no arranca, pero el reproductor se carga igual.
+            <strong>Lo que se carga solo.</strong> Los shorts de la UFC de la
+            cabecera de la portada, UFC TV (en la portada) y el directo de la
+            velada (en la portada, en /en-vivo y en la página del evento) cargan
+            el reproductor por sí mismos cuando se ve más de la mitad de él, y
+            arrancan sin sonido. Nunca hay más de uno a la vez. Los shorts van
+            uno tras otro, y cuando uno no se está reproduciendo se ve su
+            miniatura, que se descarga de un servidor de YouTube (i.ytimg.com).
+            Si tu sistema pide reducir el movimiento, no se carga ningún
+            reproductor hasta que lo pulses.
           </li>
           <li>
             <strong>Lo que espera a que pulses.</strong> En el careo oficial y
