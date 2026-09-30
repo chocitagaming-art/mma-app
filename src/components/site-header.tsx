@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 
 import { LiveNavChip } from "@/components/live/live-nav-chip";
+import { useTurnBlocker } from "@/components/playback/playback-turn-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -180,6 +181,24 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
+  // While the mobile menu is open no YouTube player plays (the turn manager
+  // unmounts them; see components/playback): it covers what is behind it.
+  useTurnBlocker("menu", open);
+
+  // The menu (and its hamburger) is lg:hidden: if the window grows past lg
+  // while it is open, close it, or the invisible menu would keep every player
+  // blocked with no button left to close it.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const handleChange = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", handleChange);
+    return () => desktop.removeEventListener("change", handleChange);
+  }, [open]);
 
   // Cerrar el menú móvil con Escape mientras está abierto (el setState ocurre en
   // el handler del evento, no de forma síncrona en el efecto). Al cerrar, devuelve
