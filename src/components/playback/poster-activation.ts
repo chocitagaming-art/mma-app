@@ -37,9 +37,9 @@ export function isModifiedClick(click: ClickLike): boolean {
  * Does the poster take this click from its link (to mount the player here)?
  * Only a plain one, on a poster that CAN play here. The hero under 200x200 (a
  * screen under 340 px) cannot: it is a link all the way, and never asks the
- * turn manager. It used to, and the turn manager looks at the menu and at
- * «ready» BEFORE the size: during the hero's intro, or under the open menu,
- * the answer was "not-ready" or "blocked" and the tap did nothing.
+ * turn manager. It used to, and the turn manager looks at the menu BEFORE the
+ * size: under the open menu the answer was "blocked" (and during the hero's
+ * intro, until 30-sep-2026, "not-ready") and the tap did nothing.
  */
 export function interceptsClick(click: ClickLike, playsHere: boolean): boolean {
   return playsHere && !isModifiedClick(click);
@@ -57,8 +57,9 @@ export function isKeyboardClick(click: { detail: number }): boolean {
 // For a poster that plays here (interceptsClick). "play-here": the player
 // mounts in place and the link must NOT open YouTube. "youtube": the turn
 // manager measured it under 200x200 (no legal inline player), so the link does
-// what it says (it replaces the old window.open of that case). "nothing": not
-// ready, blocked by a menu... the tap does nothing, as it did before the link.
+// what it says (it replaces the old window.open of that case). "nothing":
+// blocked by the open menu, or a player it does not know: the tap does
+// nothing, as it did before the link.
 export type PosterOutcome = "play-here" | "youtube" | "nothing";
 
 /** What the poster does with the turn manager's answer to the visitor's start. */
@@ -71,8 +72,9 @@ export function posterOutcome(result: StartResult): PosterOutcome {
 /**
  * After the commit that follows a KEYBOARD start: the element to focus, from
  * the turn's box (the TurnSlot <div>, which stays while its poster turns into
- * the iframe). Only a mounted player the VISITOR holds; an automatic one would
- * be marked «touched» by the focus, and the carousel timer would stop for good.
+ * the iframe). Only a mounted player the VISITOR holds; an automatic one (UFC
+ * TV, the broadcast) would be marked «touched» by the focus, and would stay
+ * as the visitor's: out of view, with the tab hidden, under the menu.
  */
 export function playerToFocus<T>(
   slot: { querySelector(selectors: "iframe"): T | null } | null,

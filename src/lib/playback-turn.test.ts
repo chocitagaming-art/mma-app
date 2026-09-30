@@ -5,7 +5,6 @@ import {
   decideTurn,
   fitsMinimum,
   loopEmbedUrl,
-  mayAutoplay,
   orderShorts,
   shortEmbedUrl,
   timerAction,
@@ -14,35 +13,40 @@ import {
 } from "@/lib/playback-turn";
 
 // Table tests for the pure turn logic. Ported one to one from the mockup
-// (maqueta-shorts/turno.test.js, 47 tests on 29-sep-2026): every case is kept,
-// with the same inputs and the same expected output. The only change is the
-// field name of orderShorts (`formato` → `format`, the shape of UfcShort).
-// On 30-sep-2026 the visitor's rules changed in both tables the same way
-// (DECISIONS.md: what the visitor chose is theirs, and only autoplay obeys
-// the tab, the menu and the half-visible rule).
+// (maqueta-shorts/turno.test.js, 47 tests on 29-sep-2026), with the same
+// inputs and expected outputs; the only rename is orderShorts' field
+// (`formato` → `format`, the shape of UfcShort). The rules changed twice on
+// 30-sep-2026, in both tables the same way (DECISIONS.md):
+//   · what the visitor chose is theirs, and only autoplay obeys the tab, the
+//     menu and the half-visible rule;
+//   · that night, the hero short stopped starting on its own: it plays only
+//     when the visitor starts it, and when it ends no other one starts. UFC
+//     TV and the event's broadcast still start on their own. «Pausar» went
+//     with it (nothing moves on its own any more), and so did `paused`.
 
 const NOW = 100_000;
 
 // A player at `ratio` visible. `since`: how many ms it has been MORE than half
 // visible (null = it is not). By default it follows the ratio, as the
 // IntersectionObserver does; passing it tests the ratio check on its own.
+// `autoStart`, as in production: every player but the hero short.
 function player(
   id: string,
   ratio: number,
   {
     since = ratio > 0.5 ? 1000 : null,
     area = null,
-    paused = false,
     eligible = true,
-  }: { since?: number | null; area?: number | null; paused?: boolean; eligible?: boolean } = {},
+    autoStart = id !== "hero",
+  }: { since?: number | null; area?: number | null; eligible?: boolean; autoStart?: boolean } = {},
 ): TurnPlayer {
   return {
     id,
     priority: PRIORITY[id] ?? 0,
+    autoStart,
     ratio,
     area: area ?? Math.round(ratio * 100_000),
     aboveSince: since == null ? null : NOW - since,
-    paused,
     eligible,
   };
 }
@@ -66,34 +70,58 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     want: null,
   },
   {
-    name: "hero more than half visible for 400 ms: it autoplays",
-    s: state([player("hero", 0.8, { since: 400 }), player("tv-bucle", 0)]),
-    want: { id: "hero", owner: "auto" },
+    name: "UFC TV more than half visible for 400 ms: it starts on its own",
+    s: state([player("hero", 0), player("tv-bucle", 0.8, { since: 400 })]),
+    want: { id: "tv-bucle", owner: "auto" },
   },
   {
-    name: "hero visible for only 399 ms: it waits",
-    s: state([player("hero", 0.8, { since: 399 })]),
+    name: "UFC TV visible for only 399 ms: it waits",
+    s: state([player("tv-bucle", 0.8, { since: 399 })]),
     want: null,
   },
   {
     // With aboveSince set: only the ratio check can say no.
     name: "exactly half visible is not «more than half»",
-    s: state([player("hero", 0.5, { since: 1000 })]),
+    s: state([player("tv-bucle", 0.5, { since: 1000 })]),
     want: null,
   },
   {
     name: "an automatic holder at exactly half is unmounted",
-    s: state([player("hero", 0.5, { since: 1000 })], { current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 0.5, { since: 1000 })], { current: { id: "tv-bucle", owner: "auto" } }),
+    want: null,
+  },
+  // ── The hero short never starts on its own (the owner, 30-sep-2026, night) ──
+  {
+    name: "the hero short never starts on its own, not even fully in view for a minute",
+    s: state([player("hero", 1, { since: 60_000, area: 200_000 })]),
     want: null,
   },
   {
+    name: "the hero short is no candidate: UFC TV starts even though the hero shows more",
+    s: state([player("hero", 1, { area: 200_000 }), player("tv-bucle", 0.6, { area: 90_000 })]),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    // It cannot happen (only the visitor mounts the hero), and if a state
+    // ever said so the rule still holds.
+    name: "an automatic holder that may not start on its own is dropped",
+    s: state([player("hero", 1)], { current: { id: "hero", owner: "auto" } }),
+    want: null,
+  },
+  {
+    name: "and UFC TV above half takes that turn in the same render",
+    s: state([player("hero", 1), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "auto" } }),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  // ── Hidden tab, blockers, reduced motion ──
+  {
     name: "hidden tab: the automatic holder goes",
-    s: state([player("hero", 1)], { pageVisible: false, current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 1)], { pageVisible: false, current: { id: "tv-bucle", owner: "auto" } }),
     want: null,
   },
   {
     name: "hidden tab and nobody holds it: nothing starts on its own",
-    s: state([player("hero", 1), player("tv-bucle", 1)], { pageVisible: false }),
+    s: state([player("evento", 1), player("tv-bucle", 1)], { pageVisible: false }),
     want: null,
   },
   {
@@ -105,12 +133,12 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   },
   {
     name: "a blocker is open (the menu): nothing starts on its own",
-    s: state([player("hero", 1), player("tv-bucle", 1)], { blocked: true }),
+    s: state([player("evento", 1), player("tv-bucle", 1)], { blocked: true }),
     want: null,
   },
   {
     name: "a blocker takes the automatic holder away",
-    s: state([player("hero", 0.9)], { blocked: true, current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 0.9)], { blocked: true, current: { id: "tv-bucle", owner: "auto" } }),
     want: null,
   },
   {
@@ -120,50 +148,55 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   },
   {
     name: "reduced motion: nothing starts on its own",
-    s: state([player("hero", 1), player("tv-bucle", 1)], { reducedMotion: true }),
+    s: state([player("evento", 1), player("tv-bucle", 1)], { reducedMotion: true }),
     want: null,
   },
   {
     name: "reduced motion also stops the automatic player that is already on",
-    s: state([player("hero", 1)], { reducedMotion: true, current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 1)], { reducedMotion: true, current: { id: "tv-bucle", owner: "auto" } }),
     want: null,
   },
+  // ── One at a time ──
   {
     name: "the automatic holder is unmounted as soon as it drops to half or less",
-    s: state([player("hero", 0.49), player("tv-bucle", 0)], { current: { id: "hero", owner: "auto" } }),
+    s: state([player("hero", 0), player("tv-bucle", 0.49)], { current: { id: "tv-bucle", owner: "auto" } }),
     want: null,
   },
+  // No page has two automatic players today (the home's slot shows ONE of
+  // the three; /en-vivo and the event page, the broadcast). The tie-break
+  // keeps the rule defined if one ever does.
   {
     name: "holder drops below half while another is above: swap in the same render",
-    s: state([player("hero", 0.3), player("tv-bucle", 0.7)], { current: { id: "hero", owner: "auto" } }),
-    want: { id: "tv-bucle", owner: "auto" },
+    s: state([player("tv-bucle", 0.3), player("evento", 0.7)], { current: { id: "tv-bucle", owner: "auto" } }),
+    want: { id: "evento", owner: "auto" },
   },
   {
     name: "the holder keeps the turn while above half, even if another shows more",
-    s: state([player("hero", 0.6, { area: 116_000 }), player("tv-bucle", 0.9, { area: 530_000 })], {
-      current: { id: "hero", owner: "auto" },
+    s: state([player("tv-bucle", 0.6, { area: 116_000 }), player("evento", 0.9, { area: 530_000 })], {
+      current: { id: "tv-bucle", owner: "auto" },
     }),
-    want: { id: "hero", owner: "auto" },
-  },
-  {
-    name: "nobody holds it and two are above half: the larger visible area wins",
-    s: state([player("hero", 0.6, { area: 116_000 }), player("tv-bucle", 0.9, { area: 530_000 })]),
     want: { id: "tv-bucle", owner: "auto" },
   },
   {
-    name: "same area: live event > UFC TV live > hero > UFC TV loop",
-    s: state([
-      player("tv-bucle", 1, { area: 200_000 }),
-      player("hero", 1, { area: 200_000 }),
-      player("tv-directo", 1, { area: 200_000 }),
-    ]),
-    want: { id: "tv-directo", owner: "auto" },
+    name: "nobody holds it and two are above half: the larger visible area wins",
+    s: state([player("evento", 0.6, { area: 116_000 }), player("tv-bucle", 0.9, { area: 530_000 })]),
+    want: { id: "tv-bucle", owner: "auto" },
   },
   {
-    name: "same area, hero against the loop: the hero",
-    s: state([player("tv-bucle", 0.8, { area: 90_000 }), player("hero", 0.9, { area: 90_000 })]),
-    want: { id: "hero", owner: "auto" },
+    name: "same area: live event > UFC TV live > UFC TV loop",
+    s: state([
+      player("tv-bucle", 1, { area: 200_000 }),
+      player("evento", 1, { area: 200_000 }),
+      player("tv-directo", 1, { area: 200_000 }),
+    ]),
+    want: { id: "evento", owner: "auto" },
   },
+  {
+    name: "same area, UFC TV live against the loop: the live one",
+    s: state([player("tv-bucle", 0.8, { area: 90_000 }), player("tv-directo", 0.9, { area: 90_000 })]),
+    want: { id: "tv-directo", owner: "auto" },
+  },
+  // ── What the visitor chose is theirs ──
   {
     name: "what the visitor started stays while any part of it is visible",
     s: state([player("hero", 0.2), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
@@ -178,7 +211,7 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   },
   {
     name: "out of view, tab hidden, a blocker and reduced motion at once: the visitor's still stays",
-    s: state([player("evento", 0), player("hero", 0.9)], {
+    s: state([player("evento", 0), player("tv-bucle", 0.9)], {
       pageVisible: false,
       blocked: true,
       reducedMotion: true,
@@ -191,24 +224,15 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     s: state([player("tv-bucle", 0.4)], { reducedMotion: true, current: { id: "tv-bucle", owner: "user" } }),
     want: { id: "tv-bucle", owner: "user" },
   },
-  {
-    name: "a paused player never starts on its own",
-    s: state([player("hero", 1, { paused: true }), player("tv-bucle", 0)]),
-    want: null,
-  },
-  {
-    name: "pausing the visitor's own player releases the turn",
-    s: state([player("hero", 1, { paused: true })], { current: { id: "hero", owner: "user" } }),
-    want: null,
-  },
+  // ── 200x200, and players that go away ──
   {
     name: "a player under 200x200 (not eligible) never gets a turn",
-    s: state([player("hero", 1, { eligible: false }), player("tv-bucle", 0.2)]),
+    s: state([player("tv-bucle", 1, { eligible: false }), player("evento", 0.2)]),
     want: null,
   },
   {
     name: "an automatic holder that shrinks under 200 px loses the turn",
-    s: state([player("hero", 0.9, { eligible: false })], { current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 0.9, { eligible: false })], { current: { id: "tv-bucle", owner: "auto" } }),
     want: null,
   },
   {
@@ -220,7 +244,13 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   },
   {
     name: "a holder that vanished from the list is dropped",
-    s: state([player("tv-bucle", 0.9)], { current: { id: "hero", owner: "auto" } }),
+    s: state([player("tv-bucle", 0.9)], { current: { id: "evento", owner: "auto" } }),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    // The hero unregisters (the visitor navigates away): the turn is free.
+    name: "the visitor's holder that vanished is dropped too",
+    s: state([player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
     want: { id: "tv-bucle", owner: "auto" },
   },
 ];
@@ -233,84 +263,30 @@ describe("decideTurn", () => {
   }
 });
 
-// mayAutoplay: may this player start a NEW automatic playback right now?
-// (every new short of the carousel is a new automatic start, rule 5)
-describe("mayAutoplay", () => {
-  it("hero above half for long enough: yes", () => {
-    expect(mayAutoplay(state([player("hero", 0.7)]), "hero")).toBe(true);
-  });
-
-  it("the visitor's hero at 20 %: the next short may NOT start on its own", () => {
-    const s = state([player("hero", 0.2)], { current: { id: "hero", owner: "user" } });
-    expect(mayAutoplay(s, "hero")).toBe(false);
-  });
-
-  it("reduced motion or hidden tab: no", () => {
-    expect(mayAutoplay(state([player("hero", 1)], { reducedMotion: true }), "hero")).toBe(false);
-    expect(mayAutoplay(state([player("hero", 1)], { pageVisible: false }), "hero")).toBe(false);
-  });
-
-  it("a blocker open or paused: no", () => {
-    expect(mayAutoplay(state([player("hero", 1)], { blocked: true }), "hero")).toBe(false);
-    expect(mayAutoplay(state([player("hero", 1, { paused: true })]), "hero")).toBe(false);
-  });
-
-  it("unknown id: no", () => {
-    expect(mayAutoplay(state([player("hero", 1)]), "nada")).toBe(false);
+// PRIORITY: the tie-break among AUTOMATIC players. The hero short is never
+// one, so it has none.
+describe("PRIORITY", () => {
+  it("only the players that start on their own, the event's broadcast first", () => {
+    expect(PRIORITY).not.toHaveProperty("hero");
+    expect(PRIORITY.evento).toBeGreaterThan(PRIORITY["tv-directo"]);
+    expect(PRIORITY["tv-directo"]).toBeGreaterThan(PRIORITY["tv-bucle"]);
   });
 });
 
-// timerAction: what the carousel timer may do when it fires (duration + 2.5 s
+// timerAction: what the hero's timer does when it fires (duration + 2.5 s
 // after the iframe's load). Without the JS API a short the visitor paused,
-// unmuted or put in full screen looks the same as one that ended (rule 7).
+// unmuted or put in full screen looks the same as one that ended.
 describe("timerAction", () => {
-  it("nobody touched it and rule 1 holds: the next short", () => {
-    const s = state([player("hero", 0.9)], { current: { id: "hero", owner: "auto" } });
-    expect(timerAction(s, "hero", false)).toBe("next");
+  it("untouched: back to its poster (which shows the next short), never a next short on its own", () => {
+    expect(timerAction(false)).toBe("release");
   });
 
-  it("the visitor touched it inside: it stays as they left it", () => {
-    const s = state([player("hero", 0.9)], { current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", true)).toBe("stay");
+  it("touched inside: it stays as the visitor left it (a pause looks like the end)", () => {
+    expect(timerAction(true)).toBe("stay");
   });
 
-  it("touched and now under half: it still stays (only the visitor takes it away)", () => {
-    const s = state([player("hero", 0.2)], { current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", true)).toBe("stay");
-  });
-
-  it("touched, out of view and with the tab hidden (PiP): it stays", () => {
-    const s = state([player("hero", 0)], { pageVisible: false, current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", true)).toBe("stay");
-  });
-
-  it("started with a tap, untouched, tab hidden: back to the poster (the next short would start on its own)", () => {
-    const s = state([player("hero", 0.9)], { pageVisible: false, current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", false)).toBe("release");
-  });
-
-  // The carousel's exit of the visitor's player: a short they started with a
-  // tap and never touched inside ends like any other. Out of view (scrolled
-  // away, maybe in a PiP opened with the browser's own button) the next short
-  // could not start on its own, so it is the poster.
-  it("started with a tap, untouched, out of view with the tab visible: back to the poster at its end", () => {
-    const s = state([player("hero", 0), player("tv-bucle", 1)], { current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", false)).toBe("release");
-  });
-
-  it("started with «Siguiente» and now at 30 %: back to the poster", () => {
-    const s = state([player("hero", 0.3)], { current: { id: "hero", owner: "user" } });
-    expect(timerAction(s, "hero", false)).toBe("release");
-  });
-
-  it("reduced motion: the next short waits for a tap", () => {
-    const s = state([player("hero", 1)], { reducedMotion: true, current: { id: "hero", owner: "auto" } });
-    expect(timerAction(s, "hero", false)).toBe("release");
-  });
-
-  it("the sheet's short under 200x200: back to the poster", () => {
-    const s = state([player("hoja", 0.9, { eligible: false })], { current: { id: "hoja", owner: "user" } });
-    expect(timerAction(s, "hoja", false)).toBe("release");
+  it("those are the only two answers: nothing starts another short", () => {
+    expect([timerAction(false), timerAction(true)].sort()).toEqual(["release", "stay"]);
   });
 });
 
@@ -335,7 +311,7 @@ describe("fitsMinimum", () => {
 });
 
 // orderShorts: 9:16 only by default; with every format allowed the 4:5 ones go
-// second and fifth, so they show up early in the carousel.
+// second and fifth, so they show up early in the list.
 const V = (id: string) => ({ id, format: "9:16" });
 const F = (id: string) => ({ id, format: "4:5" });
 

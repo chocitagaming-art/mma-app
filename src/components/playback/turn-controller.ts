@@ -21,13 +21,15 @@ import {
 // mockup's page half (maqueta-shorts/escena.js, "The page"):
 //   · one IntersectionObserver for every player, with the sticky header band
 //     taken off the top (rootMargin), re-created when the header resizes;
-//   · a player that goes above half visible is re-evaluated DWELL_MS later;
+//   · a player that goes above half visible is re-evaluated DWELL_MS later
+//     (only the ones registered with autoStart may start on their own: UFC
+//     TV and the event's broadcast; the hero short never does);
 //   · hidden tab / pagehide → the automatic player is unmounted and comes
 //     back on its own; the visitor's stays (DECISIONS.md, 30-sep-2026);
 //   · prefers-reduced-motion → decideTurn never starts anything on its own;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
-//     the carousel timer leaves it alone. As a net, every decision and every
+//     the hero's timer leaves it alone. As a net, every decision and every
 //     tap on the page first look where the focus is (noticeTouch). Nothing is
 //     sent to YouTube: no postMessage, no iframe_api, no enablejsapi.
 //
@@ -68,11 +70,11 @@ export type PlayerRegistration = {
   // Defaults to PRIORITY[id] (lib/playback-turn.ts), or 0.
   priority?: number;
   element: Element;
-  // False while the player must not be mounted yet (fonts, intro animation).
-  // Defaults to true. Change it with setReady(): that re-evaluates at once,
-  // because a visitor who does not scroll sends no other event.
-  ready?: boolean;
-  // Called synchronously on every mount: the carousel picks its short here.
+  // May it start ON ITS OWN when it is seen (UFC TV, the event's broadcast)?
+  // Defaults to false: a player that does not ask only plays when the
+  // visitor starts it (the hero short).
+  autoStart?: boolean;
+  // Called synchronously on every mount: the hero picks its short here.
   onMount?: (owner: TurnOwner) => void;
 };
 
@@ -81,20 +83,18 @@ export type PlayerView = {
   owner: TurnOwner | null;
   // Grows on every mount: key the <iframe> on it so each mount is a new one.
   mountCount: number;
-  paused: boolean;
   touched: boolean;
 };
 
 // What a visitor's tap on the poster got. "too-small": under MIN_PLAYER_PX
-// there is no legal inline player, so the poster sends the visitor to the
-// sheet instead (as the mockup does). Nothing is mounted unless "started".
-export type StartResult = "started" | "too-small" | "not-ready" | "blocked" | "unknown";
+// there is no legal inline player, so the poster's link opens YouTube
+// instead. Nothing is mounted unless "started".
+export type StartResult = "started" | "too-small" | "blocked" | "unknown";
 
 export const IDLE_VIEW: PlayerView = Object.freeze({
   mounted: false,
   owner: null,
   mountCount: 0,
-  paused: false,
   touched: false,
 });
 
@@ -104,14 +104,13 @@ const THRESHOLDS = [0, HALF, 0.51, 1];
 type Entry = {
   id: string;
   priority: number;
+  autoStart: boolean;
   element: Element;
-  ready: boolean;
   onMount?: (owner: TurnOwner) => void;
   iframe: unknown;
   ratio: number;
   area: number;
   aboveSince: number | null;
-  paused: boolean;
   touched: boolean;
   mounted: boolean;
   owner: TurnOwner | null;
@@ -147,7 +146,6 @@ export function createTurnController(env: TurnEnvironment) {
       v.mounted === p.mounted &&
       v.owner === p.owner &&
       v.mountCount === p.mountCount &&
-      v.paused === p.paused &&
       v.touched === p.touched
     ) {
       return v;
@@ -156,7 +154,6 @@ export function createTurnController(env: TurnEnvironment) {
       mounted: p.mounted,
       owner: p.owner,
       mountCount: p.mountCount,
-      paused: p.paused,
       touched: p.touched,
     };
   }
@@ -179,7 +176,7 @@ export function createTurnController(env: TurnEnvironment) {
   }
 
   function eligible(p: Entry): boolean {
-    return p.ready && fitsMinimum(p.element.getBoundingClientRect());
+    return fitsMinimum(p.element.getBoundingClientRect());
   }
 
   function snapshot(): TurnState {
@@ -192,10 +189,10 @@ export function createTurnController(env: TurnEnvironment) {
       players: [...players.values()].map((p) => ({
         id: p.id,
         priority: p.priority,
+        autoStart: p.autoStart,
         ratio: p.ratio,
         area: p.area,
         aboveSince: p.aboveSince,
-        paused: p.paused,
         eligible: eligible(p),
       })),
     };
@@ -236,7 +233,7 @@ export function createTurnController(env: TurnEnvironment) {
 
   // Is the focus inside the holder's iframe? Then the visitor touched it
   // (sound, pause, full screen, PiP): from now on it is theirs, and the
-  // carousel timer leaves it as they left it. Returns whether it changed.
+  // hero's timer leaves it as they left it. Returns whether it changed.
   //
   // The window blur is the usual sign (windowBlurred), but WebKit fires it
   // only when a frame of the page had the focus before
@@ -290,15 +287,14 @@ export function createTurnController(env: TurnEnvironment) {
   }
 
   // What the visitor starts is theirs, but only in a legal player: the 200x200
-  // minimum holds for a tap too, and nothing mounts before the page is ready.
-  // A refused start leaves the current holder alone.
+  // minimum holds for a tap too. Nothing else is waited for: the hero short's
+  // ▶ is the only way to watch it. A refused start leaves the current holder
+  // alone.
   function userStart(id: string): StartResult {
     const p = players.get(id);
     if (!p) return "unknown";
     if (blockers.size > 0) return "blocked";
-    if (!p.ready) return "not-ready";
     if (!fitsMinimum(p.element.getBoundingClientRect())) return "too-small";
-    p.paused = false;
     const holder = current ? players.get(current.id) : undefined;
     if (holder) unmount(holder);
     current = null;
@@ -313,14 +309,13 @@ export function createTurnController(env: TurnEnvironment) {
       const p: Entry = {
         id: reg.id,
         priority: reg.priority ?? PRIORITY[reg.id] ?? 0,
+        autoStart: reg.autoStart ?? false,
         element: reg.element,
-        ready: reg.ready ?? true,
         onMount: reg.onMount,
         iframe: null,
         ratio: 0,
         area: 0,
         aboveSince: null,
-        paused: false,
         touched: false,
         mounted: false,
         owner: null,
@@ -373,15 +368,6 @@ export function createTurnController(env: TurnEnvironment) {
 
     evaluate,
 
-    // The page finished what the player waits for (fonts, intro animation), or
-    // started again. Re-evaluates now: the dwell timer may be long gone.
-    setReady(id: string, ready: boolean) {
-      const p = players.get(id);
-      if (!p || p.ready === ready) return;
-      p.ready = ready;
-      evaluate();
-    },
-
     headerResized() {
       observe();
     },
@@ -393,39 +379,20 @@ export function createTurnController(env: TurnEnvironment) {
 
     userStart,
 
-    pause(id: string) {
-      const p = players.get(id);
-      if (!p) return;
-      p.paused = true;
-      if (current?.id === id) {
-        unmount(p);
-        current = null;
-      }
-      evaluate();
-      commit();
-    },
-
-    // «Reanudar» = the visitor starts it again.
-    resume: userStart,
-
-    // The carousel timer of `id` fired (duration + 2.5 s after the iframe's
-    // load). null when that player no longer holds the turn.
+    // The hero short's timer of `id` fired (duration + 2.5 s after the
+    // iframe's load). "stay" (touched: theirs) or "release" (back to its
+    // poster; the turn is free, so an automatic player in view may start).
+    // null when that player no longer holds the turn.
     timerFired(id: string): TimerAction | null {
       const p = players.get(id);
       if (!p || !current || current.id !== id) return null;
       if (noticeTouch()) commit();
-      const action = timerAction(snapshot(), id, p.touched);
+      const action = timerAction(p.touched);
       if (action === "stay") return action;
       unmount(p);
-      if (action === "next") {
-        mount(p, "auto");
-        current = { id, owner: "auto" };
-        commit();
-      } else {
-        current = null;
-        evaluate();
-        commit();
-      }
+      current = null;
+      evaluate();
+      commit();
       return action;
     },
 

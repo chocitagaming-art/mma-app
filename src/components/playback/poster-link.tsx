@@ -34,8 +34,9 @@ import type { PlayerView, StartResult } from "@/components/playback/turn-control
 //   · Under 200x200 there is no legal inline player: the link does what it
 //     says (no window.open any more). The hero knows its size (playsHere
 //     false): then it is a plain link all the way and never asks the turn
-//     manager, whose "not-ready" during the intro used to swallow the tap.
-//     UFC TV and the broadcast ask, and a "too-small" answer lets it through.
+//     manager, whose "blocked" under the open menu (and "not-ready" during
+//     the hero's intro, until 30-sep-2026) used to swallow the tap. UFC TV and
+//     the broadcast ask, and a "too-small" answer lets it through.
 //   · A keyboard start sends the focus into the player it mounted (see
 //     useKeyboardStartFocus): the poster is replaced by the <iframe>, and the
 //     focus used to fall on <body>.
