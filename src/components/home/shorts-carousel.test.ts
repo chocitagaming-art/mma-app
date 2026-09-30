@@ -12,8 +12,8 @@ import {
 // The hero's list of shorts, in node. Who may play is lib/playback-turn.ts
 // (its own tests); this is only "which short" and "for how long". Since
 // 30-sep-2026 (night) nothing here moves on its own: the poster shows a short,
-// its ▶ plays it, «Siguiente ›» plays the one after, and at the end of a short
-// the poster shows the next one, waiting for a tap.
+// its ▶ plays it, «Siguiente ›» plays the one after the last one played, and at
+// the end of a short the poster shows the next one, waiting for a tap.
 
 describe("shortTimerMs", () => {
   it("is the duration plus 2.5 s, counted from the iframe's load", () => {
@@ -55,20 +55,39 @@ describe("createShortsCarousel", () => {
     const c = createShortsCarousel(5);
     c.queue(0);
     c.take();
-    expect(c.nextIndex(true)).toBe(1);
-    c.queue(c.nextIndex(true));
+    expect(c.nextIndex()).toBe(1);
+    c.queue(c.nextIndex());
     expect(c.take()).toBe(1);
-    expect(c.nextIndex(true)).toBe(2);
+    expect(c.nextIndex()).toBe(2);
   });
 
-  it("«Siguiente ›» from the poster: the one AFTER the poster's (the poster's is its ▶)", () => {
+  it("«Siguiente ›» before any short: the one AFTER the poster's (the poster's is its ▶)", () => {
     const c = createShortsCarousel(5);
     // Nothing played yet: the poster shows the first; «Siguiente ›» skips it.
-    expect(c.nextIndex(false)).toBe(1);
+    expect(c.getSnapshot().cursor).toBe(0);
+    expect(c.nextIndex()).toBe(1);
+  });
+
+  it("«Siguiente ›» once a short has ended: the one its poster shows, the next after it", () => {
+    const c = createShortsCarousel(5);
     c.queue(0);
     c.take();
-    // The first ended: the poster shows the second; «Siguiente ›», the third.
-    expect(c.nextIndex(false)).toBe(2);
+    // The first ended (the turn manager took its iframe away): the poster
+    // shows the second, and «Siguiente ›» plays that one, not the third.
+    expect(c.getSnapshot().cursor).toBe(1);
+    expect(c.nextIndex()).toBe(1);
+  });
+
+  it("letting each short end and tapping «Siguiente ›» plays them all, in order: none is skipped", () => {
+    const c = createShortsCarousel(4);
+    c.queue(c.getSnapshot().cursor); // the poster's ▶
+    const watched = [c.take()];
+    for (let i = 0; i < 4; i += 1) {
+      // That one ended: «Siguiente ›», from its poster.
+      c.queue(c.nextIndex());
+      watched.push(c.take());
+    }
+    expect(watched).toEqual([0, 1, 2, 3, 0]);
   });
 
   it("wraps around at the end of the list", () => {
@@ -78,8 +97,16 @@ describe("createShortsCarousel", () => {
       c.take();
     }
     expect(c.getSnapshot()).toEqual({ current: 2, cursor: 0 });
-    expect(c.nextIndex(true)).toBe(0);
-    expect(c.nextIndex(false)).toBe(1);
+    // Playing the last one, or once it has ended: the first again.
+    expect(c.nextIndex()).toBe(0);
+  });
+
+  it("with a single short, «Siguiente ›» plays that one", () => {
+    const c = createShortsCarousel(1);
+    expect(c.nextIndex()).toBe(0);
+    c.queue(c.nextIndex());
+    expect(c.take()).toBe(0);
+    expect(c.nextIndex()).toBe(0);
   });
 
   it("a visitor's start plays what they asked for, once", () => {

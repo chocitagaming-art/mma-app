@@ -19,9 +19,10 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 //     its own; never two autoplaying iframes at once (also watched between
 //     stops), never an AUTOMATIC one with half or less in view below the
 //     sticky header, never one under 200x200; and UFC TV does start alone;
-//   · the ▶ plays the poster's short, «Siguiente ›» the one after the short
-//     on screen, and a short that ends untouched goes back to the poster of
-//     the next one; one the visitor touched INSIDE stays at its end;
+//   · the ▶ plays the poster's short, «Siguiente ›» the one after the last
+//     one played, and a short that ends untouched goes back to the poster of
+//     the next one, which «Siguiente ›» plays too (none is skipped); one the
+//     visitor touched INSIDE stays at its end;
 //   · the ▶ works during the hero's entrance, with the headline's font still
 //     on its way (until 30-sep-2026 it did nothing then);
 //   · UFC TV makes way when the visitor puts a short on, and starts on its own
@@ -322,7 +323,7 @@ test("pulsar el ▶ reproduce aquí el short del póster, del visitante y sin so
   await expect(heroFrame(page)).not.toHaveClass(/animate-rise/);
 });
 
-test("«Siguiente ›» reproduce el siguiente: desde el póster, el de después del que enseña; con uno sonando, el de después de ese", async ({
+test("«Siguiente ›» reproduce el siguiente: al entrar, el de después del que enseña el póster; con uno sonando, el de después de ese", async ({
   page,
 }) => {
   await openHome(page, 1280, 800);
@@ -361,6 +362,31 @@ test("al acabar un short sin tocarlo, vuelve al póster, que enseña el siguient
   // Its ▶ plays the one it shows.
   await heroPoster(page).click();
   await expectHeroShort(page, SECOND_SHORT);
+});
+
+// What the owner was told on 30-sep-2026 (night): when a short ends nothing
+// starts, and to see more the visitor taps «Siguiente ›», which plays the
+// next one. Until the review of that night it played the one AFTER the
+// poster's, so letting each short end and tapping it skipped every other one.
+test("al acabar un short, «Siguiente ›» reproduce el que enseña el póster, el siguiente: no se salta ninguno", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openHome(page, 1280, 800);
+  await heroPoster(page).click();
+  await expectHeroShort(page, FIRST_SHORT);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster", {
+    timeout: FIRST_TIMER_MS + 10_000,
+  });
+  await expectHeroPosterShows(page, SECOND_SHORT);
+
+  await nextButton(page).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expectHeroShort(page, SECOND_SHORT);
+  // And with that one playing, the one after it.
+  await nextButton(page).click();
+  await expectHeroShort(page, THIRD_SHORT);
+  await expect(autoplaying(page)).toHaveCount(1);
 });
 
 test("un short tocado por dentro es del visitante: al acabar se queda como estaba", async ({ page }) => {

@@ -39,9 +39,10 @@ import { cn } from "@/lib/utils";
 //   · It never starts on its own (the owner's decision, 30-sep-2026, night):
 //     the hero shows the poster of the most recent short, and a short plays
 //     only when the visitor taps its ▶ or «Siguiente ›». When one ends, no
-//     other one starts: the poster shows the next short, for a tap. The
-//     player is still in the turn manager (lib/playback-turn.ts), so there is
-//     ONE player at a time: UFC TV makes way when the visitor puts a short on.
+//     other one starts: the poster shows the next short, for a tap (its ▶,
+//     or «Siguiente ›», which plays that same one). The player is still in
+//     the turn manager (lib/playback-turn.ts), so there is ONE player at a
+//     time: UFC TV makes way when the visitor puts a short on.
 //   · Muted (mute=1), as UFC TV. Measured on 30-sep-2026 with the real
 //     YouTube: under a strict autoplay policy (Chromium's
 //     user-gesture-required) the tap on this page does not carry into the new
@@ -259,9 +260,10 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
   );
 
   // The short the poster shows (the cursor) is the one its ▶ starts;
-  // «Siguiente ›», the one after the short on screen.
+  // «Siguiente ›», the one after the last one played: once a short has
+  // ended, the one its poster shows (none is skipped).
   const onPoster = () => start(snapshot.cursor);
-  const onNext = () => startFromControl(carousel.nextIndex(view.mounted));
+  const onNext = () => startFromControl(carousel.nextIndex());
 
   const playing = shorts[snapshot.current ?? 0];
   const shown = shorts[snapshot.cursor];

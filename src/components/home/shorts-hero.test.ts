@@ -144,8 +144,10 @@ describe("shorts-hero.tsx · source guard", () => {
     expect(code).toMatch(/rising=\{view\.mountCount === 0\}/);
   });
 
-  it("«Siguiente ›» plays the short after the one on screen, and no pause is left", () => {
-    expect(code).toMatch(/startFromControl\(carousel\.nextIndex\(view\.mounted\)\)/);
+  it("«Siguiente ›» plays the short after the last one played, and no pause is left", () => {
+    // Not "after the one on screen": once a short had ended, that skipped
+    // the one its poster shows (shorts-carousel.test.ts).
+    expect(code).toMatch(/startFromControl\(carousel\.nextIndex\(\)\)/);
     expect(code).not.toMatch(/pause|Pausar|Seguir|resumeIndex|posterIndex/);
   });
 });

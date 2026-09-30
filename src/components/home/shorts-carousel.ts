@@ -7,8 +7,8 @@
 // shortTimerMs, and the labels of render()). WHO may play and WHEN is not
 // decided here but in lib/playback-turn.ts. Since 30-sep-2026 (night) nothing
 // here moves on its own: the poster shows a short (the most recent one at
-// first), its ▶ plays it, «Siguiente ›» plays the one after the short on
-// screen, and when a short ends the poster shows the next one, for a tap.
+// first), its ▶ plays it, «Siguiente ›» plays the one after the last one
+// played, and when a short ends the poster shows the next one, for a tap.
 //
 // Why a tiny store and not React state: the turn manager calls onMount
 // synchronously and notifies its subscribers right after. A setState there
@@ -79,12 +79,14 @@ export function createShortsCarousel(length: number) {
     },
 
     /**
-     * «Siguiente ›»: the short after the one on screen. While one plays
-     * (mounted), the one after it, which is the cursor; on the poster, the
-     * one after the poster's, because the poster's is its own ▶.
+     * «Siguiente ›»: the short after the last one played. While one plays,
+     * the one after it; once that one has ended, the same short, which its
+     * poster now shows (both are the cursor): letting each short end and
+     * tapping «Siguiente ›» plays them all, none skipped. Before any, the one
+     * after the poster's, because the poster's is its own ▶.
      */
-    nextIndex(mounted: boolean): number {
-      return mounted ? snapshot.cursor : wrap(snapshot.cursor + 1);
+    nextIndex(): number {
+      return wrap((snapshot.current ?? snapshot.cursor) + 1);
     },
 
     getSnapshot(): CarouselSnapshot {
