@@ -14,7 +14,7 @@ export default function AvisoLegalPage() {
   return (
     <LegalPage
       titulo="Aviso legal"
-      actualizado="2 de agosto de 2026"
+      actualizado="30 de septiembre de 2026"
       entradilla={
         <>
           Condiciones de uso de <strong>mmastatus.app</strong>. Al navegar por esta
@@ -134,6 +134,30 @@ export default function AvisoLegalPage() {
           Los enlaces a sitios de terceros (fuentes, vídeos, retransmisiones) se
           ofrecen por comodidad. No se controla su contenido ni sus políticas, y su
           inclusión no implica ninguna relación con ellos.
+        </p>
+        <p>
+          Los vídeos de YouTube que se ven aquí (UFC TV, el directo de la velada,
+          el careo oficial y el vídeo del pesaje de /en-vivo y de cada evento,
+          /videos, /tendencias, la columna de vídeos de la portada y los vídeos de
+          cada combate) se incrustan con el{" "}
+          <strong>reproductor oficial de YouTube</strong>: los sirve YouTube desde
+          sus servidores y verlos queda sujeto a los{" "}
+          <a
+            href="https://www.youtube.com/t/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            Términos de servicio de YouTube
+          </a>
+          . Qué datos trata ese reproductor está en la{" "}
+          <Link
+            href="/privacidad"
+            className="text-primary underline-offset-2 hover:underline"
+          >
+            política de privacidad
+          </Link>{" "}
+          (punto 4).
         </p>
       </LegalSection>
 
