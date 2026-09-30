@@ -4,10 +4,18 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import { useTurnBlocker } from "@/components/playback/playback-turn-provider";
+
 // Large centered lightbox for playing a YouTube video over the whole page.
 // Mounts into document.body via a portal (avoids z-index/overflow traps of the
 // card grid). Closes on the ✕ button, the Escape key, or a click on the dim
 // backdrop. Locks body scroll and moves focus to the close button while open.
+//
+// It covers the page (an 80 % black backdrop), and YouTube wants nothing in
+// front of a player: while it is mounted (open) it is a blocker of the turn
+// manager, like the mobile menu. The automatic player (UFC TV, the event's
+// broadcast) goes back to its poster and returns on close; the one the
+// visitor started stays (components/playback).
 export function VideoModal({
   videoId,
   title,
@@ -18,6 +26,7 @@ export function VideoModal({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  useTurnBlocker("video-modal", true);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

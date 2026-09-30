@@ -44,7 +44,9 @@ import { cn } from "@/lib/utils";
 // when the visitor starts it and is in the turn so that there is still ONE
 // player at a time. Nothing else of the site starts a YouTube player on its
 // own: the click-to-play facades and the /videos modal mount only on a tap,
-// and stay outside the turn for now.
+// and stay outside the turn for now. The videos modal is a blocker, though
+// (useTurnBlocker, like the mobile menu): it covers the page, and nothing may
+// be in front of a player.
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -163,8 +165,9 @@ export function usePlaybackTurn(id: string) {
 }
 
 /**
- * While `active` (the mobile menu is open) the automatic player goes and
- * nothing starts, not even from a poster; the visitor's player stays.
+ * While `active` (the mobile menu is open, the videos modal is up) the
+ * automatic player goes and nothing starts, not even from a poster; the
+ * visitor's player stays.
  */
 export function useTurnBlocker(name: string, active: boolean) {
   const controller = useTurnController();
