@@ -60,7 +60,10 @@ test("la semifinal del Road to UFC de 9128 sale una sola vez, la de fights", asy
     contraVines,
     "el duplicado ESPN de la pelea 16146 vuelve a salir: revisa el NOT EXISTS",
   ).toHaveCount(1);
-  await expect(contraVines).toContainText("28 ago 2026");
+  // Identified by the event, not by the date: a date-only value is rendered
+  // one day earlier when the server runs east of UTC (the megatest runs in
+  // Europe/Madrid and paints "27 ago 2026"; production, in UTC, "28 ago 2026").
+  await expect(contraVines).toContainText("Road To UFC: Maheshate vs. Flowers");
   // La que sobrevive es la de `fights` (UFC), no la copia de ESPN.
   await expect(badgeDePromocion(contraVines)).toHaveAttribute("title", "UFC");
 
