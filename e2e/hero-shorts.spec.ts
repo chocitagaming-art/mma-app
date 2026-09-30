@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
+import { fakeYouTubeEmbeds, needsUfcTvLoop, whyNoUfcTvLoop } from "./helpers";
 
 // ── The home hero's shorts and the turn manager, in a real browser ─────────
 //
@@ -37,8 +37,11 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 // «fixShort-NN», fixShort-01 lasts 15 s) and so is UFC TV (UFC_TV_FIXTURE=
 // loop); every iframe loads the fake YouTube of e2e/helpers.ts. The live strip
 // depends on the real calendar and is switched off. 🪤 Whether the home shows
-// UFC TV at all is the PRODUCTION base's call: the tests that need it skip,
-// with the reason, when it does not (needsUfcTvLoop).
+// UFC TV at all is the PRODUCTION base's call. The tests ABOUT UFC TV skip,
+// with the reason, when it does not (needsUfcTvLoop). The ones about the hero
+// run all the same and leave out only UFC TV's own checks, with a «sin UFC
+// TV» note in the report (whyNoUfcTvLoop): until 30-sep-2026 the whole scroll
+// check of the hero skipped the week the owner pinned the event's broadcast.
 //
 // ⚠️ Y NADA de `test.only`: con CI=true, `forbidOnly` tumba la recolección.
 
@@ -106,6 +109,17 @@ async function openHome(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto("/");
   await expect(hero(page)).toBeVisible();
+}
+
+/**
+ * Whether UFC TV loops in the home's slot. When it does not (the production
+ * base's call), the report says why, «sin UFC TV», and the test goes on
+ * without UFC TV's own checks: what it says of the hero is still checked.
+ */
+async function ufcTvLoops(page: Page): Promise<boolean> {
+  const why = await whyNoUfcTvLoop(page);
+  if (why) test.info().annotations.push({ type: "sin UFC TV", description: why });
+  return why === null;
 }
 
 // Counts autoplaying iframes, and the hero's, on EVERY DOM change (and every
@@ -197,7 +211,9 @@ for (const [width, height] of VIEWPORTS) {
   }) => {
     test.setTimeout(240_000);
     await openHome(page, width, height);
-    await needsUfcTvLoop(page);
+    // Without UFC TV (the slot silenced, or the event's broadcast pinned in
+    // its place) the scroll still runs: the hero's checks do not need it.
+    const tvLoops = await ufcTvLoops(page);
     await watchIframes(page);
     // The hero is on the first screen at every one of these sizes, fully in
     // view for far longer than the dwell: it stays its poster.
@@ -280,10 +296,18 @@ for (const [width, height] of VIEWPORTS) {
     expect(watch.samples, "the iframe watcher never ran").toBeGreaterThan(0);
     expect(watch.max, "two autoplaying iframes at once between two stops").toBeLessThanOrEqual(1);
     expect(watch.hero, "the hero mounted a short on its own between two stops").toBe(0);
-    // UFC TV did play on the way, on its own: a run that mounted nothing at
-    // all would pass every check above.
-    expect(autoStops, "no automatic player at any stop").toBeGreaterThan(0);
-    expect([...seen], "UFC TV never played on its own").toContain("tv-bucle:playing-auto");
+    if (tvLoops) {
+      // UFC TV did play on the way, on its own: a run that mounted nothing at
+      // all would pass every check above.
+      expect(autoStops, "no automatic player at any stop").toBeGreaterThan(0);
+      expect([...seen], "UFC TV never played on its own").toContain("tv-bucle:playing-auto");
+    }
+    // And the watcher does see the hero's short when there is one (a tap):
+    // «never on its own» above is not a watcher that sees nothing.
+    await heroPoster(page).click();
+    await expect
+      .poll(async () => (await watched(page)).hero, { message: "the watcher missed the hero's short" })
+      .toBe(1);
   });
 }
 
@@ -413,6 +437,23 @@ test("un short tocado por dentro es del visitante: al acabar se queda como estab
   await expectHeroShort(page, SECOND_SHORT);
 });
 
+// In PiP, or with the sound on while reading further down: what the visitor
+// put on is theirs, out of view too (DECISIONS.md, 30-sep-2026). Only an
+// automatic player goes when it drops to half or less in view.
+test("el short que el visitante pone sigue montado fuera de la vista, como en PiP", async ({ page }) => {
+  await openHome(page, 1280, 800);
+  await heroPoster(page).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await markIframe(hero(page));
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(hero(page)).not.toBeInViewport();
+  await page.waitForTimeout(1_500);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(markedIframe(hero(page))).toHaveCount(1);
+  await expect(autoplaying(page)).toHaveCount(1);
+});
+
 // Until 30-sep-2026 the hero took no start until its headline's font had
 // loaded and its entrance animation was over (up to 1.5 s, or the font's
 // download on a slow network): the ▶ answered "not-ready" and did nothing.
@@ -500,7 +541,7 @@ test("UFC TV arranca solo cuando se ve, se aparta si el visitante pone un short,
   expect(watch.max, "two autoplaying iframes at once").toBeLessThanOrEqual(1);
 });
 
-test("el short que el visitante pone sigue montado fuera de la vista, y UFC TV espera con su ▶ hasta que lo elige", async ({
+test("UFC TV, entero a la vista, espera con su ▶ mientras el short del visitante sigue montado, y elegirlo quita el short", async ({
   page,
 }) => {
   await openHome(page, 1280, 800);
@@ -558,14 +599,13 @@ test("UFC TV tocado por dentro es del visitante: sigue con la pestaña oculta y 
 });
 
 // ── The hidden tab and the back/forward cache ──────────────────────────────
+//
+// What goes is the AUTOMATIC player; what the visitor put on stays. Two
+// tests, so the visitor's half does not skip when the base leaves UFC TV out.
 
-test("la pestaña oculta quita UFC TV, que vuelve solo; el short que puso el visitante sigue montado, el mismo iframe", async ({
-  page,
-}) => {
+test("la pestaña oculta quita UFC TV (automático), que vuelve solo", async ({ page }) => {
   await openHome(page, 1280, 800);
   await needsUfcTvLoop(page);
-
-  // Automatic: gone while hidden, back on its own.
   await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
   await setTabHidden(page, true);
@@ -573,10 +613,14 @@ test("la pestaña oculta quita UFC TV, que vuelve solo; el short que puso el vis
   await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
   await setTabHidden(page, false);
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+});
 
-  // The visitor's short: it stays while hidden (sound in the background,
-  // PiP), and it is the same iframe when the tab comes back.
-  await page.evaluate(() => window.scrollTo(0, 0));
+test("con la pestaña oculta, el short que puso el visitante sigue montado, el mismo iframe", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 800);
+  // It stays while hidden (sound in the background, PiP), and it is the same
+  // iframe when the tab comes back.
   await heroPoster(page).click();
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expectHeroShort(page, FIRST_SHORT);
@@ -623,34 +667,38 @@ test("un pagehide hacia la caché de atrás/adelante solo quita el automático: 
 });
 
 // ── The mobile menu (site-header.tsx, a blocker of the turn manager) ───────
+//
+// The same split: the open menu takes the automatic player away, and leaves
+// what the visitor put on.
 
-test("a 390 px, el menú móvil quita UFC TV (automático), que vuelve al cerrarlo, pero no el short que el visitante puso", async ({
-  page,
-}) => {
+// By aria-controls: its name goes from «Abrir menú» to «Cerrar menú».
+const hamburger = (page: Page) => page.locator('button[aria-controls="mobile-nav"]');
+const mobileMenu = (page: Page) => page.locator("#mobile-nav");
+
+test("a 390 px, el menú móvil quita UFC TV (automático), que vuelve al cerrarlo", async ({ page }) => {
   await openHome(page, 390, 844);
   await needsUfcTvLoop(page);
-  // By aria-controls: its name goes from «Abrir menú» to «Cerrar menú».
-  const hamburger = page.locator('button[aria-controls="mobile-nav"]');
-  const menu = page.locator("#mobile-nav");
-
-  // Automatic: the open menu takes it away; closed, it comes back on its own.
+  const menu = mobileMenu(page);
   await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
-  await hamburger.click();
+  await hamburger(page).click();
   await expect(menu).toBeVisible();
   await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
   await expect(page.locator("iframe")).toHaveCount(0);
-  await hamburger.click();
+  await hamburger(page).click();
   await expect(menu).toBeHidden();
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+});
 
-  // The visitor's short: the menu leaves it playing, the same iframe, open
-  // and closed.
-  await page.evaluate(() => window.scrollTo(0, 0));
+test("a 390 px, el menú móvil no quita el short que el visitante puso: el mismo iframe, abierto y cerrado", async ({
+  page,
+}) => {
+  await openHome(page, 390, 844);
+  const menu = mobileMenu(page);
   await heroPoster(page).click();
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await markIframe(hero(page));
-  await hamburger.click();
+  await hamburger(page).click();
   await expect(menu).toBeVisible();
   await page.waitForTimeout(1_000);
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
@@ -667,7 +715,7 @@ test("con menos movimiento solo hay pósters, hasta que el visitante toca", asyn
   test.setTimeout(120_000);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openHome(page, 1280, 800);
-  await needsUfcTvLoop(page);
+  const tvLoops = await ufcTvLoops(page);
   await watchIframes(page);
   await expect(
     hero(page).getByRole("button", { name: /^Toca para reproducir\. Short de la UFC: / }),
@@ -681,10 +729,12 @@ test("con menos movimiento solo hay pósters, hasta que el visitante toca", asyn
     await page.evaluate((top) => window.scrollTo(0, top), y);
     await page.waitForTimeout(500);
   }
-  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
-  await page.waitForTimeout(1_000);
-  await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
-  await expect(tv(page).getByRole("button", { name: /^Toca para reproducir\. / })).toBeVisible();
+  if (tvLoops) {
+    await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(1_000);
+    await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+    await expect(tv(page).getByRole("button", { name: /^Toca para reproducir\. / })).toBeVisible();
+  }
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(1_000);
   await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
@@ -756,14 +806,18 @@ async function focusByKeyboard(page: Page, button: Locator) {
   ).toBe(true);
 }
 
-test("el anillo del foco del teclado se ve dentro del póster del short y del de UFC TV", async ({
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await openHome(page, 1280, 800);
-  await needsUfcTvLoop(page);
+// One test per poster: the short's does not skip when the base leaves UFC TV
+// out of the home.
+for (const [name, slotOf] of [
+  ["del short del hero", hero],
+  ["de UFC TV", tv],
+] as const) {
+  test(`el anillo del foco del teclado se ve dentro del póster ${name}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openHome(page, 1280, 800);
+    if (slotOf === tv) await needsUfcTvLoop(page);
+    const slot = slotOf(page);
 
-  for (const slot of [hero(page), tv(page)]) {
     await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
     await expect(slot).toHaveAttribute("data-turn-state", "poster");
     const button = slot.getByRole("button", { name: /^Toca para reproducir\./ });
@@ -776,9 +830,8 @@ test("el anillo del foco del teclado se ve dentro del póster del short y del de
       await ringCoverage(page, slot),
       "the focus ring is not painted inside the box on every edge",
     ).toBeGreaterThan(0.9);
-    await button.blur();
-  }
-});
+  });
+}
 
 // «Siguiente ›» is a button outside the frame: the global ring, 2 px outside
 // it, is not clipped by anything. Checked with the keyboard, on its style.

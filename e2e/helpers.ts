@@ -196,25 +196,38 @@ button{display:block;width:100%;height:100%;border:0;background:transparent;colo
  * needs it too, now that UFC TV is the only player that starts on its own.
  */
 export async function needsUfcTvLoop(page: Page): Promise<void> {
+  const why = await whyNoUfcTvLoop(page);
+  test.skip(why !== null, why ?? "");
+}
+
+/**
+ * The same guards, without skipping: null when UFC TV loops in the home's
+ * slot, or why it does not (a legitimate state of the production base). For
+ * a test whose main subject is not UFC TV: it checks that subject all the
+ * same and leaves out only UFC TV's own checks (e2e/hero-shorts.spec.ts: the
+ * hero never starting on its own must not stop being checked the week the
+ * owner pins the event's broadcast). A slot that is neither of those states
+ * nor the loop is still a red: the server was started without the fixture.
+ */
+export async function whyNoUfcTvLoop(page: Page): Promise<string | null> {
   const eventSlot = page.getByRole("heading", { name: "Retransmisión oficial", includeHidden: true });
   const block = page.locator("section[data-ufc-tv]");
   // The invisible mark the slot leaves when it is silent ON PURPOSE.
   const silenced = page.locator("[data-live-slot]");
   await expect(eventSlot.or(block).or(silenced).first()).toBeAttached();
 
-  const reason = (await silenced.count()) > 0 ? await silenced.getAttribute("data-live-slot") : null;
-  test.skip(
-    reason !== null,
-    `el hueco se calla a propósito (${reason}): lo manda events.live_video_id, no UFC TV`,
-  );
-  test.skip(
-    (await eventSlot.count()) > 0,
-    "el próximo evento tiene live_video_id a mano: manda la columna, no UFC TV",
-  );
+  if ((await silenced.count()) > 0) {
+    const reason = await silenced.getAttribute("data-live-slot");
+    return `el hueco se calla a propósito (${reason}): lo manda events.live_video_id, no UFC TV`;
+  }
+  if ((await eventSlot.count()) > 0) {
+    return "el próximo evento tiene live_video_id a mano: manda la columna, no UFC TV";
+  }
   await expect(
     block,
     "UFC TV no está en bucle: ¿el server se arrancó sin UFC_TV_FIXTURE=loop?",
   ).toHaveAttribute("data-ufc-tv", "loop");
+  return null;
 }
 
 export async function fakeYouTubeEmbeds(page: Page): Promise<string[]> {
