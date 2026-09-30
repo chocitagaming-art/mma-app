@@ -28,8 +28,9 @@ import { cn } from "@/lib/utils";
 //
 // This file is only wiring: it hands the real browser to the controller
 // (turn-controller.ts) and forwards DOM events to it —visibilitychange,
-// pagehide/pageshow, window blur, the reduced-motion media query and the
-// header's ResizeObserver—. Who may play is decided in lib/playback-turn.ts.
+// pagehide/pageshow, window blur, every pointerdown on the page, the
+// reduced-motion media query and the header's ResizeObserver—. Who may play
+// is decided in lib/playback-turn.ts.
 // Both are tested in node (turn-controller.test.ts, playback-turn.test.ts);
 // this file is covered by the e2e once it is wired into a page.
 //
@@ -88,11 +89,16 @@ export function PlaybackTurnProvider({
     controller.start();
 
     const onVisibility = () => controller.setPageVisible(document.visibilityState === "visible");
+    // pagehide may be the page going into the back/forward cache, to come
+    // back as it was: like a hidden tab, only the automatic player goes and
+    // the visitor's stays mounted. On a real unload nothing is left to stop.
     const onPageHide = () => controller.setPageVisible(false);
     const onPageShow = () => {
       if (document.visibilityState === "visible") controller.setPageVisible(true);
     };
     const onBlur = () => controller.windowBlurred();
+    // Capture phase: it runs before the tap moves the focus out of an iframe.
+    const onPointerDown = () => controller.pagePointerDown();
     const motion = window.matchMedia(REDUCED_MOTION_QUERY);
     const onMotion = () => controller.reducedMotionChanged();
 
@@ -100,6 +106,7 @@ export function PlaybackTurnProvider({
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
     window.addEventListener("blur", onBlur);
+    window.addEventListener("pointerdown", onPointerDown, true);
     motion.addEventListener("change", onMotion);
 
     const header = document.querySelector(headerSelector);
@@ -111,6 +118,7 @@ export function PlaybackTurnProvider({
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pointerdown", onPointerDown, true);
       motion.removeEventListener("change", onMotion);
       headerObserver?.disconnect();
       controller.stop();
@@ -148,7 +156,10 @@ export function usePlaybackTurn(id: string) {
   };
 }
 
-/** While `active`, nothing plays (a menu or a full-screen sheet is open). */
+/**
+ * While `active` (the mobile menu is open) the automatic player goes and
+ * nothing starts, not even from a poster; the visitor's player stays.
+ */
 export function useTurnBlocker(name: string, active: boolean) {
   const controller = useTurnController();
   useEffect(() => {

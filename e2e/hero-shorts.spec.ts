@@ -15,8 +15,10 @@ import { fakeYouTubeEmbeds } from "./helpers";
 //     half or less in view below the sticky header, never one under 200x200;
 //   · «Pausar» stops the carousel, «Siguiente ›» moves it on, the timer moves
 //     it on by itself, and a short the visitor touched INSIDE stays theirs;
-//   · a hidden tab unmounts everything; what the visitor started waits for
-//     «Seguir»;
+//   · a hidden tab and the mobile menu take away the AUTOMATIC player only:
+//     what the visitor chose (a tap on a poster, or inside a player) stays,
+//     also out of view as in PiP, and nothing starts on its own meanwhile
+//     (DECISIONS.md, 30-sep-2026);
 //   · prefers-reduced-motion: only posters, until a tap.
 //
 // No network: the shorts are canned (UFC_SHORTS_FIXTURE=list, ids
@@ -121,6 +123,17 @@ async function clickCenter(locator: Locator, page: Page) {
   const box = await locator.boundingBox();
   expect(box, "no box to click").not.toBeNull();
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+}
+
+// Marks the slot's current <iframe>. A remount is a NEW iframe (TurnSlot keys
+// it on mountCount), so a marked one still there means it was never removed:
+// the video, its sound or its PiP window went on.
+async function markIframe(slot: Locator) {
+  await slot.locator("iframe").evaluate((el) => el.setAttribute("data-e2e-mark", "same"));
+}
+
+function markedIframe(slot: Locator) {
+  return slot.locator('iframe[data-e2e-mark="same"]');
 }
 
 // ── Scrolling in jumps (pruebas/saltos.js) ─────────────────────────────────
@@ -309,7 +322,7 @@ test("un short tocado por dentro es del visitante: el temporizador no lo cambia"
 
 // ── The hidden tab ─────────────────────────────────────────────────────────
 
-test("la pestaña oculta desmonta todo; el automático vuelve solo y el del visitante espera a «Seguir»", async ({
+test("la pestaña oculta quita el automático, que vuelve solo; el del visitante sigue montado, el mismo iframe", async ({
   page,
 }) => {
   await openHome(page, 1280, 800);
@@ -324,23 +337,21 @@ test("la pestaña oculta desmonta todo; el automático vuelve solo y el del visi
   // Every mount is a new iframe that takes the carousel's next short.
   await expectHeroShort(page, SECOND_SHORT);
 
-  // The visitor's: gone while hidden, and back it WAITS, fully in view.
+  // The visitor's: it stays while hidden (sound in the background, PiP), and
+  // it is the same iframe when the tab comes back. No «Seguir» to tap.
   await page.getByRole("button", { name: "Siguiente short" }).click();
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expectHeroShort(page, THIRD_SHORT);
+  await markIframe(hero(page));
   await setTabHidden(page, true);
-  await expect(page.locator("iframe")).toHaveCount(0);
-  await setTabHidden(page, false);
   await page.waitForTimeout(1_500);
-  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
-  await expect(autoplaying(page)).toHaveCount(0);
-  const seguir = hero(page).getByRole("button", { name: /^Seguir\. Short de la UFC: / });
-  await expect(seguir).toBeVisible();
-
-  // Its tap brings back the same short.
-  await seguir.click();
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(markedIframe(hero(page))).toHaveCount(1);
+  await setTabHidden(page, false);
+  await page.waitForTimeout(1_000);
+  await expect(markedIframe(hero(page))).toHaveCount(1);
   await expectHeroShort(page, THIRD_SHORT);
+  await expect(autoplaying(page)).toHaveCount(1);
 });
 
 test("la pestaña oculta también desmonta UFC TV", async ({ page }) => {
@@ -355,6 +366,102 @@ test("la pestaña oculta también desmonta UFC TV", async ({ page }) => {
   await expect(page.locator("iframe")).toHaveCount(0);
   await setTabHidden(page, false);
   await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  await expect(autoplaying(page)).toHaveCount(1);
+});
+
+// ── What the visitor chose is theirs (DECISIONS.md, 30-sep-2026) ───────────
+//
+// UFC TV and the event's live broadcast are the same player
+// (live-embed-player.tsx), so UFC TV stands for the Saturday broadcast here.
+
+test("el short que el visitante pone sigue montado fuera de la vista, y UFC TV espera con su ▶ hasta que lo elige", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 800);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  await page.getByRole("button", { name: "Siguiente short" }).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expectHeroShort(page, SECOND_SHORT);
+  await markIframe(hero(page));
+
+  // Out of view, as when the visitor scrolls with the short in PiP: it stays,
+  // and UFC TV, fully in view for far longer than the dwell, does not start.
+  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(1_500);
+  await expect(markedIframe(hero(page))).toHaveCount(1);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(1);
+
+  // Picking UFC TV is picking another player: the short goes, one at a time.
+  await tv(page).getByRole("button", { name: /^Toca para ver\. UFC TV/ }).click();
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(1);
+});
+
+test("UFC TV tocado por dentro es del visitante: sigue con la pestaña oculta y fuera de la vista, y el short no arranca solo", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 800);
+  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  // A tap INSIDE the automatic player (sound, full screen, PiP on the real one).
+  await clickCenter(tv(page).locator("iframe"), page);
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await markIframe(tv(page));
+
+  await setTabHidden(page, true);
+  await page.waitForTimeout(1_500);
+  await expect(markedIframe(tv(page))).toHaveCount(1);
+  await setTabHidden(page, false);
+
+  // Back to the top: UFC TV out of view, the hero fully in view.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(1_500);
+  await expect(markedIframe(tv(page))).toHaveCount(1);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(1);
+
+  // The visitor picks the short: UFC TV goes.
+  await hero(page).getByRole("button", { name: /^Toca para ver\. Short de la UFC: / }).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(1);
+});
+
+// ── The mobile menu (site-header.tsx, a blocker of the turn manager) ───────
+
+test("a 390 px, el menú móvil quita el short automático, que vuelve al cerrarlo, pero no el que el visitante tocó", async ({
+  page,
+}) => {
+  await openHome(page, 390, 844);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  // By aria-controls: its name goes from «Abrir menú» to «Cerrar menú».
+  const hamburger = page.locator('button[aria-controls="mobile-nav"]');
+  const menu = page.locator("#mobile-nav");
+
+  // Automatic: the open menu takes it away; closed, it comes back on its own.
+  await hamburger.click();
+  await expect(menu).toBeVisible();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await hamburger.click();
+  await expect(menu).toBeHidden();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+
+  // Touched inside: the menu leaves it playing, the same iframe, open and closed.
+  await clickCenter(hero(page).locator("iframe"), page);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await markIframe(hero(page));
+  await hamburger.click();
+  await expect(menu).toBeVisible();
+  await page.waitForTimeout(1_000);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expect(markedIframe(hero(page))).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(markedIframe(hero(page))).toHaveCount(1);
   await expect(autoplaying(page)).toHaveCount(1);
 });
 

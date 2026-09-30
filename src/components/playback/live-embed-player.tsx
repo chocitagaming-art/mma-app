@@ -30,8 +30,10 @@ import { cn } from "@/lib/utils";
 //     29-sep-2026), which YouTube's policies forbid.
 //   · prefers-reduced-motion: nothing starts on its own; the poster's ▶ does.
 //     (The event's broadcast did not honour it until now.)
-//   · A tap on the poster makes it the visitor's: it stays while any part of
-//     it is on screen. Hidden tab → removed; back, the poster says «Seguir».
+//   · A tap on the poster, or inside the automatic player, makes it the
+//     visitor's: it stays out of view (PiP), with the tab hidden and with the
+//     menu open, until they start another player (DECISIONS.md, 30-sep-2026).
+//     The automatic one goes back to its poster in all of those.
 //   · The same URL for every mount, automatic or the visitor's: autoplay=1,
 //     mute=1 (without it nothing starts, measured), playsinline=1.
 //
@@ -76,7 +78,7 @@ export function LiveEmbedPlayer({
   // ~232 px wide.
   watchUrl: string;
 }) {
-  const { view, userStart } = usePlaybackTurn(id);
+  const { userStart } = usePlaybackTurn(id);
   const reducedMotion = useSyncExternalStore(
     subscribeToReducedMotion,
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
@@ -89,7 +91,7 @@ export function LiveEmbedPlayer({
     }
   }, [userStart, watchUrl]);
 
-  const hint = view.waiting ? "Seguir" : reducedMotion ? "Toca para reproducir" : "Toca para ver";
+  const hint = reducedMotion ? "Toca para reproducir" : "Toca para ver";
 
   const poster = (
     <button

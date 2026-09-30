@@ -49,6 +49,8 @@ import { cn } from "@/lib/utils";
 //     (DECISIONS.md, 29-sep-2026): there is no "ended" event to listen to.
 //   · A short the visitor touched (a tap INSIDE the iframe: sound, pause, full
 //     screen) is theirs: the timer never changes it, «Siguiente ›» goes on.
+//     Theirs too, with a tap on the poster: out of view (PiP), with the tab
+//     hidden or under the menu it stays (DECISIONS.md, 30-sep-2026).
 //   · prefers-reduced-motion: only the poster with ▶; nothing starts alone.
 //   · The poster is the short's own i.ytimg.com thumbnail, WHOLE (object-
 //     contain, not cropped: the thumbnail may not be altered) with the ▶
@@ -251,16 +253,14 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     [carousel, shorts, userStart],
   );
 
-  const resting = view.paused || view.waiting;
-  const onPoster = () => start(resting ? carousel.resumeIndex() : carousel.nextIndex());
+  const onPoster = () => start(view.paused ? carousel.resumeIndex() : carousel.nextIndex());
   const onPauseToggle = () => (view.paused ? start(carousel.resumeIndex()) : pause());
   const onNext = () => start(carousel.nextIndex());
 
   const playing = shorts[snapshot.current ?? 0];
-  const shown = shorts[posterIndex(snapshot, view.paused, view.waiting)];
+  const shown = shorts[posterIndex(snapshot, view.paused)];
   const label = posterLabel({
     tooSmall,
-    waiting: view.waiting,
     paused: view.paused,
     reducedMotion,
   });

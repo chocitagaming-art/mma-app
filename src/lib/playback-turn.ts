@@ -3,7 +3,8 @@
 // the browser, on the server and in the tests.
 //
 // Ported one to one from the owner's mockup (maqueta-shorts/escena.js, 29-sep-
-// 2026, table tests in turno.test.js → lib/playback-turn.test.ts, 47 tests).
+// 2026, table tests in turno.test.js → lib/playback-turn.test.ts). The rules
+// for the visitor's player changed on 30-sep-2026 in both, the same way.
 // The browser wiring (IntersectionObserver, hidden tab, "touched" detection)
 // lives in components/playback/turn-controller.ts and only feeds this module.
 //
@@ -11,14 +12,24 @@
 // 29-sep-2026):
 //   - An automatic player is mounted only when MORE than half of it is visible
 //     (the sticky header band does not count) for DWELL_MS in a row.
-//   - At most ONE player mounted. An automatic one that drops to half or less
-//     is unmounted and leaves its poster.
-//   - Hidden tab or a blocker open (menu, sheet): nothing.
-//   - prefers-reduced-motion: nothing starts on its own.
+//   - At most ONE player mounted. An automatic one goes (back to its poster)
+//     when it drops to half or less, with the tab hidden, with a blocker open
+//     (the mobile menu) or with prefers-reduced-motion.
+//   - Hidden tab, a blocker or prefers-reduced-motion: nothing starts on its own.
 //   - Two candidates at once: the larger visible area wins, then PRIORITY.
-//   - What the visitor starts is theirs: it stays while any part of it is on
-//     screen, and only goes at 0 %, with the tab hidden or a blocker open.
-//   - No player under MIN_PLAYER_PX x MIN_PLAYER_PX.
+//   - No player under MIN_PLAYER_PX x MIN_PLAYER_PX, the visitor's included.
+//
+// What the visitor chose is theirs (the owner's decision, DECISIONS.md,
+// 30-sep-2026: YouTube's rules are about autoplay, not about what the visitor
+// chose to watch). The visitor's player is one they started with a tap on a
+// poster, or an automatic one they touched inside (sound, pause, full screen,
+// PiP). It stays out of view, with the tab hidden and under an open menu, and
+// nothing automatic starts while it holds the turn. It only goes when the
+// visitor starts another player (one at a time still) or pauses it with the
+// site's control, or when it drops under the 200x200 minimum. Out of view is
+// the PiP case: the page cannot see a PiP inside a cross-origin iframe, the
+// visitor scrolls or changes tab while it plays, and removing the iframe would
+// close it.
 //
 // No iframe_api, no enablejsapi, no postMessage (Developer Policies III.D.7:
 // no undocumented APIs): "stop" means removing the iframe, and the next short
@@ -88,22 +99,22 @@ function isAutoCandidate(p: TurnPlayer, now: number): boolean {
 
 /** Who may have a mounted player right now. Returns { id, owner } or null. */
 export function decideTurn(state: TurnState): Turn | null {
-  if (!state.pageVisible || state.blocked) return null;
+  const autoplayAllowed = state.pageVisible && !state.blocked && !state.reducedMotion;
 
   const current = state.current;
   const holder = current ? state.players.find((p) => p.id === current.id) : undefined;
   if (current && holder && holder.eligible && !holder.paused) {
-    // The visitor's player stays while any part of it is on screen.
-    if (current.owner === "user" && holder.ratio > 0) {
+    // The visitor's player is theirs: out of view, tab hidden, menu open.
+    if (current.owner === "user") {
       return { id: holder.id, owner: "user" };
     }
     // An automatic one only while MORE than half of it is visible.
-    if (current.owner === "auto" && !state.reducedMotion && holder.ratio > HALF) {
+    if (autoplayAllowed && holder.ratio > HALF) {
       return { id: holder.id, owner: "auto" };
     }
   }
 
-  if (state.reducedMotion) return null;
+  if (!autoplayAllowed) return null;
   const candidates = state.players.filter((p) => isAutoCandidate(p, state.now));
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.area - a.area || b.priority - a.priority);

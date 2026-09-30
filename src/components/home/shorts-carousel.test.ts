@@ -84,7 +84,7 @@ describe("createShortsCarousel", () => {
 });
 
 describe("the poster", () => {
-  const base = { tooSmall: false, waiting: false, paused: false, reducedMotion: false };
+  const base = { tooSmall: false, paused: false, reducedMotion: false };
 
   it("labels, in the mockup's order of precedence", () => {
     expect(posterLabel(base)).toBe("Toca para ver");
@@ -92,15 +92,25 @@ describe("the poster", () => {
     expect(posterLabel({ ...base, reducedMotion: true, paused: true })).toBe(
       "En pausa · toca para seguir",
     );
-    expect(posterLabel({ ...base, paused: true, waiting: true })).toBe("Seguir");
-    expect(posterLabel({ ...base, waiting: true, tooSmall: true })).toBe("Ver en YouTube");
+    expect(posterLabel({ ...base, paused: true, tooSmall: true })).toBe("Ver en YouTube");
+  });
+
+  it("no poster says «Seguir» after a hidden tab any more: the visitor's short is not taken away for it", () => {
+    // DECISIONS.md, 30-sep-2026: the turn manager only removes what started on
+    // its own. «Seguir» is left only on the «Pausar» button, outside the frame.
+    for (const tooSmall of [false, true]) {
+      for (const paused of [false, true]) {
+        for (const reducedMotion of [false, true]) {
+          expect(posterLabel({ tooSmall, paused, reducedMotion })).not.toBe("Seguir");
+        }
+      }
+    }
   });
 
   it("shows the paused short, or else the next one", () => {
-    expect(posterIndex({ current: null, cursor: 0 }, true, false)).toBe(0);
-    expect(posterIndex({ current: 3, cursor: 4 }, false, false)).toBe(4);
-    expect(posterIndex({ current: 3, cursor: 4 }, true, false)).toBe(3);
-    expect(posterIndex({ current: 3, cursor: 4 }, false, true)).toBe(3);
+    expect(posterIndex({ current: null, cursor: 0 }, true)).toBe(0);
+    expect(posterIndex({ current: 3, cursor: 4 }, false)).toBe(4);
+    expect(posterIndex({ current: 3, cursor: 4 }, true)).toBe(3);
   });
 
   it("under 200x200 the tap goes to the short on YouTube", () => {
