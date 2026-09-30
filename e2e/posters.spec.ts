@@ -30,6 +30,11 @@ import { fakeYouTubeEmbeds } from "./helpers";
 // poster is the same component as UFC TV's (live-embed-player.tsx), and its
 // server HTML is pinned in src/lib/live-embed-callsites.test.ts.
 //
+// 🪤 WHETHER THE HOME SHOWS UFC TV AT ALL IS THE PRODUCTION BASE'S CALL: the
+// fixture only cans YouTube, and events.live_video_id of the next event can
+// switch the slot off, or pin the event's broadcast (see needsUfcTvLoop). The
+// tests that need UFC TV skip then; the hero's do not depend on it.
+//
 // ⚠️ Y NADA de `test.only`: con CI=true, `forbidOnly` tumba la recolección.
 
 const FIRST_SHORT_URL = "https://www.youtube.com/shorts/fixShort-01";
@@ -67,7 +72,38 @@ async function openHome(page: Page, width = 1280, height = 800) {
   await page.setViewportSize({ width, height });
   await page.goto("/");
   await expect(hero(page)).toBeVisible();
-  await expect(page.locator("section[data-ufc-tv]")).toHaveAttribute("data-ufc-tv", "loop");
+}
+
+/**
+ * For the tests that need UFC TV in the home's slot. 🪤 The base is
+ * PRODUCTION's, and there are legitimate states without it: the owner switched
+ * the slot off ('off' in events.live_video_id), left a hand-written id without
+ * a title, or pinned one with its title (the column rules: planHomeSlot in
+ * lib/ufc-tv.ts). None is a regression of these posters, and a red here would
+ * block the megatest (and every deploy) that whole week: skip, with the
+ * reason. The same two guards as e2e/ufc-tv.spec.ts. Hidden blocks count: with
+ * JavaScript off the content stays in the skeleton's hidden blocks.
+ */
+async function needsUfcTvLoop(page: Page) {
+  const eventSlot = page.getByRole("heading", { name: "Retransmisión oficial", includeHidden: true });
+  const block = page.locator("section[data-ufc-tv]");
+  // The invisible mark the slot leaves when it is silent ON PURPOSE.
+  const silenced = page.locator("[data-live-slot]");
+  await expect(eventSlot.or(block).or(silenced).first()).toBeAttached();
+
+  const reason = (await silenced.count()) > 0 ? await silenced.getAttribute("data-live-slot") : null;
+  test.skip(
+    reason !== null,
+    `el hueco se calla a propósito (${reason}): lo manda events.live_video_id, no UFC TV`,
+  );
+  test.skip(
+    (await eventSlot.count()) > 0,
+    "el próximo evento tiene live_video_id a mano: manda la columna, no UFC TV",
+  );
+  await expect(
+    block,
+    "UFC TV no está en bucle: ¿el server se arrancó sin UFC_TV_FIXTURE=loop?",
+  ).toHaveAttribute("data-ufc-tv", "loop");
 }
 
 async function focusByKeyboard(page: Page, target: Locator) {
@@ -93,31 +129,48 @@ function focusIsOnPlayer(slot: Locator): Promise<boolean> {
 test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("los pósters son enlaces a YouTube, en otra pestaña (hoy tapados por el esqueleto)", async ({
+  async function expectNewTabLink(poster: Locator) {
+    await expect(poster).toHaveAttribute("target", "_blank");
+    await expect(poster).toHaveAttribute("rel", "noopener noreferrer");
+    // Without JavaScript it is what it does: a link, not a button.
+    expect(await poster.getAttribute("role")).toBeNull();
+  }
+
+  // The measurement of 30-sep-2026, as a note and not as an assert (it is a
+  // bug of its own, and these tests must not freeze it): is the poster seen?
+  async function noteIfSeen(poster: Locator, name: string) {
+    const seen = await poster.isVisible();
+    test.info().annotations.push({
+      type: "info",
+      description: `sin JavaScript el póster ${name} ${seen ? "SÍ" : "NO"} se ve (el esqueleto de loading.tsx)`,
+    });
+  }
+
+  test("el póster del short del hero es un enlace a YouTube, en otra pestaña (hoy tapado por el esqueleto)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/");
 
-    const heroPoster = posterOf(hero(page));
-    await expect(heroPoster).toHaveAttribute("href", FIRST_SHORT_URL);
-    const tvPoster = posterOf(tv(page));
-    await expect(tvPoster).toHaveAttribute("href", WATCH_URL);
-    for (const poster of [heroPoster, tvPoster]) {
-      await expect(poster).toHaveAttribute("target", "_blank");
-      await expect(poster).toHaveAttribute("rel", "noopener noreferrer");
-      // Without JavaScript it is what it does: a link, not a button.
-      expect(await poster.getAttribute("role")).toBeNull();
-    }
+    const poster = posterOf(hero(page));
+    await expect(poster).toHaveAttribute("href", FIRST_SHORT_URL);
+    await expectNewTabLink(poster);
     await expect(page.locator("iframe")).toHaveCount(0);
+    await noteIfSeen(poster, "del hero");
+  });
 
-    // The measurement of 30-sep-2026, as a note and not as an assert (it is a
-    // bug of its own, and this test must not freeze it): is the poster seen?
-    const seen = await tvPoster.isVisible();
-    test.info().annotations.push({
-      type: "info",
-      description: `sin JavaScript el póster de UFC TV ${seen ? "SÍ" : "NO"} se ve (el esqueleto de loading.tsx)`,
-    });
+  test("el póster de UFC TV es un enlace a YouTube, en otra pestaña (hoy tapado por el esqueleto)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    await needsUfcTvLoop(page);
+
+    const poster = posterOf(tv(page));
+    await expect(poster).toHaveAttribute("href", WATCH_URL);
+    await expectNewTabLink(poster);
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await noteIfSeen(poster, "de UFC TV");
   });
 });
 
@@ -138,6 +191,7 @@ test("con JavaScript pero sin los bundles, el póster abre el vídeo en YouTube"
   );
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
+  await needsUfcTvLoop(page);
 
   const poster = tv(page).getByRole("link", { name: TV_POSTER });
   await poster.scrollIntoViewIfNeeded();
@@ -158,6 +212,7 @@ test("con JavaScript, el clic monta el reproductor aquí, del primer vídeo del 
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openHome(page);
+  await needsUfcTvLoop(page);
   const slot = tv(page);
   await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
   // Hydrated: the click plays here, so it is announced as a button now.
@@ -233,6 +288,7 @@ for (const key of ["Enter", "Space"] as const) {
     // Reduced motion: nothing starts on its own, so the poster waits for us.
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openHome(page);
+    await needsUfcTvLoop(page);
     const slot = tv(page);
     await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
     const poster = slot.getByRole("button", { name: /^Toca para reproducir\. UFC TV/ });
@@ -269,6 +325,7 @@ test("Enter en el póster del short del hero: el foco entra en el short que mont
 test("con el ratón el foco no se mueve al reproductor", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openHome(page);
+  await needsUfcTvLoop(page);
   const slot = tv(page);
   await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
 
@@ -280,6 +337,7 @@ test("con el ratón el foco no se mueve al reproductor", async ({ page }) => {
 
 test("un montaje automático nunca se lleva el foco", async ({ page }) => {
   await openHome(page);
+  await needsUfcTvLoop(page);
   // The hero plays on its own; UFC TV waits below the fold.
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
   const next = page.getByRole("button", { name: "Siguiente short" });
