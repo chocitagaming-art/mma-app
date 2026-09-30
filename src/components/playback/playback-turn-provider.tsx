@@ -159,6 +159,15 @@ export function useTurnBlocker(name: string, active: boolean) {
 }
 
 /**
+ * For a poster button that fills its TurnSlot box. The box clips
+ * (overflow-hidden) and the global :focus-visible ring (globals.css) is drawn
+ * 2 px OUTSIDE the element, so on the poster it was clipped away whole: a
+ * keyboard user saw no focus at all (WCAG 2.4.7). This draws the same 2 px
+ * ring INSIDE the box, with square corners like the player.
+ */
+export const POSTER_FOCUS_CLASS = "focus-visible:rounded-none focus-visible:outline-offset-[-3px]";
+
+/**
  * One player's box: the poster, or the <iframe> while it holds the turn. The
  * box is what the turn manager measures (visible part, 200x200 minimum), so
  * give it the player's final size.

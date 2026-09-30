@@ -391,3 +391,86 @@ test("con menos movimiento solo hay pósters, hasta que el visitante toca", asyn
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expect(autoplaying(page)).toHaveCount(1);
 });
+
+// ── The keyboard focus ring on the posters (WCAG 2.4.7) ────────────────────
+//
+// The ▶ poster is a button that fills its TurnSlot box, and that box clips
+// (overflow-hidden). The global :focus-visible ring (globals.css) is drawn
+// 2 px OUTSIDE the element, so on these posters it was clipped away whole:
+// focused, matching :focus-visible, and nothing on screen. With reduced
+// motion the poster is the only way to start a player, so the ring has to be
+// drawn INSIDE the box. Checked on the painted pixels, not on the CSS.
+
+/** Share of each edge of the box that has ring-red pixels in its 4 px band. */
+async function ringCoverage(page: Page, slot: Locator) {
+  const png = (await slot.screenshot()).toString("base64");
+  return page.evaluate(async (data) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${data}`;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    const { data: px, width, height } = ctx.getImageData(0, 0, img.width, img.height);
+    // --ring: #d20a0a in the light theme.
+    const red = (x: number, y: number) => {
+      const i = (y * width + x) * 4;
+      return px[i] > 150 && px[i + 1] < 90 && px[i + 2] < 90;
+    };
+    const BAND = 4;
+    const edge = (length: number, at: (pos: number, depth: number) => [number, number]) => {
+      let hit = 0;
+      for (let pos = 0; pos < length; pos += 1) {
+        for (let d = 0; d < BAND; d += 1) {
+          const [x, y] = at(pos, d);
+          if (red(x, y)) {
+            hit += 1;
+            break;
+          }
+        }
+      }
+      return hit / length;
+    };
+    return Math.min(
+      edge(width, (x, d) => [x, d]),
+      edge(width, (x, d) => [x, height - 1 - d]),
+      edge(height, (y, d) => [d, y]),
+      edge(height, (y, d) => [width - 1 - d, y]),
+    );
+  }, png);
+}
+
+async function focusByKeyboard(page: Page, button: Locator) {
+  await button.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  expect(
+    await button.evaluate((el) => el === document.activeElement && el.matches(":focus-visible")),
+    "the poster did not get the keyboard focus",
+  ).toBe(true);
+}
+
+test("el anillo del foco del teclado se ve dentro del póster del short y del de UFC TV", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openHome(page, 1280, 800);
+
+  for (const slot of [hero(page), tv(page)]) {
+    await slot.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await expect(slot).toHaveAttribute("data-turn-state", "poster");
+    const button = slot.getByRole("button", { name: /^Toca para reproducir\./ });
+
+    // Unfocused: no red along the edges (so the check below means something).
+    expect(await ringCoverage(page, slot), "red on the edges before any focus").toBeLessThan(0.1);
+
+    await focusByKeyboard(page, button);
+    expect(
+      await ringCoverage(page, slot),
+      "the focus ring is not painted inside the box on every edge",
+    ).toBeGreaterThan(0.9);
+    await button.blur();
+  }
+});

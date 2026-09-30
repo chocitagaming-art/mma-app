@@ -19,7 +19,11 @@ import {
   shortTimerMs,
   shortWatchUrl,
 } from "@/components/home/shorts-carousel";
-import { TurnSlot, usePlaybackTurn } from "@/components/playback/playback-turn-provider";
+import {
+  POSTER_FOCUS_CLASS,
+  TurnSlot,
+  usePlaybackTurn,
+} from "@/components/playback/playback-turn-provider";
 import { fitsMinimum, shortEmbedUrl } from "@/lib/playback-turn";
 import { cn } from "@/lib/utils";
 
@@ -266,7 +270,10 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
       type="button"
       onClick={onPoster}
       aria-label={`${label}. Short de la UFC: ${shown.title}`}
-      className="group absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden bg-brand-ink text-brand-ink-foreground md:gap-4"
+      className={cn(
+        "group absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden bg-brand-ink text-brand-ink-foreground md:gap-4",
+        POSTER_FOCUS_CLASS,
+      )}
     >
       {/* The official thumbnail, whole and untouched (4:3 with the short in
           the middle); the ▶ goes under it, never on it. */}

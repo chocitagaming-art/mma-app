@@ -2,7 +2,12 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { TurnSlot, usePlaybackTurn } from "@/components/playback/playback-turn-provider";
+import {
+  POSTER_FOCUS_CLASS,
+  TurnSlot,
+  usePlaybackTurn,
+} from "@/components/playback/playback-turn-provider";
+import { cn } from "@/lib/utils";
 
 // The 16:9 player of UFC TV (components/home/ufc-tv.tsx) and of the event's
 // live broadcast (components/event-live-embed.tsx: home, /en-vivo and the
@@ -91,7 +96,10 @@ export function LiveEmbedPlayer({
       type="button"
       onClick={onPoster}
       aria-label={`${hint}. ${label}`}
-      className="group absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-brand-ink text-brand-ink-foreground"
+      className={cn(
+        "group absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-brand-ink text-brand-ink-foreground",
+        POSTER_FOCUS_CLASS,
+      )}
     >
       <span
         aria-hidden
