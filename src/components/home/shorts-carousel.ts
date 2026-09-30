@@ -1,18 +1,21 @@
-// The home hero's shorts carousel: WHICH short the next mount plays, and how
-// long it stays. Pure (no React, no DOM, no clock), so it runs in the node
-// tests; shorts-hero.tsx wires it to the turn manager.
+// The home hero's list of shorts: WHICH short the visitor's next start plays,
+// which one the poster shows, and how long one stays. Pure (no React, no DOM,
+// no clock), so it runs in the node tests; shorts-hero.tsx wires it to the
+// turn manager.
 //
 // Ported from the mockup (maqueta-shorts/escena.js: heroCursor, heroCurrent,
 // shortTimerMs, and the labels of render()). WHO may play and WHEN is not
-// decided here but in lib/playback-turn.ts: this module only answers "which
-// one" when the turn manager mounts the hero.
+// decided here but in lib/playback-turn.ts. Since 30-sep-2026 (night) nothing
+// here moves on its own: the poster shows a short (the most recent one at
+// first), its ▶ plays it, «Siguiente ›» plays the one after the last one
+// played, and when a short ends the poster shows the next one, for a tap.
 //
 // Why a tiny store and not React state: the turn manager calls onMount
-// synchronously and notifies its subscribers right after, from a timer or an
-// IntersectionObserver as often as from a click. A setState there could land
-// in a later render than the one that mounts the <iframe>, which would load
-// the OLD short first and then navigate it to the new one. Read through
-// useSyncExternalStore, this store is read in the SAME render that mounts it.
+// synchronously and notifies its subscribers right after. A setState there
+// could land in a later render than the one that mounts the <iframe>, which
+// would load the OLD short first and then navigate it to the new one. Read
+// through useSyncExternalStore, this store is read in the SAME render that
+// mounts it.
 
 // Player start-up margin on top of the duration. It counts from the iframe's
 // load and not from the first frame (without the JS API there is no way to
@@ -22,7 +25,7 @@ export const TIMER_EXTRA_MS = 2_500;
 // A short is 180 s at most (lib/ufc-shorts.ts); the cap guards a bad duration.
 export const TIMER_CAP_MS = 190_000;
 
-/** How long a short stays mounted before the carousel timer fires. */
+/** How long a short stays mounted before the hero's timer fires. */
 export function shortTimerMs(seconds: number): number {
   const ms = Math.max(0, seconds) * 1000 + TIMER_EXTRA_MS;
   return Math.min(ms, TIMER_CAP_MS);
@@ -31,7 +34,8 @@ export function shortTimerMs(seconds: number): number {
 export type CarouselSnapshot = {
   // The short on screen, or the last one played (null before the first).
   current: number | null;
-  // The short the next automatic mount plays.
+  // The short the poster shows, and its ▶ plays: the one after the last
+  // played (the most recent short before any).
   cursor: number;
 };
 
@@ -42,8 +46,8 @@ export function createShortsCarousel(length: number) {
     throw new Error("createShortsCarousel needs at least one short");
   }
   let snapshot: CarouselSnapshot = { current: null, cursor: 0 };
-  // What the visitor asked for (their ▶, «Seguir», «Siguiente ›»), for the
-  // mount that their start is about to trigger.
+  // What the visitor asked for (their ▶ or «Siguiente ›»), for the mount that
+  // their start is about to trigger.
   let queued: number | null = null;
   const listeners = new Set<() => void>();
 
@@ -63,8 +67,8 @@ export function createShortsCarousel(length: number) {
     },
 
     /**
-     * The turn manager mounted the hero (its onMount): pick the short, move
-     * the cursor past it and return its index.
+     * The turn manager mounted the hero (its onMount): pick the short asked
+     * for (the cursor if none was), move the cursor past it and return it.
      */
     take(): number {
       const index = queued ?? snapshot.cursor;
@@ -74,14 +78,15 @@ export function createShortsCarousel(length: number) {
       return index;
     },
 
-    /** «Seguir» after a pause: the same short, from the start. */
-    resumeIndex(): number {
-      return snapshot.current ?? snapshot.cursor;
-    },
-
-    /** «Siguiente ›», and the poster's ▶ when nothing is paused. */
+    /**
+     * «Siguiente ›»: the short after the last one played. While one plays,
+     * the one after it; once that one has ended, the same short, which its
+     * poster now shows (both are the cursor): letting each short end and
+     * tapping «Siguiente ›» plays them all, none skipped. Before any, the one
+     * after the poster's, because the poster's is its own ▶.
+     */
     nextIndex(): number {
-      return snapshot.cursor;
+      return wrap((snapshot.current ?? snapshot.cursor) + 1);
     },
 
     getSnapshot(): CarouselSnapshot {
@@ -100,7 +105,6 @@ export function createShortsCarousel(length: number) {
 export type PosterState = {
   // Under 200x200 there is no legal inline player: the tap opens YouTube.
   tooSmall: boolean;
-  paused: boolean;
   reducedMotion: boolean;
 };
 
@@ -108,14 +112,8 @@ export type PosterState = {
 export function posterLabel(s: PosterState): string {
   // Short on purpose: under 340 px of screen the poster is ~100 px wide.
   if (s.tooSmall) return "Ver en YouTube";
-  if (s.paused) return "En pausa · toca para seguir";
   if (s.reducedMotion) return "Toca para reproducir";
   return "Toca para ver";
-}
-
-/** Which short the poster shows: the paused one, or the next to play. */
-export function posterIndex(s: CarouselSnapshot, paused: boolean): number {
-  return paused && s.current != null ? s.current : s.cursor;
 }
 
 /** The short on YouTube, for the tap under 200x200 (no inline player there). */

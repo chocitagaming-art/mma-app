@@ -158,17 +158,25 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     }
   });
 
-  it("dice que los shorts, UFC TV y el directo se cargan solos y sin sonido", () => {
+  it("dice que UFC TV y el directo se cargan solos y sin sonido, y los shorts no", () => {
     const inicio = texto.indexOf("Lo que se carga solo.");
     const vineta = texto.slice(inicio, texto.indexOf("Lo que espera a que pulses", inicio));
     expect(inicio).toBeGreaterThan(-1);
     expect(vineta).toMatch(/UFC TV/);
     expect(vineta).toMatch(/directo de la velada/);
     expect(vineta).toMatch(/sin sonido/);
-    // The home hero's shorts (components/home/shorts-hero.tsx) start on their
-    // own too, one after another, and their poster is YouTube's thumbnail.
-    expect(vineta).toMatch(/shorts/);
+    // Since 30-sep-2026 (night) the home hero's shorts never start on their
+    // own (components/home/shorts-hero.tsx: no autoStart): this line lied.
+    expect(vineta).not.toMatch(/shorts/);
+  });
+
+  it("los shorts de la portada esperan a que pulses: su miniatura sí baja de YouTube, y al acabar no se carga otro", () => {
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(vineta).toMatch(/shorts de la UFC de la cabecera de la portada/);
     expect(vineta).toMatch(/i\.ytimg\.com/);
+    expect(vineta).toMatch(/Cuando un short acaba, no se carga otro/);
   });
 
   it("con menos movimiento no promete un reproductor cargado: no se carga ninguno hasta el toque", () => {

@@ -4,14 +4,16 @@ import {
   TIMER_CAP_MS,
   TIMER_EXTRA_MS,
   createShortsCarousel,
-  posterIndex,
   posterLabel,
   shortTimerMs,
   shortWatchUrl,
 } from "@/components/home/shorts-carousel";
 
-// The hero's carousel, in node. Who may play is lib/playback-turn.ts (its own
-// tests); this is only "which short" and "for how long", as in the mockup.
+// The hero's list of shorts, in node. Who may play is lib/playback-turn.ts
+// (its own tests); this is only "which short" and "for how long". Since
+// 30-sep-2026 (night) nothing here moves on its own: the poster shows a short,
+// its ▶ plays it, «Siguiente ›» plays the one after the last one played, and at
+// the end of a short the poster shows the next one, waiting for a tap.
 
 describe("shortTimerMs", () => {
   it("is the duration plus 2.5 s, counted from the iframe's load", () => {
@@ -33,27 +35,86 @@ describe("createShortsCarousel", () => {
     expect(() => createShortsCarousel(0)).toThrow();
   });
 
-  it("each automatic mount takes the next short, and wraps around", () => {
-    const c = createShortsCarousel(3);
+  it("at first the poster shows the most recent short, and its ▶ plays that one", () => {
+    const c = createShortsCarousel(4);
     expect(c.getSnapshot()).toEqual({ current: null, cursor: 0 });
-    expect([c.take(), c.take(), c.take(), c.take()]).toEqual([0, 1, 2, 0]);
+    c.queue(c.getSnapshot().cursor);
+    expect(c.take()).toBe(0);
     expect(c.getSnapshot()).toEqual({ current: 0, cursor: 1 });
+  });
+
+  it("when a short ends, its poster shows the next one, ready for a tap", () => {
+    const c = createShortsCarousel(4);
+    c.queue(0);
+    c.take();
+    // The turn manager takes the iframe away: the poster reads the cursor.
+    expect(c.getSnapshot().cursor).toBe(1);
+  });
+
+  it("«Siguiente ›» while a short plays: the next one", () => {
+    const c = createShortsCarousel(5);
+    c.queue(0);
+    c.take();
+    expect(c.nextIndex()).toBe(1);
+    c.queue(c.nextIndex());
+    expect(c.take()).toBe(1);
+    expect(c.nextIndex()).toBe(2);
+  });
+
+  it("«Siguiente ›» before any short: the one AFTER the poster's (the poster's is its ▶)", () => {
+    const c = createShortsCarousel(5);
+    // Nothing played yet: the poster shows the first; «Siguiente ›» skips it.
+    expect(c.getSnapshot().cursor).toBe(0);
+    expect(c.nextIndex()).toBe(1);
+  });
+
+  it("«Siguiente ›» once a short has ended: the one its poster shows, the next after it", () => {
+    const c = createShortsCarousel(5);
+    c.queue(0);
+    c.take();
+    // The first ended (the turn manager took its iframe away): the poster
+    // shows the second, and «Siguiente ›» plays that one, not the third.
+    expect(c.getSnapshot().cursor).toBe(1);
+    expect(c.nextIndex()).toBe(1);
+  });
+
+  it("letting each short end and tapping «Siguiente ›» plays them all, in order: none is skipped", () => {
+    const c = createShortsCarousel(4);
+    c.queue(c.getSnapshot().cursor); // the poster's ▶
+    const watched = [c.take()];
+    for (let i = 0; i < 4; i += 1) {
+      // That one ended: «Siguiente ›», from its poster.
+      c.queue(c.nextIndex());
+      watched.push(c.take());
+    }
+    expect(watched).toEqual([0, 1, 2, 3, 0]);
+  });
+
+  it("wraps around at the end of the list", () => {
+    const c = createShortsCarousel(3);
+    for (const index of [0, 1, 2]) {
+      c.queue(index);
+      c.take();
+    }
+    expect(c.getSnapshot()).toEqual({ current: 2, cursor: 0 });
+    // Playing the last one, or once it has ended: the first again.
+    expect(c.nextIndex()).toBe(0);
+  });
+
+  it("with a single short, «Siguiente ›» plays that one", () => {
+    const c = createShortsCarousel(1);
+    expect(c.nextIndex()).toBe(0);
+    c.queue(c.nextIndex());
+    expect(c.take()).toBe(0);
+    expect(c.nextIndex()).toBe(0);
   });
 
   it("a visitor's start plays what they asked for, once", () => {
     const c = createShortsCarousel(4);
-    c.take(); // 0 on screen, cursor 1
-    c.queue(c.resumeIndex()); // «Seguir»: the same one again
-    expect(c.take()).toBe(0);
-    expect(c.take()).toBe(1); // the queue is spent: back to the cursor
-  });
-
-  it("«Siguiente ›» continues from the one on screen", () => {
-    const c = createShortsCarousel(5);
-    c.take();
-    c.take(); // 1 on screen
-    c.queue(c.nextIndex());
+    c.queue(2);
     expect(c.take()).toBe(2);
+    // The queue is spent: a mount with nothing asked would take the cursor.
+    expect(c.take()).toBe(3);
   });
 
   it("a refused start leaves nothing queued", () => {
@@ -61,12 +122,6 @@ describe("createShortsCarousel", () => {
     c.queue(2);
     c.clearQueue();
     expect(c.take()).toBe(0);
-  });
-
-  it("before anything played, «Seguir» is the first short", () => {
-    const c = createShortsCarousel(3);
-    expect(c.resumeIndex()).toBe(0);
-    expect(c.nextIndex()).toBe(0);
   });
 
   it("notifies on every take with a new snapshot object", () => {
@@ -84,33 +139,20 @@ describe("createShortsCarousel", () => {
 });
 
 describe("the poster", () => {
-  const base = { tooSmall: false, paused: false, reducedMotion: false };
+  const base = { tooSmall: false, reducedMotion: false };
 
-  it("labels, in the mockup's order of precedence", () => {
+  it("labels: tap to watch, tap to play with reduced motion, YouTube under 200x200", () => {
     expect(posterLabel(base)).toBe("Toca para ver");
     expect(posterLabel({ ...base, reducedMotion: true })).toBe("Toca para reproducir");
-    expect(posterLabel({ ...base, reducedMotion: true, paused: true })).toBe(
-      "En pausa · toca para seguir",
-    );
-    expect(posterLabel({ ...base, paused: true, tooSmall: true })).toBe("Ver en YouTube");
+    expect(posterLabel({ tooSmall: true, reducedMotion: true })).toBe("Ver en YouTube");
   });
 
-  it("no poster says «Seguir» after a hidden tab any more: the visitor's short is not taken away for it", () => {
-    // DECISIONS.md, 30-sep-2026: the turn manager only removes what started on
-    // its own. «Seguir» is left only on the «Pausar» button, outside the frame.
+  it("no label talks of a pause any more: nothing plays on its own, so nothing is paused", () => {
     for (const tooSmall of [false, true]) {
-      for (const paused of [false, true]) {
-        for (const reducedMotion of [false, true]) {
-          expect(posterLabel({ tooSmall, paused, reducedMotion })).not.toBe("Seguir");
-        }
+      for (const reducedMotion of [false, true]) {
+        expect(posterLabel({ tooSmall, reducedMotion })).not.toMatch(/pausa|seguir/i);
       }
     }
-  });
-
-  it("shows the paused short, or else the next one", () => {
-    expect(posterIndex({ current: null, cursor: 0 }, true)).toBe(0);
-    expect(posterIndex({ current: 3, cursor: 4 }, false)).toBe(4);
-    expect(posterIndex({ current: 3, cursor: 4 }, true)).toBe(3);
   });
 
   it("under 200x200 the tap goes to the short on YouTube", () => {

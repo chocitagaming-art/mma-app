@@ -4,50 +4,60 @@
 //
 // Ported one to one from the owner's mockup (maqueta-shorts/escena.js, 29-sep-
 // 2026, table tests in turno.test.js → lib/playback-turn.test.ts). The rules
-// for the visitor's player changed on 30-sep-2026 in both, the same way.
+// changed twice on 30-sep-2026, in both the same way (see below).
 // The browser wiring (IntersectionObserver, hidden tab, "touched" detection)
 // lives in components/playback/turn-controller.ts and only feeds this module.
 //
-// What it enforces (YouTube RMF and Developer Policies, see DECISIONS.md,
-// 29-sep-2026):
+// Two kinds of player (autoStart, set by each one):
+//   · UFC TV and the event's live broadcast START ON THEIR OWN when they are
+//     seen, muted.
+//   · The hero short does NOT (the owner's decision, 30-sep-2026, night): it
+//     plays only when the visitor starts it (its poster's ▶ or «Siguiente»),
+//     and when it ends no other short starts. It is never a candidate here.
+//
+// What it enforces for what starts on its own (YouTube RMF and Developer
+// Policies, see DECISIONS.md, 29-sep-2026):
 //   - An automatic player is mounted only when MORE than half of it is visible
 //     (the sticky header band does not count) for DWELL_MS in a row.
 //   - At most ONE player mounted. An automatic one goes (back to its poster)
 //     when it drops to half or less, with the tab hidden, with a blocker open
 //     (the mobile menu) or with prefers-reduced-motion.
 //   - Hidden tab, a blocker or prefers-reduced-motion: nothing starts on its own.
-//   - Two candidates at once: the larger visible area wins, then PRIORITY.
+//   - Two candidates at once: the larger visible area wins, then PRIORITY. No
+//     page has two today (the home's slot shows ONE of the three; /en-vivo and
+//     the event page, the broadcast): the tie-break keeps the rule defined.
 //   - No player under MIN_PLAYER_PX x MIN_PLAYER_PX, the visitor's included.
 //
 // What the visitor chose is theirs (the owner's decision, DECISIONS.md,
 // 30-sep-2026: YouTube's rules are about autoplay, not about what the visitor
-// chose to watch). The visitor's player is one they started with a tap on a
-// poster, or an automatic one they touched inside (sound, pause, full screen,
-// PiP). It stays out of view, with the tab hidden (a pagehide too: the page
-// may come back from the back/forward cache) and under an open menu, and
-// nothing automatic starts while it holds the turn. It only goes when the
-// visitor starts another player (one at a time still) or pauses it with the
-// site's control, or when it drops under the 200x200 minimum. Out of view is
-// the PiP case: the page cannot see a PiP inside a cross-origin iframe, the
-// visitor scrolls or changes tab while it plays, and removing the iframe would
-// close it.
+// chose to watch). The visitor's player is one they started with a tap (the
+// hero short is always one), or an automatic one they touched inside (sound,
+// pause, full screen, PiP). It stays out of view, with the tab hidden (a
+// pagehide too: the page may come back from the back/forward cache) and under
+// an open menu, and nothing automatic starts while it holds the turn: if the
+// visitor puts a short on, UFC TV makes way. It only goes when the visitor
+// starts another player (one at a time still), or when it drops under the
+// 200x200 minimum. Out of view is the PiP case: the page cannot see a PiP
+// inside a cross-origin iframe, the visitor scrolls or changes tab while it
+// plays, and removing the iframe would close it.
 //
-// One more exit, the carousel's (timerAction): a short started with a tap
-// and never touched inside ends like any other. Its timer cannot tell the end
-// from a pause (no JS API), and the next short would be a new automatic
-// start: out of view that is the poster, and the turn is free. So a PiP
-// opened with the browser's own button, with no tap inside, closes there.
+// One more exit, the hero short's end (timerAction): without the JS API its
+// timer cannot tell the end from a pause. Untouched inside, it goes back to
+// its poster (which shows the next short, ready for a tap) and the turn is
+// free, so UFC TV may start on its own if it is seen; a PiP opened with the
+// browser's own button, with no tap inside, closes there. Touched inside, it
+// stays as the visitor left it.
 //
 // No iframe_api, no enablejsapi, no postMessage (Developer Policies III.D.7:
-// no undocumented APIs): "stop" means removing the iframe, and the next short
-// is a new iframe mounted on a timer.
+// no undocumented APIs): "stop" means removing the iframe, and each short the
+// visitor starts is a new iframe.
 
-// Tie-break when two players show the same visible area: the event's live
-// broadcast, UFC TV live, the hero short, UFC TV's loop.
+// Tie-break when two AUTOMATIC players show the same visible area: the
+// event's live broadcast, UFC TV live, UFC TV's loop. The hero short is never
+// one, so it has no entry.
 export const PRIORITY: Readonly<Record<string, number>> = {
-  evento: 4,
-  "tv-directo": 3,
-  hero: 2,
+  evento: 3,
+  "tv-directo": 2,
   "tv-bucle": 1,
 };
 
@@ -68,13 +78,15 @@ export type Turn = { id: string; owner: TurnOwner };
 export type TurnPlayer = {
   id: string;
   priority: number;
+  // May it start on its own (UFC TV, the event's broadcast)? The hero short
+  // may not: only the visitor starts it.
+  autoStart: boolean;
   // Visible fraction (0-1) and visible area in px², header band excluded.
   ratio: number;
   area: number;
   // When it went MORE than half visible (same clock as `now`), or null.
   aboveSince: number | null;
-  paused: boolean;
-  // Big enough (fitsMinimum) and ready to be mounted.
+  // Big enough for a legal player (fitsMinimum).
   eligible: boolean;
 };
 
@@ -87,7 +99,7 @@ export type TurnState = {
   players: TurnPlayer[];
 };
 
-export type TimerAction = "stay" | "next" | "release";
+export type TimerAction = "stay" | "release";
 
 /** Is this box (a getBoundingClientRect) big enough for a legal player? */
 export function fitsMinimum(rect: { width: number; height: number }): boolean {
@@ -96,8 +108,8 @@ export function fitsMinimum(rect: { width: number; height: number }): boolean {
 
 function isAutoCandidate(p: TurnPlayer, now: number): boolean {
   return (
+    p.autoStart &&
     p.eligible &&
-    !p.paused &&
     p.ratio > HALF &&
     p.aboveSince != null &&
     now - p.aboveSince >= DWELL_MS
@@ -110,13 +122,14 @@ export function decideTurn(state: TurnState): Turn | null {
 
   const current = state.current;
   const holder = current ? state.players.find((p) => p.id === current.id) : undefined;
-  if (current && holder && holder.eligible && !holder.paused) {
+  if (current && holder && holder.eligible) {
     // The visitor's player is theirs: out of view, tab hidden, menu open.
     if (current.owner === "user") {
       return { id: holder.id, owner: "user" };
     }
-    // An automatic one only while MORE than half of it is visible.
-    if (autoplayAllowed && holder.ratio > HALF) {
+    // An automatic one only while it may start on its own and MORE than half
+    // of it is visible.
+    if (autoplayAllowed && holder.autoStart && holder.ratio > HALF) {
       return { id: holder.id, owner: "auto" };
     }
   }
@@ -128,29 +141,21 @@ export function decideTurn(state: TurnState): Turn | null {
   return { id: candidates[0].id, owner: "auto" };
 }
 
-/** May `id` start a NEW automatic playback now? Every carousel short is one. */
-export function mayAutoplay(state: TurnState, id: string): boolean {
-  if (!state.pageVisible || state.blocked || state.reducedMotion) return false;
-  const p = state.players.find((x) => x.id === id);
-  return Boolean(p) && isAutoCandidate(p as TurnPlayer, state.now);
-}
-
 /**
- * What the carousel timer does when it fires (the API duration + 2.5 s after
- * the iframe's load). Without the JS API a short the visitor paused, unmuted
- * or put in full screen looks the same as one that ended, so one they TOUCHED
- * inside stays as they left it: "stay". Otherwise the next short is a new
- * automatic start and needs rule 1 again: "next", or "release" (back to the
- * poster; the turn is free).
+ * What the hero short's timer does when it fires (the API duration + 2.5 s
+ * after the iframe's load). Without the JS API a short the visitor paused,
+ * unmuted or put in full screen looks the same as one that ended, so one they
+ * TOUCHED inside stays as they left it: "stay". Otherwise it goes back to its
+ * poster and the turn is free: "release". Never a next short on its own: the
+ * poster shows it, and the visitor starts it (or «Siguiente»).
  */
-export function timerAction(state: TurnState, id: string, touched: boolean): TimerAction {
-  if (touched) return "stay";
-  return mayAutoplay(state, id) ? "next" : "release";
+export function timerAction(touched: boolean): TimerAction {
+  return touched ? "stay" : "release";
 }
 
 /**
  * 9:16 only, unless every format is allowed: then the 4:5 ones go 2nd and 5th
- * (and so on, every third place), so they show up early in the carousel.
+ * (and so on, every third place), so they show up early in the list.
  */
 export function orderShorts<T extends { format: string }>(all: T[], allFormats: boolean): T[] {
   const vertical = all.filter((s) => s.format === "9:16");

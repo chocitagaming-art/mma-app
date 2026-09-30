@@ -254,6 +254,16 @@ describe("los reproductores de directo arrancan solos, mudos y en línea", () =>
     expect(leerFuente("components/playback/live-embed-player.tsx")).toMatch(/<TurnSlot\s/);
   });
 
+  it("UFC TV y el directo son los que arrancan solos: su TurnSlot lo pide (autoStart)", () => {
+    // Since 30-sep-2026 (night) TurnSlot starts on its own only when it is
+    // asked to, and the hero short no longer asks. The shared 16:9 player is
+    // the one that must: in its own line, not in a comment.
+    const fuente = leerFuente("components/playback/live-embed-player.tsx");
+    const etiqueta = /<TurnSlot\s[\s\S]*?\/>/.exec(fuente)?.[0] ?? "";
+    expect(etiqueta, "LiveEmbedPlayer ya no pinta su TurnSlot").not.toBe("");
+    expect(etiqueta, "UFC TV y el directo ya no arrancan solos").toMatch(/\n\s*autoStart\s/);
+  });
+
   it("el directo del evento: la URL de liveEmbedUrl, con los tres parámetros, en el turno 'evento'", () => {
     const fuente = leerFuente("components/event-live-embed.tsx");
     expect(fuente).toMatch(/const src = liveEmbedUrl\(videoId\)/);

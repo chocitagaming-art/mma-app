@@ -9,10 +9,11 @@ import { ShortsHero, ShortsHeroPlaceholder, type HeroShort } from "@/components/
 import { PlaybackTurnProvider } from "@/components/playback/playback-turn-provider";
 
 // The home hero's server render (no DOM: effects do not run on the server),
-// plus a guard on its source. The browser behaviour (autoplay only in view,
-// the timer, «Siguiente ›», a touched short) is the turn manager's, tested in
-// turn-controller.test.ts and playback-turn.test.ts, and the geometry is in
-// e2e/maquetacion.spec.ts.
+// plus a guard on its source. The browser behaviour (it never starts on its
+// own, a tap plays the short, «Siguiente ›», the end of a short, a touched
+// short) is the turn manager's, tested in turn-controller.test.ts and
+// playback-turn.test.ts, and in a real browser in e2e/hero-shorts.spec.ts;
+// the geometry is in e2e/maquetacion.spec.ts.
 
 const SHORTS: HeroShort[] = [
   { id: "fixShort-01", title: "The finish #ufc332", seconds: 15, thumbnail: "https://i.ytimg.com/vi/fixShort-01/hqdefault.jpg" },
@@ -26,13 +27,13 @@ function render(node: ReactElement) {
 describe("ShortsHero · server render", () => {
   const html = render(createElement(ShortsHero, { shorts: SHORTS }));
 
-  it("no iframe reaches the HTML: only the turn manager mounts one, in the browser", () => {
+  it("no iframe reaches the HTML: only a tap mounts one, in the browser", () => {
     expect(html).not.toContain("<iframe");
     expect(html).toContain('data-turn="hero"');
     expect(html).toContain('data-turn-state="poster"');
   });
 
-  it("the poster is the first short's own thumbnail, whole, with its ▶ label", () => {
+  it("the poster is the most recent short's own thumbnail, whole, with its ▶ label", () => {
     expect(html).toContain('src="https://i.ytimg.com/vi/fixShort-01/hqdefault.jpg"');
     expect(html).toContain("object-contain");
     expect(html).toContain("Toca para ver");
@@ -52,13 +53,28 @@ describe("ShortsHero · server render", () => {
     expect(poster).not.toContain("role=");
   });
 
-  it("Pausar and «Siguiente ›» are real buttons, outside the frame", () => {
-    expect(html).toMatch(/<button type="button"[^>]*>.*?<span>Pausar<\/span><\/button>/);
+  it("«Siguiente ›» is a real button, outside the frame, and there is no «Pausar»: nothing moves on its own", () => {
     expect(html).toMatch(/<button type="button" aria-label="Siguiente short"[^>]*>Siguiente /);
-    // Outside the measured box: the frame's markup closes before them.
+    expect(html).not.toMatch(/Pausar|Seguir/);
+    // Outside the measured box: the frame's markup closes before it.
     const frame = html.indexOf('data-testid="hero-short"');
     expect(frame).toBeGreaterThan(-1);
-    expect(html.indexOf("Pausar")).toBeGreaterThan(html.indexOf("</div>", html.indexOf('data-turn="hero"')));
+    expect(html.indexOf("Siguiente short")).toBeGreaterThan(
+      html.indexOf("</div>", html.indexOf('data-turn="hero"')),
+    );
+  });
+
+  it("before React runs «Siguiente ›» is not shown: no dead button without JavaScript", () => {
+    // visibility: hidden keeps its room (the search box below does not jump
+    // at hydration) and takes it out of the tab order and of screen readers.
+    const row = /<div class="([^"]*)"><button type="button" aria-label="Siguiente short"/.exec(html)?.[1];
+    expect(row, "the row of «Siguiente ›» is not where the test looks").toBeDefined();
+    expect(row?.split(/\s+/)).toContain("invisible");
+  });
+
+  it("the entrance animation is on the frame until a short is mounted in it", () => {
+    const frame = /<div class="([^"]*)"><div aria-hidden="true" class="absolute left-1\/2/.exec(html)?.[1];
+    expect(frame?.split(/\s+/)).toContain("animate-rise");
   });
 
   it("attributes the UFC channel on YouTube, by name, in a new tab without referrer", () => {
@@ -107,10 +123,31 @@ describe("shorts-hero.tsx · source guard", () => {
   });
 
   it("the iframe URL comes from the tested builder, not written by hand", () => {
+    // mute=1, measured on 30-sep-2026: without it a strict autoplay policy
+    // leaves the short the visitor tapped black and stopped (a second tap).
     expect(code).toContain("src={shortEmbedUrl(playing.id, { mute: true })}");
     expect(code).not.toContain("youtube");
     // The one <iframe> is TurnSlot's: the turn manager mounts and unmounts it.
     expect(code).not.toMatch(/<iframe[\s>]/);
     expect(code).toContain("<TurnSlot");
+  });
+
+  it("the hero short never starts on its own: its TurnSlot does not ask for autoStart", () => {
+    // The owner's decision of 30-sep-2026 (night). TurnSlot's autoStart is
+    // false unless a player asks for it; only LiveEmbedPlayer does.
+    expect(code).not.toMatch(/autoStart/);
+  });
+
+  it("nothing waits for the page before a tap: no readiness, no fonts, no intro timer", () => {
+    // The ▶ during the hero's entrance used to do nothing ("not-ready").
+    expect(code).not.toMatch(/\bready\b|document\.fonts|setTimeout\(resolve/);
+    expect(code).toMatch(/rising=\{view\.mountCount === 0\}/);
+  });
+
+  it("«Siguiente ›» plays the short after the last one played, and no pause is left", () => {
+    // Not "after the one on screen": once a short had ended, that skipped
+    // the one its poster shows (shorts-carousel.test.ts).
+    expect(code).toMatch(/startFromControl\(carousel\.nextIndex\(\)\)/);
+    expect(code).not.toMatch(/pause|Pausar|Seguir|resumeIndex|posterIndex/);
   });
 });

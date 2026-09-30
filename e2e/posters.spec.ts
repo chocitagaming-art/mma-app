@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { fakeYouTubeEmbeds } from "./helpers";
+import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 
 // ── The players' posters: a real link, and the keyboard focus ──────────────
 //
@@ -72,38 +72,6 @@ async function openHome(page: Page, width = 1280, height = 800) {
   await page.setViewportSize({ width, height });
   await page.goto("/");
   await expect(hero(page)).toBeVisible();
-}
-
-/**
- * For the tests that need UFC TV in the home's slot. 🪤 The base is
- * PRODUCTION's, and there are legitimate states without it: the owner switched
- * the slot off ('off' in events.live_video_id), left a hand-written id without
- * a title, or pinned one with its title (the column rules: planHomeSlot in
- * lib/ufc-tv.ts). None is a regression of these posters, and a red here would
- * block the megatest (and every deploy) that whole week: skip, with the
- * reason. The same two guards as e2e/ufc-tv.spec.ts. Hidden blocks count: with
- * JavaScript off the content stays in the skeleton's hidden blocks.
- */
-async function needsUfcTvLoop(page: Page) {
-  const eventSlot = page.getByRole("heading", { name: "Retransmisión oficial", includeHidden: true });
-  const block = page.locator("section[data-ufc-tv]");
-  // The invisible mark the slot leaves when it is silent ON PURPOSE.
-  const silenced = page.locator("[data-live-slot]");
-  await expect(eventSlot.or(block).or(silenced).first()).toBeAttached();
-
-  const reason = (await silenced.count()) > 0 ? await silenced.getAttribute("data-live-slot") : null;
-  test.skip(
-    reason !== null,
-    `el hueco se calla a propósito (${reason}): lo manda events.live_video_id, no UFC TV`,
-  );
-  test.skip(
-    (await eventSlot.count()) > 0,
-    "el próximo evento tiene live_video_id a mano: manda la columna, no UFC TV",
-  );
-  await expect(
-    block,
-    "UFC TV no está en bucle: ¿el server se arrancó sin UFC_TV_FIXTURE=loop?",
-  ).toHaveAttribute("data-ufc-tv", "loop");
 }
 
 async function focusByKeyboard(page: Page, target: Locator) {
@@ -234,18 +202,18 @@ test("con JavaScript, el clic monta el reproductor aquí, del primer vídeo del 
   expect(opened, "the click opened YouTube as well as playing here").toBe(false);
 });
 
-test("a 320 px el póster del short es un enlace que abre YouTube, también antes de que el hero esté listo", async ({
+test("a 320 px el póster del short es un enlace que abre YouTube, también con la fuente del titular sin llegar", async ({
   page,
   context,
 }) => {
   // Under 340 px of screen the hero's box is ~120 px wide: no legal inline
   // player (200x200), so its poster only opens the short on YouTube. It used
-  // to ask the turn manager first, which answers "not-ready" (or "blocked",
-  // with the menu open) BEFORE it looks at the size: during the hero's intro
-  // the tap did nothing. Here the headline's font never arrives (a slow
-  // network), so the hero stays not ready for as long as the test needs.
+  // to ask the turn manager first, which answered "not-ready" during the
+  // hero's intro (or "blocked", with the menu open) BEFORE it looked at the
+  // size: the tap did nothing. Here the headline's font never arrives (a slow
+  // network), which is what held the hero back for longest.
   await page.route(/\/_next\/static\/media\/[^/]+\.woff2$/, () => {
-    // Never answered: document.fonts.ready waits for it.
+    // Never answered: document.fonts stays "loading".
   });
   await context.route("https://www.youtube.com/**", (route) =>
     route.fulfill({
@@ -261,9 +229,7 @@ test("a 320 px el póster del short es un enlace que abre YouTube, también ante
   // Hydrated and measured: only then does the label say where it goes.
   const poster = hero(page).getByRole("link", { name: /^Ver en YouTube\. Short de la UFC: / });
   await expect(poster).toBeVisible();
-  // Not ready yet: the frame keeps the intro's class until it is.
-  const frame = page.getByTestId("hero-short").locator("..");
-  await expect(frame).toHaveClass(/animate-rise/);
+  expect(await page.evaluate(() => document.fonts.status), "the headline's font arrived").toBe("loading");
   const href = await poster.getAttribute("href");
   expect(href).toMatch(/^https:\/\/www\.youtube\.com\/shorts\/[\w-]+$/);
 
@@ -272,11 +238,39 @@ test("a 320 px el póster del short es un enlace que abre YouTube, también ante
     poster.click(),
   ]);
   await expect(tab).toHaveURL(href!);
-  // It was a tap on a hero still not ready (the case that did nothing), and
-  // nothing mounts here: there is no legal player at this size.
-  await expect(frame).toHaveClass(/animate-rise/);
+  // Nothing mounts here: there is no legal player at this size. And under
+  // 200x200 there is no «Siguiente ›» either (only the link).
   await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
   await expect(hero(page).locator("iframe")).toHaveCount(0);
+  await expect(page.locator('button[aria-label="Siguiente short"]')).toBeHidden();
+});
+
+// «Siguiente ›» is a plain button that only React understands: without the
+// app's bundles it would be a dead button next to a poster that works. Until
+// React runs it is not shown (visibility: hidden: its room is kept, and it is
+// out of the tab order and of screen readers).
+test("con JavaScript pero sin los bundles, «Siguiente ›» no se enseña: sería un botón muerto", async ({
+  page,
+}) => {
+  await page.route(/\/_next\/static\/chunks\/.+\.js(\?.*)?$/, (route) => route.abort());
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  // The content is in place (the streaming's inline scripts), React is not.
+  const poster = hero(page).getByRole("link", { name: /^Toca para ver\. Short de la UFC: / });
+  await expect(poster).toBeVisible();
+  const next = page.locator('button[aria-label="Siguiente short"]');
+  await expect(next).toHaveCount(1);
+  await expect(next).toBeHidden();
+  // The attribution under the frame is a real link: that one is shown.
+  const column = page.getByTestId("hero-short").locator("..");
+  await expect(column.getByRole("link", { name: "YouTube", exact: true })).toBeVisible();
+});
+
+test("con JavaScript, «Siguiente ›» se enseña en cuanto React corre", async ({ page }) => {
+  await openHome(page);
+  // Hydrated: the poster turned button.
+  await expect(hero(page).getByRole("button", { name: /^Toca para ver\. / })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Siguiente short" })).toBeVisible();
 });
 
 // ── (5) The keyboard focus ────────────────────────────────────────────────
@@ -311,9 +305,7 @@ test("Enter en el póster del short del hero: el foco entra en el short que mont
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openHome(page);
   const slot = hero(page);
-  // The hero takes no start until the headline's font and its intro are done
-  // (shorts-hero.tsx): its frame drops animate-rise then.
-  await expect(page.getByTestId("hero-short").locator("..")).not.toHaveClass(/animate-rise/);
+  // No wait for the headline's font or the intro: a start never waits.
   const poster = slot.getByRole("button", { name: /^Toca para reproducir\. Short de la UFC: / });
 
   await focusByKeyboard(page, poster);
@@ -338,8 +330,9 @@ test("con el ratón el foco no se mueve al reproductor", async ({ page }) => {
 test("un montaje automático nunca se lleva el foco", async ({ page }) => {
   await openHome(page);
   await needsUfcTvLoop(page);
-  // The hero plays on its own; UFC TV waits below the fold.
-  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  // Nothing plays at the top (the hero short waits for a tap); UFC TV waits
+  // below the fold. The focus sits on «Siguiente ›», which is only focused.
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
   const next = page.getByRole("button", { name: "Siguiente short" });
   await next.focus();
 

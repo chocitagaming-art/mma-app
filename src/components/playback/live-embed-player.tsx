@@ -23,12 +23,16 @@ import { cn } from "@/lib/utils";
 //
 // The <iframe> is TurnSlot's (playback-turn-provider.tsx), so it obeys the
 // same turn manager as the hero short (ported from the owner's
-// mockup, maqueta-shorts/index.html #tv-media and escena.js):
+// mockup, maqueta-shorts/index.html #tv-media and escena.js). These two are
+// the only players that start on their own (autoStart); the hero short only
+// plays when the visitor starts it (the owner's decision, 30-sep-2026):
 //   · It mounts on its own only when MORE than half of it is visible below
 //     the sticky header for 400 ms and nobody else holds the turn; it is
 //     removed (back to the poster) when it drops to half or less. Before
 //     this, UFC TV played muted 700-850 px below the fold (measured on
 //     29-sep-2026), which YouTube's policies forbid.
+//   · If the visitor puts a short on, it makes way (one player at a time),
+//     and it does not start again while that short is theirs.
 //   · prefers-reduced-motion: nothing starts on its own; the poster's ▶ does.
 //     (The event's broadcast did not honour it until now.)
 //   · A tap on the poster, or inside the automatic player, makes it the
@@ -40,7 +44,9 @@ import { cn } from "@/lib/utils";
 //     intercepted and the player mounts here. Started with the keyboard, the
 //     focus goes into the player (it used to fall on <body>).
 //   · The same URL for every mount, automatic or the visitor's: autoplay=1,
-//     mute=1 (without it nothing starts, measured), playsinline=1.
+//     mute=1 (without it nothing starts on its own, measured), playsinline=1.
+//     So a tap on the poster starts it MUTED too (measured on 30-sep-2026 in
+//     Chromium and WebKit): the sound is YouTube's speaker, inside.
 //
 // No postMessage, no iframe_api, no enablejsapi (DECISIONS.md, 29-sep-2026).
 
@@ -131,6 +137,7 @@ export function LiveEmbedPlayer({
   return (
     <TurnSlot
       id={id}
+      autoStart
       src={src}
       title={title}
       poster={poster}

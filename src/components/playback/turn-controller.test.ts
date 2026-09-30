@@ -17,6 +17,10 @@ import {
 // ResizeObserver, tab visibility, reduced motion, the header height and the
 // focused element. The React side (playback-turn-provider.tsx) only passes the
 // real ones in; the decisions are lib/playback-turn.ts, tested on their own.
+//
+// The two players of the home, as in production: the hero short, which only
+// plays when the visitor starts it (no autoStart: the owner's decision of
+// 30-sep-2026, night), and UFC TV, which starts on its own when it is seen.
 
 type FakeBox = Element & { size: { width: number; height: number } };
 
@@ -132,7 +136,12 @@ function setup() {
   const tv = box(1024, 576);
   const mounts: string[] = [];
   controller.register({ id: "hero", element: hero, onMount: (owner) => mounts.push(`hero:${owner}`) });
-  controller.register({ id: "tv-bucle", element: tv, onMount: (owner) => mounts.push(`tv:${owner}`) });
+  controller.register({
+    id: "tv-bucle",
+    element: tv,
+    autoStart: true,
+    onMount: (owner) => mounts.push(`tv:${owner}`),
+  });
   controller.start();
   const worst = watchSinglePlayer(controller, ["hero", "tv-bucle"]);
   return { ...browser, controller, hero, tv, mounts, worst };
@@ -155,71 +164,141 @@ describe("turn controller · IntersectionObserver without the sticky header", ()
   });
 });
 
-describe("turn controller · more than half visible for 0.4 s", () => {
+describe("turn controller · UFC TV: more than half visible for 0.4 s", () => {
   it("mounts only after the dwell, as automatic", () => {
-    const { controller, see, advance, hero, mounts } = setup();
-    see(hero, 0.8);
+    const { controller, see, advance, tv, mounts } = setup();
+    see(tv, 0.8);
     advance(300);
-    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
     advance(200);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto" });
-    expect(mounts).toEqual(["hero:auto"]);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(mounts).toEqual(["tv:auto"]);
   });
 
   it("a fast scroll (above half for 200 ms, then out) never mounts anything", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 0.9);
+    const { controller, see, advance, tv } = setup();
+    see(tv, 0.9);
     advance(200);
-    see(hero, 0.3);
+    see(tv, 0.3);
     advance(2_000);
-    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
   });
 
   it("exactly half is not «more than half»: an automatic player is unmounted at once", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 0.9);
+    const { controller, see, advance, tv } = setup();
+    see(tv, 0.9);
     advance(500);
-    expect(controller.getView("hero").mounted).toBe(true);
-    see(hero, 0.5);
+    expect(controller.getView("tv-bucle").mounted).toBe(true);
+    see(tv, 0.5);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+  });
+});
+
+describe("turn controller · the hero short never starts on its own (30-sep-2026, night)", () => {
+  it("fully in view for a minute: still its poster, and nothing was ever mounted", () => {
+    const { controller, see, advance, hero, mounts } = setup();
+    see(hero, 1);
+    advance(60_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, owner: null, mountCount: 0 });
+    expect(mounts).toEqual([]);
+  });
+
+  it("nor when the tab comes back, the menu closes, reduced motion goes off or the box resizes", () => {
+    const { controller, see, advance, hero, page, resize, mounts } = setup();
+    see(hero, 1);
+    advance(1_000);
+    controller.setPageVisible(false);
+    controller.setPageVisible(true);
+    controller.addBlocker("menu");
+    controller.removeBlocker("menu");
+    page.reduced = true;
+    controller.reducedMotionChanged();
+    page.reduced = false;
+    controller.reducedMotionChanged();
+    resize();
+    advance(5_000);
     expect(controller.getView("hero").mounted).toBe(false);
+    expect(mounts).toEqual([]);
+  });
+
+  it("a player starts on its own only if it says so: autoStart is false by default", () => {
+    const browser = fakeBrowser();
+    const controller = createTurnController(browser.env);
+    const quiet = box(1024, 576);
+    const loud = box(1024, 576);
+    controller.register({ id: "tv-directo", element: quiet });
+    controller.register({ id: "evento", element: loud, autoStart: true });
+    controller.start();
+    browser.see(quiet, 1);
+    browser.advance(1_000);
+    expect(controller.getView("tv-directo").mounted).toBe(false);
+    browser.see(quiet, 0);
+    browser.see(loud, 1);
+    browser.advance(1_000);
+    expect(controller.getView("evento")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  // The hero used to register «not ready» until its headline's font and its
+  // intro were done, and a tap on its ▶ in that time did nothing. Its poster
+  // is now THE way to watch a short: no start of the visitor waits for that.
+  it("the visitor starts it at once: there is no «not ready» for a tap", () => {
+    const browser = fakeBrowser();
+    const controller = createTurnController(browser.env);
+    const hero = box();
+    controller.register({ id: "hero", element: hero });
+    controller.start();
+    expect(controller.userStart("hero")).toBe("started");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
   });
 });
 
 describe("turn controller · only one at a time", () => {
   it("two above half: the larger visible area; when it drops, the other takes over in the same commit", () => {
-    const { controller, see, advance, hero, tv, worst } = setup();
-    see(hero, 0.6);
-    see(tv, 0.9);
-    advance(500);
+    // No page has two automatic players today; the rule still holds.
+    const browser = fakeBrowser();
+    const controller = createTurnController(browser.env);
+    const tv = box(1024, 576);
+    const live = box(768, 432);
+    controller.register({ id: "tv-bucle", element: tv, autoStart: true });
+    controller.register({ id: "evento", element: live, autoStart: true });
+    controller.start();
+    const worst = watchSinglePlayer(controller, ["tv-bucle", "evento"]);
+    browser.see(live, 0.6);
+    browser.see(tv, 0.9);
+    browser.advance(500);
     expect(controller.getView("tv-bucle").mounted).toBe(true);
-    expect(controller.getView("hero").mounted).toBe(false);
-    see(tv, 0.2);
+    expect(controller.getView("evento").mounted).toBe(false);
+    browser.see(tv, 0.2);
     expect(controller.getView("tv-bucle").mounted).toBe(false);
-    expect(controller.getView("hero").mounted).toBe(true);
+    expect(controller.getView("evento").mounted).toBe(true);
     expect(worst.mounted).toBe(1);
   });
 
-  it("what the visitor starts takes the turn from an automatic player", () => {
-    const { controller, see, advance, hero, tv, worst } = setup();
+  it("the visitor's short takes the turn from UFC TV, and UFC TV does not come back while it is theirs", () => {
+    const { controller, see, advance, hero, tv, mounts, worst } = setup();
     see(tv, 1);
     advance(500);
     see(hero, 0.3);
-    controller.userStart("hero");
+    expect(controller.userStart("hero")).toBe("started");
     expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
     expect(controller.getView("tv-bucle").mounted).toBe(false);
+    // UFC TV fully in view for far longer than the dwell: it waits.
+    advance(10_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(mounts).toEqual(["tv:auto", "hero:user"]);
     expect(worst.mounted).toBe(1);
   });
 });
 
 describe("turn controller · hidden tab", () => {
   it("the automatic one is unmounted, and comes back on its own when the tab does", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv } = setup();
+    see(tv, 1);
     advance(500);
     controller.setPageVisible(false);
-    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
     controller.setPageVisible(true);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
   });
 
   it("what the visitor started stays mounted: the same iframe, not a new one", () => {
@@ -241,70 +320,72 @@ describe("turn controller · hidden tab", () => {
   });
 
   it("an automatic player the visitor touched inside is theirs: it stays with the tab hidden", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
     const iframe = {};
-    controller.setIframe("hero", iframe);
+    controller.setIframe("tv-bucle", iframe);
     page.active = iframe;
     controller.windowBlurred();
     advance(0);
     controller.setPageVisible(false);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user", touched: true });
   });
 
   it("a tab that starts hidden mounts nothing", () => {
     const browser = fakeBrowser();
     browser.page.visible = false;
     const controller = createTurnController(browser.env);
-    const hero = box();
-    controller.register({ id: "hero", element: hero });
+    const tv = box(1024, 576);
+    controller.register({ id: "tv-bucle", element: tv, autoStart: true });
     controller.start();
-    browser.see(hero, 1);
+    browser.see(tv, 1);
     browser.advance(1_000);
-    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
   });
 });
 
 describe("turn controller · prefers-reduced-motion", () => {
   it("nothing starts on its own, and turning it on stops the automatic one; a tap still plays", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
     page.reduced = true;
     controller.reducedMotionChanged();
-    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
     advance(5_000);
-    expect(controller.getView("hero").mounted).toBe(false);
-    controller.userStart("hero");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    controller.userStart("tv-bucle");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
   });
 });
 
 describe("turn controller · touched by the visitor", () => {
-  it("a tap inside its iframe (window blur + the iframe focused) makes it the visitor's, and the timer leaves it", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+  it("a tap inside UFC TV's iframe (window blur + the iframe focused) makes it the visitor's", () => {
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
     const iframe = {};
-    controller.setIframe("hero", iframe);
+    controller.setIframe("tv-bucle", iframe);
     page.active = iframe;
     controller.windowBlurred();
     advance(0);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
-    expect(controller.timerFired("hero")).toBe("stay");
-    expect(controller.getView("hero").mounted).toBe(true);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    // Theirs now: out of view it stays (PiP).
+    see(tv, 0);
+    advance(2_000);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
   });
 
   it("a blur with the focus somewhere else (another tab, another app) touches nothing", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
-    controller.setIframe("hero", {});
+    controller.setIframe("tv-bucle", {});
     page.active = null;
     controller.windowBlurred();
     advance(0);
-    expect(controller.getView("hero")).toMatchObject({ owner: "auto", touched: false });
+    expect(controller.getView("tv-bucle")).toMatchObject({ owner: "auto", touched: false });
   });
 
   // The net under the window blur: WebKit fires that blur only when a frame of
@@ -312,51 +393,49 @@ describe("turn controller · touched by the visitor", () => {
   // first tap inside the iframe may move the focus there with no blur at all.
   // Every decision looks where the focus is before taking a player away.
   it("the focus inside the holder's iframe with no blur still makes it the visitor's at the next decision", () => {
-    const { controller, see, advance, hero, tv, page, worst } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page, worst } = setup();
+    see(tv, 1);
     advance(500);
     const iframe = {};
-    controller.setIframe("hero", iframe);
+    controller.setIframe("tv-bucle", iframe);
     page.active = iframe;
-    // No windowBlurred(): the visitor scrolls away, UFC TV fully in view.
-    see(hero, 0);
-    see(tv, 1);
+    // No windowBlurred(): the visitor scrolls away.
+    see(tv, 0);
     advance(1_000);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
-    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user", touched: true });
     expect(worst.mounted).toBe(1);
   });
 
   it("a tap on the page (pointerdown) reads the focus BEFORE it leaves the iframe: the menu does not take it away", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
     const iframe = {};
-    controller.setIframe("hero", iframe);
+    controller.setIframe("tv-bucle", iframe);
     page.active = iframe;
     // The hamburger: pointerdown first, then the focus goes to the page, then
     // the menu opens.
     controller.pagePointerDown();
     page.active = null;
     controller.addBlocker("menu");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user", touched: true });
   });
 
   it("with the focus elsewhere the net touches nothing: the automatic one still goes out of view", () => {
-    const { controller, see, advance, hero, page } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, page } = setup();
+    see(tv, 1);
     advance(500);
-    controller.setIframe("hero", {});
+    controller.setIframe("tv-bucle", {});
     page.active = null;
     controller.pagePointerDown();
-    see(hero, 0);
-    expect(controller.getView("hero")).toMatchObject({ mounted: false, touched: false });
+    see(tv, 0);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: false, touched: false });
   });
 
-  it("the carousel timer also looks at the focus first: a short with the focus inside stays", () => {
-    const { controller, see, advance, hero, page } = setup();
+  it("the hero's timer also looks at the focus first: a short with the focus inside stays", () => {
+    const { controller, see, hero, page } = setup();
     see(hero, 1);
-    advance(500);
+    controller.userStart("hero");
     const iframe = {};
     controller.setIframe("hero", iframe);
     page.active = iframe;
@@ -403,60 +482,45 @@ describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-
     expect(worst.mounted).toBe(1);
   });
 
-  it("or when the visitor pauses it with the site's control: then the automatic one may start", () => {
-    const { controller, see, advance, hero, tv } = setup();
-    see(hero, 0.9);
-    controller.userStart("hero");
-    see(hero, 0.2);
-    see(tv, 1);
-    advance(1_000);
-    expect(controller.getView("tv-bucle").mounted).toBe(false);
-    controller.pause("hero");
-    expect(controller.getView("hero")).toMatchObject({ mounted: false, paused: true });
-    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
-  });
-
-  it("the view has no «waiting» state any more: nothing waits for «Seguir» after a hidden tab", () => {
+  it("the view has no «waiting» nor «paused» state: nothing waits for a «Seguir» any more", () => {
     const { controller, see, hero } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
     controller.setPageVisible(false);
     expect(Object.keys(controller.getView("hero")).sort()).toEqual(
-      ["mountCount", "mounted", "owner", "paused", "touched"].sort(),
+      ["mountCount", "mounted", "owner", "touched"].sort(),
     );
   });
 });
 
-describe("turn controller · the carousel timer", () => {
-  it("untouched and still more than half visible: the next short is a new automatic mount", () => {
+describe("turn controller · the end of the hero short (its timer)", () => {
+  it("untouched and fully in view: back to its poster, and no short starts on its own after it", () => {
     const { controller, see, advance, hero, mounts } = setup();
     see(hero, 1);
-    advance(500);
-    const before = controller.getView("hero").mountCount;
-    expect(controller.timerFired("hero")).toBe("next");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto", mountCount: before + 1 });
-    expect(mounts).toEqual(["hero:auto", "hero:auto"]);
+    controller.userStart("hero");
+    expect(controller.timerFired("hero")).toBe("release");
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, owner: null });
+    advance(60_000);
+    expect(controller.getView("hero").mounted).toBe(false);
+    expect(mounts).toEqual(["hero:user"]);
   });
 
-  it("started with «Siguiente» and now at 30 %: back to the poster, and the turn is free", () => {
-    const { controller, see, advance, hero, tv } = setup();
-    see(hero, 0.3);
+  it("and the turn is free: UFC TV, in view, starts on its own in the same commit", () => {
+    const { controller, see, advance, hero, tv, worst } = setup();
+    see(hero, 0.6);
     see(tv, 0.9);
     controller.userStart("hero");
-    advance(500);
-    expect(controller.getView("hero").mounted).toBe(true);
+    advance(2_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
     expect(controller.timerFired("hero")).toBe("release");
     expect(controller.getView("hero").mounted).toBe(false);
-    expect(controller.getView("tv-bucle").mounted).toBe(true);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
   });
 
-  // The carousel's exit of the visitor's player (lib/playback-turn.ts): a
-  // short they started with a tap and never touched inside ends like any
-  // other. Without the JS API its end looks like a pause, and the next short
-  // would be a new automatic start (rule 1). Out of view that is the poster,
-  // so a PiP opened with the browser's own button (no tap inside) closes at
-  // that moment.
-  it("started with a tap and never touched, out of view with the tab visible: it stays while it plays, and its timer frees the turn for UFC TV", () => {
+  // Out of view while it plays, maybe in a PiP opened with the browser's own
+  // button (no tap inside): it stays while it plays, and its end closes it.
+  it("started with a tap and never touched, out of view: it stays while it plays, and its timer frees the turn for UFC TV", () => {
     const { controller, see, advance, hero, tv, mounts, worst } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
@@ -497,85 +561,43 @@ describe("turn controller · the carousel timer", () => {
   });
 });
 
-describe("turn controller · blockers, pause and size", () => {
+describe("turn controller · blockers and size", () => {
   it("a blocker (the menu) unmounts the automatic player, and nothing starts until it closes", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 1);
+    const { controller, see, advance, tv, hero } = setup();
+    see(tv, 1);
     advance(500);
     controller.addBlocker("menu");
-    expect(controller.getView("hero").mounted).toBe(false);
-    controller.userStart("hero");
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    see(hero, 1);
+    expect(controller.userStart("hero")).toBe("blocked");
     expect(controller.getView("hero").mounted).toBe(false);
     controller.removeBlocker("menu");
-    expect(controller.getView("hero").mounted).toBe(true);
-  });
-
-  it("pause: unmounted and never starts on its own; resume is the visitor's", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 1);
-    advance(500);
-    controller.pause("hero");
-    expect(controller.getView("hero")).toMatchObject({ mounted: false, paused: true });
-    advance(5_000);
-    expect(controller.getView("hero").mounted).toBe(false);
-    controller.resume("hero");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", paused: false });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
   });
 
   it("under 200x200 it never mounts, and one that shrinks loses the turn on the next resize", () => {
-    const { controller, see, advance, hero, resize } = setup();
-    hero.size.width = 120;
-    hero.size.height = 213;
-    see(hero, 1);
+    const { controller, see, advance, tv, resize } = setup();
+    tv.size.width = 356;
+    tv.size.height = 199;
+    see(tv, 1);
     advance(500);
-    expect(controller.getView("hero").mounted).toBe(false);
-    hero.size.width = 330;
-    hero.size.height = 587;
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    tv.size.height = 200;
     resize();
-    expect(controller.getView("hero").mounted).toBe(true);
-    hero.size.width = 199;
+    expect(controller.getView("tv-bucle").mounted).toBe(true);
+    tv.size.width = 199;
     resize();
-    expect(controller.getView("hero").mounted).toBe(false);
-  });
-
-  it("not ready (fonts, intro animation): not eligible yet; becoming ready mounts with no scroll or resize", () => {
-    // A visitor who does not move: the dwell re-evaluation has already fired
-    // and no IntersectionObserver / ResizeObserver event will come. Becoming
-    // ready must be enough on its own (the mockup: heroReady = true; evaluate()).
-    const browser = fakeBrowser();
-    const controller = createTurnController(browser.env);
-    const hero = box();
-    controller.register({ id: "hero", element: hero, ready: false });
-    controller.start();
-    browser.see(hero, 1);
-    browser.advance(1_000);
-    expect(controller.getView("hero").mounted).toBe(false);
-    controller.setReady("hero", true);
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto" });
-    browser.advance(60_000);
-    expect(controller.getView("hero").mounted).toBe(true);
-  });
-
-  it("going back to not ready takes the turn away; setReady on an unknown id does nothing", () => {
-    const { controller, see, advance, hero } = setup();
-    see(hero, 1);
-    advance(500);
-    expect(controller.getView("hero").mounted).toBe(true);
-    controller.setReady("hero", false);
-    expect(controller.getView("hero").mounted).toBe(false);
-    expect(() => controller.setReady("nada", true)).not.toThrow();
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
   });
 });
 
 describe("turn controller · what the visitor starts also needs 200x200", () => {
-  it("userStart on a 150x150 box does not mount and says why (the poster opens the sheet)", () => {
+  it("userStart on a 150x150 box does not mount and says why (the poster opens YouTube)", () => {
     const { controller, see, hero } = setup();
     hero.size.width = 150;
     hero.size.height = 150;
     see(hero, 1);
     expect(controller.userStart("hero")).toBe("too-small");
-    expect(controller.getView("hero").mounted).toBe(false);
-    expect(controller.resume("hero")).toBe("too-small");
     expect(controller.getView("hero").mounted).toBe(false);
   });
 
@@ -590,20 +612,6 @@ describe("turn controller · what the visitor starts also needs 200x200", () => 
     expect(worst.mounted).toBe(1);
   });
 
-  it("not ready yet: refused too, until it is", () => {
-    const browser = fakeBrowser();
-    const controller = createTurnController(browser.env);
-    const hero = box();
-    controller.register({ id: "hero", element: hero, ready: false });
-    controller.start();
-    browser.see(hero, 0.3);
-    expect(controller.userStart("hero")).toBe("not-ready");
-    expect(controller.getView("hero").mounted).toBe(false);
-    controller.setReady("hero", true);
-    expect(controller.userStart("hero")).toBe("started");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
-  });
-
   it("the result of every start: started, blocked, unknown", () => {
     const { controller, see, hero } = setup();
     see(hero, 0.3);
@@ -612,6 +620,16 @@ describe("turn controller · what the visitor starts also needs 200x200", () => 
     expect(controller.userStart("hero")).toBe("blocked");
     controller.removeBlocker("menu");
     expect(controller.userStart("hero")).toBe("started");
+  });
+
+  it("the visitor's player that shrinks under 200x200 goes too", () => {
+    const { controller, see, hero, resize } = setup();
+    see(hero, 1);
+    controller.userStart("hero");
+    hero.size.width = 120;
+    hero.size.height = 213;
+    resize();
+    expect(controller.getView("hero").mounted).toBe(false);
   });
 });
 
@@ -622,13 +640,14 @@ describe("turn controller · lifecycle", () => {
     const hero = box();
     const tv = box(1024, 576);
     const offHero = controller.register({ id: "hero", element: hero });
-    controller.register({ id: "tv-bucle", element: tv });
+    controller.register({ id: "tv-bucle", element: tv, autoStart: true });
     controller.start();
     browser.see(hero, 1);
     browser.see(tv, 0.9);
     browser.advance(500);
     expect(controller.getView("tv-bucle").mounted).toBe(true);
     controller.userStart("hero");
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
     offHero();
     expect(controller.getView("hero").mounted).toBe(false);
     expect(controller.getView("tv-bucle").mounted).toBe(true);
@@ -647,12 +666,12 @@ describe("turn controller · lifecycle", () => {
     const browser = fakeBrowser();
     const controller = createTurnController(browser.env);
     controller.start();
-    const hero = box();
-    controller.register({ id: "hero", element: hero });
-    expect(browser.liveIO().observed.has(hero)).toBe(true);
-    browser.see(hero, 1);
+    const tv = box(1024, 576);
+    controller.register({ id: "tv-bucle", element: tv, autoStart: true });
+    expect(browser.liveIO().observed.has(tv)).toBe(true);
+    browser.see(tv, 1);
     browser.advance(500);
-    expect(controller.getView("hero").mounted).toBe(true);
+    expect(controller.getView("tv-bucle").mounted).toBe(true);
   });
 
   it("an unknown id reads as an idle poster, and the view object is stable between reads", () => {
@@ -680,23 +699,30 @@ describe("source guards of the turn manager", () => {
   it("the decisions stay in lib/playback-turn.ts: the wiring calls decideTurn and timerAction, it does not reimplement them", () => {
     const controller = files[0][1];
     expect(controller).toMatch(/apply\(decideTurn\(snapshot\(\)\)\)/);
-    expect(controller).toMatch(/timerAction\(snapshot\(\), id, p\.touched\)/);
+    expect(controller).toMatch(/timerAction\(p\.touched\)/);
     const provider = files[1][1];
-    expect(provider).not.toMatch(/decideTurn|mayAutoplay|timerAction\(/);
+    expect(provider).not.toMatch(/decideTurn|timerAction\(/);
   });
 
-  it("TurnSlot tells the controller when `ready` changes, so a still visitor still gets the player", () => {
+  it("TurnSlot registers autoStart, and it is false unless the player asks for it", () => {
     const provider = files[1][1];
-    expect(provider).toMatch(/ready\?: boolean;/);
-    expect(provider).toMatch(/useEffect\(\(\) => \{\s*controller\.setReady\(id, ready\);\s*\}, \[controller, id, ready\]\);/);
-    // No readiness callback that nobody can re-trigger.
-    expect(provider).not.toMatch(/isReady/);
+    expect(provider).toMatch(/autoStart\?: boolean;/);
+    expect(provider).toMatch(/autoStart = false,/);
+    expect(provider).toMatch(/controller\.register\(\{[\s\S]*?\bautoStart,[\s\S]*?\}\)/);
+    expect(files[0][1]).toMatch(/autoStart: reg\.autoStart \?\? false/);
   });
 
-  it("the hook hands the start result to the poster (too-small → the sheet, as in the mockup)", () => {
+  // The hero's ▶ during its entrance (until its headline's font and its intro
+  // animation were done) used to answer "not-ready" and do nothing.
+  it("no start of the visitor waits for the page: no readiness gate left", () => {
+    const [controller, provider] = [files[0][1], files[1][1]];
+    expect(controller).not.toMatch(/not-ready|setReady/);
+    expect(provider).not.toMatch(/setReady/);
+  });
+
+  it("the hook hands the start result to the poster (too-small → YouTube)", () => {
     const provider = files[1][1];
     expect(provider).toMatch(/userStart: useCallback\(\(\): StartResult => controller\.userStart\(id\)/);
-    expect(provider).toMatch(/resume: useCallback\(\(\): StartResult => controller\.resume\(id\)/);
   });
 
   it("the provider hands every tap on the page to the controller, in the capture phase (before the focus moves)", () => {

@@ -61,10 +61,10 @@ describe("interceptsClick: what the poster takes from its link", () => {
   });
 
   // The hero under 200x200 (a screen under 340 px). It used to ask the turn
-  // manager anyway, which looks at the menu and at «ready» BEFORE the size:
-  // during the intro (up to 1.5 s, or while the headline's font loads) or
-  // under the open menu the answer was "not-ready" or "blocked", not
-  // "too-small", and the tap did nothing on a poster announced as a link.
+  // manager anyway, which looks at the menu BEFORE the size (and, until
+  // 30-sep-2026, at «ready»: the hero's intro and its headline's font): the
+  // answer was "blocked" or "not-ready", not "too-small", and the tap did
+  // nothing on a poster announced as a link.
   it("a poster that cannot play here is a link all the way: never taken", () => {
     expect(interceptsClick(CLICK, false)).toBe(false);
   });
@@ -90,8 +90,8 @@ describe("posterOutcome: what the poster does with the turn manager's answer", (
     expect(posterOutcome("too-small")).toBe("youtube");
   });
 
-  it("not ready, blocked or unknown: nothing (as before the link)", () => {
-    for (const result of ["not-ready", "blocked", "unknown"] as StartResult[]) {
+  it("blocked by the open menu, or unknown: nothing (as before the link)", () => {
+    for (const result of ["blocked", "unknown"] as StartResult[]) {
       expect(posterOutcome(result), result).toBe("nothing");
     }
   });
@@ -124,10 +124,11 @@ describe("playerToFocus: only into a player the VISITOR holds", () => {
 // With the REAL turn manager (turn-controller.ts) and a fake browser: focusing
 // an iframe blurs the window and leaves the iframe as document.activeElement,
 // which is exactly how the controller recognises a player the visitor touched
-// ("touched": the carousel timer then leaves it alone). So the focus may only
-// go into what the visitor started, and never into an automatic mount.
+// ("touched": it is theirs from then on). So the focus may only go into what
+// the visitor started, and never into an automatic mount (UFC TV here: the
+// hero short never mounts on its own).
 describe("playerToFocus with the turn manager's «touched» detection", () => {
-  function setup() {
+  function setup(id: "tv-bucle" | "hero") {
     let clock = 1_000;
     const timers: { at: number; fn: () => void }[] = [];
     const page = { active: null as unknown };
@@ -158,9 +159,9 @@ describe("playerToFocus with the turn manager's «touched» detection", () => {
       getBoundingClientRect: () => ({ width: 330, height: 587 }),
     } as unknown as Element;
     const controller = createTurnController(env);
-    controller.register({ id: "hero", element });
+    controller.register({ id, element, autoStart: id === "tv-bucle" });
     controller.start();
-    const iframe: FakeIframe = { name: "hero iframe" };
+    const iframe: FakeIframe = { name: `${id} iframe` };
     const slot = slotWith(iframe);
     // What the provider does: the React slot hands its iframe over, and the
     // window's blur reaches windowBlurred.
@@ -185,18 +186,18 @@ describe("playerToFocus with the turn manager's «touched» detection", () => {
   }
 
   it("an automatic mount is left alone: nothing focused, never marked touched", () => {
-    const { controller, iframe, slot, focus, showFully } = setup();
+    const { controller, iframe, slot, focus, showFully } = setup("tv-bucle");
     showFully();
-    const view = controller.getView("hero");
+    const view = controller.getView("tv-bucle");
     expect(view).toMatchObject({ mounted: true, owner: "auto" });
-    controller.setIframe("hero", iframe);
+    controller.setIframe("tv-bucle", iframe);
 
     focus(playerToFocus(slot, view));
-    expect(controller.getView("hero")).toMatchObject({ owner: "auto", touched: false });
+    expect(controller.getView("tv-bucle")).toMatchObject({ owner: "auto", touched: false });
   });
 
-  it("a keyboard start: the focus goes in, and the player is the visitor's (touched)", () => {
-    const { controller, iframe, slot, focus } = setup();
+  it("a keyboard start of the hero short: the focus goes in, and the short is the visitor's (touched)", () => {
+    const { controller, iframe, slot, focus } = setup("hero");
     expect(controller.userStart("hero")).toBe("started");
     const view = controller.getView("hero");
     expect(view).toMatchObject({ mounted: true, owner: "user", touched: false });

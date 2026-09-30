@@ -37,12 +37,14 @@ import { cn } from "@/lib/utils";
 // No postMessage, no iframe_api, no enablejsapi: to stop a player its <iframe>
 // is removed, and each mount is a new <iframe>.
 //
-// Wired: the home hero's short (components/home/shorts-hero.tsx), and UFC TV
-// and the event's live broadcast through their shared 16:9 player
-// (components/playback/live-embed-player.tsx: the home, /en-vivo and the event
-// page). Nothing else of the site starts a YouTube player on its own: the
-// click-to-play facades and the /videos modal mount only on a tap, and stay
-// outside the turn for now.
+// Wired: UFC TV and the event's live broadcast through their shared 16:9
+// player (components/playback/live-embed-player.tsx: the home, /en-vivo and
+// the event page), the only players that start on their own (autoStart); and
+// the home hero's short (components/home/shorts-hero.tsx), which only plays
+// when the visitor starts it and is in the turn so that there is still ONE
+// player at a time. Nothing else of the site starts a YouTube player on its
+// own: the click-to-play facades and the /videos modal mount only on a tap,
+// and stay outside the turn for now.
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -146,12 +148,10 @@ export function usePlaybackTurn(id: string) {
   );
   return {
     view,
-    // The poster's ▶, «Siguiente», «Seguir». Mounts only on "started"; on
-    // "too-small" the poster opens the sheet instead (as in the mockup).
+    // The poster's ▶ and «Siguiente». Mounts only on "started"; on
+    // "too-small" the poster's link opens YouTube instead.
     userStart: useCallback((): StartResult => controller.userStart(id), [controller, id]),
-    pause: useCallback(() => controller.pause(id), [controller, id]),
-    resume: useCallback((): StartResult => controller.resume(id), [controller, id]),
-    // The carousel timer: "stay" | "next" | "release", or null.
+    // The hero short's timer: "stay" | "release", or null.
     timerFired: useCallback(() => controller.timerFired(id), [controller, id]),
   };
 }
@@ -190,7 +190,7 @@ export function TurnSlot({
   title,
   poster,
   className,
-  ready = true,
+  autoStart = false,
   onMount,
   onIframeLoad,
 }: {
@@ -201,20 +201,20 @@ export function TurnSlot({
   title: string;
   poster: ReactNode;
   className?: string;
-  // False until the page is ready for this player (fonts loaded, intro
-  // animation over). Turning it true re-evaluates at once.
-  ready?: boolean;
+  // Starts on its own when it is seen (UFC TV, the event's broadcast). False
+  // by default: then it only plays when the visitor starts it (the hero short).
+  autoStart?: boolean;
   onMount?: (owner: TurnOwner) => void;
-  // The carousel starts its timer here (duration + 2.5 s, as in the mockup).
+  // The hero starts its short's timer here (duration + 2.5 s, as in the mockup).
   onIframeLoad?: () => void;
 }) {
   const controller = useTurnController();
   const boxRef = useRef<HTMLDivElement>(null);
-  // The latest values, without re-registering the player on every render.
-  const latest = useRef({ ready, onMount });
+  // The latest callback, without re-registering the player on every render.
+  const latest = useRef({ onMount });
   useEffect(() => {
-    latest.current = { ready, onMount };
-  }, [ready, onMount]);
+    latest.current = { onMount };
+  }, [onMount]);
 
   useEffect(() => {
     const element = boxRef.current;
@@ -223,16 +223,10 @@ export function TurnSlot({
       id,
       priority,
       element,
-      ready: latest.current.ready,
+      autoStart,
       onMount: (owner) => latest.current.onMount?.(owner),
     });
-  }, [controller, id, priority]);
-
-  // Declared after the registration, so on mount it runs after it (a no-op
-  // then); afterwards every change of `ready` re-evaluates the turn.
-  useEffect(() => {
-    controller.setReady(id, ready);
-  }, [controller, id, ready]);
+  }, [controller, id, priority, autoStart]);
 
   const view: PlayerView = useSyncExternalStore(
     controller.subscribe,

@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,7 +13,6 @@ import {
 import { ShortsAttribution } from "@/components/home/shorts-attribution";
 import {
   createShortsCarousel,
-  posterIndex,
   posterLabel,
   shortTimerMs,
   shortWatchUrl,
@@ -38,36 +36,50 @@ import { cn } from "@/lib/utils";
 //     headline (variant A; the grid lives in app/page.tsx). Under 340 px of
 //     screen the column is 120 px: no legal inline player there (200x200), so
 //     the poster opens the short on YouTube instead.
-//   · It autoplays muted (mute=1 accepted) on every device, but only when the
-//     turn manager says so: more than half of it in view for 400 ms, one
-//     player at a time, nothing with the tab hidden (lib/playback-turn.ts).
+//   · It never starts on its own (the owner's decision, 30-sep-2026, night):
+//     the hero shows the poster of the most recent short, and a short plays
+//     only when the visitor taps its ▶ or «Siguiente ›». When one ends, no
+//     other one starts: the poster shows the next short, for a tap (its ▶,
+//     or «Siguiente ›», which plays that same one). The player is still in
+//     the turn manager (lib/playback-turn.ts), so there is ONE player at a
+//     time: UFC TV makes way when the visitor puts a short on.
+//   · Muted (mute=1), as UFC TV. Measured on 30-sep-2026 with the real
+//     YouTube: under a strict autoplay policy (Chromium's
+//     user-gesture-required) the tap on this page does not carry into the new
+//     iframe, and without mute the short the visitor tapped stayed black and
+//     stopped until a second tap inside. With it, it plays at once; the sound
+//     is YouTube's speaker, inside the player.
 //   · Nothing over the iframe: square corners, no mask-feather, no fade and no
-//     animate-rise on an ancestor while it plays (the frame drops the class
-//     before it may mount). The brand halo BEHIND the frame stays.
-//   · Pausar / Seguir and «Siguiente ›» (WCAG 2.2.2) and the attribution go
-//     OUTSIDE the frame: below it on mobile, under it (absolute) from md.
-//   · The next short is a NEW iframe mounted on a timer: its duration + 2.5 s
-//     from the iframe's load. No postMessage, no iframe_api, no enablejsapi
-//     (DECISIONS.md, 29-sep-2026): there is no "ended" event to listen to.
-//   · A short the visitor touched (a tap INSIDE the iframe: sound, pause, full
-//     screen) is theirs: the timer never changes it, «Siguiente ›» goes on.
-//     Theirs too, with a tap on the poster: out of view (PiP), with the tab
-//     hidden or under the menu it stays (DECISIONS.md, 30-sep-2026) until it
-//     ends; if they never touched it inside, the timer then goes on as ever.
-//   · prefers-reduced-motion: only the poster with ▶; nothing starts alone.
+//     animate-rise on an ancestor while it plays (the frame drops the class at
+//     its first mount, for good). The brand halo BEHIND the frame stays.
+//   · «Siguiente ›» and the attribution go OUTSIDE the frame: below it on
+//     mobile, under it (absolute) from md. No «Pausar»: nothing moves on its
+//     own (WCAG 2.2.2 is about what starts by itself), and YouTube's own
+//     player pauses.
+//   · The end of a short is a timer: its duration + 2.5 s from the iframe's
+//     load. No postMessage, no iframe_api, no enablejsapi (DECISIONS.md,
+//     29-sep-2026): there is no "ended" event to listen to. A short the
+//     visitor touched (a tap INSIDE the iframe: sound, pause, full screen) is
+//     theirs: the timer leaves it as they left it, «Siguiente ›» goes on. One
+//     they did not touch goes back to its poster, and the turn is free. Until
+//     then it stays out of view (PiP), with the tab hidden or under the menu
+//     (DECISIONS.md, 30-sep-2026).
+//   · A tap never waits for the page. The player used to wait for the
+//     headline's font and the entrance animation (up to 1.5 s, or the font's
+//     download), and the ▶ did nothing meanwhile. Now it mounts at once and
+//     the frame drops its entrance class.
 //   · The poster is the short's own i.ytimg.com thumbnail, WHOLE (object-
 //     contain, not cropped: the thumbnail may not be altered) with the ▶
 //     below it, not on it. With no list at all: our own poster, no player.
 //   · The poster is a real link to that short on YouTube (poster-link.tsx):
 //     without the page's JavaScript, and under 200x200, it opens it there.
 //     Started with the keyboard, the focus goes into the short it mounts.
+//     «Siguiente ›» is a button only React understands: until the page
+//     hydrates it is not shown (it would do nothing).
 
 export type HeroShort = { id: string; title: string; seconds: number; thumbnail: string };
 
 const HERO_ID = "hero";
-// The intro animation (animate-rise, 0.7 s) must be over before the player
-// may mount; this is the net if its animationend never arrives.
-const INTRO_FALLBACK_MS = 1_500;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribeToReducedMotion(onChange: () => void) {
@@ -76,30 +88,27 @@ function subscribeToReducedMotion(onChange: () => void) {
   return () => query.removeEventListener("change", onChange);
 }
 
+function subscribeToNothing() {
+  return () => {};
+}
+
 /**
  * The frame's column: the halo behind, the 9:16 box (what the e2e measures:
  * data-testid="hero-short") and what goes under it.
  */
 function HeroFrame({
   rising,
-  onIntroEnd,
   boxRef,
   children,
   below,
 }: {
   rising: boolean;
-  onIntroEnd?: () => void;
   boxRef?: Ref<HTMLDivElement>;
   children: ReactNode;
   below?: ReactNode;
 }) {
   return (
-    <div
-      className={cn("relative mx-auto w-full md:max-w-[280px] lg:max-w-[330px]", rising && "animate-rise")}
-      onAnimationEnd={(event) => {
-        if (event.target === event.currentTarget) onIntroEnd?.();
-      }}
-    >
+    <div className={cn("relative mx-auto w-full md:max-w-[280px] lg:max-w-[330px]", rising && "animate-rise")}>
       {/* Soft brand glow BEHIND the frame (-z-10): never over the player. */}
       <div
         aria-hidden
@@ -162,45 +171,26 @@ function PlayIcon({ className }: { className?: string }) {
   );
 }
 
-function PauseIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-      <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />
-    </svg>
-  );
-}
-
 const CONTROL_CLASS =
   "inline-flex h-8 items-center rounded-lg border border-border bg-card px-2.5 font-display text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
 function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
   const [carousel] = useState(() => createShortsCarousel(shorts.length));
   const snapshot = useSyncExternalStore(carousel.subscribe, carousel.getSnapshot, carousel.getSnapshot);
-  const { view, userStart, pause, timerFired } = usePlaybackTurn(HERO_ID);
+  const { view, userStart, timerFired } = usePlaybackTurn(HERO_ID);
   const focusShort = useKeyboardStartFocus(view);
   const reducedMotion = useSyncExternalStore(
     subscribeToReducedMotion,
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
     () => false,
   );
-
-  // The player waits for the headline's font (the column widths depend on
-  // it) and for the intro animation: nothing may animate over the iframe.
-  const [ready, setReady] = useState(false);
-  const introDone = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const intro = new Promise<void>((resolve) => {
-      introDone.current = resolve;
-      window.setTimeout(resolve, INTRO_FALLBACK_MS);
-    });
-    void Promise.all([document.fonts.ready, intro]).then(() => {
-      if (alive) setReady(true);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // False on the server and while hydrating, true once React runs (the same
+  // pattern as PosterLink): «Siguiente ›» only works from then on.
+  const hydrated = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
   // Under 200x200 (a screen under 340 px): no inline player, no buttons.
   const [box, setBox] = useState<HTMLDivElement | null>(null);
@@ -219,7 +209,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     () => false,
   );
 
-  // The carousel timer: armed on the iframe's load, dropped whenever that
+  // The short's timer: armed on the iframe's load, dropped whenever that
   // iframe goes (unmounted, or replaced by the next mount).
   const timer = useRef<number | null>(null);
   const clearTimer = useCallback(() => {
@@ -235,18 +225,18 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     const short = shorts[carousel.getSnapshot().current ?? 0];
     timer.current = window.setTimeout(() => {
       timer.current = null;
-      // "stay" (touched: theirs), "next" (a new automatic start) or
-      // "release" (back to the poster). The turn manager applies it.
+      // "stay" (touched: theirs) or "release" (back to the poster, which
+      // shows the next short). The turn manager applies it.
       timerFired();
     }, shortTimerMs(short.seconds));
   }, [carousel, clearTimer, shorts, timerFired]);
 
-  // Every mount, automatic or the visitor's, picks its short here.
+  // Every mount is the visitor's start: it picks the short they asked for.
   const onMount = useCallback(() => {
     carousel.take();
   }, [carousel]);
 
-  // The visitor's ▶, «Seguir» and «Siguiente ›»: the turn manager's answer.
+  // The visitor's ▶ and «Siguiente ›»: the turn manager's answer.
   const start = useCallback(
     (index: number): StartResult => {
       carousel.queue(index);
@@ -257,9 +247,9 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     [carousel, userStart],
   );
 
-  // «Seguir» and «Siguiente ›» are buttons, not links: under 200x200 (where
-  // they are hidden anyway) they open the short on YouTube themselves. The
-  // poster needs none of this: it is a link to that short.
+  // «Siguiente ›» is a button, not a link: under 200x200 (where it is hidden
+  // anyway) it opens the short on YouTube itself. The poster needs none of
+  // this: it is a link to that short.
   const startFromControl = useCallback(
     (index: number) => {
       if (start(index) === "too-small") {
@@ -269,18 +259,15 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     [shorts, start],
   );
 
-  // The short the poster shows (posterIndex) is the one it starts.
-  const onPoster = () => start(view.paused ? carousel.resumeIndex() : carousel.nextIndex());
-  const onPauseToggle = () => (view.paused ? startFromControl(carousel.resumeIndex()) : pause());
+  // The short the poster shows (the cursor) is the one its ▶ starts;
+  // «Siguiente ›», the one after the last one played: once a short has
+  // ended, the one its poster shows (none is skipped).
+  const onPoster = () => start(snapshot.cursor);
   const onNext = () => startFromControl(carousel.nextIndex());
 
   const playing = shorts[snapshot.current ?? 0];
-  const shown = shorts[posterIndex(snapshot, view.paused)];
-  const label = posterLabel({
-    tooSmall,
-    paused: view.paused,
-    reducedMotion,
-  });
+  const shown = shorts[snapshot.cursor];
+  const label = posterLabel({ tooSmall, reducedMotion });
 
   const poster = (
     <PosterLink
@@ -316,8 +303,10 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
 
   return (
     <HeroFrame
-      rising={!ready}
-      onIntroEnd={() => introDone.current?.()}
+      // The entrance animation, until a short is mounted: nothing may animate
+      // over the player. mountCount only grows, so the class never comes
+      // back (and the animation never replays) when a short ends.
+      rising={view.mountCount === 0}
       boxRef={setBox}
       below={
         <div
@@ -326,11 +315,10 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
             tooSmall && "hidden",
           )}
         >
-          <div className="flex items-center gap-2 md:justify-center">
-            <button type="button" onClick={onPauseToggle} className={cn(CONTROL_CLASS, "gap-1.5")}>
-              {view.paused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
-              <span>{view.paused ? "Seguir" : "Pausar"}</span>
-            </button>
+          {/* Invisible, not absent, until React runs: it keeps its room (the
+              search box below does not jump) and it is out of the tab order
+              and of screen readers while it would do nothing. */}
+          <div className={cn("flex items-center gap-2 md:justify-center", !hydrated && "invisible")}>
             <button
               type="button"
               onClick={onNext}
@@ -341,7 +329,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
             </button>
           </div>
           {/* On mobile the attribution goes at the foot of the text column
-              (app/page.tsx): under the 200 px frame only the buttons fit
+              (app/page.tsx): under the 200 px frame only the button fits
               without the hero growing past 844 px. */}
           <ShortsAttribution className="mt-1.5 max-md:hidden md:text-center" />
         </div>
@@ -352,7 +340,6 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
         src={shortEmbedUrl(playing.id, { mute: true })}
         title={`Short de la UFC: ${playing.title}`}
         poster={poster}
-        ready={ready}
         onMount={onMount}
         onIframeLoad={onIframeLoad}
         className="aspect-[9/16] w-full overflow-hidden bg-black"

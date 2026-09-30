@@ -97,7 +97,8 @@ test("la portada pinta UFC TV en bucle, arrancando solo, mudo y en línea al lle
   }
 
   // Brought to the middle of the screen it starts on its own, and it is then
-  // the only autoplaying iframe of the page (the hero short left the turn).
+  // the only autoplaying iframe of the page (the hero short never starts on
+  // its own: only a tap mounts it).
   await marco.evaluate((el) => el.scrollIntoView({ block: "center" }));
   await expect(marco).toHaveAttribute("data-turn-state", "playing-auto");
   const iframe = bloque.locator("iframe");
