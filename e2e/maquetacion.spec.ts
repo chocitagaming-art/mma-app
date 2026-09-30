@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectNoHorizontalOverflow } from "./helpers";
+import { expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
 // ── Geometría del hero de la portada, de UFC TV y de la foto de la ficha ────
 //
@@ -24,9 +24,9 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //
 // Corre en UN proyecto: cada test fija su viewport y el tema no cambia ninguna
 // medida. Y sin red de fuera: los shorts del hero salen enlatados
-// (UFC_SHORTS_FIXTURE=list en playwright.config.ts) y su iframe se corta: se
-// mide el MARCO del short (data-testid="hero-short"), esté el póster o el
-// reproductor dentro,
+// (UFC_SHORTS_FIXTURE=list en playwright.config.ts) y su iframe carga el
+// YouTube falso de helpers.ts: se mide el MARCO del short
+// (data-testid="hero-short"), esté el póster o el reproductor dentro,
 // las imágenes de terceros se sirven con un PNG de relleno y el resto se corta.
 // 🪤 La foto de la ficha se RELLENA, no se corta: si no carga, el componente
 // cae al headshot y la caja que se mide deja de existir.
@@ -61,6 +61,9 @@ test.beforeEach(async ({ page, baseURL }, testInfo) => {
   await page.route("**/api/live/now", (route) =>
     route.fulfill({ status: 200, json: { phase: "none" } }),
   );
+  // The players the turn manager mounts get the fake YouTube (e2e/helpers.ts).
+  // Registered after the catch-all above, so it wins for youtube-nocookie.
+  await fakeYouTubeEmbeds(page);
 });
 
 type Caja = { left: number; right: number; top: number; bottom: number; width: number };

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── Fase 13B · "que los favoritos sobrevivan a recargar" ───────────────────
 //
 // Es literalmente una de las tres frases del sprint. La lógica pura de
@@ -18,6 +20,12 @@ test.beforeEach(({}, testInfo) => {
     testInfo.project.name !== "escritorio-light",
     "la franja llama a una ruta con freno: un solo proyecto",
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 const OLIVEIRA = { id: 6493, nombre: "Charles Oliveira" };

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── UFC TV en la portada ────────────────────────────────────────────────────
 //
 // El reproductor siempre encendido bajo el hero del próximo evento. Aquí se
@@ -42,9 +44,10 @@ test("la portada pinta UFC TV en bucle, arrancando solo, mudo y en línea al lle
     "con PLAYWRIGHT_BASE_URL no hay UFC_TV_FIXTURE: el contenido depende del día",
   );
 
-  // Se corta el iframe de terceros: lo que se prueba es NUESTRO marcado, no
-  // que YouTube cargue (mismo criterio que el modal de vídeo en interfaz.spec).
-  await page.route("https://www.youtube-nocookie.com/**", (route) => route.abort());
+  // Lo que se prueba es NUESTRO marcado, no que YouTube cargue: the iframe
+  // gets the fake YouTube of e2e/helpers.ts (it used to be aborted; the stub
+  // also fires `load`, like a real player would).
+  await fakeYouTubeEmbeds(page);
 
   await page.goto("/");
 

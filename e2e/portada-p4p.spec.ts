@@ -1,6 +1,6 @@
 import { expect, test, type Locator } from "@playwright/test";
 
-import { esperarHidratacion } from "./helpers";
+import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
 
 // ── «Mejores libra por libra» de la portada ───────────────────────────────
 //
@@ -104,6 +104,12 @@ async function comprobarPiesEnUnaLinea(panel: Locator, nombre: string): Promise<
     );
   }
 }
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
+});
 
 test("el libra por libra alterna Masculino y Femenino, y cada pie cuadra con su récord", async ({
   page,

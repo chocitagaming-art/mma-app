@@ -159,3 +159,39 @@ export async function collectHeadshots(page: Page): Promise<HeadshotReport> {
     return { photos, silhouettes, brokenExternal };
   });
 }
+
+// A fake YouTube for the e2e: every https://www.youtube-nocookie.com request
+// is answered here and never reaches YouTube. /embed/<id> gets a tiny local
+// page (it fires `load`, which starts the hero's carousel timer, and it takes
+// focus when clicked, which is how the turn manager sees a player the visitor
+// touched); anything else on that host is aborted.
+//
+// Since the turn manager (src/components/playback) the home page mounts the
+// hero short, UFC TV and the event's live broadcast on its own, so any spec
+// that loads `/`, /en-vivo or an event page would otherwise open a real
+// YouTube player.
+//
+// Call it BEFORE page.goto. Playwright runs the LAST registered matching route
+// first: register it after a catch-all (maquetacion.spec.ts) so the embed is
+// stubbed, and a later `route.abort()` of a spec that wants the player gone on
+// purpose still wins over it. Returns the embed URLs requested, in order.
+export const YOUTUBE_EMBED_STUB_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>YouTube (e2e stub)</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#999;font:12px/1.2 sans-serif}
+button{display:block;width:100%;height:100%;border:0;background:transparent;color:inherit;cursor:pointer}</style>
+</head><body><button type="button">e2e stub</button></body></html>`;
+
+export async function fakeYouTubeEmbeds(page: Page): Promise<string[]> {
+  const requested: string[] = [];
+  await page.route("https://www.youtube-nocookie.com/**", (route) => {
+    const url = route.request().url();
+    if (!url.startsWith("https://www.youtube-nocookie.com/embed/")) return route.abort();
+    requested.push(url);
+    return route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: YOUTUBE_EMBED_STUB_HTML,
+    });
+  });
+  return requested;
+}

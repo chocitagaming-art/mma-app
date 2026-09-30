@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── Fase 13B · /enfrentamiento y las DOS ramas de la predicción ────────────
 //
 // 🔴 NINGÚN TEST DE ESTE FICHERO LLAMA AL MICROSERVICIO. `/api/predict` se
@@ -25,6 +27,12 @@ test.beforeEach(({}, testInfo) => {
     testInfo.project.name !== "escritorio-light",
     "la predicción no depende del viewport: un solo proyecto",
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 const ROJO = { id: 6493, nombre: "Charles Oliveira" };
