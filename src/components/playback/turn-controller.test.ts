@@ -235,6 +235,24 @@ describe("turn controller · hidden tab", () => {
     expect(controller.getView("hero").waiting).toBe(false);
   });
 
+  it("«Seguir» waits even with the visitor's player well in view: 90 % visible after the tab comes back", () => {
+    const { controller, see, advance, hero, mounts } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    controller.setPageVisible(false);
+    controller.setPageVisible(true);
+    // The observer reports it again (a scroll, a resize): more than half in
+    // view for far longer than the dwell must NOT bring it back on its own.
+    see(hero, 0.9);
+    advance(1_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, waiting: true });
+    expect(mounts).toEqual(["hero:user"]);
+    // Only the visitor's tap does.
+    expect(controller.userStart("hero")).toBe("started");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", waiting: false });
+  });
+
   it("a tab that starts hidden mounts nothing", () => {
     const browser = fakeBrowser();
     browser.page.visible = false;
