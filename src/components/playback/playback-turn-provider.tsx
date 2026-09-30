@@ -15,6 +15,7 @@ import {
   IDLE_VIEW,
   createTurnController,
   type PlayerView,
+  type StartResult,
   type TurnController,
   type TurnEnvironment,
 } from "@/components/playback/turn-controller";
@@ -133,10 +134,11 @@ export function usePlaybackTurn(id: string) {
   );
   return {
     view,
-    // The poster's ▶, «Siguiente», «Seguir».
-    userStart: useCallback(() => controller.userStart(id), [controller, id]),
+    // The poster's ▶, «Siguiente», «Seguir». Mounts only on "started"; on
+    // "too-small" the poster opens the sheet instead (as in the mockup).
+    userStart: useCallback((): StartResult => controller.userStart(id), [controller, id]),
     pause: useCallback(() => controller.pause(id), [controller, id]),
-    resume: useCallback(() => controller.resume(id), [controller, id]),
+    resume: useCallback((): StartResult => controller.resume(id), [controller, id]),
     // The carousel timer: "stay" | "next" | "release", or null.
     timerFired: useCallback(() => controller.timerFired(id), [controller, id]),
   };
@@ -164,7 +166,7 @@ export function TurnSlot({
   title,
   poster,
   className,
-  isReady,
+  ready = true,
   onMount,
   onIframeLoad,
 }: {
@@ -175,18 +177,20 @@ export function TurnSlot({
   title: string;
   poster: ReactNode;
   className?: string;
-  isReady?: () => boolean;
+  // False until the page is ready for this player (fonts loaded, intro
+  // animation over). Turning it true re-evaluates at once.
+  ready?: boolean;
   onMount?: (owner: TurnOwner) => void;
   // The carousel starts its timer here (duration + 2.5 s, as in the mockup).
   onIframeLoad?: () => void;
 }) {
   const controller = useTurnController();
   const boxRef = useRef<HTMLDivElement>(null);
-  // The latest callbacks, without re-registering the player on every render.
-  const callbacks = useRef({ isReady, onMount });
+  // The latest values, without re-registering the player on every render.
+  const latest = useRef({ ready, onMount });
   useEffect(() => {
-    callbacks.current = { isReady, onMount };
-  }, [isReady, onMount]);
+    latest.current = { ready, onMount };
+  }, [ready, onMount]);
 
   useEffect(() => {
     const element = boxRef.current;
@@ -195,10 +199,16 @@ export function TurnSlot({
       id,
       priority,
       element,
-      isReady: () => callbacks.current.isReady?.() ?? true,
-      onMount: (owner) => callbacks.current.onMount?.(owner),
+      ready: latest.current.ready,
+      onMount: (owner) => latest.current.onMount?.(owner),
     });
   }, [controller, id, priority]);
+
+  // Declared after the registration, so on mount it runs after it (a no-op
+  // then); afterwards every change of `ready` re-evaluates the turn.
+  useEffect(() => {
+    controller.setReady(id, ready);
+  }, [controller, id, ready]);
 
   const view: PlayerView = useSyncExternalStore(
     controller.subscribe,

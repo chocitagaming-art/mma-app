@@ -360,19 +360,80 @@ describe("turn controller · blockers, pause and size", () => {
     expect(controller.getView("hero").mounted).toBe(false);
   });
 
-  it("not ready (fonts, intro animation): not eligible yet", () => {
+  it("not ready (fonts, intro animation): not eligible yet; becoming ready mounts with no scroll or resize", () => {
+    // A visitor who does not move: the dwell re-evaluation has already fired
+    // and no IntersectionObserver / ResizeObserver event will come. Becoming
+    // ready must be enough on its own (the mockup: heroReady = true; evaluate()).
     const browser = fakeBrowser();
     const controller = createTurnController(browser.env);
     const hero = box();
-    let ready = false;
-    controller.register({ id: "hero", element: hero, isReady: () => ready });
+    controller.register({ id: "hero", element: hero, ready: false });
     controller.start();
     browser.see(hero, 1);
     browser.advance(1_000);
     expect(controller.getView("hero").mounted).toBe(false);
-    ready = true;
-    controller.evaluate();
+    controller.setReady("hero", true);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto" });
+    browser.advance(60_000);
     expect(controller.getView("hero").mounted).toBe(true);
+  });
+
+  it("going back to not ready takes the turn away; setReady on an unknown id does nothing", () => {
+    const { controller, see, advance, hero } = setup();
+    see(hero, 1);
+    advance(500);
+    expect(controller.getView("hero").mounted).toBe(true);
+    controller.setReady("hero", false);
+    expect(controller.getView("hero").mounted).toBe(false);
+    expect(() => controller.setReady("nada", true)).not.toThrow();
+  });
+});
+
+describe("turn controller · what the visitor starts also needs 200x200", () => {
+  it("userStart on a 150x150 box does not mount and says why (the poster opens the sheet)", () => {
+    const { controller, see, hero } = setup();
+    hero.size.width = 150;
+    hero.size.height = 150;
+    see(hero, 1);
+    expect(controller.userStart("hero")).toBe("too-small");
+    expect(controller.getView("hero").mounted).toBe(false);
+    expect(controller.resume("hero")).toBe("too-small");
+    expect(controller.getView("hero").mounted).toBe(false);
+  });
+
+  it("a refused start leaves the current holder playing", () => {
+    const { controller, see, advance, hero, tv, worst } = setup();
+    see(tv, 1);
+    advance(500);
+    hero.size.width = 150;
+    see(hero, 0.3);
+    expect(controller.userStart("hero")).toBe("too-small");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("not ready yet: refused too, until it is", () => {
+    const browser = fakeBrowser();
+    const controller = createTurnController(browser.env);
+    const hero = box();
+    controller.register({ id: "hero", element: hero, ready: false });
+    controller.start();
+    browser.see(hero, 0.3);
+    expect(controller.userStart("hero")).toBe("not-ready");
+    expect(controller.getView("hero").mounted).toBe(false);
+    controller.setReady("hero", true);
+    expect(controller.userStart("hero")).toBe("started");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+  });
+
+  it("the result of every start: started, blocked, unknown", () => {
+    const { controller, see, hero } = setup();
+    see(hero, 0.3);
+    expect(controller.userStart("nada")).toBe("unknown");
+    controller.addBlocker("menu");
+    expect(controller.userStart("hero")).toBe("blocked");
+    controller.removeBlocker("menu");
+    expect(controller.userStart("hero")).toBe("started");
   });
 });
 
@@ -444,5 +505,19 @@ describe("source guards of the turn manager", () => {
     expect(controller).toMatch(/timerAction\(snapshot\(\), id, p\.touched\)/);
     const provider = files[1][1];
     expect(provider).not.toMatch(/decideTurn|mayAutoplay|timerAction\(/);
+  });
+
+  it("TurnSlot tells the controller when `ready` changes, so a still visitor still gets the player", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/ready\?: boolean;/);
+    expect(provider).toMatch(/useEffect\(\(\) => \{\s*controller\.setReady\(id, ready\);\s*\}, \[controller, id, ready\]\);/);
+    // No readiness callback that nobody can re-trigger.
+    expect(provider).not.toMatch(/isReady/);
+  });
+
+  it("the hook hands the start result to the poster (too-small → the sheet, as in the mockup)", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/userStart: useCallback\(\(\): StartResult => controller\.userStart\(id\)/);
+    expect(provider).toMatch(/resume: useCallback\(\(\): StartResult => controller\.resume\(id\)/);
   });
 });

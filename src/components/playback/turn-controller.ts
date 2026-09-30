@@ -68,7 +68,9 @@ export type PlayerRegistration = {
   priority?: number;
   element: Element;
   // False while the player must not be mounted yet (fonts, intro animation).
-  isReady?: () => boolean;
+  // Defaults to true. Change it with setReady(): that re-evaluates at once,
+  // because a visitor who does not scroll sends no other event.
+  ready?: boolean;
   // Called synchronously on every mount: the carousel picks its short here.
   onMount?: (owner: TurnOwner) => void;
 };
@@ -83,6 +85,11 @@ export type PlayerView = {
   waiting: boolean;
   touched: boolean;
 };
+
+// What a visitor's tap on the poster got. "too-small": under MIN_PLAYER_PX
+// there is no legal inline player, so the poster sends the visitor to the
+// sheet instead (as the mockup does). Nothing is mounted unless "started".
+export type StartResult = "started" | "too-small" | "not-ready" | "blocked" | "unknown";
 
 export const IDLE_VIEW: PlayerView = Object.freeze({
   mounted: false,
@@ -100,7 +107,7 @@ type Entry = {
   id: string;
   priority: number;
   element: Element;
-  isReady: () => boolean;
+  ready: boolean;
   onMount?: (owner: TurnOwner) => void;
   iframe: unknown;
   ratio: number;
@@ -177,7 +184,7 @@ export function createTurnController(env: TurnEnvironment) {
   }
 
   function eligible(p: Entry): boolean {
-    return p.isReady() && fitsMinimum(p.element.getBoundingClientRect());
+    return p.ready && fitsMinimum(p.element.getBoundingClientRect());
   }
 
   function snapshot(): TurnState {
@@ -270,10 +277,15 @@ export function createTurnController(env: TurnEnvironment) {
     for (const p of players.values()) io.observe(p.element);
   }
 
-  // What the visitor starts is theirs.
-  function userStart(id: string) {
+  // What the visitor starts is theirs, but only in a legal player: the 200x200
+  // minimum holds for a tap too, and nothing mounts before the page is ready.
+  // A refused start leaves the current holder alone.
+  function userStart(id: string): StartResult {
     const p = players.get(id);
-    if (!p || blockers.size > 0) return;
+    if (!p) return "unknown";
+    if (blockers.size > 0) return "blocked";
+    if (!p.ready) return "not-ready";
+    if (!fitsMinimum(p.element.getBoundingClientRect())) return "too-small";
     p.paused = false;
     p.waiting = false;
     const holder = current ? players.get(current.id) : undefined;
@@ -282,6 +294,7 @@ export function createTurnController(env: TurnEnvironment) {
     mount(p, "user");
     current = { id: p.id, owner: "user" };
     commit();
+    return "started";
   }
 
   return {
@@ -290,7 +303,7 @@ export function createTurnController(env: TurnEnvironment) {
         id: reg.id,
         priority: reg.priority ?? PRIORITY[reg.id] ?? 0,
         element: reg.element,
-        isReady: reg.isReady ?? (() => true),
+        ready: reg.ready ?? true,
         onMount: reg.onMount,
         iframe: null,
         ratio: 0,
@@ -349,6 +362,15 @@ export function createTurnController(env: TurnEnvironment) {
     },
 
     evaluate,
+
+    // The page finished what the player waits for (fonts, intro animation), or
+    // started again. Re-evaluates now: the dwell timer may be long gone.
+    setReady(id: string, ready: boolean) {
+      const p = players.get(id);
+      if (!p || p.ready === ready) return;
+      p.ready = ready;
+      evaluate();
+    },
 
     headerResized() {
       observe();
