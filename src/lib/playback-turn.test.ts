@@ -17,6 +17,9 @@ import {
 // (maqueta-shorts/turno.test.js, 47 tests on 29-sep-2026): every case is kept,
 // with the same inputs and the same expected output. The only change is the
 // field name of orderShorts (`formato` → `format`, the shape of UfcShort).
+// On 30-sep-2026 the visitor's rules changed in both tables the same way
+// (DECISIONS.md: what the visitor chose is theirs, and only autoplay obeys
+// the tab, the menu and the half-visible rule).
 
 const NOW = 100_000;
 
@@ -84,20 +87,36 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     want: null,
   },
   {
-    name: "hidden tab: nothing, not even what the visitor started",
-    s: state([player("hero", 1)], { pageVisible: false, current: { id: "hero", owner: "user" } }),
+    name: "hidden tab: the automatic holder goes",
+    s: state([player("hero", 1)], { pageVisible: false, current: { id: "hero", owner: "auto" } }),
     want: null,
   },
   {
-    name: "a blocker is open (sheet or menu): nothing",
+    name: "hidden tab and nobody holds it: nothing starts on its own",
+    s: state([player("hero", 1), player("tv-bucle", 1)], { pageVisible: false }),
+    want: null,
+  },
+  {
+    // The owner's decision of 30-sep-2026: YouTube's rules are about autoplay,
+    // not about what the visitor chose to watch (PiP, sound in the background).
+    name: "hidden tab: what the visitor chose stays",
+    s: state([player("hero", 1)], { pageVisible: false, current: { id: "hero", owner: "user" } }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "a blocker is open (the menu): nothing starts on its own",
     s: state([player("hero", 1), player("tv-bucle", 1)], { blocked: true }),
     want: null,
   },
   {
-    // Otherwise the sheet and the hero would play at once: two iframes.
-    name: "a blocker also takes away what the visitor started",
-    s: state([player("hero", 0.9)], { blocked: true, current: { id: "hero", owner: "user" } }),
+    name: "a blocker takes the automatic holder away",
+    s: state([player("hero", 0.9)], { blocked: true, current: { id: "hero", owner: "auto" } }),
     want: null,
+  },
+  {
+    name: "a blocker (the menu) leaves what the visitor chose alone",
+    s: state([player("evento", 0.9)], { blocked: true, current: { id: "evento", owner: "user" } }),
+    want: { id: "evento", owner: "user" },
   },
   {
     name: "reduced motion: nothing starts on its own",
@@ -151,9 +170,21 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     want: { id: "hero", owner: "user" },
   },
   {
-    name: "what the visitor started goes at 0 % and the turn is free again",
+    // In PiP the visitor scrolls away: removing the iframe would close it, and
+    // the page cannot see a PiP inside a cross-origin iframe.
+    name: "what the visitor chose stays at 0 % too, and nothing automatic starts meanwhile",
     s: state([player("hero", 0), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
-    want: { id: "tv-bucle", owner: "auto" },
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "out of view, tab hidden, a blocker and reduced motion at once: the visitor's still stays",
+    s: state([player("evento", 0), player("hero", 0.9)], {
+      pageVisible: false,
+      blocked: true,
+      reducedMotion: true,
+      current: { id: "evento", owner: "user" },
+    }),
+    want: { id: "evento", owner: "user" },
   },
   {
     name: "the visitor's choice also survives reduced motion",
@@ -181,6 +212,8 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     want: null,
   },
   {
+    // The 200x200 minimum is a rule for every embedded player, not only for
+    // autoplay: the visitor's goes too.
     name: "the visitor's player also goes when it shrinks under 200 px",
     s: state([player("hero", 0.9, { eligible: false })], { current: { id: "hero", owner: "user" } }),
     want: null,
@@ -241,9 +274,28 @@ describe("timerAction", () => {
     expect(timerAction(s, "hero", true)).toBe("stay");
   });
 
-  it("touched and now under half: it still stays (it goes at 0 %)", () => {
+  it("touched and now under half: it still stays (only the visitor takes it away)", () => {
     const s = state([player("hero", 0.2)], { current: { id: "hero", owner: "user" } });
     expect(timerAction(s, "hero", true)).toBe("stay");
+  });
+
+  it("touched, out of view and with the tab hidden (PiP): it stays", () => {
+    const s = state([player("hero", 0)], { pageVisible: false, current: { id: "hero", owner: "user" } });
+    expect(timerAction(s, "hero", true)).toBe("stay");
+  });
+
+  it("started with a tap, untouched, tab hidden: back to the poster (the next short would start on its own)", () => {
+    const s = state([player("hero", 0.9)], { pageVisible: false, current: { id: "hero", owner: "user" } });
+    expect(timerAction(s, "hero", false)).toBe("release");
+  });
+
+  // The carousel's exit of the visitor's player: a short they started with a
+  // tap and never touched inside ends like any other. Out of view (scrolled
+  // away, maybe in a PiP opened with the browser's own button) the next short
+  // could not start on its own, so it is the poster.
+  it("started with a tap, untouched, out of view with the tab visible: back to the poster at its end", () => {
+    const s = state([player("hero", 0), player("tv-bucle", 1)], { current: { id: "hero", owner: "user" } });
+    expect(timerAction(s, "hero", false)).toBe("release");
   });
 
   it("started with «Siguiente» and now at 30 %: back to the poster", () => {

@@ -181,8 +181,9 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
-  // While the mobile menu is open no YouTube player plays (the turn manager
-  // unmounts them; see components/playback): it covers what is behind it.
+  // While the mobile menu is open no YouTube player starts on its own, and
+  // the automatic one is unmounted (see components/playback): the menu covers
+  // what is behind it. What the visitor chose to watch keeps playing.
   useTurnBlocker("menu", open);
 
   // The menu (and its hamburger) is lg:hidden: if the window grows past lg

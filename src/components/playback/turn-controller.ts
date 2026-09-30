@@ -22,13 +22,14 @@ import {
 //   · one IntersectionObserver for every player, with the sticky header band
 //     taken off the top (rootMargin), re-created when the header resizes;
 //   · a player that goes above half visible is re-evaluated DWELL_MS later;
-//   · hidden tab / pagehide → everything is unmounted; what the visitor had
-//     started waits for a tap («Seguir») instead of coming back on its own;
+//   · hidden tab / pagehide → the automatic player is unmounted and comes
+//     back on its own; the visitor's stays (DECISIONS.md, 30-sep-2026);
 //   · prefers-reduced-motion → decideTurn never starts anything on its own;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
-//     the carousel timer leaves it alone. Nothing is sent to YouTube: no
-//     postMessage, no iframe_api, no enablejsapi.
+//     the carousel timer leaves it alone. As a net, every decision and every
+//     tap on the page first look where the focus is (noticeTouch). Nothing is
+//     sent to YouTube: no postMessage, no iframe_api, no enablejsapi.
 //
 // "Mounted" is state here; the React slot renders the <iframe> only while its
 // view says so, and re-creates it when mountCount changes.
@@ -81,8 +82,6 @@ export type PlayerView = {
   // Grows on every mount: key the <iframe> on it so each mount is a new one.
   mountCount: number;
   paused: boolean;
-  // The visitor's player after a hidden tab: the poster says «Seguir».
-  waiting: boolean;
   touched: boolean;
 };
 
@@ -96,7 +95,6 @@ export const IDLE_VIEW: PlayerView = Object.freeze({
   owner: null,
   mountCount: 0,
   paused: false,
-  waiting: false,
   touched: false,
 });
 
@@ -114,7 +112,6 @@ type Entry = {
   area: number;
   aboveSince: number | null;
   paused: boolean;
-  waiting: boolean;
   touched: boolean;
   mounted: boolean;
   owner: TurnOwner | null;
@@ -151,7 +148,6 @@ export function createTurnController(env: TurnEnvironment) {
       v.owner === p.owner &&
       v.mountCount === p.mountCount &&
       v.paused === p.paused &&
-      v.waiting === p.waiting &&
       v.touched === p.touched
     ) {
       return v;
@@ -161,7 +157,6 @@ export function createTurnController(env: TurnEnvironment) {
       owner: p.owner,
       mountCount: p.mountCount,
       paused: p.paused,
-      waiting: p.waiting,
       touched: p.touched,
     };
   }
@@ -200,7 +195,7 @@ export function createTurnController(env: TurnEnvironment) {
         ratio: p.ratio,
         area: p.area,
         aboveSince: p.aboveSince,
-        paused: p.paused || p.waiting,
+        paused: p.paused,
         eligible: eligible(p),
       })),
     };
@@ -239,8 +234,28 @@ export function createTurnController(env: TurnEnvironment) {
     }
   }
 
+  // Is the focus inside the holder's iframe? Then the visitor touched it
+  // (sound, pause, full screen, PiP): from now on it is theirs, and the
+  // carousel timer leaves it as they left it. Returns whether it changed.
+  //
+  // The window blur is the usual sign (windowBlurred), but WebKit fires it
+  // only when a frame of the page had the focus before
+  // (FocusController::setFocusedFrame): a first tap inside the iframe may
+  // move the focus there with no blur at all. So every decision that could
+  // take the holder away, and every tap on the page (pagePointerDown), look
+  // here first.
+  function noticeTouch(): boolean {
+    const p = current ? players.get(current.id) : undefined;
+    if (!p || p.touched || !p.iframe || env.activeElement() !== p.iframe) return false;
+    p.touched = true;
+    p.owner = "user";
+    current = { id: p.id, owner: "user" };
+    return true;
+  }
+
   function evaluate() {
     if (!started) return;
+    noticeTouch();
     apply(decideTurn(snapshot()));
     commit();
   }
@@ -259,9 +274,6 @@ export function createTurnController(env: TurnEnvironment) {
       } else {
         p.aboveSince = null;
       }
-      // «Seguir» only waits while it is on screen; out of sight it goes back
-      // to being an ordinary participant.
-      if (p.ratio === 0) p.waiting = false;
     }
     evaluate();
   }
@@ -287,7 +299,6 @@ export function createTurnController(env: TurnEnvironment) {
     if (!p.ready) return "not-ready";
     if (!fitsMinimum(p.element.getBoundingClientRect())) return "too-small";
     p.paused = false;
-    p.waiting = false;
     const holder = current ? players.get(current.id) : undefined;
     if (holder) unmount(holder);
     current = null;
@@ -310,7 +321,6 @@ export function createTurnController(env: TurnEnvironment) {
         area: 0,
         aboveSince: null,
         paused: false,
-        waiting: false,
         touched: false,
         mounted: false,
         owner: null,
@@ -403,6 +413,7 @@ export function createTurnController(env: TurnEnvironment) {
     timerFired(id: string): TimerAction | null {
       const p = players.get(id);
       if (!p || !current || current.id !== id) return null;
+      if (noticeTouch()) commit();
       const action = timerAction(snapshot(), id, p.touched);
       if (action === "stay") return action;
       unmount(p);
@@ -428,20 +439,11 @@ export function createTurnController(env: TurnEnvironment) {
       evaluate();
     },
 
+    // Hidden: the automatic player goes (decideTurn), the visitor's stays.
     setPageVisible(visible: boolean) {
       if (visible === pageVisible) return;
       pageVisible = visible;
-      if (visible) {
-        evaluate();
-        return;
-      }
-      const holder = current ? players.get(current.id) : undefined;
-      if (current && holder) {
-        if (current.owner === "user") holder.waiting = true;
-        unmount(holder);
-      }
-      current = null;
-      commit();
+      evaluate();
     },
 
     reducedMotionChanged() {
@@ -451,13 +453,15 @@ export function createTurnController(env: TurnEnvironment) {
     // window "blur": after this task, is the focus inside the holder's iframe?
     windowBlurred() {
       later(() => {
-        const p = current ? players.get(current.id) : undefined;
-        if (!p || !p.iframe || env.activeElement() !== p.iframe) return;
-        p.touched = true;
-        p.owner = "user";
-        current = { id: p.id, owner: "user" };
-        commit();
+        if (noticeTouch()) commit();
       }, 0);
+    },
+
+    // A tap or click anywhere on the page, in the capture phase: it runs
+    // BEFORE the focus leaves the iframe, so a player the visitor touched
+    // with no window blur is already theirs when this tap opens the menu.
+    pagePointerDown() {
+      if (noticeTouch()) commit();
     },
 
     getView(id: string): PlayerView {

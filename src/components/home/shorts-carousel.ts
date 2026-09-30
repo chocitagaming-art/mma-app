@@ -74,7 +74,7 @@ export function createShortsCarousel(length: number) {
       return index;
     },
 
-    /** «Seguir» after a pause or a hidden tab: the same short, from the start. */
+    /** «Seguir» after a pause: the same short, from the start. */
     resumeIndex(): number {
       return snapshot.current ?? snapshot.cursor;
     },
@@ -100,8 +100,6 @@ export function createShortsCarousel(length: number) {
 export type PosterState = {
   // Under 200x200 there is no legal inline player: the tap opens YouTube.
   tooSmall: boolean;
-  // The visitor's short after a hidden tab: it waits for their tap.
-  waiting: boolean;
   paused: boolean;
   reducedMotion: boolean;
 };
@@ -110,15 +108,14 @@ export type PosterState = {
 export function posterLabel(s: PosterState): string {
   // Short on purpose: under 340 px of screen the poster is ~100 px wide.
   if (s.tooSmall) return "Ver en YouTube";
-  if (s.waiting) return "Seguir";
   if (s.paused) return "En pausa · toca para seguir";
   if (s.reducedMotion) return "Toca para reproducir";
   return "Toca para ver";
 }
 
 /** Which short the poster shows: the paused one, or the next to play. */
-export function posterIndex(s: CarouselSnapshot, paused: boolean, waiting: boolean): number {
-  return (paused || waiting) && s.current != null ? s.current : s.cursor;
+export function posterIndex(s: CarouselSnapshot, paused: boolean): number {
+  return paused && s.current != null ? s.current : s.cursor;
 }
 
 /** The short on YouTube, for the tap under 200x200 (no inline player there). */

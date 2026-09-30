@@ -212,7 +212,7 @@ describe("turn controller · only one at a time", () => {
 });
 
 describe("turn controller · hidden tab", () => {
-  it("everything is unmounted; the automatic one comes back when the tab does", () => {
+  it("the automatic one is unmounted, and comes back on its own when the tab does", () => {
     const { controller, see, advance, hero } = setup();
     see(hero, 1);
     advance(500);
@@ -222,35 +222,35 @@ describe("turn controller · hidden tab", () => {
     expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "auto" });
   });
 
-  it("what the visitor started waits for a tap («Seguir») instead of coming back on its own", () => {
-    const { controller, see, hero } = setup();
-    see(hero, 0.3);
+  it("what the visitor started stays mounted: the same iframe, not a new one", () => {
+    const { controller, see, advance, hero, tv, mounts, worst } = setup();
+    see(hero, 0.9);
     controller.userStart("hero");
+    const { mountCount } = controller.getView("hero");
     controller.setPageVisible(false);
-    expect(controller.getView("hero")).toMatchObject({ mounted: false, waiting: true });
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", mountCount });
+    // Hidden for a while, with UFC TV fully in view: nothing else starts.
+    see(tv, 1);
+    advance(5_000);
     controller.setPageVisible(true);
-    expect(controller.getView("hero").mounted).toBe(false);
-    // Out of sight it goes back to being an ordinary participant.
-    see(hero, 0);
-    expect(controller.getView("hero").waiting).toBe(false);
+    advance(1_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", mountCount });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(mounts).toEqual(["hero:user"]);
+    expect(worst.mounted).toBe(1);
   });
 
-  it("«Seguir» waits even with the visitor's player well in view: 90 % visible after the tab comes back", () => {
-    const { controller, see, advance, hero, mounts } = setup();
-    see(hero, 0.9);
-    controller.userStart("hero");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+  it("an automatic player the visitor touched inside is theirs: it stays with the tab hidden", () => {
+    const { controller, see, advance, hero, page } = setup();
+    see(hero, 1);
+    advance(500);
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    controller.windowBlurred();
+    advance(0);
     controller.setPageVisible(false);
-    controller.setPageVisible(true);
-    // The observer reports it again (a scroll, a resize): more than half in
-    // view for far longer than the dwell must NOT bring it back on its own.
-    see(hero, 0.9);
-    advance(1_000);
-    expect(controller.getView("hero")).toMatchObject({ mounted: false, waiting: true });
-    expect(mounts).toEqual(["hero:user"]);
-    // Only the visitor's tap does.
-    expect(controller.userStart("hero")).toBe("started");
-    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", waiting: false });
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
   });
 
   it("a tab that starts hidden mounts nothing", () => {
@@ -306,6 +306,125 @@ describe("turn controller · touched by the visitor", () => {
     advance(0);
     expect(controller.getView("hero")).toMatchObject({ owner: "auto", touched: false });
   });
+
+  // The net under the window blur: WebKit fires that blur only when a frame of
+  // the page had the focus before (FocusController::setFocusedFrame), so a
+  // first tap inside the iframe may move the focus there with no blur at all.
+  // Every decision looks where the focus is before taking a player away.
+  it("the focus inside the holder's iframe with no blur still makes it the visitor's at the next decision", () => {
+    const { controller, see, advance, hero, tv, page, worst } = setup();
+    see(hero, 1);
+    advance(500);
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    // No windowBlurred(): the visitor scrolls away, UFC TV fully in view.
+    see(hero, 0);
+    see(tv, 1);
+    advance(1_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("a tap on the page (pointerdown) reads the focus BEFORE it leaves the iframe: the menu does not take it away", () => {
+    const { controller, see, advance, hero, page } = setup();
+    see(hero, 1);
+    advance(500);
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    // The hamburger: pointerdown first, then the focus goes to the page, then
+    // the menu opens.
+    controller.pagePointerDown();
+    page.active = null;
+    controller.addBlocker("menu");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+  });
+
+  it("with the focus elsewhere the net touches nothing: the automatic one still goes out of view", () => {
+    const { controller, see, advance, hero, page } = setup();
+    see(hero, 1);
+    advance(500);
+    controller.setIframe("hero", {});
+    page.active = null;
+    controller.pagePointerDown();
+    see(hero, 0);
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, touched: false });
+  });
+
+  it("the carousel timer also looks at the focus first: a short with the focus inside stays", () => {
+    const { controller, see, advance, hero, page } = setup();
+    see(hero, 1);
+    advance(500);
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    expect(controller.timerFired("hero")).toBe("stay");
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+  });
+});
+
+describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-sep-2026)", () => {
+  it("out of view (0 %, as when scrolling in PiP) it stays, and no automatic player starts meanwhile", () => {
+    const { controller, see, advance, hero, tv, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    see(hero, 0);
+    see(tv, 1);
+    advance(2_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("a blocker (the menu) leaves it alone, and still refuses a new start behind it", () => {
+    const { controller, see, hero, tv } = setup();
+    see(tv, 0.9);
+    controller.userStart("tv-bucle");
+    controller.addBlocker("menu");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    see(hero, 1);
+    expect(controller.userStart("hero")).toBe("blocked");
+    controller.removeBlocker("menu");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    expect(controller.getView("hero").mounted).toBe(false);
+  });
+
+  it("it goes when the visitor picks another player: still one at a time", () => {
+    const { controller, see, hero, tv, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    see(hero, 0);
+    see(tv, 0.4);
+    expect(controller.userStart("tv-bucle")).toBe("started");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    expect(controller.getView("hero").mounted).toBe(false);
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("or when the visitor pauses it with the site's control: then the automatic one may start", () => {
+    const { controller, see, advance, hero, tv } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    see(hero, 0.2);
+    see(tv, 1);
+    advance(1_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    controller.pause("hero");
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, paused: true });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  it("the view has no «waiting» state any more: nothing waits for «Seguir» after a hidden tab", () => {
+    const { controller, see, hero } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    controller.setPageVisible(false);
+    expect(Object.keys(controller.getView("hero")).sort()).toEqual(
+      ["mountCount", "mounted", "owner", "paused", "touched"].sort(),
+    );
+  });
 });
 
 describe("turn controller · the carousel timer", () => {
@@ -331,6 +450,47 @@ describe("turn controller · the carousel timer", () => {
     expect(controller.getView("tv-bucle").mounted).toBe(true);
   });
 
+  // The carousel's exit of the visitor's player (lib/playback-turn.ts): a
+  // short they started with a tap and never touched inside ends like any
+  // other. Without the JS API its end looks like a pause, and the next short
+  // would be a new automatic start (rule 1). Out of view that is the poster,
+  // so a PiP opened with the browser's own button (no tap inside) closes at
+  // that moment.
+  it("started with a tap and never touched, out of view with the tab visible: it stays while it plays, and its timer frees the turn for UFC TV", () => {
+    const { controller, see, advance, hero, tv, mounts, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    see(hero, 0);
+    see(tv, 1);
+    advance(15_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: false });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(controller.timerFired("hero")).toBe("release");
+    expect(controller.getView("hero")).toMatchObject({ mounted: false, owner: null });
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(mounts).toEqual(["hero:user", "tv:auto"]);
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("the same short touched inside (a PiP from YouTube's own button) stays at its timer, and UFC TV keeps waiting", () => {
+    const { controller, see, advance, hero, tv, page, worst } = setup();
+    see(hero, 0.9);
+    controller.userStart("hero");
+    const iframe = {};
+    controller.setIframe("hero", iframe);
+    page.active = iframe;
+    controller.windowBlurred();
+    advance(0);
+    see(hero, 0);
+    see(tv, 1);
+    advance(15_000);
+    expect(controller.timerFired("hero")).toBe("stay");
+    advance(5_000);
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(worst.mounted).toBe(1);
+  });
+
   it("a timer of a player that no longer holds the turn does nothing", () => {
     const { controller } = setup();
     expect(controller.timerFired("hero")).toBeNull();
@@ -338,7 +498,7 @@ describe("turn controller · the carousel timer", () => {
 });
 
 describe("turn controller · blockers, pause and size", () => {
-  it("a blocker (menu or sheet) unmounts everything, and nothing comes back until it closes", () => {
+  it("a blocker (the menu) unmounts the automatic player, and nothing starts until it closes", () => {
     const { controller, see, advance, hero } = setup();
     see(hero, 1);
     advance(500);
@@ -537,5 +697,31 @@ describe("source guards of the turn manager", () => {
     const provider = files[1][1];
     expect(provider).toMatch(/userStart: useCallback\(\(\): StartResult => controller\.userStart\(id\)/);
     expect(provider).toMatch(/resume: useCallback\(\(\): StartResult => controller\.resume\(id\)/);
+  });
+
+  it("the provider hands every tap on the page to the controller, in the capture phase (before the focus moves)", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/const onPointerDown = \(\) => controller\.pagePointerDown\(\);/);
+    expect(provider).toMatch(/window\.addEventListener\("pointerdown", onPointerDown, true\);/);
+    expect(provider).toMatch(/window\.removeEventListener\("pointerdown", onPointerDown, true\);/);
+  });
+
+  // pagehide may be the page going into the back/forward cache, to come back
+  // as it was: it has to stay a hidden tab and nothing more, so the visitor's
+  // player is still there on the way back (DECISIONS.md, 30-sep-2026). What a
+  // hidden tab does is tested above; this pins the wiring that leads there,
+  // and e2e/hero-shorts.spec.ts checks it in a real browser.
+  it("pagehide is a hidden tab and nothing more (the back/forward cache), and pageshow brings the automatic player back", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/const onPageHide = \(\) => controller\.setPageVisible\(false\);/);
+    expect(provider).toMatch(/window\.addEventListener\("pagehide", onPageHide\);/);
+    expect(provider).toMatch(
+      /const onPageShow = \(\) => \{\s*if \(document\.visibilityState === "visible"\) controller\.setPageVisible\(true\);\s*\};/,
+    );
+    expect(provider).toMatch(/window\.addEventListener\("pageshow", onPageShow\);/);
+    // One pagehide listener in the whole turn manager: no second one that
+    // takes the players away behind this one's back.
+    const listeners = files.flatMap(([, source]) => source.match(/addEventListener\("pagehide"/g) ?? []);
+    expect(listeners).toHaveLength(1);
   });
 });
