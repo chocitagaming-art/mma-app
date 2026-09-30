@@ -10,7 +10,7 @@ import {
 function feature(
   name: string,
   contribution: number,
-  value = 1,
+  value: number | null = 1,
 ): PredictionFeature {
   return {
     name,
@@ -96,6 +96,21 @@ describe("buildShapBars", () => {
     const rows = buildShapBars([feature("age_diff", 0)], { age_diff: 0 }, 5);
     expect(rows[0]!.widthPct).toBe(MIN_BAR_WIDTH_PCT);
     expect(rows[0]!.side).toBe("red");
+  });
+
+  // El servicio manda value null cuando el valor no es finito. La barra sale
+  // de la contribución, que sí llega: el factor se pinta igual y el null viaja
+  // hasta la fila para que la UI escriba «N/D» en vez de inventarse un número.
+  it("un factor sin valor (null) se pinta igual y conserva el null", () => {
+    const rows = buildShapBars(
+      [feature("age_diff", 0.3, -4.5), feature("ranking_position_diff", -0.15, null)],
+      null,
+      5,
+    );
+    expect(rows.map((row) => row.value)).toEqual([-4.5, null]);
+    expect(rows[1]!.isRest).toBe(false);
+    expect(rows[1]!.side).toBe("blue");
+    expect(rows[1]!.widthPct).toBe(50);
   });
 
   it("mapa presente pero sin factores extra: sin fila de resto", () => {

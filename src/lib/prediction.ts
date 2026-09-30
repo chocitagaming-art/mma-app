@@ -2,7 +2,10 @@ import { Anthropic } from "@anthropic-ai/sdk";
 
 export type PredictionFeature = {
   name: string;
-  value: number;
+  // What the model saw for this feature. null when the service has no finite
+  // value to send (JSON has no NaN): the contribution still arrives, so the
+  // bar is drawn and the UI writes "N/D" for the value.
+  value: number | null;
   // Signed log-odds contribution of this feature for the matchup.
   contribution: number;
   // Which corner the feature favours.
@@ -236,8 +239,14 @@ export async function generatePredictionExplanation(
           data.methodPrediction.probabilities.submission,
         )}. Si alguna destaca sobre su base histórica, menciónala en una frase.`
       : "",
+    // Un value null (sin valor finito en el servicio) se escribe «No
+    // disponible», igual que la categoría cuando falta: tal cual, la IA leería
+    // «null» y podría repetirlo en la explicación.
     `Factores clave: ${data.topFeatures
-      .map((feature) => `${humanizeFeatureName(feature.name)}=${feature.value}`)
+      .map(
+        (feature) =>
+          `${humanizeFeatureName(feature.name)}=${feature.value ?? "No disponible"}`,
+      )
       .join(", ")}`,
     `Stats roja: ${JSON.stringify(data.fighters.red.aggregate_stats)}`,
     `Stats azul: ${JSON.stringify(data.fighters.blue.aggregate_stats)}`,

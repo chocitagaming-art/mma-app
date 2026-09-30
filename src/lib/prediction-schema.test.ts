@@ -56,6 +56,26 @@ describe("parsePredictionPayload", () => {
     expect(data.campoDelFuturo).toBe(42);
   });
 
+  // El servicio manda value null cuando el valor de un factor no es finito
+  // (JSON no tiene NaN). Con z.number() a secas eso tumbaba la predicción
+  // ENTERA por un dato que la UI solo enseña como texto junto a la barra.
+  it("acepta un factor con value null y conserva el resto de la predicción", () => {
+    const result = parsePredictionPayload(
+      payload({
+        topFeatures: [
+          { name: "ranking_position_diff", value: null, contribution: 0.2, direction: "red" },
+          { name: "reach_diff", value: 5, contribution: -0.05, direction: "blue" },
+        ],
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect(result.data.topFeatures.map((feature) => feature.value)).toEqual([null, 5]);
+    expect(result.data.redProbability).toBe(0.62);
+    expect(result.data.methodPrediction?.predicted).toBe("decision");
+  });
+
   describe("degrada solo el método cuando es el método lo que viene roto", () => {
     const metodosRotos: Array<[string, unknown]> = [
       ["le falta una clase", { probabilities: { decision: 0.5, ko: 0.5 }, predicted: "ko" }],
@@ -103,6 +123,33 @@ describe("parsePredictionPayload", () => {
         {
           topFeatures: [{ name: "x", value: 1, contribution: 0.1, direction: "verde" }],
         },
+      ],
+      // value admite null y nada más: ni que falte la clave, ni texto, ni
+      // NaN/Infinity (no viajan por JSON, pero sí en un objeto construido a mano).
+      [
+        "una feature llega sin value",
+        { topFeatures: [{ name: "x", contribution: 0.1, direction: "red" }] },
+      ],
+      [
+        "el value de una feature llega como texto",
+        { topFeatures: [{ name: "x", value: "1", contribution: 0.1, direction: "red" }] },
+      ],
+      [
+        "el value de una feature es NaN",
+        { topFeatures: [{ name: "x", value: Number.NaN, contribution: 0.1, direction: "red" }] },
+      ],
+      [
+        "el value de una feature es Infinity",
+        {
+          topFeatures: [
+            { name: "x", value: Number.POSITIVE_INFINITY, contribution: 0.1, direction: "red" },
+          ],
+        },
+      ],
+      // El null es SOLO para value: sin contribución no hay barra que pintar.
+      [
+        "la contribution de una feature llega null",
+        { topFeatures: [{ name: "x", value: 1, contribution: null, direction: "red" }] },
       ],
     ];
 

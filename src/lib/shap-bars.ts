@@ -16,7 +16,8 @@ export type ShapBarRow = {
   // larga del gráfico). El área excluye el hueco fijo del número, así el valor
   // nunca se sale de la caja (petición del dueño al aprobar la maqueta).
   widthPct: number;
-  // Valor (diff rojo−azul imputado) que vio el modelo; null en la fila "rest".
+  // Valor (diff rojo−azul imputado) que vio el modelo; null en la fila "rest"
+  // y cuando el servicio no tenía un valor finito que mandar (la UI: «N/D»).
   value: number | null;
   isRest: boolean;
   // Nº de factores agregados en la fila "rest" (solo cuando isRest).
