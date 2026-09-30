@@ -11,8 +11,8 @@ import {
 } from "react";
 
 import {
+  interceptsClick,
   isKeyboardClick,
-  isModifiedClick,
   playerToFocus,
   posterOutcome,
 } from "@/components/playback/poster-activation";
@@ -31,8 +31,11 @@ import type { PlayerView, StartResult } from "@/components/playback/turn-control
 //     mounts HERE, as before; only then is it announced as a button
 //     (role="button", with Space too). Ctrl/⌘/Shift/Alt and the middle button
 //     keep the link's own action: the video on YouTube.
-//   · Under 200x200 there is no legal inline player: the start is refused and
-//     the link does what it says (no window.open any more).
+//   · Under 200x200 there is no legal inline player: the link does what it
+//     says (no window.open any more). The hero knows its size (playsHere
+//     false): then it is a plain link all the way and never asks the turn
+//     manager, whose "not-ready" during the intro used to swallow the tap.
+//     UFC TV and the broadcast ask, and a "too-small" answer lets it through.
 //   · A keyboard start sends the focus into the player it mounted (see
 //     useKeyboardStartFocus): the poster is replaced by the <iframe>, and the
 //     focus used to fall on <body>.
@@ -90,11 +93,11 @@ export function PosterLink({
   label: string;
   className?: string;
   // False when a tap can only open YouTube (the hero under 200x200): then it
-  // stays a link for assistive technology too.
+  // stays a link for assistive technology too, and no click is taken from it.
   playsHere?: boolean;
   // The visitor's start: the turn manager's userStart, plus whatever the
   // player needs first (the hero queues its short). Only on a plain click,
-  // Enter or Space.
+  // Enter or Space, and only when it plays here.
   onStart: () => StartResult;
   // useKeyboardStartFocus's function.
   onKeyboardStart?: (slot: Element | null) => void;
@@ -112,7 +115,7 @@ export function PosterLink({
   const spaceDown = useRef(false);
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (isModifiedClick(event)) return;
+    if (!interceptsClick(event, playsHere)) return;
     // Asked BEFORE the start, and only by the keyboard: the commit that mounts
     // the player follows the start, and a mouse or a finger never moves it.
     // The box is the turn's (TurnSlot's <div>): it stays when the poster goes.

@@ -179,6 +179,51 @@ test("con JavaScript, el clic monta el reproductor aquí, del primer vídeo del 
   expect(opened, "the click opened YouTube as well as playing here").toBe(false);
 });
 
+test("a 320 px el póster del short es un enlace que abre YouTube, también antes de que el hero esté listo", async ({
+  page,
+  context,
+}) => {
+  // Under 340 px of screen the hero's box is ~120 px wide: no legal inline
+  // player (200x200), so its poster only opens the short on YouTube. It used
+  // to ask the turn manager first, which answers "not-ready" (or "blocked",
+  // with the menu open) BEFORE it looks at the size: during the hero's intro
+  // the tap did nothing. Here the headline's font never arrives (a slow
+  // network), so the hero stays not ready for as long as the test needs.
+  await page.route(/\/_next\/static\/media\/[^/]+\.woff2$/, () => {
+    // Never answered: document.fonts.ready waits for it.
+  });
+  await context.route("https://www.youtube.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: "<!doctype html><title>YouTube (e2e stub)</title>",
+    }),
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  // Hydrated and measured: only then does the label say where it goes.
+  const poster = hero(page).getByRole("link", { name: /^Ver en YouTube\. Short de la UFC: / });
+  await expect(poster).toBeVisible();
+  // Not ready yet: the frame keeps the intro's class until it is.
+  const frame = page.getByTestId("hero-short").locator("..");
+  await expect(frame).toHaveClass(/animate-rise/);
+  const href = await poster.getAttribute("href");
+  expect(href).toMatch(/^https:\/\/www\.youtube\.com\/shorts\/[\w-]+$/);
+
+  const [tab] = await Promise.all([
+    context.waitForEvent("page", { timeout: 5_000 }),
+    poster.click(),
+  ]);
+  await expect(tab).toHaveURL(href!);
+  // It was a tap on a hero still not ready (the case that did nothing), and
+  // nothing mounts here: there is no legal player at this size.
+  await expect(frame).toHaveClass(/animate-rise/);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(hero(page).locator("iframe")).toHaveCount(0);
+});
+
 // ── (5) The keyboard focus ────────────────────────────────────────────────
 
 for (const key of ["Enter", "Space"] as const) {

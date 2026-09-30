@@ -34,6 +34,18 @@ export function isModifiedClick(click: ClickLike): boolean {
 }
 
 /**
+ * Does the poster take this click from its link (to mount the player here)?
+ * Only a plain one, on a poster that CAN play here. The hero under 200x200 (a
+ * screen under 340 px) cannot: it is a link all the way, and never asks the
+ * turn manager. It used to, and the turn manager looks at the menu and at
+ * «ready» BEFORE the size: during the hero's intro, or under the open menu,
+ * the answer was "not-ready" or "blocked" and the tap did nothing.
+ */
+export function interceptsClick(click: ClickLike, playsHere: boolean): boolean {
+  return playsHere && !isModifiedClick(click);
+}
+
+/**
  * Enter on the link (and a screen reader's activation) clicks with detail 0;
  * a mouse or a finger, with 1 or more. Space on the poster turned button is
  * sent here as a click too (poster-link.tsx), so it counts as the keyboard.
@@ -42,8 +54,9 @@ export function isKeyboardClick(click: { detail: number }): boolean {
   return click.detail === 0;
 }
 
-// "play-here": the player mounts in place and the link must NOT open YouTube.
-// "youtube": under 200x200 there is no legal inline player, so the link does
+// For a poster that plays here (interceptsClick). "play-here": the player
+// mounts in place and the link must NOT open YouTube. "youtube": the turn
+// manager measured it under 200x200 (no legal inline player), so the link does
 // what it says (it replaces the old window.open of that case). "nothing": not
 // ready, blocked by a menu... the tap does nothing, as it did before the link.
 export type PosterOutcome = "play-here" | "youtube" | "nothing";

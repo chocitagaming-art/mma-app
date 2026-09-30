@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  interceptsClick,
   isKeyboardClick,
   isModifiedClick,
   playerToFocus,
@@ -37,6 +38,35 @@ describe("isModifiedClick: what stays the browser's own link action", () => {
   it("a button other than the main one", () => {
     expect(isModifiedClick({ ...CLICK, button: 1 })).toBe(true);
     expect(isModifiedClick({ ...CLICK, button: 2 })).toBe(true);
+  });
+});
+
+describe("interceptsClick: what the poster takes from its link", () => {
+  it("a plain click, Enter or Space on a poster that plays here: it mounts here", () => {
+    expect(interceptsClick(CLICK, true)).toBe(true);
+  });
+
+  it("Ctrl, ⌘, Shift, Alt or another button: always the link's own action", () => {
+    const clicks = [
+      { ...CLICK, ctrlKey: true },
+      { ...CLICK, metaKey: true },
+      { ...CLICK, shiftKey: true },
+      { ...CLICK, altKey: true },
+      { ...CLICK, button: 1 },
+    ];
+    for (const click of clicks) {
+      expect(interceptsClick(click, true), JSON.stringify(click)).toBe(false);
+      expect(interceptsClick(click, false), JSON.stringify(click)).toBe(false);
+    }
+  });
+
+  // The hero under 200x200 (a screen under 340 px). It used to ask the turn
+  // manager anyway, which looks at the menu and at «ready» BEFORE the size:
+  // during the intro (up to 1.5 s, or while the headline's font loads) or
+  // under the open menu the answer was "not-ready" or "blocked", not
+  // "too-small", and the tap did nothing on a poster announced as a link.
+  it("a poster that cannot play here is a link all the way: never taken", () => {
+    expect(interceptsClick(CLICK, false)).toBe(false);
   });
 });
 
