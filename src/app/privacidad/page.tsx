@@ -283,9 +283,9 @@ export default function PrivacidadPage() {
             pesaje (en /en-vivo y en la página de cada evento), en /videos, en
             /tendencias, en la columna de vídeos de la portada y en los vídeos de
             cada combate se ve primero una miniatura, y el reproductor solo se
-            carga cuando pulsas «play». La miniatura sí se descarga de un servidor
-            de YouTube (i.ytimg.com). Cuando un short acaba, no se carga otro por
-            sí solo: se ve la miniatura del siguiente.
+            carga cuando pulsas «play» (en los shorts, también «Siguiente»). La
+            miniatura sí se descarga de un servidor de YouTube (i.ytimg.com).
+            Cuando un short acaba, no se carga otro por sí solo.
           </li>
           <li>
             <strong>Lo que hace el reproductor al cargarse</strong> (medido el 29
@@ -293,7 +293,8 @@ export default function PrivacidadPage() {
             arrancando solo): no pone ninguna cookie, pero guarda datos en tu
             navegador (punto 3) y, sin que pulses nada, se conecta con servidores
             de Google: www.youtube-nocookie.com, googlevideo.com (el vídeo),
-            i.ytimg.com y yt3.ggpht.com (imágenes), fonts.gstatic.com,
+            i.ytimg.com y yt3.ggpht.com (imágenes), m.youtube.com (dos iconos
+            que pide el reproductor de los shorts, sin cookie), fonts.gstatic.com,
             www.gstatic.com, www.google.com y jnn-pa.googleapis.com. Como a
             cualquier servidor al que se conecta tu navegador, a esos les llegan
             tu dirección IP y los datos técnicos del navegador.
