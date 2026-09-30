@@ -39,6 +39,19 @@ describe("ShortsHero · server render", () => {
     expect(html).toContain('aria-label="Toca para ver. Short de la UFC: The finish #ufc332"');
   });
 
+  it("without JavaScript the poster is a real link to that short on YouTube, in a new tab", () => {
+    // What the visitor gets while the page's JavaScript is off, blocked or not
+    // there yet: the ▶ opens the short on YouTube. With it, the click plays it
+    // here (poster-link.tsx) and only then is it announced as a button.
+    const poster = /<div[^>]*\bdata-turn="hero"[^>]*>(<[a-z]+\b[^>]*>)/.exec(html)?.[1] ?? "";
+    expect(poster).toMatch(/^<a\s/);
+    expect(poster).toContain('href="https://www.youtube.com/shorts/fixShort-01"');
+    expect(poster).toContain('target="_blank"');
+    expect(poster).toContain('rel="noopener noreferrer"');
+    expect(poster).toContain('aria-label="Toca para ver. Short de la UFC: The finish #ufc332"');
+    expect(poster).not.toContain("role=");
+  });
+
   it("Pausar and «Siguiente ›» are real buttons, outside the frame", () => {
     expect(html).toMatch(/<button type="button"[^>]*>.*?<span>Pausar<\/span><\/button>/);
     expect(html).toMatch(/<button type="button" aria-label="Siguiente short"[^>]*>Siguiente /);

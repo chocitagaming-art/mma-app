@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 import {
   POSTER_FOCUS_CLASS,
   TurnSlot,
   usePlaybackTurn,
 } from "@/components/playback/playback-turn-provider";
+import { PosterLink, useKeyboardStartFocus } from "@/components/playback/poster-link";
 import { cn } from "@/lib/utils";
 
 // The 16:9 player of UFC TV (components/home/ufc-tv.tsx) and of the event's
@@ -32,6 +33,10 @@ import { cn } from "@/lib/utils";
 //     (The event's broadcast did not honour it until now.)
 //   · A tap on the poster makes it the visitor's: it stays while any part of
 //     it is on screen. Hidden tab → removed; back, the poster says «Seguir».
+//   · The poster is a real link to the video on YouTube (poster-link.tsx):
+//     without the page's JavaScript it opens it there; with it, the click is
+//     intercepted and the player mounts here. Started with the keyboard, the
+//     focus goes into the player (it used to fall on <body>).
 //   · The same URL for every mount, automatic or the visitor's: autoplay=1,
 //     mute=1 (without it nothing starts, measured), playsinline=1.
 //
@@ -71,31 +76,28 @@ export function LiveEmbedPlayer({
   title: string;
   // What the poster says the player is («UFC TV · Peleas completas»…).
   label: string;
-  // youtube.com, for a tap when the box is under 200x200 (no legal inline
-  // player there). With the 202 px minimum height it takes a screen under
-  // ~232 px wide.
+  // youtube.com (youtubeWatchUrl): the poster's link. It is what a visitor
+  // without the page's JavaScript gets, and what a tap opens when the box is
+  // under 200x200 (no legal inline player there; with the 202 px minimum
+  // height, a screen under ~232 px wide).
   watchUrl: string;
 }) {
   const { view, userStart } = usePlaybackTurn(id);
+  const focusPlayer = useKeyboardStartFocus(view);
   const reducedMotion = useSyncExternalStore(
     subscribeToReducedMotion,
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
     () => false,
   );
 
-  const onPoster = useCallback(() => {
-    if (userStart() === "too-small") {
-      window.open(watchUrl, "_blank", "noopener,noreferrer");
-    }
-  }, [userStart, watchUrl]);
-
   const hint = view.waiting ? "Seguir" : reducedMotion ? "Toca para reproducir" : "Toca para ver";
 
   const poster = (
-    <button
-      type="button"
-      onClick={onPoster}
-      aria-label={`${hint}. ${label}`}
+    <PosterLink
+      href={watchUrl}
+      label={`${hint}. ${label}`}
+      onStart={userStart}
+      onKeyboardStart={focusPlayer}
       className={cn(
         "group absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-brand-ink text-brand-ink-foreground",
         POSTER_FOCUS_CLASS,
@@ -114,7 +116,7 @@ export function LiveEmbedPlayer({
       <span className="relative font-mono text-[0.625rem] uppercase tracking-[0.14em] text-brand-ink-foreground/70">
         {hint}
       </span>
-    </button>
+    </PosterLink>
   );
 
   // The box is what the turn manager measures, so it carries the final size:

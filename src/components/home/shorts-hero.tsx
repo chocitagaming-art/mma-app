@@ -24,6 +24,8 @@ import {
   TurnSlot,
   usePlaybackTurn,
 } from "@/components/playback/playback-turn-provider";
+import { PosterLink, useKeyboardStartFocus } from "@/components/playback/poster-link";
+import type { StartResult } from "@/components/playback/turn-controller";
 import { fitsMinimum, shortEmbedUrl } from "@/lib/playback-turn";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,9 @@ import { cn } from "@/lib/utils";
 //   · The poster is the short's own i.ytimg.com thumbnail, WHOLE (object-
 //     contain, not cropped: the thumbnail may not be altered) with the ▶
 //     below it, not on it. With no list at all: our own poster, no player.
+//   · The poster is a real link to that short on YouTube (poster-link.tsx):
+//     without the page's JavaScript, and under 200x200, it opens it there.
+//     Started with the keyboard, the focus goes into the short it mounts.
 
 export type HeroShort = { id: string; title: string; seconds: number; thumbnail: string };
 
@@ -169,6 +174,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
   const [carousel] = useState(() => createShortsCarousel(shorts.length));
   const snapshot = useSyncExternalStore(carousel.subscribe, carousel.getSnapshot, carousel.getSnapshot);
   const { view, userStart, pause, timerFired } = usePlaybackTurn(HERO_ID);
+  const focusShort = useKeyboardStartFocus(view);
   const reducedMotion = useSyncExternalStore(
     subscribeToReducedMotion,
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
@@ -237,24 +243,34 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     carousel.take();
   }, [carousel]);
 
-  // The visitor's ▶, «Seguir» and «Siguiente ›».
+  // The visitor's ▶, «Seguir» and «Siguiente ›»: the turn manager's answer.
   const start = useCallback(
-    (index: number) => {
+    (index: number): StartResult => {
       carousel.queue(index);
       const result = userStart();
-      if (result === "started") return;
-      carousel.clearQueue();
-      if (result === "too-small") {
+      if (result !== "started") carousel.clearQueue();
+      return result;
+    },
+    [carousel, userStart],
+  );
+
+  // «Seguir» and «Siguiente ›» are buttons, not links: under 200x200 (where
+  // they are hidden anyway) they open the short on YouTube themselves. The
+  // poster needs none of this: it is a link to that short.
+  const startFromControl = useCallback(
+    (index: number) => {
+      if (start(index) === "too-small") {
         window.open(shortWatchUrl(shorts[index].id), "_blank", "noopener,noreferrer");
       }
     },
-    [carousel, shorts, userStart],
+    [shorts, start],
   );
 
   const resting = view.paused || view.waiting;
+  // The short the poster shows (posterIndex) is the one it starts.
   const onPoster = () => start(resting ? carousel.resumeIndex() : carousel.nextIndex());
-  const onPauseToggle = () => (view.paused ? start(carousel.resumeIndex()) : pause());
-  const onNext = () => start(carousel.nextIndex());
+  const onPauseToggle = () => (view.paused ? startFromControl(carousel.resumeIndex()) : pause());
+  const onNext = () => startFromControl(carousel.nextIndex());
 
   const playing = shorts[snapshot.current ?? 0];
   const shown = shorts[posterIndex(snapshot, view.paused, view.waiting)];
@@ -266,10 +282,12 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
   });
 
   const poster = (
-    <button
-      type="button"
-      onClick={onPoster}
-      aria-label={`${label}. Short de la UFC: ${shown.title}`}
+    <PosterLink
+      href={shortWatchUrl(shown.id)}
+      label={`${label}. Short de la UFC: ${shown.title}`}
+      playsHere={!tooSmall}
+      onStart={onPoster}
+      onKeyboardStart={focusShort}
       className={cn(
         "group absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden bg-brand-ink text-brand-ink-foreground md:gap-4",
         POSTER_FOCUS_CLASS,
@@ -292,7 +310,7 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
       <span className="px-2 text-center font-mono text-[0.625rem] uppercase tracking-[0.14em] text-brand-ink-foreground/70">
         {label}
       </span>
-    </button>
+    </PosterLink>
   );
 
   return (
