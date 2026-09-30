@@ -6,7 +6,7 @@ import { CONTACTO_EMAIL, LegalPage, LegalSection } from "@/components/legal-page
 export const metadata: Metadata = {
   title: "Privacidad",
   description:
-    "Qué datos trata MMA STATUS y cuáles no: sin cuentas, sin cookies y sin publicidad. Qué se guarda en tu navegador, qué hace el reproductor de YouTube de los vídeos y cómo borrarlo.",
+    "Qué datos trata MMA STATUS y cuáles no: sin cuentas, esta web no pone cookies y no hay publicidad. Qué se guarda en tu navegador, qué hace el reproductor de YouTube de los vídeos, qué servidores de imágenes intervienen y cómo borrarlo.",
   alternates: { canonical: "/privacidad" },
 };
 
@@ -30,7 +30,16 @@ export const metadata: Metadata = {
 // conexiones a Google sin ningún clic) y producción el 30-sep en Chromium (8
 // páginas: 0 cookies; www.ufc.com manda un Set-Cookie sin SameSite en sus
 // fotos y el navegador lo rechaza). src/lib/legal-pages.test.ts vigila lo
-// esencial: si la web incrusta YouTube, esta página tiene que contarlo.
+// esencial: si la web incrusta YouTube, esta página tiene que contarlo, y
+// ningún reproductor puede volver al dominio de YouTube con cookies.
+//
+// Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
+// el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
+// upload.wikimedia.org, 285 en events.image_url) dejan guardada la cookie
+// WMF-Uniq (SameSite=None, caduca en un año). Por cabeceras: www.ufc.com manda
+// STYXKEY_region (2 días, sin SameSite) y www1-cdn.sherdog.com, en las
+// imágenes de noticias, __cf_bm (30 min). Las fotos de ESPN (a.espncdn.com)
+// son solo retratos de luchadores (fighters.headshot_url), no carteles.
 
 export default function PrivacidadPage() {
   return (
@@ -42,7 +51,9 @@ export default function PrivacidadPage() {
           Resumen: <strong>no hay cuentas, esta web no usa cookies y no se vende
           nada a nadie</strong>. Lo que hay que saber son los vídeos: se ven con
           el reproductor de YouTube, que guarda datos en tu navegador y se conecta
-          con Google (puntos 3 y 4). Abajo está el detalle, sin letra pequeña.
+          con Google (puntos 3 y 4). Y algunas imágenes se descargan de otros
+          servidores, y alguno manda su propia cookie con ellas (punto 4). Abajo
+          está el detalle, sin letra pequeña.
         </>
       }
     >
@@ -61,7 +72,9 @@ export default function PrivacidadPage() {
             reproductor de YouTube va en su versión sin cookies
             (youtube-nocookie.com; medido, cero cookies). Ese reproductor sí
             guarda otros datos en tu navegador y se conecta con Google al
-            cargarse: está contado en los puntos 3 y 4.
+            cargarse: está contado en los puntos 3 y 4. Algunos servidores de
+            los que se descargan imágenes sí mandan su propia cookie; también
+            está en el punto 4.
           </li>
           <li>
             <strong>Hoy esta web no pone publicidad</strong> ni usa redes de
@@ -255,13 +268,41 @@ export default function PrivacidadPage() {
         </ul>
         <p>
           <strong>Imágenes de otros servidores.</strong> Las fotos de los
-          luchadores y los carteles (ufc.com y ESPN), las miniaturas y los avatares
-          de canal de YouTube (i.ytimg.com y yt3.ggpht.com), las banderas
-          (flagcdn.com), las imágenes de las noticias (del medio de cada una) y el
-          mapa de /gimnasios (OpenStreetMap) se descargan directamente de sus
-          servidores. Tu navegador se conecta con ellos para pedirlas y, como con
-          cualquier imagen enlazada, les llegan tu dirección IP y los datos
-          técnicos del navegador.
+          luchadores (ufc.com y ESPN), los carteles de los eventos (ufc.com y, los
+          de eventos antiguos, Wikimedia desde upload.wikimedia.org), las
+          miniaturas y los avatares de canal de YouTube (i.ytimg.com y
+          yt3.ggpht.com), las banderas (flagcdn.com), las imágenes de las noticias
+          (del medio de cada una) y el mapa de /gimnasios (OpenStreetMap) se
+          descargan directamente de sus servidores. Tu navegador se conecta con
+          ellos para pedirlas y, como con cualquier imagen enlazada, les llegan tu
+          dirección IP y los datos técnicos del navegador.
+        </p>
+        <p>
+          <strong>Algunos de esos servidores mandan su propia cookie</strong> junto
+          con la imagen (medido el 30 de septiembre de 2026):
+        </p>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>
+            <strong>upload.wikimedia.org</strong> (los carteles antiguos):{" "}
+            <code className="font-mono text-xs">WMF-Uniq</code>, un identificador
+            que dura un año. Chrome la guarda.
+          </li>
+          <li>
+            <strong>www.ufc.com</strong> (fotos de luchadores y carteles):{" "}
+            <code className="font-mono text-xs">STYXKEY_region</code>, con tu
+            región, durante 2 días. Chrome la rechaza; otros navegadores pueden
+            guardarla.
+          </li>
+          <li>
+            <strong>sherdog.com</strong> (imágenes de algunas noticias):{" "}
+            <code className="font-mono text-xs">__cf_bm</code>, la protección
+            antibots de Cloudflare, durante 30 minutos.
+          </li>
+        </ul>
+        <p>
+          Esta web no las lee ni las pone: las gestiona cada uno de esos
+          servidores según su propia política. Si quieres evitarlas, puedes
+          bloquear las cookies de terceros en tu navegador.
         </p>
       </LegalSection>
 
@@ -305,7 +346,9 @@ export default function PrivacidadPage() {
           un minuto y las estadísticas de visita son agregadas y no
           identificables; lo que guardas en el navegador lo borras tú (punto 3).
           Lo que recoja el reproductor de YouTube lo trata Google, y se le pide a
-          Google según su Política de Privacidad (punto 4).
+          Google según su Política de Privacidad (punto 4). Las cookies que
+          manden los servidores de imágenes (punto 4) no llegan a esta web: las
+          trata cada uno de ellos.
         </p>
         <p>
           <strong>La excepción es si escribiste por /contacto</strong>: ahí sí hay

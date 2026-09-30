@@ -23,25 +23,24 @@ import PrivacidadPage, { metadata as privacidadMetadata } from "@/app/privacidad
 
 const SRC = new URL("../", import.meta.url);
 
-// Qué ficheros incrustan el reproductor. Solo app/, components/ y lib/, sin
-// tests: un vigilante que se cuenta entre los vigilados no vigila nada.
-function ficherosConYoutube(rutaRelativa: string): string[] {
-  const encontrados: string[] = [];
+// Las fuentes que acaban en la web: solo app/, components/ y lib/, sin tests.
+// Un vigilante que se cuenta entre los vigilados no vigila nada.
+function fuentesDe(rutaRelativa: string): Array<[string, string]> {
+  const fuentes: Array<[string, string]> = [];
   for (const entrada of readdirSync(fileURLToPath(new URL(rutaRelativa, SRC)), {
     withFileTypes: true,
   })) {
     const hijo = `${rutaRelativa}${entrada.name}`;
     if (entrada.isDirectory()) {
-      encontrados.push(...ficherosConYoutube(`${hijo}/`));
+      fuentes.push(...fuentesDe(`${hijo}/`));
     } else if (/\.tsx?$/.test(entrada.name) && !/\.test\.tsx?$/.test(entrada.name)) {
-      const fuente = readFileSync(fileURLToPath(new URL(hijo, SRC)), "utf8");
-      if (fuente.includes("youtube-nocookie.com/embed")) {
-        encontrados.push(hijo);
-      }
+      fuentes.push([hijo, readFileSync(fileURLToPath(new URL(hijo, SRC)), "utf8")]);
     }
   }
-  return encontrados;
+  return fuentes;
 }
+
+const FUENTES = [...fuentesDe("app/"), ...fuentesDe("components/"), ...fuentesDe("lib/")];
 
 // El texto visible: sin etiquetas y con los espacios de JSX colapsados.
 function textoDe(html: string): string {
@@ -61,12 +60,20 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
   const texto = textoDe(html);
 
   it("la web SÍ incrusta YouTube hoy (si deja de hacerlo, revisa esta página)", () => {
-    const sitios = [
-      ...ficherosConYoutube("app/"),
-      ...ficherosConYoutube("components/"),
-      ...ficherosConYoutube("lib/"),
-    ];
+    const sitios = FUENTES.filter(([, fuente]) => fuente.includes("youtube-nocookie.com/embed"));
     expect(sitios.length).toBeGreaterThan(0);
+  });
+
+  it("ningún reproductor vuelve a youtube.com, la versión CON cookies", () => {
+    // Esto es lo que sostiene la frase «medido, cero cookies». La CSP deja
+    // enmarcar https://www.youtube.com, así que un cambio de dominio en
+    // youtube-facade.tsx o en video-modal.tsx funcionaría igual en producción
+    // y la página seguiría prometiendo lo que ya no es verdad. Enlazar a
+    // youtube.com/watch sí vale: eso es salir de la web, no incrustar.
+    const conCookies = FUENTES.filter(([, fuente]) =>
+      /youtube\.com\/(embed|iframe_api)/.test(fuente),
+    ).map(([ruta]) => ruta);
+    expect(conCookies).toEqual([]);
   });
 
   it("nombra a YouTube, a Google y a quién lo presta en la UE", () => {
@@ -100,8 +107,48 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     expect(texto).toMatch(/no usa cookies/i);
   });
 
+  it("nombra a Wikimedia, que sirve los carteles de los eventos antiguos", () => {
+    // 285 carteles de events.image_url vienen de upload.wikimedia.org
+    // (medido el 30-sep-2026, del 12-jul-1996 al 9-ago-2025).
+    expect(texto).toContain("upload.wikimedia.org");
+  });
+
+  it("no atribuye los carteles a ESPN: ESPN solo pone fotos de luchadores", () => {
+    expect(texto).not.toMatch(/carteles \(ufc\.com y ESPN\)/);
+    expect(texto).toMatch(/fotos de los luchadores \(ufc\.com y ESPN\)/);
+  });
+
+  it("cuenta las cookies que otros servidores mandan con sus imágenes", () => {
+    // Medido el 30-sep-2026: WMF-Uniq (upload.wikimedia.org, 1 año, Chrome la
+    // guarda), STYXKEY_region (www.ufc.com, 2 días, Chrome la rechaza) y
+    // __cf_bm (sherdog.com, 30 min).
+    for (const [servidor, cookie] of [
+      ["upload.wikimedia.org", "WMF-Uniq"],
+      ["www.ufc.com", "STYXKEY_region"],
+      ["sherdog.com", "__cf_bm"],
+    ]) {
+      expect(texto, `falta ${servidor}`).toContain(servidor);
+      expect(texto, `falta ${cookie}`).toContain(cookie);
+    }
+    expect(texto).toMatch(/Esta web no las lee ni las pone/);
+  });
+
+  it("el resumen avisa de que otros servidores sí pueden poner cookies", () => {
+    // Solo la entradilla: el resto de la página ya nombra otros servidores.
+    const inicio = texto.indexOf("Resumen:");
+    const resumen = texto.slice(inicio, texto.indexOf("Lo que esta web NO hace", inicio));
+    expect(resumen.length).toBeGreaterThan(0);
+    expect(resumen).toMatch(/otros servidores.*cookie/);
+  });
+
   it("la metadescripción no resume la página como si YouTube no existiera", () => {
     expect(String(privacidadMetadata.description)).toMatch(/YouTube/);
+  });
+
+  it("la metadescripción dice «sin cookies» de esta web, no del navegador", () => {
+    const descripcion = String(privacidadMetadata.description);
+    expect(descripcion).not.toMatch(/sin cookies/);
+    expect(descripcion).toMatch(/esta web no pone cookies/);
   });
 
   it("lleva la fecha del cambio", () => {
