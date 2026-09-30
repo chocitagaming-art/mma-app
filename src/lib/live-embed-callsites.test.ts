@@ -542,3 +542,74 @@ describe("los reproductores miden al menos 200 px de alto por dentro", () => {
     expect(encontrados[0]).toContain(MINIMO);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sin JavaScript, el póster es un ENLACE al vídeo en YouTube
+// ---------------------------------------------------------------------------
+//
+// 🪤 EL PÓSTER ERA UN <button> QUE SOLO SABÍA HABLAR CON EL TURNERO. Sin el
+// JavaScript de la web —apagado, bloqueado por una extensión, o un móvil lento
+// que aún no lo ha descargado— el visitante veía el ▶ y pulsarlo no hacía nada
+// (medido el 30-sep-2026 en un build local con los bundles bloqueados). Ahora
+// es un <a> de verdad: sin JavaScript abre el vídeo en YouTube, en otra
+// pestaña; con él, el clic se intercepta y el reproductor se monta aquí, como
+// antes (components/playback/poster-link.tsx).
+//
+// El enlace es SALIR de la web, no incrustar: youtube.com/watch vale (ver
+// legal-pages.test.ts). Sale del mismo constructor probado, youtubeWatchUrl.
+
+// La etiqueta de apertura de lo primero que hay dentro de la caja del turno:
+// el póster, que es lo único que pinta el servidor ahí.
+function etiquetaDelPoster(html: string): string {
+  return /<div[^>]*\bdata-turn="[^"]+"[^>]*>(<[a-z]+\b[^>]*>)/.exec(html)?.[1] ?? "";
+}
+
+describe("sin JavaScript el póster es un enlace real al vídeo en YouTube", () => {
+  it("UFC TV en bucle: al PRIMER vídeo del bucle, el mismo de la ruta del iframe", () => {
+    const poster = etiquetaDelPoster(pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] })));
+    expect(poster).toMatch(/^<a\s/);
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=eolk1_qxI28"');
+  });
+
+  it("UFC TV en directo: al directo", () => {
+    const poster = etiquetaDelPoster(pintar(UfcTv({ mode: "live", video: DIRECTO_PELEAS })));
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=z1PhY6ix2XY"');
+  });
+
+  it("el directo del evento: a su vídeo", () => {
+    const poster = etiquetaDelPoster(
+      pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" })),
+    );
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=qM-h-OudTqM"');
+  });
+
+  it("en otra pestaña y sin referrer, con su nombre, y en el servidor NO se anuncia como botón", () => {
+    // role="button" lo pone el navegador al hidratar, cuando el clic ya se
+    // monta aquí; sin JavaScript es lo que hace: un enlace.
+    for (const html of [
+      pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] })),
+      pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" })),
+    ]) {
+      const poster = etiquetaDelPoster(html);
+      expect(poster).toContain('target="_blank"');
+      expect(poster).toContain('rel="noopener noreferrer"');
+      expect(poster).toMatch(/aria-label="Toca para ver\. /);
+      expect(poster).not.toContain("role=");
+      expect(html).not.toContain("<button");
+    }
+  });
+
+  it("el enlace sale de youtubeWatchUrl: ningún componente lo escribe a mano", () => {
+    for (const ruta of ["components/home/ufc-tv.tsx", "components/event-live-embed.tsx"]) {
+      expect(leerFuente(ruta), ruta).toMatch(/const watchUrl = youtubeWatchUrl\(/);
+    }
+    for (const ruta of [
+      "components/playback/live-embed-player.tsx",
+      "components/playback/poster-link.tsx",
+    ]) {
+      expect(leerFuente(ruta), `${ruta} escribe una URL de YouTube a mano`).not.toMatch(
+        /https:\/\/(www\.)?youtube\.com/,
+      );
+    }
+  });
+});
