@@ -26,4 +26,20 @@ describe("turn blockers", () => {
   it("the mobile menu blocks the turn while it is open", () => {
     expect(source("../site-header.tsx")).toMatch(/useTurnBlocker\("menu", open\);/);
   });
+
+  // A menu left open after navigating kept every player blocked: /en-vivo
+  // opened (from the EN VIVO chip) with the broadcast's ▶ dead.
+  it("the mobile menu closes on every navigation: a new route, the logo and the EN VIVO chip", () => {
+    const header = source("../site-header.tsx");
+    // A new route closes it (state adjusted while rendering, no effect).
+    expect(header).toMatch(
+      /if \(menuPathname !== pathname\) \{\s*setMenuPathname\(pathname\);\s*setOpen\(false\);\s*\}/,
+    );
+    // The logo and the chip close it too (the logo on the home is the same
+    // route: no change of path to catch).
+    expect(header).toMatch(/<Link\s+href="\/"\s+aria-label="MMA STATUS — inicio"\s+onClick=\{closeMenu\}/);
+    expect(header).toMatch(/<LiveNavChip onNavigate=\{closeMenu\} \/>/);
+    const chip = source("../live/live-nav-chip.tsx");
+    expect(chip).toMatch(/<Link\s+href="\/en-vivo"\s+onClick=\{onNavigate\}/);
+  });
 });

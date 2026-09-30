@@ -7,11 +7,14 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 // YouTube's rules: nothing in front of the player. The turn manager
 // (components/playback) takes the AUTOMATIC player away while a blocker is
 // open, and brings it back when it closes; what the visitor chose stays.
-// Fixed in the final review of the shorts branch:
+// Two blockers, fixed in the final review of the shorts branch:
 //
 //   · The videos lightbox (video-modal.tsx: the home's videos column and
 //     /videos) covers the page with an 80 % black backdrop, and UFC TV kept
 //     playing behind it.
+//   · The mobile menu (site-header.tsx) did not close when the visitor left
+//     with the logo or the EN VIVO chip: /en-vivo opened with the menu open,
+//     every player blocked and the broadcast's ▶ dead until it was closed.
 //
 // No network: UFC TV is canned (UFC_TV_FIXTURE=loop) and every iframe loads
 // the fake YouTube of helpers.ts.
@@ -103,5 +106,55 @@ test.describe("el modal de vídeos", () => {
     await page.keyboard.press("Escape");
     await expect(dialog(page)).toHaveCount(0);
     await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+  });
+});
+
+test.describe("el menú móvil se cierra al navegar", () => {
+  const hamburger = (page: Page) => page.locator('button[aria-controls="mobile-nav"]');
+  const mobileMenu = (page: Page) => page.locator("#mobile-nav");
+  const logo = (page: Page) => page.getByRole("link", { name: "MMA STATUS — inicio" });
+
+  test.beforeEach(async ({ page }) => {
+    // A night of an event: the header shows the EN VIVO chip.
+    await page.route("**/api/live/now", (route) =>
+      route.fulfill({
+        status: 200,
+        json: { phase: "live", live: true, eventId: 357, eventName: "UFC 306", daysUntil: 0 },
+      }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  async function openMenu(page: Page) {
+    await hamburger(page).click();
+    await expect(mobileMenu(page)).toBeVisible();
+  }
+
+  async function expectMenuClosed(page: Page) {
+    await expect(mobileMenu(page)).toBeHidden();
+    await expect(hamburger(page)).toHaveAttribute("aria-expanded", "false");
+  }
+
+  test("con el logo, desde otra página y desde la portada misma", async ({ page }) => {
+    await page.goto("/eventos");
+    await openMenu(page);
+    await logo(page).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expectMenuClosed(page);
+
+    // Already on the home: the route does not change, the menu closes anyway.
+    await openMenu(page);
+    await logo(page).click();
+    await expectMenuClosed(page);
+  });
+
+  test("con el chip EN VIVO: se llega a /en-vivo con el menú cerrado", async ({ page }) => {
+    await page.goto("/");
+    const chip = page.locator("header").getByRole("link", { name: "En vivo" });
+    await expect(chip).toBeVisible();
+    await openMenu(page);
+    await chip.click();
+    await expect(page).toHaveURL(/\/en-vivo$/);
+    await expectMenuClosed(page);
   });
 });
