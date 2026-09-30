@@ -36,9 +36,12 @@ import { cn } from "@/lib/utils";
 // No postMessage, no iframe_api, no enablejsapi: to stop a player its <iframe>
 // is removed, and each mount is a new <iframe>.
 //
-// Wired so far: the home hero's short (components/home/shorts-hero.tsx). UFC
-// TV (ufc-tv-player.tsx) and the live broadcast (event-live-embed.tsx) still
-// play on their own and join the turn next.
+// Wired: the home hero's short (components/home/shorts-hero.tsx), and UFC TV
+// and the event's live broadcast through their shared 16:9 player
+// (components/playback/live-embed-player.tsx: the home, /en-vivo and the event
+// page). Nothing else of the site starts a YouTube player on its own: the
+// click-to-play facades and the /videos modal mount only on a tap, and stay
+// outside the turn for now.
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 

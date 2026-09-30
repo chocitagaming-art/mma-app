@@ -1,7 +1,8 @@
 import { Radio } from "lucide-react";
 
+import { LiveEmbedPlayer } from "@/components/playback/live-embed-player";
 import { LIVE_PLAYER_COLUMN, type LivePlayerColumn } from "@/lib/live-player-column";
-import { isYouTubeVideoId, type UfcChannel } from "@/lib/ufc-tv";
+import { liveEmbedUrl, youtubeWatchUrl, type UfcChannel } from "@/lib/ufc-tv";
 
 // El directo que la UFC emite EN ABIERTO la noche de la velada, incrustado.
 //
@@ -23,14 +24,14 @@ import { isYouTubeVideoId, type UfcChannel } from "@/lib/ufc-tv";
 // programado, en directo o acabado, y la única fuente que sabe cuál de las tres
 // es en este segundo es el propio reproductor. Lo dice él dentro del marco.
 //
-// Es un componente de SERVIDOR: no lleva estado ni "use client". El iframe
-// ARRANCA SOLO Y MUDO (`autoplay=1&mute=1&playsinline=1`, más `autoplay` en
-// `allow`): el acuerdo con el dueño es que el directo se vea sin darle a play.
-// Arrancar con sonido no es opción —es de las pocas cosas que un navegador
-// bloquea por su cuenta— y por eso el `mute=1` es obligatorio, no estético. Va
-// con `loading="lazy"` para que no arranque hasta que el bloque entra en
-// pantalla. El detalle, junto al <iframe>, y la red que lo vigila en
-// lib/live-embed-callsites.test.ts.
+// Es un componente de SERVIDOR: no lleva estado ni "use client". The player
+// is the client LiveEmbedPlayer (components/playback/live-embed-player.tsx,
+// shared with UFC TV): it ARRANCA SOLO Y MUDO (`autoplay=1&mute=1&playsinline=1`,
+// más `autoplay` en `allow`), because the owner wants the broadcast seen
+// without pressing play, but only when the turn manager gives it the turn:
+// more than half of it in view for 400 ms, one player at a time, nothing
+// under prefers-reduced-motion. `mute=1` es obligatorio, no estético: sin él
+// no arranca. La red que lo vigila: lib/live-embed-callsites.test.ts.
 //
 // El vídeo lo elige quien llama, con resolveEventVideo (lib/ufc-tv.ts): el id
 // escrito a mano en events.live_video_id si lo hay, y si no el directo de la
@@ -103,7 +104,11 @@ export function EventLiveEmbed({
   // sitio de llamada nuevo se lo salta. Por eso no compara con 'off' sin más:
   // 'OFF', ' off' o una URL pegada con SQL tampoco son un id de YouTube, y
   // cualquiera de ellos acabaría en `embed/OFF`.
-  if (!videoTitle || eventOver || !isYouTubeVideoId(videoId)) {
+  // liveEmbedUrl / youtubeWatchUrl return null for anything that is not a
+  // YouTube id: that is the "last gate" above.
+  const src = liveEmbedUrl(videoId);
+  const watchUrl = youtubeWatchUrl(videoId);
+  if (!videoTitle || eventOver || !src || !watchUrl) {
     return null;
   }
 
@@ -138,51 +143,34 @@ export function EventLiveEmbed({
             otras dos, que ya estaban bien. Lo que fallaba era la franja que lo
             envolvía en la portada, no el reproductor.
 
-            Y un cuarto que lo COPIA: UFC TV (components/home/ufc-tv.tsx, el
-            iframe en ufc-tv-player.tsx) usa este mismo marco para que el hueco
-            de la portada no cambie de tamaño al pasar del bucle de peleas al
-            directo de la velada. Si se toca aquí, se toca allí.
+            Y un cuarto que lo COMPARTE: UFC TV (components/home/ufc-tv.tsx)
+            uses the same LiveEmbedPlayer, so the home slot does not change
+            size when it goes from the loop to the event's broadcast. Tocar
+            el marco es tocarlo en los cuatro.
 
-            🪤 ARRANCA SOLO, Y ARRANCA MUDO — las dos cosas son obligatorias, no
-            una preferencia. `autoplay=1` sin `mute=1` NO arranca: Chrome y Safari
-            bloquean por su cuenta cualquier vídeo que empiece con sonido, así que
-            el resultado sería un reproductor parado y la sensación de que el
-            arreglo no funcionó. Y `autoplay` tiene que estar ADEMÁS en el
-            atributo `allow`, o la política de permisos del iframe lo corta antes
-            de que YouTube lea el parámetro.
+            The iframe is not written here any more: LiveEmbedPlayer (client)
+            shows a poster and the turn manager mounts the iframe only in
+            view and one player at a time (the home short, UFC TV, this). The
+            URL comes from liveEmbedUrl (lib/ufc-tv.ts), whose exact params
+            lib/ufc-tv.test.ts pins: autoplay=1 AND mute=1 (Chrome and Safari
+            block a start with sound) AND playsinline=1 (iOS would go full
+            screen). prefers-reduced-motion is honoured now: nothing starts
+            on its own, the poster's ▶ does.
 
-            `playsinline=1` es para iOS: sin él, Safari de iPhone se lleva el
-            vídeo a pantalla completa él solo en cuanto arranca.
-
-            Sigue con `loading="lazy"` a propósito: así no arranca al cargar la
-            página, sino cuando el bloque entra en pantalla. Es lo que evita que
-            la portada se ponga a consumir datos de alguien que nunca baja hasta
-            aquí.
-
-            ⚠️ LO QUE ESTO NO HACE: no respeta `prefers-reduced-motion`. No se
-            puede desde aquí — el src se fija al renderizar y esto es un
-            componente de SERVIDOR, así que para leer la preferencia del
-            navegador habría que convertirlo en cliente (lo que hace ufc-tv-player.tsx).
-            Lo que sí se cumple es la WCAG 2.2.2: el reproductor de YouTube trae
-            su propio botón de pausa, que es el mecanismo que la norma exige.
-            UFC TV sí la respeta (ufc-tv-player.tsx, un iframe de cliente)
-            porque arranca en CADA visita a la portada; este solo la noche de
-            la velada. Si se quiere aquí también, es reutilizar ese patrón.
-
-            🪤 AL MENOS 200 PX DE ALTO POR DENTRO (`min-h-[202px]`). YouTube
-            pide un reproductor de al menos 200×200, y en un móvil de 360 px
-            el 16:9 se quedaba en 183. Es 202 y no 200 porque el borde de 1 px
-            va por dentro de la caja (border-box): con 200, el visor medía 198.
-            Con una columna de menos de 359 px el marco deja de ser 16:9 y el
+            🪤 AL MENOS 200 PX DE ALTO POR DENTRO (`min-h-[202px]` on the
+            player's box, see live-embed-player.tsx). YouTube pide un
+            reproductor de al menos 200×200, y en un móvil de 360 px el 16:9
+            se quedaba en 183. Es 202 y no 200 porque el borde de 1 px va por
+            dentro de la caja (border-box). Con una columna de menos de 359 px
+            el marco deja de ser 16:9 y el
             propio reproductor pone franjas arriba y abajo. */}
         <div className="w-full">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`}
+          <LiveEmbedPlayer
+            id="evento"
+            src={src}
+            watchUrl={watchUrl}
             title={`${videoTitle} · ${eventName}`}
-            loading="lazy"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            className="aspect-video min-h-[202px] w-full rounded-lg border border-border bg-muted"
+            label="Retransmisión oficial"
           />
         </div>
       </div>

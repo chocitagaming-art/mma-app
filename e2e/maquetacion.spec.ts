@@ -354,7 +354,10 @@ test("ficha: la foto de cuerpo entero no pasa de 400 px en tablet, y en móvil y
 // Y en móvil, un visor de al menos 200 px de alto: la norma de YouTube.
 //
 // El webServer arranca con UFC_TV_FIXTURE=loop, así que es el bucle enlatado,
-// sin red. El directo del EVENTO usa la misma columna en la portada, pero aquí
+// sin red. And since the turn manager the iframe only exists while UFC TV holds
+// the turn, so each test brings it to the middle of the screen first and waits
+// for it to mount on its own; then it measures the player's box (TurnSlot,
+// with the border) and the iframe inside it (the viewer YouTube measures). El directo del EVENTO usa la misma columna en la portada, pero aquí
 // no sale (depende de la ventana real de la velada): su ancho lo vigila
 // src/lib/live-embed-callsites.test.ts.
 
@@ -363,15 +366,19 @@ type UfcTvMedido = {
   // La cabecera es sticky: al bajar, es lo que tapa la parte de arriba.
   cabecera: number;
   columna: { top: number; width: number };
-  iframe: { bottom: number; width: number; height: number };
-  // Lo de DENTRO del borde del iframe: el reproductor que mide YouTube.
+  // The player's box (TurnSlot), border included.
+  marco: { bottom: number; width: number; height: number };
+  // Lo de DENTRO del borde: el iframe, el reproductor que mide YouTube.
   visor: { width: number; height: number };
 };
 
 /** Carga la portada a ese tamaño y mide el bloque de UFC TV. */
 async function medirUfcTv(page: Page, width: number, height: number): Promise<UfcTvMedido> {
+  // An external server started with UFC_TV_FIXTURE=loop can be declared by
+  // exporting the same variable to Playwright (as the shorts' e2e runs do on
+  // port 3200); the data-ufc-tv="loop" check below still catches a lie.
   test.skip(
-    Boolean(process.env.PLAYWRIGHT_BASE_URL),
+    Boolean(process.env.PLAYWRIGHT_BASE_URL) && process.env.UFC_TV_FIXTURE !== "loop",
     "con PLAYWRIGHT_BASE_URL no hay UFC_TV_FIXTURE: el contenido depende del día",
   );
   await page.setViewportSize({ width, height });
@@ -405,6 +412,12 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
     "data-ufc-tv",
     "loop",
   );
+  // The iframe mounts only with the turn: more than half in view below the
+  // sticky header for 400 ms.
+  const turno = bloque.locator("[data-turn]");
+  await turno.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(turno).toHaveAttribute("data-turn-state", "playing-auto");
+  await expect(turno.locator("iframe")).toHaveCount(1);
   // Los rótulos cambian de alto con la fuente (font-display: swap).
   await page.evaluate(() => document.fonts.ready);
   const cabecera = await page
@@ -413,12 +426,13 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
 
   const medida = await bloque.evaluate((seccion) => {
     const columna = (seccion.firstElementChild as HTMLElement).getBoundingClientRect();
-    const iframe = seccion.querySelector("iframe") as HTMLIFrameElement;
-    const caja = iframe.getBoundingClientRect();
+    const turno = seccion.querySelector("[data-turn]") as HTMLElement;
+    const iframe = turno.querySelector("iframe") as HTMLIFrameElement;
+    const caja = turno.getBoundingClientRect();
     return {
       ventana: window.innerHeight,
       columna: { top: columna.top, width: columna.width },
-      iframe: { bottom: caja.bottom, width: caja.width, height: caja.height },
+      marco: { bottom: caja.bottom, width: caja.width, height: caja.height },
       visor: { width: iframe.clientWidth, height: iframe.clientHeight },
     };
   });
@@ -428,12 +442,12 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
 /** El vídeo llena su columna y es 16:9 (en escritorio no manda el mínimo). */
 function expectVideo169(m: UfcTvMedido, contexto: string) {
   expect(
-    Math.abs(m.iframe.width - m.columna.width),
-    `${contexto}: el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+    Math.abs(m.marco.width - m.columna.width),
+    `${contexto}: el vídeo (${m.marco.width}) no llena su columna (${m.columna.width})`,
   ).toBeLessThanOrEqual(0.5);
   expect(
-    Math.abs(m.iframe.height - (m.iframe.width * 9) / 16),
-    `${contexto}: el vídeo no es 16:9 (${m.iframe.width}×${m.iframe.height})`,
+    Math.abs(m.marco.height - (m.marco.width * 9) / 16),
+    `${contexto}: el vídeo no es 16:9 (${m.marco.width}×${m.marco.height})`,
   ).toBeLessThanOrEqual(1);
 }
 
@@ -458,7 +472,7 @@ for (const [width, height, ancho, margen] of [
     expectVideo169(m, contexto);
     // Bajando hasta el bloque, la cabecera fija tapa su alto: lo que queda de
     // ventana tiene que tener sitio para los rótulos y el vídeo entero.
-    const bloqueEntero = m.cabecera + (m.iframe.bottom - m.columna.top);
+    const bloqueEntero = m.cabecera + (m.marco.bottom - m.columna.top);
     expect(
       bloqueEntero,
       `${contexto}: cabecera (${m.cabecera}) + rótulos + vídeo no caben en ${m.ventana} px`,
@@ -495,8 +509,8 @@ for (const [width, height] of [
     expect(m.visor.width, `ancho del visor de UFC TV a ${width}`).toBeGreaterThanOrEqual(200);
     // El mínimo le da alto, no ancho: sigue llenando su columna.
     expect(
-      Math.abs(m.iframe.width - m.columna.width),
-      `a ${width}, el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+      Math.abs(m.marco.width - m.columna.width),
+      `a ${width}, el vídeo (${m.marco.width}) no llena su columna (${m.columna.width})`,
     ).toBeLessThanOrEqual(0.5);
     await expectNoHorizontalOverflow(page, `portada a ${width}×${height}`);
   });

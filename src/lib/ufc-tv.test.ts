@@ -38,6 +38,7 @@ import {
   toLiveCandidate,
   utcDaySeed,
   withCooldown,
+  youtubeWatchUrl,
   type LiveCandidate,
   type LoopVideo,
   type UfcChannel,
@@ -716,14 +717,10 @@ describe("liveEmbedUrl / loopEmbedUrl", () => {
     );
   });
 
-  it("la versión quieta (prefers-reduced-motion): ni autoplay ni mute, solo playsinline", () => {
-    expect(liveEmbedUrl("z1PhY6ix2XY", { autoplay: false })).toBe(
-      "https://www.youtube-nocookie.com/embed/z1PhY6ix2XY?playsinline=1",
-    );
-    expect(loopEmbedUrl(["4jCfhpKS4Wg", "eolk1_qxI28"], { autoplay: false })).toBe(
-      "https://www.youtube-nocookie.com/embed/4jCfhpKS4Wg?playlist=4jCfhpKS4Wg,eolk1_qxI28&loop=1&playsinline=1",
-    );
-    expect(liveEmbedUrl(LIVE_VIDEO_OFF, { autoplay: false })).toBeNull();
+  it("the youtube.com link of a poster under 200x200: only for a real YouTube id", () => {
+    expect(youtubeWatchUrl("z1PhY6ix2XY")).toBe("https://www.youtube.com/watch?v=z1PhY6ix2XY");
+    expect(youtubeWatchUrl(LIVE_VIDEO_OFF)).toBeNull();
+    expect(youtubeWatchUrl("abc?autoplay=0")).toBeNull();
   });
 
   it("'off' ni ningún id que no sea de YouTube llega nunca a un iframe", () => {

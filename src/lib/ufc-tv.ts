@@ -647,26 +647,26 @@ const EMBED_BASE = "https://www.youtube-nocookie.com/embed/";
 
 // 🪤 ARRANCA SOLO Y ARRANCA MUDO, las dos cosas: `autoplay=1` sin `mute=1` no
 // arranca (Chrome y Safari lo bloquean) y `playsinline=1` evita que el iPhone
-// se lo lleve a pantalla completa. Ver event-live-embed.tsx, que lleva el mismo
-// acuerdo, y live-embed-callsites.test.ts, que lo vigila en los dos.
+// se lo lleve a pantalla completa. Lo vigila live-embed-callsites.test.ts.
+//
+// There is no "calm" URL any more (the prefers-reduced-motion one, without
+// autoplay): the iframe is now mounted by the turn manager
+// (components/playback/live-embed-player.tsx), which starts nothing on its own
+// under reduced motion. The iframe then exists only after the visitor's tap
+// on the poster, and that tap IS their play, so every mount uses this one.
 const AUTOPLAY_PARAMS = "autoplay=1&mute=1&playsinline=1";
-
-// La versión QUIETA, para quien pide menos movimiento
-// (prefers-reduced-motion): ni arranca sola ni va muda —si le da a play, lo
-// ha pedido él y quiere oírlo—. Solo `playsinline`. La elige el navegador en
-// components/home/ufc-tv-player.tsx.
-const CALM_PARAMS = "playsinline=1";
-
-type EmbedOptions = { autoplay?: boolean };
-
-function embedParams({ autoplay = true }: EmbedOptions): string {
-  return autoplay ? AUTOPLAY_PARAMS : CALM_PARAMS;
-}
 
 // Devuelve null si el id no es de YouTube: así 'off' (o cualquier otra cosa
 // que se cuele en la columna) no llega nunca a un iframe.
-export function liveEmbedUrl(videoId: string, opts: EmbedOptions = {}): string | null {
-  return isYouTubeVideoId(videoId) ? `${EMBED_BASE}${videoId}?${embedParams(opts)}` : null;
+export function liveEmbedUrl(videoId: string): string | null {
+  return isYouTubeVideoId(videoId) ? `${EMBED_BASE}${videoId}?${AUTOPLAY_PARAMS}` : null;
+}
+
+// The video on youtube.com, for a tap on a poster under 200x200 (no legal
+// inline player there, see lib/playback-turn.ts MIN_PLAYER_PX). null for
+// anything that is not a YouTube id, like the embed URLs.
+export function youtubeWatchUrl(videoId: string): string | null {
+  return isYouTubeVideoId(videoId) ? `https://www.youtube.com/watch?v=${videoId}` : null;
 }
 
 // 🪤 CÓMO SE COMBINAN `playlist` Y `loop` (doc de parámetros del reproductor
@@ -690,12 +690,12 @@ export function liveEmbedUrl(videoId: string, opts: EmbedOptions = {}): string |
 // mismo primero. Medido igual: arranca por Green vs Zellhuber (0:01 de 12:02),
 // una sola vez. Con un solo vídeo sale playlist = él mismo, que es además lo
 // que pide la nota de la doc para repetirlo.
-export function loopEmbedUrl(ids: string[], opts: EmbedOptions = {}): string | null {
+export function loopEmbedUrl(ids: string[]): string | null {
   const valid = [...new Set(ids)].filter(isYouTubeVideoId);
   if (valid.length === 0) {
     return null;
   }
-  return `${EMBED_BASE}${valid[0]}?playlist=${valid.join(",")}&loop=1&${embedParams(opts)}`;
+  return `${EMBED_BASE}${valid[0]}?playlist=${valid.join(",")}&loop=1&${AUTOPLAY_PARAMS}`;
 }
 
 // ── La columna manda ────────────────────────────────────────────────────────
