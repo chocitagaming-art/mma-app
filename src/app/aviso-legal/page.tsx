@@ -137,7 +137,9 @@ export default function AvisoLegalPage() {
         </p>
         <p>
           Los vídeos de YouTube que se ven aquí (UFC TV, el directo de la velada,
-          /videos y los vídeos de cada combate) se incrustan con el{" "}
+          el careo oficial y el vídeo del pesaje de /en-vivo y de cada evento,
+          /videos, /tendencias, la columna de vídeos de la portada y los vídeos de
+          cada combate) se incrustan con el{" "}
           <strong>reproductor oficial de YouTube</strong>: los sirve YouTube desde
           sus servidores y verlos queda sujeto a los{" "}
           <a

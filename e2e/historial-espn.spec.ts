@@ -3,7 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 // ── El historial ESPN de la ficha, contra la base de verdad ────────────────
 //
 // El NOT EXISTS de fighters.detail.ts esconde las filas de fight_history_espn
-// que ya están en `fights` (±1 día, mismo rival). Sus tests de vitest
+// que ya están en `fights`: mismo luchador y evento a ±1 día de fecha. NO
+// compara el rival: con cualquier combate de `fights` en esa ventana, la fila
+// ESPN se esconde. Sus tests de vitest
 // (src/lib/queries/espn-history.sql.test.ts) solo leen el TEXTO de la SQL: un
 // mutante con `and false` los pasa. Aquí se mira lo que sale en la página.
 //
@@ -94,4 +96,22 @@ test("una pelea del Contender Series lleva la etiqueta violeta", async ({ page }
     await expect(badge).toHaveClass(new RegExp(`(^|\\s)${clase}(\\s|$)`));
   }
   await expect(badge).not.toHaveClass(/(^|\s)bg-muted(\s|$)/);
+
+  // Y el tile «Última pelea» del hero: 6782 no tiene combate UFC disputado (su
+  // única fila en `fights` es la próxima), así que el tile cae a su última fila
+  // ESPN, esta misma, y tiene que llevar el mismo badge violeta.
+  const tile = page
+    .locator("p", { hasText: /^Última pelea$/ })
+    .locator("xpath=..")
+    .locator("span[title]");
+  await expect(tile).toHaveCount(1);
+  await expect(tile).toHaveAttribute("title", "Contender Series");
+  for (const clase of [
+    "bg-violet-500/15",
+    "text-violet-800",
+    "dark:bg-violet-400/15",
+    "dark:text-violet-300",
+  ]) {
+    await expect(tile).toHaveClass(new RegExp(`(^|\\s)${clase}(\\s|$)`));
+  }
 });

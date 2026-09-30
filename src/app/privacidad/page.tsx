@@ -33,6 +33,18 @@ export const metadata: Metadata = {
 // esencial: si la web incrusta YouTube, esta página tiene que contarlo, y
 // ningún reproductor puede volver al dominio de YouTube con cookies.
 //
+// 🪤 Esa maqueta se midió con la partición del almacenamiento de terceros
+// DESACTIVADA. En un Chrome normal, lo que guarda el iframe de
+// youtube-nocookie.com queda particionado bajo el sitio que lo incrusta
+// (mmastatus.app) y se borra con sus datos. Por eso el punto 3 lo cuenta así
+// y no dice «medido en Chrome».
+//
+// Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): UFC TV y el
+// directo arrancan solos; el careo oficial (/en-vivo y /eventos/[id]), el
+// pesaje (event-weigh-ins.tsx), /videos, /tendencias, la columna de la
+// portada y los combates esperan al clic. /gimnasios: api/gyms/route.ts manda
+// DESDE EL SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
+//
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
 // upload.wikimedia.org, 285 en events.image_url) dejan guardada la cookie
@@ -163,21 +175,24 @@ export default function PrivacidadPage() {
         </ul>
         <p>
           <strong>Lo que guarda el reproductor de YouTube es aparte.</strong> Cuando
-          se carga un vídeo (punto 4), el reproductor guarda sus propios datos en
-          tu navegador, bajo el dominio{" "}
-          <code className="font-mono text-xs">youtube-nocookie.com</code>: en el{" "}
-          <strong>localStorage</strong>, preferencias del reproductor (como los
-          subtítulos) y una medida de la velocidad de tu conexión; además, una base
-          de datos <strong>IndexedDB</strong> y una <strong>Cache Storage</strong>{" "}
-          con los iconos del reproductor. Unos 16 KB en total y ninguna cookie,
-          medido el 29 de septiembre de 2026 en Chrome. Eso no lo escribe ni lo lee
-          esta web, sino el reproductor; qué hace Google con ello lo explica su
-          Política de Privacidad (punto 4).
+          se carga un vídeo (punto 4), el reproductor, que se sirve desde{" "}
+          <code className="font-mono text-xs">youtube-nocookie.com</code>, guarda
+          sus propios datos en tu navegador: en el <strong>localStorage</strong>,
+          preferencias del reproductor (como los subtítulos) y una medida de la
+          velocidad de tu conexión; además, una base de datos{" "}
+          <strong>IndexedDB</strong> y una <strong>Cache Storage</strong> con los
+          iconos del reproductor. Unos 16 KB en total y ninguna cookie, medido con
+          el mismo reproductor que usa esta web. Eso no lo escribe ni lo lee esta
+          web, sino el reproductor; qué hace Google con ello lo explica su Política
+          de Privacidad (punto 4).
         </p>
         <p>
           Para borrarlo todo basta con limpiar los datos del sitio desde tu
-          navegador: los de mmastatus.app y, para lo del reproductor, los de
-          youtube-nocookie.com. No hace falta pedírnoslo: nosotros no tenemos copia.
+          navegador. <strong>En Chrome</strong>, lo que guarda el reproductor queda
+          dentro de los datos de mmastatus.app, así que se borra al borrar los
+          datos de mmastatus.app. Otros navegadores pueden guardarlo aparte, bajo{" "}
+          youtube-nocookie.com: ahí hay que borrar también los de ese dominio. No
+          hace falta pedírnoslo: nosotros no tenemos copia.
         </p>
       </LegalSection>
 
@@ -206,6 +221,12 @@ export default function PrivacidadPage() {
             <strong>Render</strong> — solo si pides una predicción; recibe
             estadísticas deportivas de los dos luchadores, nada tuyo.
           </li>
+          <li>
+            <strong>OpenStreetMap</strong> (Nominatim) — solo si buscas una
+            ciudad en /gimnasios: el servidor de esta web le envía el nombre de la
+            ciudad que escribes para situarla en el mapa. La petición sale del
+            servidor, así que tu dirección IP no le llega.
+          </li>
         </ul>
         <p>
           Algunos están fuera del Espacio Económico Europeo. En ese caso la
@@ -214,7 +235,9 @@ export default function PrivacidadPage() {
         </p>
         <p>
           <strong>Los vídeos: YouTube.</strong> UFC TV, el directo de la velada,
-          /videos y los vídeos de cada combate se ven con el reproductor de{" "}
+          el careo oficial y el vídeo del pesaje (en /en-vivo y en la página de
+          cada evento), /videos, /tendencias, la columna de vídeos de la portada y
+          los vídeos de cada combate se ven con el reproductor de{" "}
           <strong>YouTube</strong>, un servicio de <strong>Google</strong> (en la
           Unión Europea lo presta <strong>Google Ireland Limited</strong>),
           incrustado en su versión{" "}
@@ -248,9 +271,11 @@ export default function PrivacidadPage() {
             movimiento, UFC TV no arranca, pero el reproductor se carga igual.
           </li>
           <li>
-            <strong>Lo que espera a que pulses.</strong> En /videos, en
-            /tendencias, en la columna de vídeos de la portada y en los vídeos de
-            cada combate se ve primero una miniatura, y el reproductor solo se
+            <strong>Lo que espera a que pulses.</strong> En el careo oficial y
+            en el vídeo del pesaje (en /en-vivo y en la página de cada evento),
+            en /videos, en /tendencias, en la columna de vídeos de la portada y en
+            los vídeos de cada combate se ve primero una miniatura, y el
+            reproductor solo se
             carga cuando pulsas «play». La miniatura sí se descarga de un servidor
             de YouTube (i.ytimg.com).
           </li>

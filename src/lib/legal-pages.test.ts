@@ -141,6 +141,63 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     expect(resumen).toMatch(/otros servidores.*cookie/);
   });
 
+  it("el párrafo de imágenes nombra los servidores de los que se descargan", () => {
+    const inicio = texto.indexOf("Imágenes de otros servidores.");
+    const parrafo = texto.slice(inicio, texto.indexOf("Algunos de esos servidores", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    for (const servidor of [
+      "ufc.com",
+      "ESPN",
+      "upload.wikimedia.org",
+      "i.ytimg.com",
+      "yt3.ggpht.com",
+      "flagcdn.com",
+      "OpenStreetMap",
+    ]) {
+      expect(parrafo, `falta ${servidor}`).toContain(servidor);
+    }
+  });
+
+  it("dice que UFC TV y el directo se cargan solos y sin sonido", () => {
+    const inicio = texto.indexOf("Lo que se carga solo.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que espera a que pulses", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(vineta).toMatch(/UFC TV/);
+    expect(vineta).toMatch(/directo de la velada/);
+    expect(vineta).toMatch(/sin sonido/);
+  });
+
+  it("no promete que no haya cookies «ni propias ni de terceros»", () => {
+    // Falso desde que se midió: Wikimedia, ufc.com y sherdog mandan la suya.
+    expect(texto).not.toMatch(/ni propias ni de terceros/i);
+  });
+
+  it("nombra a OpenStreetMap (Nominatim), a quien el servidor manda la ciudad de /gimnasios", () => {
+    // api/gyms/route.ts: geocodeCity() pide nominatim.openstreetmap.org desde
+    // el servidor con la ciudad escrita; la IP del visitante no viaja.
+    const inicio = texto.indexOf("Quién más interviene");
+    const proveedores = texto.slice(inicio, texto.indexOf("Algunos están fuera", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(proveedores).toMatch(/OpenStreetMap \(Nominatim\)/);
+    expect(proveedores).toMatch(/\/gimnasios/);
+  });
+
+  it("cuenta los careos y los pesajes entre los vídeos, y que esperan al clic", () => {
+    expect(texto).toMatch(/careo oficial/);
+    expect(texto).toMatch(/vídeo del pesaje/);
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(vineta).toMatch(/careo oficial/);
+    expect(vineta).toMatch(/pesaje/);
+  });
+
+  it("en Chrome, lo del reproductor se borra con los datos de mmastatus.app", () => {
+    // La maqueta se midió con la partición de terceros desactivada: no se
+    // puede atribuir a «Chrome» sin más.
+    expect(texto).not.toMatch(/medido el 29 de septiembre de 2026 en Chrome/);
+    expect(texto).toMatch(/En Chrome.*dentro de los datos de mmastatus\.app/);
+  });
+
   it("la metadescripción no resume la página como si YouTube no existiera", () => {
     expect(String(privacidadMetadata.description)).toMatch(/YouTube/);
   });
@@ -163,6 +220,12 @@ describe("/aviso-legal dice con qué reproductor van los vídeos", () => {
   it("los vídeos van con el reproductor oficial de YouTube y sus Términos, enlazados", () => {
     expect(texto).toMatch(/reproductor oficial de YouTube/);
     expect(html).toContain(`href="${TERMINOS_YOUTUBE}"`);
+  });
+
+  it("cuenta los careos y los pesajes entre los vídeos incrustados", () => {
+    expect(texto).toMatch(/careo oficial/);
+    expect(texto).toMatch(/vídeo del pesaje/);
+    expect(texto).toMatch(/\/tendencias/);
   });
 
   it("lleva la fecha del cambio", () => {
