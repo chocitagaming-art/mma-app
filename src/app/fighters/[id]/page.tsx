@@ -887,7 +887,8 @@ export default async function FighterDetailPage({
                             ? "bg-nc/10 text-nc"
                             : "bg-muted text-muted-foreground";
                     // Badge de promoción (S3-G): UFC rojo, Bellator ámbar,
-                    // resto (regionales) gris con su nombre corto. Mapping
+                    // Contender Series violeta, resto (regionales) gris con
+                    // su nombre corto. Mapping (promotion-badge.ts)
                     // compartido con el tile "Última pelea" del hero.
                     const { label: promotionLabel, className: promotionClass } =
                       promotionBadge(fight);
