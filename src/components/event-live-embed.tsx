@@ -162,7 +162,7 @@ export function EventLiveEmbed({
             ⚠️ LO QUE ESTO NO HACE: no respeta `prefers-reduced-motion`. No se
             puede desde aquí — el src se fija al renderizar y esto es un
             componente de SERVIDOR, así que para leer la preferencia del
-            navegador habría que convertirlo en cliente (lo que hace VideoHero).
+            navegador habría que convertirlo en cliente (lo que hace ufc-tv-player.tsx).
             Lo que sí se cumple es la WCAG 2.2.2: el reproductor de YouTube trae
             su propio botón de pausa, que es el mecanismo que la norma exige.
             UFC TV sí la respeta (ufc-tv-player.tsx, un iframe de cliente)

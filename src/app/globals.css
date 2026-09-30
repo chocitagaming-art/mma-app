@@ -14,6 +14,9 @@
   --font-mono: var(--font-plex-mono);
   --font-display: var(--font-saira);
   --font-heading: var(--font-saira);
+  /* Only the mobile headline of the home hero (variant A of the shorts). The
+     variable comes from next/font in app/page.tsx, on the hero's <section>. */
+  --font-xc: var(--font-saira-xc);
   --color-corner-red: var(--corner-red);
   --color-corner-red-foreground: var(--corner-red-foreground);
   --color-corner-blue: var(--corner-blue);
@@ -421,19 +424,4 @@
 /* Punto "en vivo" que late. */
 .live-dot {
   animation: pulse-dot 1.8s ease-in-out infinite;
-}
-
-/* ---------- Bordes difuminados (feather) del reel de vídeo del hero ---------- */
-/* Funciona igual en dark y light: la máscara recorta el alpha, no pinta color. */
-.mask-feather {
-  -webkit-mask-image: radial-gradient(
-    ellipse 86% 92% at 50% 50%,
-    #000 60%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 86% 92% at 50% 50%,
-    #000 60%,
-    transparent 100%
-  );
 }

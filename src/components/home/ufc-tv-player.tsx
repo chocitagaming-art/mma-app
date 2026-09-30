@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 //
 // 🪤 UFC TV ARRANCA SOLO EN CADA VISITA A LA PORTADA, 24/7 —no solo la noche de
 // la velada, como el bloque del evento—, así que aquí sí se respeta
-// `prefers-reduced-motion`, igual que VideoHero en esta misma portada y que
+// `prefers-reduced-motion`, igual que el short del hero en esta misma portada y que
 // globals.css en todo el sitio. Quien lo pide recibe la URL QUIETA: sin
 // autoplay y sin mute (si le da a play, quiere oírlo).
 //
@@ -14,7 +14,7 @@ import { useSyncExternalStore } from "react";
 // lib/ufc-tv.ts (liveEmbedUrl/loopEmbedUrl): aquí solo se elige una. Este
 // fichero no puede importar lib/ufc-tv.ts, que es solo de servidor.
 //
-// Mismo patrón useSyncExternalStore que VideoHero: el servidor pinta la de
+// Mismo patrón useSyncExternalStore que el antiguo hero de mp4: el servidor pinta la de
 // autoplay (la preferencia del navegador no la sabe) y el cliente cambia a la
 // quieta al hidratar si toca. Como el iframe es `loading="lazy"` y cae bajo
 // el pliegue, casi siempre cambia antes de haber cargado nada; si ya estaba a

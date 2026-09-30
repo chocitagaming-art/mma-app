@@ -22,8 +22,9 @@ import {
 import type { TurnOwner } from "@/lib/playback-turn";
 import { cn } from "@/lib/utils";
 
-// The turn manager in React: ONE provider per page, and a <TurnSlot> per
-// player (the hero short, UFC TV, the event's live broadcast).
+// The turn manager in React: ONE provider per document (app/layout.tsx, see
+// why there), and a <TurnSlot> per player (the hero short, UFC TV, the
+// event's live broadcast).
 //
 // This file is only wiring: it hands the real browser to the controller
 // (turn-controller.ts) and forwards DOM events to it —visibilitychange,
@@ -35,9 +36,9 @@ import { cn } from "@/lib/utils";
 // No postMessage, no iframe_api, no enablejsapi: to stop a player its <iframe>
 // is removed, and each mount is a new <iframe>.
 //
-// NOT WIRED YET into video-hero.tsx, ufc-tv-player.tsx, event-live-embed.tsx
-// or page.tsx: that waits for the owner's decisions on the mockup (mobile A or
-// B, mute=1, the 4:5 shorts and privacy), after UFC 332.
+// Wired so far: the home hero's short (components/home/shorts-hero.tsx). UFC
+// TV (ufc-tv-player.tsx) and the live broadcast (event-live-embed.tsx) still
+// play on their own and join the turn next.
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
