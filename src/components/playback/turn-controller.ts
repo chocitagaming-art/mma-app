@@ -27,6 +27,9 @@ import {
 //   · hidden tab / pagehide → the automatic player is unmounted and comes
 //     back on its own; the visitor's stays (DECISIONS.md, 30-sep-2026);
 //   · prefers-reduced-motion → decideTurn never starts anything on its own;
+//   · the keyboard focus inside a player's box (its poster) → that one does
+//     not start on its own until the focus leaves (focusChanged): mounting
+//     would remove the focused poster and drop the focus on <body>;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
 //     the hero's timer leaves it alone. As a net, every decision and every
@@ -179,6 +182,12 @@ export function createTurnController(env: TurnEnvironment) {
     return fitsMinimum(p.element.getBoundingClientRect());
   }
 
+  // Is the keyboard focus inside this player's box (its poster)?
+  function holdsFocus(p: Entry): boolean {
+    const active = env.activeElement();
+    return active != null && p.element.contains(active as Node);
+  }
+
   function snapshot(): TurnState {
     return {
       now: env.now(),
@@ -194,6 +203,7 @@ export function createTurnController(env: TurnEnvironment) {
         area: p.area,
         aboveSince: p.aboveSince,
         eligible: eligible(p),
+        focused: holdsFocus(p),
       })),
     };
   }
@@ -415,6 +425,14 @@ export function createTurnController(env: TurnEnvironment) {
 
     reducedMotionChanged() {
       evaluate();
+    },
+
+    // focusin / focusout anywhere on the page: a poster that had the focus
+    // may start on its own now. One task later, so the focus has settled (a
+    // focusout runs before the next element gets it) and never inside
+    // React's commit (a focused element that is removed may fire focusout).
+    focusChanged() {
+      later(evaluate, 0);
     },
 
     // window "blur": after this task, is the focus inside the holder's iframe?

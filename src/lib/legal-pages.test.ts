@@ -176,7 +176,32 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     expect(inicio).toBeGreaterThan(-1);
     expect(vineta).toMatch(/shorts de la UFC de la cabecera de la portada/);
     expect(vineta).toMatch(/i\.ytimg\.com/);
-    expect(vineta).toMatch(/Cuando un short acaba, no se carga otro/);
+    expect(vineta).toMatch(/Cuando un short acaba, no se carga otro por sí solo\./);
+    // Not always true: a short touched inside (to hear it) or started with
+    // the keyboard stays on YouTube's end screen, not on our next thumbnail.
+    expect(vineta).not.toMatch(/se ve la miniatura del siguiente/);
+  });
+
+  it("los shorts también se cargan con «Siguiente», no solo con «play»", () => {
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(vineta).toMatch(/cuando pulsas «play»/);
+    expect(vineta).toMatch(/«Siguiente»/);
+  });
+
+  it("la lista de servidores del reproductor nombra m.youtube.com (los iconos del de los shorts, medido en el QA)", () => {
+    const inicio = texto.indexOf("Lo que hace el reproductor al cargarse");
+    const vineta = texto.slice(inicio, texto.indexOf("Imágenes de otros servidores.", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    for (const servidor of [
+      "www.youtube-nocookie.com",
+      "googlevideo.com",
+      "i.ytimg.com",
+      "yt3.ggpht.com",
+      "m.youtube.com",
+    ]) {
+      expect(vineta, `falta ${servidor}`).toContain(servidor);
+    }
   });
 
   it("con menos movimiento no promete un reproductor cargado: no se carga ninguno hasta el toque", () => {

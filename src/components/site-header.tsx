@@ -185,6 +185,19 @@ export function SiteHeader() {
   // the automatic one is unmounted (see components/playback): the menu covers
   // what is behind it. What the visitor chose to watch keeps playing.
   useTurnBlocker("menu", open);
+  const closeMenu = () => setOpen(false);
+
+  // Every navigation closes the menu. Left open, it kept every player blocked
+  // on the next page: /en-vivo opened (from the EN VIVO chip) with the
+  // broadcast's ▶ dead until the menu was closed. A new route closes it here
+  // (state adjusted while rendering, React's pattern for "reset on a prop
+  // change"); the logo and the chip also close it on click, because the logo
+  // on the home, or the chip on /en-vivo, is the same route.
+  const [menuPathname, setMenuPathname] = useState(pathname);
+  if (menuPathname !== pathname) {
+    setMenuPathname(pathname);
+    setOpen(false);
+  }
 
   // The menu (and its hamburger) is lg:hidden: if the window grows past lg
   // while it is open, close it, or the invisible menu would keep every player
@@ -254,6 +267,7 @@ export function SiteHeader() {
         <Link
           href="/"
           aria-label="MMA STATUS — inicio"
+          onClick={closeMenu}
           className="group flex shrink-0 items-center justify-center gap-2.5 py-2.5"
         >
           <Image
@@ -278,7 +292,7 @@ export function SiteHeader() {
           </nav>
           {/* T3-A: chip EN VIVO/HOY, solo cuando hay evento en marcha o en <24 h.
               Visible también en móvil (vive junto al ThemeToggle, fuera del menú). */}
-          <LiveNavChip />
+          <LiveNavChip onNavigate={closeMenu} />
           <ThemeToggle />
         </div>
       </div>

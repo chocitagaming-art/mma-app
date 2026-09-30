@@ -31,7 +31,8 @@ import { etiquetaChipDirecto } from "@/lib/live-event";
 // verdad importa —"pre" a "live"— sí la coge, porque en "pre" ya se está sondeando.
 const POLL_EN_VELADA_MS = 2 * 60_000;
 
-export function LiveNavChip() {
+// `onNavigate`: the header closes its mobile menu with it (site-header.tsx).
+export function LiveNavChip({ onNavigate }: { onNavigate?: () => void } = {}) {
   // Quien decide si hay que repetir la pregunta es useLiveNow, mirando la fase que
   // devuelve el servidor: aquí solo se dice CADA CUÁNTO preguntar cuando toca.
   const payload = useLiveNow(POLL_EN_VELADA_MS);
@@ -51,6 +52,7 @@ export function LiveNavChip() {
   return (
     <Link
       href="/en-vivo"
+      onClick={onNavigate}
       className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/50 bg-primary/5 px-2.5 py-1 font-display text-xs font-bold uppercase tracking-wide text-primary transition-colors hover:border-primary lg:hidden xl:inline-flex"
     >
       <span className="live-dot inline-block size-1.5 rounded-full bg-primary shadow-[0_0_8px_1px_var(--primary)]" />

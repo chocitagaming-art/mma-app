@@ -28,9 +28,9 @@ import { cn } from "@/lib/utils";
 //
 // This file is only wiring: it hands the real browser to the controller
 // (turn-controller.ts) and forwards DOM events to it —visibilitychange,
-// pagehide/pageshow, window blur, every pointerdown on the page, the
-// reduced-motion media query and the header's ResizeObserver—. Who may play
-// is decided in lib/playback-turn.ts.
+// pagehide/pageshow, window blur, every pointerdown on the page, every focus
+// change, the reduced-motion media query and the header's ResizeObserver—.
+// Who may play is decided in lib/playback-turn.ts.
 // Both are tested in node (turn-controller.test.ts, playback-turn.test.ts);
 // this file is covered by the e2e once it is wired into a page.
 //
@@ -44,7 +44,9 @@ import { cn } from "@/lib/utils";
 // when the visitor starts it and is in the turn so that there is still ONE
 // player at a time. Nothing else of the site starts a YouTube player on its
 // own: the click-to-play facades and the /videos modal mount only on a tap,
-// and stay outside the turn for now.
+// and stay outside the turn for now. The videos modal is a blocker, though
+// (useTurnBlocker, like the mobile menu): it covers the page, and nothing may
+// be in front of a player.
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -101,6 +103,8 @@ export function PlaybackTurnProvider({
     const onBlur = () => controller.windowBlurred();
     // Capture phase: it runs before the tap moves the focus out of an iframe.
     const onPointerDown = () => controller.pagePointerDown();
+    // A focused poster holds its automatic start: when the focus moves, look again.
+    const onFocusChange = () => controller.focusChanged();
     const motion = window.matchMedia(REDUCED_MOTION_QUERY);
     const onMotion = () => controller.reducedMotionChanged();
 
@@ -109,6 +113,8 @@ export function PlaybackTurnProvider({
     window.addEventListener("pageshow", onPageShow);
     window.addEventListener("blur", onBlur);
     window.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("focusin", onFocusChange);
+    document.addEventListener("focusout", onFocusChange);
     motion.addEventListener("change", onMotion);
 
     const header = document.querySelector(headerSelector);
@@ -121,6 +127,8 @@ export function PlaybackTurnProvider({
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("focusin", onFocusChange);
+      document.removeEventListener("focusout", onFocusChange);
       motion.removeEventListener("change", onMotion);
       headerObserver?.disconnect();
       controller.stop();
@@ -157,8 +165,9 @@ export function usePlaybackTurn(id: string) {
 }
 
 /**
- * While `active` (the mobile menu is open) the automatic player goes and
- * nothing starts, not even from a poster; the visitor's player stays.
+ * While `active` (the mobile menu is open, the videos modal is up) the
+ * automatic player goes and nothing starts, not even from a poster; the
+ * visitor's player stays.
  */
 export function useTurnBlocker(name: string, active: boolean) {
   const controller = useTurnController();
