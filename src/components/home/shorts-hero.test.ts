@@ -40,6 +40,17 @@ describe("ShortsHero · server render", () => {
     expect(html).toContain('aria-label="Toca para ver. Short de la UFC: The finish #ufc332"');
   });
 
+  it("under 340 px of screen CSS shows our poster and «Ver en YouTube», never the thumbnail (RMF: 120x70)", () => {
+    // Before React has measured the box (tooSmall), only CSS can keep a
+    // ~99x74 thumbnail off the 120 px column.
+    const thumbnail = /<img[^>]*\bsrc="https:\/\/i\.ytimg\.com\/[^"]*"[^>]*>/.exec(html)?.[0] ?? "";
+    expect(thumbnail).toMatch(/class="[^"]*\bmax-\[339px\]:hidden\b/);
+    const own = /<span[^>]*\bdata-own-poster[^>]*>/.exec(html)?.[0] ?? "";
+    expect(own).toMatch(/class="[^"]*\bhidden max-\[339px\]:block\b/);
+    expect(html).toMatch(/<span class="hidden max-\[339px\]:inline">Ver en YouTube<\/span>/);
+    expect(html).toMatch(/<span class="max-\[339px\]:hidden">Toca para ver<\/span>/);
+  });
+
   it("without JavaScript the poster is a real link to that short on YouTube, in a new tab", () => {
     // What the visitor gets while the page's JavaScript is off, blocked or not
     // there yet: the ▶ opens the short on YouTube. With it, the click plays it

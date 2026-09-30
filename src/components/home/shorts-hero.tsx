@@ -71,6 +71,12 @@ import { cn } from "@/lib/utils";
 //   · The poster is the short's own i.ytimg.com thumbnail, WHOLE (object-
 //     contain, not cropped: the thumbnail may not be altered) with the ▶
 //     below it, not on it. With no list at all: our own poster, no player.
+//   · Under 340 px of screen (the 120 px column) it is OUR poster, not the
+//     thumbnail: the RMF wants any thumbnail that starts a playback at least
+//     120x70, and there it measured 99x74 (under 70 high while the headline's
+//     font loaded). Still the link to the short, with «Ver en YouTube». CSS
+//     does it before React runs (max-[339px]); React, once it has measured
+//     the box (tooSmall). From 340 px the thumbnail is 200 px wide or more.
 //   · The poster is a real link to that short on YouTube (poster-link.tsx):
 //     without the page's JavaScript, and under 200x200, it opens it there.
 //     Started with the keyboard, the focus goes into the short it mounts.
@@ -122,6 +128,21 @@ function HeroFrame({
   );
 }
 
+/** Our poster's background: the brand glow and watermark, no image of anyone else's. */
+function OwnPosterArt({ className }: { className?: string }) {
+  return (
+    <span aria-hidden data-own-poster className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}>
+      <span className="absolute inset-0 [background:radial-gradient(90%_55%_at_50%_0%,color-mix(in_oklch,var(--brand-ink-primary)_30%,transparent),transparent_72%)]" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/hero-watermark.webp"
+        alt=""
+        className="absolute left-1/2 top-[14%] w-[115%] max-w-none -translate-x-1/2 opacity-[0.16]"
+      />
+    </span>
+  );
+}
+
 /** Our own poster: no clip and no image of anyone else's. */
 function OwnPoster() {
   return (
@@ -129,13 +150,7 @@ function OwnPoster() {
       aria-hidden
       className="relative flex aspect-[9/16] w-full items-center justify-center overflow-hidden bg-brand-ink"
     >
-      <span className="absolute inset-0 [background:radial-gradient(90%_55%_at_50%_0%,color-mix(in_oklch,var(--brand-ink-primary)_30%,transparent),transparent_72%)]" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/brand/hero-watermark.webp"
-        alt=""
-        className="pointer-events-none absolute left-1/2 top-[14%] w-[115%] max-w-none -translate-x-1/2 opacity-[0.16]"
-      />
+      <OwnPosterArt />
       <span className="octagon relative size-12 bg-brand-ink-primary/80 shadow-[0_0_30px_6px_color-mix(in_oklch,var(--brand-ink-primary)_45%,transparent)] md:size-16" />
     </div>
   );
@@ -281,22 +296,32 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
         POSTER_FOCUS_CLASS,
       )}
     >
-      {/* The official thumbnail, whole and untouched (4:3 with the short in
-          the middle); the ▶ goes under it, never on it. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={shown.thumbnail}
-        alt=""
-        width={480}
-        height={360}
-        decoding="async"
-        className="block aspect-[4/3] w-full shrink-0 bg-black object-contain"
-      />
+      {/* Under 200x200 (a screen under 340 px): our poster, never the
+          thumbnail, which would be under YouTube's 120x70 there. CSS hides the
+          thumbnail before React runs; tooSmall drops it once it has measured. */}
+      <OwnPosterArt className={cn("hidden max-[339px]:block", tooSmall && "block")} />
+      {tooSmall ? null : (
+        <>
+          {/* The official thumbnail, whole and untouched (4:3 with the short
+              in the middle); the ▶ goes under it, never on it. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={shown.thumbnail}
+            alt=""
+            width={480}
+            height={360}
+            decoding="async"
+            className="block aspect-[4/3] w-full shrink-0 bg-black object-contain max-[339px]:hidden"
+          />
+        </>
+      )}
       <span className="octagon relative grid size-12 shrink-0 place-items-center bg-brand-ink-primary text-brand-ink shadow-[0_0_30px_6px_color-mix(in_oklch,var(--brand-ink-primary)_45%,transparent)] transition-transform duration-200 group-hover:scale-105 md:size-16">
         <PlayIcon className="ml-0.5 size-5 md:ml-1 md:size-7" />
       </span>
-      <span className="px-2 text-center font-mono text-[0.625rem] uppercase tracking-[0.14em] text-brand-ink-foreground/70">
-        {label}
+      <span className="relative px-2 text-center font-mono text-[0.625rem] uppercase tracking-[0.14em] text-brand-ink-foreground/70">
+        {/* Before React has measured, CSS says where a tap goes under 340 px. */}
+        <span className={cn(!tooSmall && "max-[339px]:hidden")}>{label}</span>
+        {tooSmall ? null : <span className="hidden max-[339px]:inline">Ver en YouTube</span>}
       </span>
     </PosterLink>
   );

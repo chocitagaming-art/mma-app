@@ -245,6 +245,79 @@ test("a 320 px el póster del short es un enlace que abre YouTube, también con 
   await expect(page.locator('button[aria-label="Siguiente short"]')).toBeHidden();
 });
 
+// ── The hero's thumbnail: never under 120x70 ────────────────────────────
+//
+// YouTube's RMF: «Any YouTube thumbnail that initiates a playback must be at
+// least 120 pixels wide and 70 pixels tall». Under 340 px of screen the hero's
+// box is ~120 px wide and the official thumbnail measured 99x74 (and under 70
+// px high while the headline's font loaded). There the poster shows OUR poster
+// (no YouTube image) with «Ver en YouTube», and the link is the same. CSS does
+// it before React runs; React, once it has measured the box (tooSmall).
+
+// The official thumbnail is the poster's only 480x360 <img>.
+const heroThumbnail = (page: Page) => hero(page).locator('a img[width="480"]');
+const heroOwnPoster = (page: Page) => hero(page).locator("a [data-own-poster]");
+
+test("a 320 px el póster del short no enseña la miniatura de YouTube sino la nuestra, con «Ver en YouTube»", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/");
+  const poster = hero(page).getByRole("link", { name: /^Ver en YouTube\. Short de la UFC: / });
+  await expect(poster).toBeVisible();
+  await expect(poster).toHaveAttribute("href", /^https:\/\/www\.youtube\.com\/shorts\/[\w-]+$/);
+  await expect(heroThumbnail(page)).toHaveCount(0);
+  await expect(heroOwnPoster(page)).toBeVisible();
+  await expect(poster).toContainText("Ver en YouTube");
+});
+
+test("a 320 px, sin los bundles (antes de hidratar), la miniatura tampoco se ve: la oculta el CSS", async ({
+  page,
+}) => {
+  await page.route(/\/_next\/static\/chunks\/.+\.js(\?.*)?$/, (route) => route.abort());
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/");
+  const poster = posterOf(hero(page));
+  await expect(poster).toBeVisible();
+  await expect(heroThumbnail(page)).toBeHidden();
+  await expect(heroOwnPoster(page)).toBeVisible();
+});
+
+for (const fontArrives of [true, false]) {
+  test(`de 340 px en adelante la miniatura del short mide al menos 120x70${fontArrives ? "" : ", también con la fuente del titular sin llegar"}`, async ({
+    page,
+  }) => {
+    if (!fontArrives) {
+      await page.route(/\/_next\/static\/media\/[^/]+\.woff2$/, () => {
+        // Never answered: document.fonts stays "loading".
+      });
+    }
+    const sizes: string[] = [];
+    for (const width of [340, 360, 390, 768, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/", { waitUntil: fontArrives ? "load" : "domcontentloaded" });
+      const thumb = heroThumbnail(page);
+      await expect(thumb, `${width} px: no thumbnail`).toBeVisible();
+      await expect(heroOwnPoster(page), `${width} px: our poster shows`).toBeHidden();
+      // Measured before and after React runs (the poster may change then).
+      for (const moment of ["antes", "después"]) {
+        if (moment === "después") {
+          await expect(hero(page).getByRole("button", { name: /^Toca para (ver|reproducir)\. / })).toBeVisible();
+        }
+        const box = await thumb.boundingBox();
+        expect(box, `${width} px: no box`).not.toBeNull();
+        sizes.push(`${width}:${moment}:${Math.round(box!.width)}x${Math.round(box!.height)}`);
+        expect(box!.width, `${width} px (${moment}): ${box!.width} wide`).toBeGreaterThanOrEqual(120);
+        expect(box!.height, `${width} px (${moment}): ${box!.height} high`).toBeGreaterThanOrEqual(70);
+      }
+      if (!fontArrives) {
+        expect(await page.evaluate(() => document.fonts.status), "the headline's font arrived").toBe("loading");
+      }
+    }
+    test.info().annotations.push({ type: "info", description: `miniatura: ${sizes.join(" · ")}` });
+  });
+}
+
 // «Siguiente ›» is a plain button that only React understands: without the
 // app's bundles it would be a dead button next to a poster that works. Until
 // React runs it is not shown (visibility: hidden: its room is kept, and it is
