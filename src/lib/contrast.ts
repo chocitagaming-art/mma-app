@@ -98,6 +98,66 @@ export function blend(fg: string, bg: string, alpha: number): string | null {
   return `#${mixed.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
 }
 
+// `oklch(60.6% 0.25 292.717)` -> "#8e51ff".
+//
+// Hace falta porque globals.css es hex, pero la PALETA de Tailwind v4 (los
+// `violet-500`, `amber-800`… que usan algunos badges) va declarada en oklch()
+// en tailwindcss/theme.css. Para medir un badge de paleta con números reales
+// hay que pasarla a sRGB. Fórmulas de Björn Ottosson (OKLab -> sRGB lineal) y
+// la curva de transferencia de sRGB.
+//
+// Un color fuera del gamut sRGB (violet-500 lo está) se RECORTA canal a canal,
+// que es lo que da el hex publicado por Tailwind y lo que pinta Chrome en una
+// pantalla sRGB. Acepta la L en porcentaje o en fracción, y no entiende alpha
+// ni `none`: con eso devuelve null, como el resto de este fichero.
+export function oklchToHex(value: string): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = value
+    .trim()
+    .match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*\)$/);
+
+  if (match === null) {
+    return null;
+  }
+
+  const lightness = Number(match[1]) / (match[2] === "%" ? 100 : 1);
+  const chroma = Number(match[3]);
+  const hue = (Number(match[4]) * Math.PI) / 180;
+
+  if (![lightness, chroma, hue].every(Number.isFinite)) {
+    return null;
+  }
+
+  const a = chroma * Math.cos(hue);
+  const b = chroma * Math.sin(hue);
+
+  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+
+  const linear = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+
+  return `#${linear
+    .map((channel) => {
+      const clipped = Math.min(1, Math.max(0, channel));
+      const encoded =
+        clipped <= 0.0031308
+          ? 12.92 * clipped
+          : 1.055 * clipped ** (1 / 2.4) - 0.055;
+      return Math.round(encoded * 255)
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("")}`;
+}
+
 // Extrae los tokens `--nombre: #hex;` de un bloque de CSS.
 //
 // Deliberadamente tonto: no entiende CSS, solo busca el patrón. Es suficiente

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -6,11 +7,13 @@ import {
   blend,
   contrastRatio,
   extractBlock,
+  oklchToHex,
   parseColorTokens,
   parseHex,
   relativeLuminance,
 } from "@/lib/contrast";
 import { controlLaneOffset } from "@/lib/fight-timeline-markers";
+import { promotionBadge } from "@/lib/promotion-badge";
 
 // Este test LEE globals.css. No es una copia de los valores: si alguien cambia
 // un color en el CSS, aquí se entera. Es el único vigilante de contraste que
@@ -79,6 +82,20 @@ describe("aritmética de contraste", () => {
     expect(blend("#000000", "#ffffff", 0)).toBe("#ffffff");
     expect(blend("#ffffff", "#000000", 0.5)).toBe("#808080");
     expect(blend("#ffffff", "#000000", Number.NaN)).toBeNull();
+  });
+
+  it("pasa oklch() a hex sRGB, que es como Tailwind v4 declara su paleta", () => {
+    // Los extremos: el blanco y el negro no dependen del tono.
+    expect(oklchToHex("oklch(100% 0 0)")).toBe("#ffffff");
+    expect(oklchToHex("oklch(0% 0 0)")).toBe("#000000");
+    // red-500 de Tailwind v4, cuyo hex publicado es #fb2c36. La L acepta las
+    // dos formas del CSS: porcentaje y fracción.
+    expect(oklchToHex("oklch(63.7% 0.237 25.331)")).toBe("#fb2c36");
+    expect(oklchToHex("oklch(0.637 0.237 25.331)")).toBe("#fb2c36");
+    // violet-500, que se sale del gamut sRGB: se recorta canal a canal.
+    expect(oklchToHex("oklch(60.6% 0.25 292.717)")).toBe("#8e51ff");
+    expect(oklchToHex("#8e51ff")).toBeNull();
+    expect(oklchToHex("oklch(nada)")).toBeNull();
   });
 
   it("lee los tokens de cada tema por separado, sin mezclarlos", () => {
@@ -736,4 +753,100 @@ describe("🪤 el pie es negro en los DOS temas, así que su rojo tampoco cambia
       "hover:text-primary",
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+// Los badges de promoción del historial (promotion-badge.ts)
+// ---------------------------------------------------------------------------
+//
+// Bellator (ámbar) y Contender Series (violeta) son un TINTE al 15 % con el
+// texto encima, y el tinte es transparente: el fondo real del badge es el
+// color de la paleta mezclado con lo que haya DEBAJO. Y debajo hay tres cosas:
+//
+//   · la tabla del historial, que es `bg-card`;
+//   · la misma fila con el ratón encima, `hover:bg-muted` — el badge no tiene
+//     hover propio, pero la fila sí, y es el estado que axe no audita;
+//   · el tile «Última pelea» del hero, que es PREMIUM_TILE: degradado de
+//     --card a --muted/60 (/30 en oscuro) sobre --background.
+//
+// Los colores NO salen de globals.css sino de la paleta de Tailwind, que v4
+// declara en oklch(): se leen de su theme.css y se pasan a sRGB. Y las clases
+// se leen de promotionBadge(), no de una copia: si alguien cambia el tono en
+// el helper, este test mide el nuevo.
+const TAILWIND_THEME = readFileSync(
+  createRequire(import.meta.url).resolve("tailwindcss/theme.css"),
+  "utf8",
+);
+
+// `nombre` sale de /[a-z]+-\d+/ (ver tintedBadge), así que no hay nada que
+// escapar antes de meterlo en la expresión.
+function tailwindColor(nombre: string): string {
+  const found = TAILWIND_THEME.match(
+    new RegExp(String.raw`--color-${nombre}:\s*(oklch\([^)]*\))`),
+  );
+  expect(found, `no encuentro --color-${nombre} en tailwindcss/theme.css`).not.toBeNull();
+  const hex = oklchToHex((found as RegExpMatchArray)[1]);
+  expect(hex, `no sé convertir ${(found as RegExpMatchArray)[1]}`).not.toBeNull();
+  return hex as string;
+}
+
+// De "bg-violet-500/15 text-violet-800 dark:bg-violet-400/15 dark:text-violet-300"
+// saca, para un tema, el color del tinte, su opacidad y el del texto.
+function tintedBadge(className: string, tema: "claro" | "oscuro") {
+  const prefijo = tema === "oscuro" ? "dark:" : "";
+  const clases = className
+    .split(/\s+/)
+    .filter((clase) => (tema === "oscuro" ? clase.startsWith("dark:") : !clase.includes(":")))
+    .map((clase) => clase.slice(prefijo.length));
+  const fondo = clases
+    .map((clase) => clase.match(/^bg-([a-z]+-\d+)\/(\d+)$/))
+    .find((match) => match !== null);
+  const texto = clases
+    .map((clase) => clase.match(/^text-([a-z]+-\d+)$/))
+    .find((match) => match !== null);
+  expect(fondo, `sin tinte bg-<color>/<alpha> en tema ${tema}: ${className}`).toBeDefined();
+  expect(texto, `sin text-<color> en tema ${tema}: ${className}`).toBeDefined();
+  return {
+    tinte: tailwindColor((fondo as RegExpMatchArray)[1]),
+    alpha: Number((fondo as RegExpMatchArray)[2]) / 100,
+    texto: tailwindColor((texto as RegExpMatchArray)[1]),
+    clases: `${(fondo as RegExpMatchArray)[0]} ${(texto as RegExpMatchArray)[0]}`,
+  };
+}
+
+describe("badges de promoción: el texto cumple 4,5:1 sobre su propio tinte", () => {
+  const PROMOCIONES = ["Contender Series", "Bellator"] as const;
+
+  for (const promotion of PROMOCIONES) {
+    const { className } = promotionBadge({ origin: "espn", promotion });
+
+    it(`${promotion} lleva un tinte propio en los dos temas, no el gris de los regionales`, () => {
+      expect(className).not.toContain("bg-muted");
+      expect(className).toMatch(/(^|\s)dark:bg-/);
+      expect(className).toMatch(/(^|\s)dark:text-/);
+    });
+
+    for (const { nombre, tokens, alphaMuted } of TEMAS) {
+      const { arriba, abajo } = superficies(tokens, alphaMuted);
+      const debajo = [
+        ["la tabla del historial (--card)", arriba],
+        ["la fila con el ratón encima (--muted)", tokens["--muted"]],
+        ["el pie del tile «Última pelea»", abajo],
+      ] as const;
+
+      for (const [donde, superficie] of debajo) {
+        it(`${promotion} en tema ${nombre}, sobre ${donde}`, () => {
+          const badge = tintedBadge(className, nombre);
+          const fondo = blend(badge.tinte, superficie, badge.alpha);
+          expect(fondo).not.toBeNull();
+          const ratio = contrastRatio(badge.texto, fondo as string);
+          expect(ratio).not.toBeNull();
+          expect(
+            ratio as number,
+            `${badge.clases}: ${badge.texto} sobre ${fondo} (tema ${nombre})`,
+          ).toBeGreaterThanOrEqual(UMBRAL_TEXTO);
+        });
+      }
+    }
+  }
 });
