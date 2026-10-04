@@ -22,6 +22,12 @@ const RESPONSE_RESERVE_MS = 2_000;
 const requestSchema = z.object({
   redFighterId: z.number().int().positive(),
   blueFighterId: z.number().int().positive(),
+  // The fight page sends its own fight so the service anchors to THAT fight
+  // (date, weight class, rounds, title) even once it is decided: the strict
+  // `event_date < anchor` history cut then never lets its own result in.
+  // /enfrentamiento leaves it out (bare pair). null is not accepted: "no
+  // fight" is spelled by leaving the key out.
+  fightId: z.number().int().positive().optional(),
 });
 
 // Valida en runtime la respuesta del microservicio; un núcleo inválido corta con
@@ -51,6 +57,7 @@ class InvalidPredictionRequestError extends Error {}
 async function fetchPrediction(
   redFighterId: number,
   blueFighterId: number,
+  fightId: number | undefined,
 ): Promise<RawPrediction> {
   const baseUrl = process.env.PREDICTION_SERVICE_URL;
 
@@ -80,7 +87,14 @@ async function fetchPrediction(
           "Content-Type": "application/json",
           ...(apiKey ? { "X-API-Key": apiKey } : {}),
         },
-        body: JSON.stringify({ red: redFighterId, blue: blueFighterId }),
+        // fightId only travels when given, so a bare-pair request is
+        // byte-identical to the old one. A service older than fightId
+        // ignores the unknown key (pydantic's default extra="ignore").
+        body: JSON.stringify(
+          fightId === undefined
+            ? { red: redFighterId, blue: blueFighterId }
+            : { red: redFighterId, blue: blueFighterId, fightId },
+        ),
         signal: AbortSignal.timeout(ATTEMPT_TIMEOUTS_MS[attempt]),
       });
       // El proxy de Render responde 502/503/504 mientras la instancia
@@ -211,16 +225,20 @@ export async function POST(request: Request) {
     }
 
     // 3) Caché por par: evita re-llamar a Render + Anthropic en repeticiones.
-    const cacheKey = `${parsed.data.redFighterId}-${parsed.data.blueFighterId}`;
+    //    The fight id is part of the key: a fight-anchored answer and a
+    //    bare-pair answer for the same two fighters are different predictions
+    //    and must never be served from each other's entry.
+    const { redFighterId, blueFighterId, fightId } = parsed.data;
+    const cacheKey =
+      fightId === undefined
+        ? `${redFighterId}-${blueFighterId}`
+        : `${redFighterId}-${blueFighterId}@${fightId}`;
     const cached = getCachedPrediction(cacheKey);
     if (cached) {
       return NextResponse.json(cached);
     }
 
-    const prediction = await fetchPrediction(
-      parsed.data.redFighterId,
-      parsed.data.blueFighterId,
-    );
+    const prediction = await fetchPrediction(redFighterId, blueFighterId, fightId);
     // Tras un arranque en frío los reintentos contra Render pueden haber
     // consumido ~56s de los 60 disponibles: la explicación IA recibe SOLO el
     // presupuesto restante (menos la reserva de respuesta). Si es demasiado

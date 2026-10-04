@@ -45,9 +45,52 @@ const rawPredictionSchema = z.looseObject({
   methodPrediction: methodPredictionSchema.nullish(),
 });
 
+// Where the service anchored the prediction (owner decision, 4-oct-2026): the
+// requested fight, the pair's pending bout, today, or none (neither fighter
+// has any fight).
+export const PREDICTION_ANCHORS = ["fight", "pending", "today", "none"] as const;
+export type PredictionAnchor = (typeof PREDICTION_ANCHORS)[number];
+
+// Secondary data, like the method: validated on its own so a malformed anchor
+// is dropped without taking the winner prediction down. Both fields are
+// optional because a service older than them does not send them, and the web
+// may deploy first.
+const anchorFieldsSchema = z.object({
+  anchor: z.enum(PREDICTION_ANCHORS).optional(),
+  anchorFightId: z.number().int().positive().nullable().optional(),
+});
+
+// Drops BOTH anchor fields when either is malformed (they describe one thing)
+// and returns the warning; undefined when there is nothing to drop.
+function dropMalformedAnchor(data: RawPrediction): string | undefined {
+  const context: unknown = data.context;
+  if (typeof context !== "object" || context === null) return undefined;
+  const fields = context as Record<string, unknown>;
+  const parsed = anchorFieldsSchema.safeParse({
+    anchor: fields.anchor,
+    anchorFightId: fields.anchorFightId,
+  });
+  if (parsed.success) return undefined;
+
+  const rest = { ...fields };
+  delete rest.anchor;
+  delete rest.anchorFightId;
+  data.context = rest as RawPrediction["context"];
+  return `context.anchor/anchorFightId con forma inesperada, se descartan: ${z.prettifyError(parsed.error)}`;
+}
+
 export type ParsePredictionResult =
   | { ok: true; data: RawPrediction; warning?: string }
   | { ok: false; error: string };
+
+function accepted(data: RawPrediction, methodWarning?: string): ParsePredictionResult {
+  const warnings = [methodWarning, dropMalformedAnchor(data)].filter(
+    (warning): warning is string => warning !== undefined,
+  );
+  return warnings.length > 0
+    ? { ok: true, data, warning: warnings.join("\n") }
+    : { ok: true, data };
+}
 
 /**
  * Valida en runtime lo que devuelve el microservicio de predicción.
@@ -60,11 +103,14 @@ export type ParsePredictionResult =
  * `methodPrediction` se descarta solo ese campo y la predicción de ganador sigue
  * adelante (la sección de método ya está preparada para no existir); si lo roto
  * es el núcleo, no hay nada que salvar y el llamante debe cortar.
+ *
+ * The anchor fields of `context` (`anchor`, `anchorFightId`) degrade the same
+ * way as the method: malformed, they are dropped on their own with a warning.
  */
 export function parsePredictionPayload(payload: unknown): ParsePredictionResult {
   const parsed = rawPredictionSchema.safeParse(payload);
   if (parsed.success) {
-    return { ok: true, data: parsed.data as RawPrediction };
+    return accepted(parsed.data as RawPrediction);
   }
 
   // Segunda oportunidad: sálvese el ganador aunque el método venga roto.
@@ -73,11 +119,10 @@ export function parsePredictionPayload(payload: unknown): ParsePredictionResult 
     methodPrediction: null,
   });
   if (withoutMethod.success) {
-    return {
-      ok: true,
-      data: withoutMethod.data as RawPrediction,
-      warning: `methodPrediction con forma inesperada, se descarta: ${z.prettifyError(parsed.error)}`,
-    };
+    return accepted(
+      withoutMethod.data as RawPrediction,
+      `methodPrediction con forma inesperada, se descarta: ${z.prettifyError(parsed.error)}`,
+    );
   }
 
   return { ok: false, error: z.prettifyError(parsed.error) };

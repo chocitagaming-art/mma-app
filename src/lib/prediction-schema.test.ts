@@ -76,6 +76,73 @@ describe("parsePredictionPayload", () => {
     expect(result.data.methodPrediction?.predicted).toBe("decision");
   });
 
+  // Where the service anchored the prediction (owner decision, 4-oct-2026). The
+  // web may deploy before the service, so a response without these fields must
+  // keep parsing exactly as before.
+  describe("context.anchor / context.anchorFightId", () => {
+    const baseContext = { matchupDate: "2026-06-25", weightClass: "Lightweight" };
+
+    it("an old service response (no anchor fields) parses, with no warning", () => {
+      const result = parsePredictionPayload(payload());
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.warning).toBeUndefined();
+      expect(result.data.context.anchor).toBeUndefined();
+      expect(result.data.context.anchorFightId).toBeUndefined();
+    });
+
+    it.each([
+      ["fight", 14232],
+      ["pending", 14232],
+      ["pending", null],
+      ["today", null],
+      ["none", null],
+    ] as const)("a new response with anchor %s and anchorFightId %s keeps both", (anchor, anchorFightId) => {
+      const result = parsePredictionPayload(
+        payload({ context: { ...baseContext, anchor, anchorFightId } }),
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.warning).toBeUndefined();
+      expect(result.data.context.anchor).toBe(anchor);
+      expect(result.data.context.anchorFightId).toBe(anchorFightId);
+      // The rest of the context travels untouched.
+      expect(result.data.context.matchupDate).toBe("2026-06-25");
+    });
+
+    // A malformed anchor is secondary data: like a broken methodPrediction it
+    // is dropped on its own (with a warning) and the winner prediction survives.
+    it.each([
+      ["an unknown anchor", { anchor: "tomorrow", anchorFightId: null }],
+      ["an anchor that is not text", { anchor: 1, anchorFightId: null }],
+      ["an anchorFightId as text", { anchor: "fight", anchorFightId: "14232" }],
+      ["a fractional anchorFightId", { anchor: "fight", anchorFightId: 14.5 }],
+    ])("%s: drops both anchor fields, keeps the prediction and warns", (_case, fields) => {
+      const result = parsePredictionPayload(payload({ context: { ...baseContext, ...fields } }));
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.redProbability).toBe(0.62);
+      expect(result.data.methodPrediction?.predicted).toBe("decision");
+      expect(result.data.context).toEqual(baseContext);
+      expect(result.warning).toMatch(/anchor/);
+    });
+
+    it("a broken method and a broken anchor are both dropped and both reported", () => {
+      const result = parsePredictionPayload(
+        payload({
+          context: { ...baseContext, anchor: "tomorrow" },
+          methodPrediction: { probabilities: { decision: 0.5, ko: 0.5 }, predicted: "ko" },
+        }),
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.methodPrediction).toBeNull();
+      expect(result.data.context).toEqual(baseContext);
+      expect(result.warning).toMatch(/methodPrediction/);
+      expect(result.warning).toMatch(/anchor/);
+    });
+  });
+
   describe("degrada solo el método cuando es el método lo que viene roto", () => {
     const metodosRotos: Array<[string, unknown]> = [
       ["le falta una clase", { probabilities: { decision: 0.5, ko: 0.5 }, predicted: "ko" }],

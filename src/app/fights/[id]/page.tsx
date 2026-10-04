@@ -140,6 +140,7 @@ export default async function FightDetailPage({ params }: FightDetailPageProps) 
       {favorite && fight.oddsRed != null && fight.oddsBlue != null ? (
         showComparison && fight.red.id != null && fight.blue.id != null ? (
           <MarketModelComparison
+            fightId={fightId}
             redFighterId={fight.red.id}
             blueFighterId={fight.blue.id}
             redName={fight.red.name}
