@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Mide el ancho del documento, o devuelve null si en ese instante no se puede
 // medir porque el documento se está reemplazando.
@@ -158,4 +158,89 @@ export async function collectHeadshots(page: Page): Promise<HeadshotReport> {
     }
     return { photos, silhouettes, brokenExternal };
   });
+}
+
+// A fake YouTube for the e2e: every https://www.youtube-nocookie.com request
+// is answered here and never reaches YouTube. /embed/<id> gets a tiny local
+// page (it fires `load`, which starts the hero short's timer, and it takes
+// focus when clicked, which is how the turn manager sees a player the visitor
+// touched); anything else on that host is aborted.
+//
+// Since the turn manager (src/components/playback) the home page mounts UFC
+// TV and the event's live broadcast on its own (and the hero short on a tap),
+// so any spec that loads `/`, /en-vivo or an event page would otherwise open
+// a real YouTube player.
+//
+// Call it BEFORE page.goto. Playwright runs the LAST registered matching route
+// first: register it after a catch-all (maquetacion.spec.ts) so the embed is
+// stubbed, and a later `route.abort()` of a spec that wants the player gone on
+// purpose still wins over it. Returns the embed URLs requested, in order.
+export const YOUTUBE_EMBED_STUB_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>YouTube (e2e stub)</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#999;font:12px/1.2 sans-serif}
+button{display:block;width:100%;height:100%;border:0;background:transparent;color:inherit;cursor:pointer}</style>
+</head><body><button type="button">e2e stub</button></body></html>`;
+
+/**
+ * For the tests that need UFC TV in the home's slot. 🪤 The base is
+ * PRODUCTION's, and there are legitimate states without it: the owner switched
+ * the slot off ('off' in events.live_video_id), left a hand-written id without
+ * a title, or pinned one with its title (the column rules: planHomeSlot in
+ * lib/ufc-tv.ts). None is a regression of the players, and a red here would
+ * block the megatest (and every deploy) that whole week, the Saturday of the
+ * event included: skip, with the reason. The same two guards as
+ * e2e/ufc-tv.spec.ts. Hidden blocks count: with JavaScript off the content
+ * stays in the skeleton's hidden blocks.
+ *
+ * Moved here from e2e/posters.spec.ts on 30-sep-2026: e2e/hero-shorts.spec.ts
+ * needs it too, now that UFC TV is the only player that starts on its own.
+ */
+export async function needsUfcTvLoop(page: Page): Promise<void> {
+  const why = await whyNoUfcTvLoop(page);
+  test.skip(why !== null, why ?? "");
+}
+
+/**
+ * The same guards, without skipping: null when UFC TV loops in the home's
+ * slot, or why it does not (a legitimate state of the production base). For
+ * a test whose main subject is not UFC TV: it checks that subject all the
+ * same and leaves out only UFC TV's own checks (e2e/hero-shorts.spec.ts: the
+ * hero never starting on its own must not stop being checked the week the
+ * owner pins the event's broadcast). A slot that is neither of those states
+ * nor the loop is still a red: the server was started without the fixture.
+ */
+export async function whyNoUfcTvLoop(page: Page): Promise<string | null> {
+  const eventSlot = page.getByRole("heading", { name: "Retransmisión oficial", includeHidden: true });
+  const block = page.locator("section[data-ufc-tv]");
+  // The invisible mark the slot leaves when it is silent ON PURPOSE.
+  const silenced = page.locator("[data-live-slot]");
+  await expect(eventSlot.or(block).or(silenced).first()).toBeAttached();
+
+  if ((await silenced.count()) > 0) {
+    const reason = await silenced.getAttribute("data-live-slot");
+    return `el hueco se calla a propósito (${reason}): lo manda events.live_video_id, no UFC TV`;
+  }
+  if ((await eventSlot.count()) > 0) {
+    return "el próximo evento tiene live_video_id a mano: manda la columna, no UFC TV";
+  }
+  await expect(
+    block,
+    "UFC TV no está en bucle: ¿el server se arrancó sin UFC_TV_FIXTURE=loop?",
+  ).toHaveAttribute("data-ufc-tv", "loop");
+  return null;
+}
+
+export async function fakeYouTubeEmbeds(page: Page): Promise<string[]> {
+  const requested: string[] = [];
+  await page.route("https://www.youtube-nocookie.com/**", (route) => {
+    const url = route.request().url();
+    if (!url.startsWith("https://www.youtube-nocookie.com/embed/")) return route.abort();
+    requested.push(url);
+    return route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: YOUTUBE_EMBED_STUB_HTML,
+    });
+  });
+  return requested;
 }

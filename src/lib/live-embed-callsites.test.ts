@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createElement, isValidElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,6 +13,33 @@ vi.mock("next/cache", () => ({
 
 import { EventLiveEmbed } from "@/components/event-live-embed";
 import { UfcTv } from "@/components/home/ufc-tv";
+import { LiveEmbedPlayer } from "@/components/playback/live-embed-player";
+import { PlaybackTurnProvider } from "@/components/playback/playback-turn-provider";
+import type { LiveCandidate } from "@/lib/ufc-tv";
+
+// The player (LiveEmbedPlayer, a client component) needs the turn manager
+// above it, as in app/layout.tsx. On the server it renders its poster only:
+// the iframe is mounted in the browser, by the turn.
+function pintar(nodo: ReactNode): string {
+  return renderToStaticMarkup(createElement(PlaybackTurnProvider, null, nodo));
+}
+
+// The props the server wrapper hands to the player, read from the element
+// tree it returns (a server component is a plain function here): the URL is
+// no longer in the HTML, because no iframe is rendered on the server.
+function propsDelReproductor(nodo: ReactNode): Record<string, unknown> | null {
+  if (Array.isArray(nodo)) {
+    for (const hijo of nodo) {
+      const encontrado = propsDelReproductor(hijo);
+      if (encontrado) return encontrado;
+    }
+    return null;
+  }
+  if (!isValidElement(nodo)) return null;
+  const props = nodo.props as Record<string, unknown> & { children?: ReactNode };
+  if (nodo.type === LiveEmbedPlayer) return props;
+  return propsDelReproductor(props.children);
+}
 
 // 🪤 TRES SITIOS PINTAN <EventLiveEmbed> Y UNO SE QUEDÓ SIN `eventOver`.
 //
@@ -173,10 +201,12 @@ describe("sitios que pintan EventLiveEmbed", () => {
 // YouTube lea el parámetro). Quitar cualquiera de las cuatro deja un
 // reproductor que «funciona» en la revisión de código y no arranca en la calle.
 //
-// Se mira el fuente por lo mismo que el resto de este fichero: no hay arnés de
-// componentes. En ufc-tv.tsx la URL no se escribe a mano: la construyen
-// liveEmbedUrl/loopEmbedUrl (lib/ufc-tv.ts), cuyos parámetros exactos prueba
-// lib/ufc-tv.test.ts. Aquí se exige que el iframe use ESAS y no otra cosa.
+// Since the turn manager there is ONE <iframe> for both players: TurnSlot's
+// (components/playback/playback-turn-provider.tsx), mounted by the turn,
+// behind the shared LiveEmbedPlayer. The URLs are not written by hand
+// anywhere: liveEmbedUrl/loopEmbedUrl (lib/ufc-tv.ts) build them, and
+// lib/ufc-tv.test.ts pins their exact params. Here: that the players use
+// THOSE URLs, and that the one iframe keeps `autoplay` in `allow`.
 
 // Recorta cada etiqueta <iframe … /> entera, por lo mismo que etiquetaDelEmbed:
 // que el aserto mire ESTA etiqueta y no un comentario que hable de ella.
@@ -188,48 +218,115 @@ function iframes(src: string): string[] {
   return [...src.matchAll(/<iframe\s[\s\S]*?\/>/g)].map((m) => m[0]);
 }
 
-describe("los reproductores de directo arrancan solos, mudos y en línea", () => {
-  const PARAMS = ["autoplay=1", "mute=1", "playsinline=1"];
+const EMBED = "https://www.youtube-nocookie.com/embed/";
+const PARAMS = "autoplay=1&mute=1&playsinline=1";
 
-  it("event-live-embed.tsx: la URL lleva los tres parámetros y allow lleva autoplay", () => {
-    const encontrados = iframes(leerFuente("components/event-live-embed.tsx"));
-    expect(encontrados, "event-live-embed.tsx ya no pinta ningún iframe").toHaveLength(1);
-    for (const iframe of encontrados) {
-      expect(iframe).toContain("youtube-nocookie.com/embed/");
-      for (const param of PARAMS) {
-        expect(iframe, `al directo del evento le falta ${param}`).toContain(param);
-      }
-      expect(iframe).toMatch(/allow="[^"]*\bautoplay\b/);
+const DIRECTO_PELEAS: LiveCandidate = {
+  videoId: "z1PhY6ix2XY",
+  title: "UFC 332 Prelims LIVE",
+  channel: "ufc",
+  liveBroadcastContent: "live",
+  scheduledStartTime: null,
+  actualStartTime: null,
+  actualEndTime: null,
+  duration: "P0D",
+  embeddable: true,
+  madeForKids: false,
+  regionRestriction: null,
+  ageRestricted: false,
+};
+
+describe("los reproductores de directo arrancan solos, mudos y en línea", () => {
+  it("el único <iframe> es el del turnero (TurnSlot), con autoplay en allow y el src que le pasan", () => {
+    const encontrados = iframes(leerFuente("components/playback/playback-turn-provider.tsx"));
+    expect(encontrados, "TurnSlot ya no pinta ningún iframe").toHaveLength(1);
+    expect(encontrados[0]).toMatch(/allow="[^"]*\bautoplay\b/);
+    expect(encontrados[0]).toMatch(/\n\s*src=\{src\}/);
+    for (const ruta of [
+      "components/event-live-embed.tsx",
+      "components/home/ufc-tv.tsx",
+      "components/playback/live-embed-player.tsx",
+    ]) {
+      const fuente = leerFuente(ruta);
+      expect(iframes(fuente), `${ruta} vuelve a pintar un iframe propio, fuera del turno`).toHaveLength(0);
+      expect(fuente, `${ruta} escribe una URL de YouTube a mano`).not.toContain("youtube-nocookie.com");
+    }
+    expect(leerFuente("components/playback/live-embed-player.tsx")).toMatch(/<TurnSlot\s/);
+  });
+
+  it("UFC TV y el directo son los que arrancan solos: su TurnSlot lo pide (autoStart)", () => {
+    // Since 30-sep-2026 (night) TurnSlot starts on its own only when it is
+    // asked to, and the hero short no longer asks. The shared 16:9 player is
+    // the one that must: in its own line, not in a comment.
+    const fuente = leerFuente("components/playback/live-embed-player.tsx");
+    const etiqueta = /<TurnSlot\s[\s\S]*?\/>/.exec(fuente)?.[0] ?? "";
+    expect(etiqueta, "LiveEmbedPlayer ya no pinta su TurnSlot").not.toBe("");
+    expect(etiqueta, "UFC TV y el directo ya no arrancan solos").toMatch(/\n\s*autoStart\s/);
+  });
+
+  it("el directo del evento: la URL de liveEmbedUrl, con los tres parámetros, en el turno 'evento'", () => {
+    const fuente = leerFuente("components/event-live-embed.tsx");
+    expect(fuente).toMatch(/const src = liveEmbedUrl\(videoId\)/);
+    expect(fuente).toMatch(/<LiveEmbedPlayer\s[^>]*\bsrc=\{src\}/);
+    const props = propsDelReproductor(
+      EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: "UFC 330 | Previa", eventName: "UFC 330" }),
+    );
+    expect(props, "event-live-embed.tsx ya no pinta el reproductor").not.toBeNull();
+    expect(props?.src).toBe(`${EMBED}qM-h-OudTqM?${PARAMS}`);
+    expect(props?.id).toBe("evento");
+  });
+
+  it("UFC TV: bucle y directo con las URLs de los constructores probados", () => {
+    const fuente = leerFuente("components/home/ufc-tv.tsx");
+    expect(fuente).toMatch(/const src =[^;]*liveEmbedUrl\(/);
+    expect(fuente).toMatch(/const src =[^;]*loopEmbedUrl\(/);
+    expect(fuente).toMatch(/<LiveEmbedPlayer\s[^>]*\bsrc=\{src\}/);
+
+    const bucle = propsDelReproductor(
+      UfcTv({ mode: "loop", ids: ["eolk1_qxI28", "NcCPNVPx3O4"], channels: ["ufc"] }),
+    );
+    expect(bucle?.src).toBe(`${EMBED}eolk1_qxI28?playlist=eolk1_qxI28,NcCPNVPx3O4&loop=1&${PARAMS}`);
+    expect(bucle?.id).toBe("tv-bucle");
+
+    const directo = propsDelReproductor(UfcTv({ mode: "live", video: DIRECTO_PELEAS }));
+    expect(directo?.src).toBe(`${EMBED}z1PhY6ix2XY?${PARAMS}`);
+    expect(directo?.id).toBe("tv-directo");
+  });
+
+  it("en el HTML del servidor no sale ningún iframe: el póster con ▶, y el turnero monta después", () => {
+    for (const [html, turno, rotulo] of [
+      [
+        pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: "UFC 330 | Previa", eventName: "UFC 330" })),
+        "evento",
+        "Retransmisión oficial",
+      ],
+      [
+        pintar(UfcTv({ mode: "loop", ids: ["eolk1_qxI28"], channels: ["ufc"] })),
+        "tv-bucle",
+        "UFC TV · Peleas completas",
+      ],
+      [pintar(UfcTv({ mode: "live", video: DIRECTO_PELEAS })), "tv-directo", "UFC TV · En directo"],
+    ] as const) {
+      expect(html).not.toContain("<iframe");
+      expect(html).toContain(`data-turn="${turno}"`);
+      expect(html).toContain('data-turn-state="poster"');
+      expect(html).toContain(`aria-label="Toca para ver. ${rotulo}"`);
     }
   });
 
-  it("UFC TV: el iframe (home/ufc-tv-player.tsx) usa las URLs de los constructores probados y allow lleva autoplay", () => {
-    // El iframe vive en un componente de CLIENTE (para leer
-    // prefers-reduced-motion) y recibe las dos URLs hechas: la de autoplay y
-    // la quieta. Aquí se exige que el iframe no escriba una URL a mano y que
-    // ufc-tv.tsx las saque de los constructores, que no estarían cubiertos
-    // por los tests de parámetros de lib/ufc-tv.test.ts si no.
-    const reproductor = leerFuente("components/home/ufc-tv-player.tsx");
-    const encontrados = iframes(reproductor);
-    expect(encontrados, "ufc-tv-player.tsx ya no pinta ningún iframe").toHaveLength(1);
-    for (const iframe of encontrados) {
-      expect(iframe).toMatch(/allow="[^"]*\bautoplay\b/);
-      expect(iframe, "el iframe de UFC TV ya no toma su src de las props").toContain(
-        "src={reducedMotion ? calmSrc : src}",
-      );
-    }
-    expect(reproductor, "ufc-tv-player.tsx escribe una URL de YouTube a mano").not.toContain(
-      "youtube-nocookie.com",
-    );
+  it("un estreno de YouTube no se anuncia «En directo» ni en el póster", () => {
+    const html = pintar(UfcTv({ mode: "live", video: { ...DIRECTO_PELEAS, duration: "PT12M3S" } }));
+    expect(html).toContain('aria-label="Toca para ver. UFC TV · Estreno"');
+    expect(html).not.toContain("UFC TV · En directo");
+  });
 
-    const fuente = leerFuente("components/home/ufc-tv.tsx");
-    expect(iframes(fuente), "ufc-tv.tsx vuelve a pintar un iframe propio").toHaveLength(0);
-    expect(fuente).toMatch(/const src =[^;]*liveEmbedUrl\(/);
-    expect(fuente).toMatch(/const src =[^;]*loopEmbedUrl\(/);
-    expect(fuente).toMatch(/<UfcTvPlayer\s+src=\{src\}\s+calmSrc=\{calmSrc\}/);
-    expect(fuente, "ufc-tv.tsx escribe una URL de YouTube a mano").not.toContain(
-      "youtube-nocookie.com",
-    );
+  it("sin la API de YouTube: ni postMessage, ni iframe_api, ni enablejsapi", () => {
+    // Developer Policies III.D.7 (DECISIONS.md, 29-sep-2026). Comments may
+    // name what the code must not do.
+    const codigo = leerFuente("components/playback/live-embed-player.tsx")
+      .replace(/\/\/.*$/gm, "")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    expect(codigo).not.toMatch(/postMessage|iframe_api|enablejsapi/);
   });
 });
 
@@ -255,21 +352,21 @@ describe("EventLiveEmbed se niega a pintar lo que no es un id de YouTube", () =>
     }
   });
 
-  it("un id de verdad con título → el iframe, y la fuente dice de qué canal es", () => {
-    const html = renderToStaticMarkup(
-      EventLiveEmbed({
-        videoId: "qM-h-OudTqM",
-        videoTitle: titulo,
-        eventName: "UFC 330",
-        channel: "ufc-es",
-      }),
+  it("un id de verdad con título → el reproductor, y la fuente dice de qué canal es", () => {
+    const nodo = EventLiveEmbed({
+      videoId: "qM-h-OudTqM",
+      videoTitle: titulo,
+      eventName: "UFC 330",
+      channel: "ufc-es",
+    });
+    expect(propsDelReproductor(nodo)?.src).toBe(
+      "https://www.youtube-nocookie.com/embed/qM-h-OudTqM?autoplay=1&mute=1&playsinline=1",
     );
-    expect(html).toContain("youtube-nocookie.com/embed/qM-h-OudTqM?autoplay=1&amp;mute=1");
-    expect(html).toContain("canal oficial de UFC Español");
+    expect(pintar(nodo)).toContain("canal oficial de UFC Español");
   });
 
   it("un id escrito a mano (sin canal) se queda con el rótulo genérico de la UFC", () => {
-    const html = renderToStaticMarkup(
+    const html = pintar(
       EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: titulo, eventName: "UFC 330" }),
     );
     expect(html).toContain("canal oficial de la UFC (fuente YouTube)");
@@ -325,7 +422,7 @@ const BUCLE = ["eolk1_qxI28", "NcCPNVPx3O4", "X7k1eTCC3_w"];
 
 describe("el reproductor crece solo en la portada", () => {
   it("EventLiveEmbed sin `column` se queda en los 768 px de siempre (ficha y /en-vivo)", () => {
-    const html = renderToStaticMarkup(
+    const html = pintar(
       EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" }),
     );
     expect(html).toContain(COLUMNA_PAGINA);
@@ -333,7 +430,7 @@ describe("el reproductor crece solo en la portada", () => {
   });
 
   it('con column="home" toma la columna de la portada', () => {
-    const html = renderToStaticMarkup(
+    const html = pintar(
       EventLiveEmbed({
         videoId: "qM-h-OudTqM",
         videoTitle: TITULO,
@@ -346,7 +443,7 @@ describe("el reproductor crece solo en la portada", () => {
   });
 
   it("UFC TV, que solo se pinta en la portada, usa la de la portada", () => {
-    const html = renderToStaticMarkup(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }));
+    const html = pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }));
     expect(html).toContain(COLUMNA_PORTADA);
     expect(html).not.toContain(COLUMNA_PAGINA);
   });
@@ -376,6 +473,8 @@ describe("el reproductor crece solo en la portada", () => {
       );
       expect(fuente, `${ruta} vuelve a fijar el ancho a mano`).not.toMatch(/\bmax-w-/);
     }
+    // And the shared player takes its column's width, never one of its own.
+    expect(leerFuente("components/playback/live-embed-player.tsx")).not.toMatch(/\bmax-w-/);
   });
 });
 
@@ -407,32 +506,120 @@ describe("ningún iframe pide accelerated-rotation", () => {
 //
 // 🪤 202 Y NO 200: el visor es lo que queda DENTRO del borde. Los iframes
 // llevan 1 px de borde arriba y abajo con border-box, así que min-h-[200px]
-// deja un visor de 198 (medido en Chromium). Y el mínimo va en el <iframe>, no
-// en la caja que lo envuelve: en el modal, puesto en la caja, la ensanchaba 3 px
+// deja un visor de 198 (medido en Chromium). En el modal el mínimo va en el
+// <iframe>, no en la caja que lo envuelve: puesto en la caja, la ensanchaba 3 px
 // más allá de su hueco (el alto mínimo pasa al ancho a través del 16:9).
+//
+// UFC TV and the event's broadcast are different since the turn manager: the
+// iframe comes and goes, so the minimum goes on the turn's BOX (the one the
+// turn manager measures: 16:9, full width, 1 px border) and the iframe fills
+// its inside (absolute inset-0, no border). The box has an explicit width
+// (w-full), so the minimum height cannot widen it; the e2e measures it
+// (e2e/maquetacion.spec.ts, UFC TV at 360 and 390).
 
 const MINIMO = "min-h-[202px]";
 
-function etiquetaIframe(html: string): string | null {
-  return /<iframe\s[^>]*>/.exec(html)?.[0] ?? null;
+function clasesDeLaCajaDelTurno(html: string): string[] {
+  const caja = /<div[^>]*\bdata-turn="[^"]+"[^>]*>/.exec(html)?.[0] ?? "";
+  return /\bclass="([^"]*)"/.exec(caja)?.[1].split(/\s+/) ?? [];
 }
 
 describe("los reproductores miden al menos 200 px de alto por dentro", () => {
-  it("el directo del evento", () => {
-    const html = renderToStaticMarkup(
-      EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" }),
-    );
-    expect(etiquetaIframe(html)).toContain(MINIMO);
-  });
+  for (const [nombre, html] of [
+    [
+      "el directo del evento",
+      pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" })),
+    ],
+    ["UFC TV", pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }))],
+  ] as const) {
+    it(nombre, () => {
+      const clases = clasesDeLaCajaDelTurno(html);
+      for (const clase of [MINIMO, "aspect-video", "w-full", "border"]) {
+        expect(clases, `${nombre}: a la caja del turno le falta ${clase}`).toContain(clase);
+      }
+    });
+  }
 
-  it("UFC TV", () => {
-    const html = renderToStaticMarkup(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] }));
-    expect(etiquetaIframe(html)).toContain(MINIMO);
+  it("el iframe del turno llena el INTERIOR de su caja, sin borde propio", () => {
+    const [iframe] = iframes(leerFuente("components/playback/playback-turn-provider.tsx"));
+    expect(iframe).toContain("absolute inset-0");
+    expect(iframe).toContain("border-0");
   });
 
   it("el modal de vídeo de /videos (va por un portal: en node no se pinta, se lee el fuente)", () => {
     const encontrados = iframes(leerFuente("components/video-modal.tsx"));
     expect(encontrados, "video-modal.tsx ya no pinta ningún iframe").toHaveLength(1);
     expect(encontrados[0]).toContain(MINIMO);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sin JavaScript, el póster es un ENLACE al vídeo en YouTube
+// ---------------------------------------------------------------------------
+//
+// 🪤 EL PÓSTER ERA UN <button> QUE SOLO SABÍA HABLAR CON EL TURNERO. Sin el
+// JavaScript de la web —apagado, bloqueado por una extensión, o un móvil lento
+// que aún no lo ha descargado— el visitante veía el ▶ y pulsarlo no hacía nada
+// (medido el 30-sep-2026 en un build local con los bundles bloqueados). Ahora
+// es un <a> de verdad: sin JavaScript abre el vídeo en YouTube, en otra
+// pestaña; con él, el clic se intercepta y el reproductor se monta aquí, como
+// antes (components/playback/poster-link.tsx).
+//
+// El enlace es SALIR de la web, no incrustar: youtube.com/watch vale (ver
+// legal-pages.test.ts). Sale del mismo constructor probado, youtubeWatchUrl.
+
+// La etiqueta de apertura de lo primero que hay dentro de la caja del turno:
+// el póster, que es lo único que pinta el servidor ahí.
+function etiquetaDelPoster(html: string): string {
+  return /<div[^>]*\bdata-turn="[^"]+"[^>]*>(<[a-z]+\b[^>]*>)/.exec(html)?.[1] ?? "";
+}
+
+describe("sin JavaScript el póster es un enlace real al vídeo en YouTube", () => {
+  it("UFC TV en bucle: al PRIMER vídeo del bucle, el mismo de la ruta del iframe", () => {
+    const poster = etiquetaDelPoster(pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] })));
+    expect(poster).toMatch(/^<a\s/);
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=eolk1_qxI28"');
+  });
+
+  it("UFC TV en directo: al directo", () => {
+    const poster = etiquetaDelPoster(pintar(UfcTv({ mode: "live", video: DIRECTO_PELEAS })));
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=z1PhY6ix2XY"');
+  });
+
+  it("el directo del evento: a su vídeo", () => {
+    const poster = etiquetaDelPoster(
+      pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" })),
+    );
+    expect(poster).toContain('href="https://www.youtube.com/watch?v=qM-h-OudTqM"');
+  });
+
+  it("en otra pestaña y sin referrer, con su nombre, y en el servidor NO se anuncia como botón", () => {
+    // role="button" lo pone el navegador al hidratar, cuando el clic ya se
+    // monta aquí; sin JavaScript es lo que hace: un enlace.
+    for (const html of [
+      pintar(UfcTv({ mode: "loop", ids: BUCLE, channels: ["ufc-es"] })),
+      pintar(EventLiveEmbed({ videoId: "qM-h-OudTqM", videoTitle: TITULO, eventName: "UFC 330" })),
+    ]) {
+      const poster = etiquetaDelPoster(html);
+      expect(poster).toContain('target="_blank"');
+      expect(poster).toContain('rel="noopener noreferrer"');
+      expect(poster).toMatch(/aria-label="Toca para ver\. /);
+      expect(poster).not.toContain("role=");
+      expect(html).not.toContain("<button");
+    }
+  });
+
+  it("el enlace sale de youtubeWatchUrl: ningún componente lo escribe a mano", () => {
+    for (const ruta of ["components/home/ufc-tv.tsx", "components/event-live-embed.tsx"]) {
+      expect(leerFuente(ruta), ruta).toMatch(/const watchUrl = youtubeWatchUrl\(/);
+    }
+    for (const ruta of [
+      "components/playback/live-embed-player.tsx",
+      "components/playback/poster-link.tsx",
+    ]) {
+      expect(leerFuente(ruta), `${ruta} escribe una URL de YouTube a mano`).not.toMatch(
+        /https:\/\/(www\.)?youtube\.com/,
+      );
+    }
   });
 });

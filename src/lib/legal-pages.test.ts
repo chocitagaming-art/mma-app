@@ -158,13 +158,68 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     }
   });
 
-  it("dice que UFC TV y el directo se cargan solos y sin sonido", () => {
+  it("dice que UFC TV y el directo se cargan solos y sin sonido, y los shorts no", () => {
     const inicio = texto.indexOf("Lo que se carga solo.");
     const vineta = texto.slice(inicio, texto.indexOf("Lo que espera a que pulses", inicio));
     expect(inicio).toBeGreaterThan(-1);
     expect(vineta).toMatch(/UFC TV/);
     expect(vineta).toMatch(/directo de la velada/);
     expect(vineta).toMatch(/sin sonido/);
+    // Since 30-sep-2026 (night) the home hero's shorts never start on their
+    // own (components/home/shorts-hero.tsx: no autoStart): this line lied.
+    expect(vineta).not.toMatch(/shorts/);
+  });
+
+  it("los shorts de la portada esperan a que pulses: su miniatura sí baja de YouTube, y al acabar no se carga otro", () => {
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(vineta).toMatch(/shorts de la UFC de la cabecera de la portada/);
+    expect(vineta).toMatch(/i\.ytimg\.com/);
+    expect(vineta).toMatch(/Cuando un short acaba, no se carga otro por sí solo\./);
+    // Not always true: a short touched inside (to hear it) or started with
+    // the keyboard stays on YouTube's end screen, not on our next thumbnail.
+    expect(vineta).not.toMatch(/se ve la miniatura del siguiente/);
+  });
+
+  it("los shorts también se cargan con «Siguiente», no solo con «play»", () => {
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(vineta).toMatch(/cuando pulsas «play»/);
+    expect(vineta).toMatch(/«Siguiente»/);
+  });
+
+  it("la lista de servidores del reproductor nombra m.youtube.com (los iconos del de los shorts, medido en el QA)", () => {
+    const inicio = texto.indexOf("Lo que hace el reproductor al cargarse");
+    const vineta = texto.slice(inicio, texto.indexOf("Imágenes de otros servidores.", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    for (const servidor of [
+      "www.youtube-nocookie.com",
+      "googlevideo.com",
+      "i.ytimg.com",
+      "yt3.ggpht.com",
+      "m.youtube.com",
+    ]) {
+      expect(vineta, `falta ${servidor}`).toContain(servidor);
+    }
+  });
+
+  it("con menos movimiento no promete un reproductor cargado: no se carga ninguno hasta el toque", () => {
+    // Under prefers-reduced-motion the turn manager (lib/playback-turn.ts)
+    // mounts no iframe at all until the visitor taps a poster.
+    expect(texto).not.toMatch(/se carga igual/);
+    const inicio = texto.indexOf("Lo que se carga solo.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que espera a que pulses", inicio));
+    expect(vineta).toMatch(
+      /reducir el movimiento, no se carga ningún reproductor hasta que lo pulses/,
+    );
+  });
+
+  it("la lista de vídeos de YouTube nombra los shorts de la portada", () => {
+    const inicio = texto.indexOf("Los vídeos: YouTube.");
+    const parrafo = texto.slice(inicio, texto.indexOf("Lo que se carga solo.", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(parrafo).toMatch(/shorts/);
   });
 
   it("no promete que no haya cookies «ni propias ni de terceros»", () => {
@@ -226,6 +281,13 @@ describe("/aviso-legal dice con qué reproductor van los vídeos", () => {
     expect(texto).toMatch(/careo oficial/);
     expect(texto).toMatch(/vídeo del pesaje/);
     expect(texto).toMatch(/\/tendencias/);
+  });
+
+  it("cuenta los shorts de la portada entre los vídeos incrustados", () => {
+    const inicio = texto.indexOf("Los vídeos de YouTube que se ven aquí");
+    const parrafo = texto.slice(inicio, texto.indexOf("reproductor oficial de YouTube", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(parrafo).toMatch(/shorts/);
   });
 
   it("lleva la fecha del cambio", () => {

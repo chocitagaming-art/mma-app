@@ -1,11 +1,13 @@
 import { Tv } from "lucide-react";
 
-import { UfcTvPlayer } from "@/components/home/ufc-tv-player";
+import { LiveEmbedPlayer } from "@/components/playback/live-embed-player";
 import { LIVE_PLAYER_COLUMN } from "@/lib/live-player-column";
 import {
   isRealLive,
+  isYouTubeVideoId,
   liveEmbedUrl,
   loopEmbedUrl,
+  youtubeWatchUrl,
   type LiveCandidate,
   type UfcChannel,
 } from "@/lib/ufc-tv";
@@ -25,10 +27,11 @@ import {
 //     orden, y el que está en pantalla en este segundo lo sabe el reproductor.
 //     Por eso el texto describe el bucle, no el vídeo.
 //
-// Componente de SERVIDOR, sin estado; solo el iframe va en cliente
-// (ufc-tv-player.tsx, por prefers-reduced-motion). Mismo marco que
-// EventLiveEmbed —si se toca uno, se toca el otro— para que el hueco de la
-// portada no salte de tamaño al pasar del bucle al directo de la velada.
+// Componente de SERVIDOR, sin estado. The player (poster or iframe) is the
+// client LiveEmbedPlayer (components/playback/live-embed-player.tsx), the SAME
+// component EventLiveEmbed uses, so the home slot cannot change size when it
+// goes from the loop to the event's broadcast. It mounts the iframe only when
+// the turn manager gives it the turn (in view, one player at a time).
 
 type UfcTvProps =
   | { mode: "live"; video: LiveCandidate; className?: string }
@@ -53,20 +56,22 @@ function loopSource(channels: UfcChannel[]): string {
 export function UfcTv(props: UfcTvProps) {
   // Las URLs salen SIEMPRE de los dos constructores de lib/ufc-tv.ts, que
   // llevan el acuerdo «arranca solo y mudo» y devuelven null para cualquier id
-  // que no sea de YouTube ('off' incluido). Sin URL no hay bloque. La quieta
-  // (sin autoplay) es la de quien pide menos movimiento: la elige el navegador
-  // en UfcTvPlayer.
+  // que no sea de YouTube ('off' incluido). Sin URL no hay bloque.
   const src = props.mode === "live" ? liveEmbedUrl(props.video.videoId) : loopEmbedUrl(props.ids);
-  const calmSrc =
-    props.mode === "live"
-      ? liveEmbedUrl(props.video.videoId, { autoplay: false })
-      : loopEmbedUrl(props.ids, { autoplay: false });
-  if (!src || !calmSrc) {
+  // For a tap under 200x200: the video on youtube.com. The loop's is the one
+  // it starts with, the first valid id (the one loopEmbedUrl puts in the path).
+  const watchUrl = youtubeWatchUrl(
+    props.mode === "live" ? props.video.videoId : (props.ids.find(isYouTubeVideoId) ?? ""),
+  );
+  if (!src || !watchUrl) {
     return null;
   }
 
   const live = props.mode === "live";
   const premiere = live && !isRealLive(props.video);
+  // The poster names the block, never the fight (in the loop only the player
+  // knows which one is on), and «En directo» only when it really is.
+  const posterLabel = !live ? "UFC TV · Peleas completas" : premiere ? "UFC TV · Estreno" : "UFC TV · En directo";
 
   return (
     <section className={props.className} data-ufc-tv={props.mode}>
@@ -109,17 +114,19 @@ export function UfcTv(props: UfcTvProps) {
           </p>
         )}
 
-        {/* El iframe vive en UfcTvPlayer (cliente) solo para poder leer
-            prefers-reduced-motion; el marco es el mismo de EventLiveEmbed. */}
+        {/* The player is a client component under the turn manager; the
+            frame is the one EventLiveEmbed uses. */}
         <div className="w-full">
-          <UfcTvPlayer
+          <LiveEmbedPlayer
+            id={live ? "tv-directo" : "tv-bucle"}
             src={src}
-            calmSrc={calmSrc}
+            watchUrl={watchUrl}
             title={
               props.mode === "live"
                 ? `${props.video.title} · UFC TV`
                 : "UFC TV · Peleas completas en bucle"
             }
+            label={posterLabel}
           />
         </div>
       </div>

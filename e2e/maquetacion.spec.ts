@@ -1,13 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectNoHorizontalOverflow } from "./helpers";
+import { expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
 // ── Geometría del hero de la portada, de UFC TV y de la foto de la ficha ────
 //
 // Los cambios de maquetación del 29-sep-2026, aprobados por el dueño con
 // vistas previas:
-//   · Portada, móvil (<768): el titular primero y el vídeo PEQUEÑO a su
-//     derecha. Antes el vídeo iba encima y llenaba la primera pantalla.
+//   · Portada, móvil (<768): el titular primero y el short a su derecha.
+//     Antes el vídeo iba encima y llenaba la primera pantalla. Desde los
+//     shorts de la UFC (variante A de la maqueta): 200 px, el mínimo de
+//     YouTube, pegado al borde derecho.
 //   · Portada, tablet (768-1023): dos columnas, como el escritorio.
 //   · Portada, escritorio (≥1024): SIN CAMBIOS. Se prueba para que siga así.
 //   · Ficha, tablet: la foto de cuerpo entero con tope de 400 px. A todo el
@@ -21,7 +23,10 @@ import { expectNoHorizontalOverflow } from "./helpers";
 // GEOMETRÍA: dónde cae cada caja y cuánto mide.
 //
 // Corre en UN proyecto: cada test fija su viewport y el tema no cambia ninguna
-// medida. Y sin red de fuera: los vídeos del hero son locales (/public/videos),
+// medida. Y sin red de fuera: los shorts del hero salen enlatados
+// (UFC_SHORTS_FIXTURE=list en playwright.config.ts) y su iframe carga el
+// YouTube falso de helpers.ts: se mide el MARCO del short
+// (data-testid="hero-short"), esté el póster o el reproductor dentro,
 // las imágenes de terceros se sirven con un PNG de relleno y el resto se corta.
 // 🪤 La foto de la ficha se RELLENA, no se corta: si no carga, el componente
 // cae al headshot y la caja que se mide deja de existir.
@@ -56,6 +61,9 @@ test.beforeEach(async ({ page, baseURL }, testInfo) => {
   await page.route("**/api/live/now", (route) =>
     route.fulfill({ status: 200, json: { phase: "none" } }),
   );
+  // The players the turn manager mounts get the fake YouTube (e2e/helpers.ts).
+  // Registered after the catch-all above, so it wins for youtube-nocookie.
+  await fakeYouTubeEmbeds(page);
 });
 
 type Caja = { left: number; right: number; top: number; bottom: number; width: number };
@@ -92,7 +100,7 @@ async function medirHero(page: Page, width: number, height: number): Promise<Her
 
   const h1 = page.getByRole("heading", { level: 1 });
   await expect(h1).toBeVisible();
-  await expect(page.locator("section", { has: h1 }).locator("video")).toBeVisible();
+  await expect(page.locator("section", { has: h1 }).getByTestId("hero-short")).toBeVisible();
   await page.waitForFunction(() =>
     document
       .getAnimations()
@@ -114,7 +122,8 @@ async function medirHero(page: Page, width: number, height: number): Promise<Her
     });
     const seccion = titular.closest("section") as HTMLElement;
     const rejilla = seccion.firstElementChild as HTMLElement;
-    const video = seccion.querySelector("video") as HTMLVideoElement;
+    // The short's frame: the poster or the iframe sit inside it, at its size.
+    const video = seccion.querySelector('[data-testid="hero-short"]') as HTMLElement;
     const bloque = titular.parentElement as HTMLElement;
 
     const rangoTitular = document.createRange();
@@ -145,7 +154,7 @@ async function medirHero(page: Page, width: number, height: number): Promise<Her
   });
 }
 
-test("portada 390×844: el vídeo pequeño va a la derecha del titular y el hero cabe en la primera pantalla", async ({
+test("portada 390×844: el short de 200 px va a la derecha del titular, pegado al borde, y el hero cabe en la primera pantalla", async ({
   page,
 }) => {
   const m = await medirHero(page, 390, 844);
@@ -158,15 +167,19 @@ test("portada 390×844: el vídeo pequeño va a la derecha del titular y el hero
     Math.abs(m.video.top - m.h1.top),
     `el borde de arriba del vídeo (${m.video.top}) no casa con el del titular (${m.h1.top})`,
   ).toBeLessThanOrEqual(12);
-  expect(m.video.width, "ancho del vídeo en móvil").toBeGreaterThanOrEqual(110);
-  expect(m.video.width, "ancho del vídeo en móvil").toBeLessThanOrEqual(130);
+  // 200 px: YouTube's minimum player (200x200). Not one pixel less.
+  expect(Math.abs(m.video.width - 200), `ancho del short en móvil (${m.video.width})`).toBeLessThanOrEqual(0.5);
+  expect(
+    Math.abs(m.video.right - m.anchoUtil),
+    `el short no está pegado al borde derecho (${m.video.right} de ${m.anchoUtil})`,
+  ).toBeLessThanOrEqual(0.5);
   expect(m.h1.bottom, "el titular queda por debajo del pliegue").toBeLessThanOrEqual(m.alto);
   // Lo aprobado: el hero ENTERO en la primera pantalla, y asoma lo de debajo.
   expect(m.seccion.bottom, "el hero no cabe en la primera pantalla").toBeLessThan(m.alto);
   await expectNoHorizontalOverflow(page, "portada a 390×844");
 });
 
-test("portada 360×800: «INTELIGENCIA» cabe en su columna y deja el vídeo a su derecha", async ({
+test("portada 360×800: «INTELIGENCIA» cabe en su columna y deja el short de 200 px a su derecha", async ({
   page,
 }) => {
   const m = await medirHero(page, 360, 800);
@@ -185,6 +198,7 @@ test("portada 360×800: «INTELIGENCIA» cabe en su columna y deja el vídeo a s
   expect(m.video.right, "el titular empuja el vídeo fuera de la rejilla").toBeLessThanOrEqual(
     m.finRejilla + 0.5,
   );
+  expect(Math.abs(m.video.width - 200), `ancho del short a 360 (${m.video.width})`).toBeLessThanOrEqual(0.5);
   await expectNoHorizontalOverflow(page, "portada a 360×800");
 });
 
@@ -203,8 +217,7 @@ for (const [width, height] of [
     expect(m.video.left, "el vídeo no está a la derecha del texto").toBeGreaterThanOrEqual(
       texto.right,
     );
-    expect(m.video.width, "ancho del vídeo en tablet").toBeGreaterThanOrEqual(260);
-    expect(m.video.width, "ancho del vídeo en tablet").toBeLessThanOrEqual(300);
+    expect(Math.abs(m.video.width - 280), `ancho del short en tablet (${m.video.width})`).toBeLessThanOrEqual(0.5);
     expect(m.inteligencia.right, "«INTELIGENCIA» se sale de su columna").toBeLessThanOrEqual(
       texto.right + 0.5,
     );
@@ -231,8 +244,7 @@ for (const [width, height] of [
     expect(m.video.left, "el vídeo no está a la derecha del texto").toBeGreaterThanOrEqual(
       texto.right,
     );
-    expect(m.video.width, "ancho del vídeo en escritorio").toBeGreaterThanOrEqual(300);
-    expect(m.video.width, "ancho del vídeo en escritorio").toBeLessThanOrEqual(340);
+    expect(Math.abs(m.video.width - 330), `ancho del short en escritorio (${m.video.width})`).toBeLessThanOrEqual(0.5);
     expect(m.inteligencia.right, "«INTELIGENCIA» se sale de su columna").toBeLessThanOrEqual(
       texto.right + 0.5,
     );
@@ -345,7 +357,10 @@ test("ficha: la foto de cuerpo entero no pasa de 400 px en tablet, y en móvil y
 // Y en móvil, un visor de al menos 200 px de alto: la norma de YouTube.
 //
 // El webServer arranca con UFC_TV_FIXTURE=loop, así que es el bucle enlatado,
-// sin red. El directo del EVENTO usa la misma columna en la portada, pero aquí
+// sin red. And since the turn manager the iframe only exists while UFC TV holds
+// the turn, so each test brings it to the middle of the screen first and waits
+// for it to mount on its own; then it measures the player's box (TurnSlot,
+// with the border) and the iframe inside it (the viewer YouTube measures). El directo del EVENTO usa la misma columna en la portada, pero aquí
 // no sale (depende de la ventana real de la velada): su ancho lo vigila
 // src/lib/live-embed-callsites.test.ts.
 
@@ -354,15 +369,19 @@ type UfcTvMedido = {
   // La cabecera es sticky: al bajar, es lo que tapa la parte de arriba.
   cabecera: number;
   columna: { top: number; width: number };
-  iframe: { bottom: number; width: number; height: number };
-  // Lo de DENTRO del borde del iframe: el reproductor que mide YouTube.
+  // The player's box (TurnSlot), border included.
+  marco: { bottom: number; width: number; height: number };
+  // Lo de DENTRO del borde: el iframe, el reproductor que mide YouTube.
   visor: { width: number; height: number };
 };
 
 /** Carga la portada a ese tamaño y mide el bloque de UFC TV. */
 async function medirUfcTv(page: Page, width: number, height: number): Promise<UfcTvMedido> {
+  // An external server started with UFC_TV_FIXTURE=loop can be declared by
+  // exporting the same variable to Playwright (as the shorts' e2e runs do on
+  // port 3200); the data-ufc-tv="loop" check below still catches a lie.
   test.skip(
-    Boolean(process.env.PLAYWRIGHT_BASE_URL),
+    Boolean(process.env.PLAYWRIGHT_BASE_URL) && process.env.UFC_TV_FIXTURE !== "loop",
     "con PLAYWRIGHT_BASE_URL no hay UFC_TV_FIXTURE: el contenido depende del día",
   );
   await page.setViewportSize({ width, height });
@@ -396,6 +415,12 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
     "data-ufc-tv",
     "loop",
   );
+  // The iframe mounts only with the turn: more than half in view below the
+  // sticky header for 400 ms.
+  const turno = bloque.locator("[data-turn]");
+  await turno.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(turno).toHaveAttribute("data-turn-state", "playing-auto");
+  await expect(turno.locator("iframe")).toHaveCount(1);
   // Los rótulos cambian de alto con la fuente (font-display: swap).
   await page.evaluate(() => document.fonts.ready);
   const cabecera = await page
@@ -404,12 +429,13 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
 
   const medida = await bloque.evaluate((seccion) => {
     const columna = (seccion.firstElementChild as HTMLElement).getBoundingClientRect();
-    const iframe = seccion.querySelector("iframe") as HTMLIFrameElement;
-    const caja = iframe.getBoundingClientRect();
+    const turno = seccion.querySelector("[data-turn]") as HTMLElement;
+    const iframe = turno.querySelector("iframe") as HTMLIFrameElement;
+    const caja = turno.getBoundingClientRect();
     return {
       ventana: window.innerHeight,
       columna: { top: columna.top, width: columna.width },
-      iframe: { bottom: caja.bottom, width: caja.width, height: caja.height },
+      marco: { bottom: caja.bottom, width: caja.width, height: caja.height },
       visor: { width: iframe.clientWidth, height: iframe.clientHeight },
     };
   });
@@ -419,12 +445,12 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
 /** El vídeo llena su columna y es 16:9 (en escritorio no manda el mínimo). */
 function expectVideo169(m: UfcTvMedido, contexto: string) {
   expect(
-    Math.abs(m.iframe.width - m.columna.width),
-    `${contexto}: el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+    Math.abs(m.marco.width - m.columna.width),
+    `${contexto}: el vídeo (${m.marco.width}) no llena su columna (${m.columna.width})`,
   ).toBeLessThanOrEqual(0.5);
   expect(
-    Math.abs(m.iframe.height - (m.iframe.width * 9) / 16),
-    `${contexto}: el vídeo no es 16:9 (${m.iframe.width}×${m.iframe.height})`,
+    Math.abs(m.marco.height - (m.marco.width * 9) / 16),
+    `${contexto}: el vídeo no es 16:9 (${m.marco.width}×${m.marco.height})`,
   ).toBeLessThanOrEqual(1);
 }
 
@@ -449,7 +475,7 @@ for (const [width, height, ancho, margen] of [
     expectVideo169(m, contexto);
     // Bajando hasta el bloque, la cabecera fija tapa su alto: lo que queda de
     // ventana tiene que tener sitio para los rótulos y el vídeo entero.
-    const bloqueEntero = m.cabecera + (m.iframe.bottom - m.columna.top);
+    const bloqueEntero = m.cabecera + (m.marco.bottom - m.columna.top);
     expect(
       bloqueEntero,
       `${contexto}: cabecera (${m.cabecera}) + rótulos + vídeo no caben en ${m.ventana} px`,
@@ -486,8 +512,8 @@ for (const [width, height] of [
     expect(m.visor.width, `ancho del visor de UFC TV a ${width}`).toBeGreaterThanOrEqual(200);
     // El mínimo le da alto, no ancho: sigue llenando su columna.
     expect(
-      Math.abs(m.iframe.width - m.columna.width),
-      `a ${width}, el vídeo (${m.iframe.width}) no llena su columna (${m.columna.width})`,
+      Math.abs(m.marco.width - m.columna.width),
+      `a ${width}, el vídeo (${m.marco.width}) no llena su columna (${m.columna.width})`,
     ).toBeLessThanOrEqual(0.5);
     await expectNoHorizontalOverflow(page, `portada a ${width}×${height}`);
   });

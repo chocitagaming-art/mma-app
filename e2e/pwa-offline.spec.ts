@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // Un service worker no se puede probar con vitest (entorno node, sin DOM), así
 // que este es el único sitio donde se verifica el comportamiento real.
 //
@@ -11,6 +13,12 @@ test.beforeEach(({}, testInfo) => {
     testInfo.project.name !== "escritorio-light",
     "El service worker se verifica en un unico proyecto",
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 // El registrador solo actúa en producción (NODE_ENV). El webServer de Playwright

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { esperarHidratacion } from "./helpers";
+import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
 
 // ── Fase 13B · tema, navegación, modales y acordeón ────────────────────────
 //
@@ -21,6 +21,12 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/live/now", (route) =>
     route.fulfill({ status: 200, json: { phase: "none" } }),
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 const esEscritorio = (nombre: string) => nombre.startsWith("escritorio");

@@ -1,5 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── Volver al listado padre (6-ago) ────────────────────────────────────────
 //
 // EL ATAQUE ANTES DEL PARCHE. Medido en producción (be53baa) el 6-ago con
@@ -87,6 +89,12 @@ const CASOS: CasoVolver[] = [
 function enlaceDeVolver(page: Page) {
   return page.getByRole("link", { name: /^Volver a /i });
 }
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
+});
 
 for (const caso of CASOS) {
   test(`volver: ${caso.nombre}`, async ({ page }) => {

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { collectHeadshots, expectNoHorizontalOverflow } from "./helpers";
+import { collectHeadshots, expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
 // Las 20 rutas de página (16 + las dos legales y /contacto del 2-ago + /creditos
 // de la fase 13). Las dinámicas usan IDs ESTABLES que existen en prod:
@@ -35,6 +35,12 @@ const ROUTES = [
   "/ufc-hoy",
   "/videos",
 ];
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
+});
 
 for (const route of ROUTES) {
   test(`ruta ${route} renderiza sin desbordamiento`, async ({ page }, testInfo) => {

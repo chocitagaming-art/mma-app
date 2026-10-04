@@ -65,6 +65,21 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("img-src 'self' data: https:");
   });
 
+  it("deja pasar los pósters de los shorts del hero (i.ytimg.com) y su iframe sin cookies", () => {
+    // The hero's poster is each short's thumbnail (lib/ufc-shorts.ts
+    // shortThumbnailUrl, https://i.ytimg.com/vi/<id>/hqdefault.jpg): it goes
+    // through the `https:` scheme source, which covers every host. Narrowing
+    // img-src to a host list must keep i.ytimg.com, or the posters go blank.
+    const imgSrc = directiveSources(csp, "img-src").split(" ");
+    expect(
+      imgSrc.includes("https:") || imgSrc.includes("https://i.ytimg.com"),
+      `img-src no deja pasar i.ytimg.com: ${imgSrc.join(" ")}`,
+    ).toBe(true);
+    expect(directiveSources(csp, "frame-src").split(" ")).toContain(
+      "https://www.youtube-nocookie.com",
+    );
+  });
+
   it("permite los reproductores de YouTube en frame-src", () => {
     expect(csp).toContain("frame-src https://www.youtube.com");
     expect(csp).toContain("https://www.youtube-nocookie.com");

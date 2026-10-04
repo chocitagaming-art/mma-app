@@ -66,7 +66,11 @@ export default defineConfig({
           // ⚠️ Solo vale para el server que arranca Playwright. Con
           // PLAYWRIGHT_BASE_URL, o si reuseExistingServer reutiliza uno ya vivo
           // en :3100, la variable no está y la portada enseña lo de verdad.
-          env: { UFC_TV_FIXTURE: "loop" },
+          //
+          // The hero's UFC shorts, canned too (src/lib/ufc-shorts.ts,
+          // readShortsFixtureMode): made-up ids and inline SVG thumbnails, so
+          // the hero never reaches YouTube nor its image CDN.
+          env: { UFC_TV_FIXTURE: "loop", UFC_SHORTS_FIXTURE: "list" },
         },
       }
     : {}),

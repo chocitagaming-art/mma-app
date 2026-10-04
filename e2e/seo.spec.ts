@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { aislarDeTerceros, observarViolacionesCsp } from "./helpers";
+import { aislarDeTerceros, fakeYouTubeEmbeds, observarViolacionesCsp } from "./helpers";
 
 // PUERTA DE LA FASE 6. Existe porque el megatest NO basta para validarla: una
 // página cuya canónica o cuyo JSON-LD hayan desaparecido sigue devolviendo 200,
@@ -24,6 +24,12 @@ test.beforeEach(({}, testInfo) => {
     testInfo.project.name !== "escritorio-light",
     "asertos de SEO: se corren solo en un proyecto",
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 function extraerCanonica(html: string): string | null {

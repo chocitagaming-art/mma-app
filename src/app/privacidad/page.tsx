@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 // desactualizada es peor que no tenerla: aquí sí se está afirmando algo.
 //
 // Y volvió a pasar con YouTube. Revisado el 30-sep-2026 contra el código
-// (ufc-tv.ts, home/ufc-tv-player.tsx, event-live-embed.tsx, youtube-facade.tsx,
+// (ufc-tv.ts, playback/live-embed-player.tsx, event-live-embed.tsx,
+// home/shorts-hero.tsx, ufc-shorts.ts, playback-turn.ts, youtube-facade.tsx,
 // video-modal.tsx, security-headers.ts, next.config.ts `unoptimized`,
 // country-flag.tsx, map/leaflet-map.tsx, news-image.tsx) y contra lo medido:
 // maqueta-shorts/capturas/privacidad_medida.json (29-sep: 0 cookies, pero
@@ -40,10 +41,14 @@ export const metadata: Metadata = {
 // y no dice «medido en Chrome».
 //
 // Vídeos (grep de FightVideoPlayer, YtLite y YouTubeFacade): UFC TV y el
-// directo arrancan solos; el careo oficial (/en-vivo y /eventos/[id]), el
-// pesaje (event-weigh-ins.tsx), /videos, /tendencias, la columna de la
-// portada y los combates esperan al clic. /gimnasios: api/gyms/route.ts manda
-// DESDE EL SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
+// directo arrancan solos, de uno en uno, con el turnero (playback-turn.ts,
+// autoStart), y con menos movimiento ninguno monta su iframe hasta el toque.
+// Los shorts del hero de la portada esperan al toque desde el 30-sep-2026
+// (noche): solo se baja su miniatura (i.ytimg.com), y al acabar uno no se
+// monta otro. El careo oficial (/en-vivo y /eventos/[id]), el pesaje
+// (event-weigh-ins.tsx), /videos, /tendencias, la columna de la portada y los
+// combates esperan al clic. /gimnasios: api/gyms/route.ts manda DESDE EL
+// SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
 //
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
@@ -234,8 +239,9 @@ export default function PrivacidadPage() {
           Europea o en el marco de adecuación aplicable.
         </p>
         <p>
-          <strong>Los vídeos: YouTube.</strong> UFC TV, el directo de la velada,
-          el careo oficial y el vídeo del pesaje (en /en-vivo y en la página de
+          <strong>Los vídeos: YouTube.</strong> Los shorts de la UFC de la
+          cabecera de la portada, UFC TV, el directo de la velada, el careo
+          oficial y el vídeo del pesaje (en /en-vivo y en la página de
           cada evento), /videos, /tendencias, la columna de vídeos de la portada y
           los vídeos de cada combate se ven con el reproductor de{" "}
           <strong>YouTube</strong>, un servicio de <strong>Google</strong> (en la
@@ -266,18 +272,20 @@ export default function PrivacidadPage() {
           <li>
             <strong>Lo que se carga solo.</strong> UFC TV (en la portada) y el
             directo de la velada (en la portada, en /en-vivo y en la página del
-            evento) cargan el reproductor por sí mismos cuando su bloque entra en
-            pantalla, y arrancan sin sonido. Si tu sistema pide reducir el
-            movimiento, UFC TV no arranca, pero el reproductor se carga igual.
+            evento) cargan el reproductor por sí mismos cuando se ve más de la
+            mitad de él, y arrancan sin sonido. Nunca hay más de uno a la vez.
+            Si tu sistema pide reducir el movimiento, no se carga ningún
+            reproductor hasta que lo pulses.
           </li>
           <li>
-            <strong>Lo que espera a que pulses.</strong> En el careo oficial y
-            en el vídeo del pesaje (en /en-vivo y en la página de cada evento),
-            en /videos, en /tendencias, en la columna de vídeos de la portada y en
-            los vídeos de cada combate se ve primero una miniatura, y el
-            reproductor solo se
-            carga cuando pulsas «play». La miniatura sí se descarga de un servidor
-            de YouTube (i.ytimg.com).
+            <strong>Lo que espera a que pulses.</strong> En los shorts de la UFC
+            de la cabecera de la portada, en el careo oficial y en el vídeo del
+            pesaje (en /en-vivo y en la página de cada evento), en /videos, en
+            /tendencias, en la columna de vídeos de la portada y en los vídeos de
+            cada combate se ve primero una miniatura, y el reproductor solo se
+            carga cuando pulsas «play» (en los shorts, también «Siguiente»). La
+            miniatura sí se descarga de un servidor de YouTube (i.ytimg.com).
+            Cuando un short acaba, no se carga otro por sí solo.
           </li>
           <li>
             <strong>Lo que hace el reproductor al cargarse</strong> (medido el 29
@@ -285,7 +293,8 @@ export default function PrivacidadPage() {
             arrancando solo): no pone ninguna cookie, pero guarda datos en tu
             navegador (punto 3) y, sin que pulses nada, se conecta con servidores
             de Google: www.youtube-nocookie.com, googlevideo.com (el vídeo),
-            i.ytimg.com y yt3.ggpht.com (imágenes), fonts.gstatic.com,
+            i.ytimg.com y yt3.ggpht.com (imágenes), m.youtube.com (dos iconos
+            que pide el reproductor de los shorts, sin cookie), fonts.gstatic.com,
             www.gstatic.com, www.google.com y jnn-pa.googleapis.com. Como a
             cualquier servidor al que se conecta tu navegador, a esos les llegan
             tu dirección IP y los datos técnicos del navegador.

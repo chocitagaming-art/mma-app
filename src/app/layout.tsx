@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
 import { headers } from "next/headers";
 
+import { PlaybackTurnProvider } from "@/components/playback/playback-turn-provider";
 import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -101,13 +102,29 @@ export default async function RootLayout({
           >
             Saltar al contenido
           </a>
-          <div className="relative flex min-h-screen flex-col">
-            <SiteHeader />
-            <main id="main-content" tabIndex={-1} className="flex-1">
-              {children}
-            </main>
-            <SiteFooter />
-          </div>
+          {/*
+            The turn manager of the YouTube players (components/playback): it
+            decides which one may be mounted, one at most and only in view.
+            It goes HERE, once per document, and not in each page:
+              · it wraps the header, whose mobile menu can then stop every
+                player while open (useTurnBlocker needs the provider above);
+              · the home, /en-vivo and the event page (the live broadcast) do
+                not have to remember it: a TurnSlot without a provider fails on
+                purpose instead of autoplaying outside the turn;
+              · it survives client navigation: the leaving player unregisters
+                and the arriving one registers with the same controller.
+            A page without players pays nothing noticeable for it: five event
+            listeners and an IntersectionObserver with nothing to observe.
+          */}
+          <PlaybackTurnProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <SiteHeader />
+              <main id="main-content" tabIndex={-1} className="flex-1">
+                {children}
+              </main>
+              <SiteFooter />
+            </div>
+          </PlaybackTurnProvider>
         </ThemeProvider>
       </body>
     </html>

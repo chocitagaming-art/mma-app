@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── UFC TV en la portada ────────────────────────────────────────────────────
 //
 // El reproductor siempre encendido bajo el hero del próximo evento. Aquí se
@@ -16,6 +18,12 @@ import { expect, test } from "@playwright/test";
 // Esto es la otra mitad: que la portada SERVIDA de verdad pinte el bloque y que
 // el src que llega al navegador lleve lo mismo.
 //
+// Since the turn manager (components/playback) the iframe is NOT in the page
+// from the start: UFC TV shows its poster (▶) and the iframe is mounted only
+// while more than half of it is in view below the sticky header, for 400 ms,
+// and nobody else plays. Before it, UFC TV played muted below the fold, which
+// YouTube's policies forbid. So: poster first, then scroll, then the iframe.
+//
 // ⚠️ Y NADA de `test.only`: con CI=true, `forbidOnly` tumba la recolección.
 
 test.beforeEach(({}, testInfo) => {
@@ -25,17 +33,21 @@ test.beforeEach(({}, testInfo) => {
   );
 });
 
-test("la portada pinta UFC TV en bucle, arrancando solo, mudo y en línea", async ({ page }) => {
+test("la portada pinta UFC TV en bucle, arrancando solo, mudo y en línea al llegar a él", async ({ page }) => {
   // Con un server externo el entorno no es nuestro: sin UFC_TV_FIXTURE la
   // portada enseña lo que haya de verdad en YouTube, que cambia cada día.
+  // An external server started with UFC_TV_FIXTURE=loop can be declared by
+  // exporting the same variable to Playwright (as the shorts' e2e runs do on
+  // port 3200); the data-ufc-tv="loop" check below still catches a lie.
   test.skip(
-    Boolean(process.env.PLAYWRIGHT_BASE_URL),
+    Boolean(process.env.PLAYWRIGHT_BASE_URL) && process.env.UFC_TV_FIXTURE !== "loop",
     "con PLAYWRIGHT_BASE_URL no hay UFC_TV_FIXTURE: el contenido depende del día",
   );
 
-  // Se corta el iframe de terceros: lo que se prueba es NUESTRO marcado, no
-  // que YouTube cargue (mismo criterio que el modal de vídeo en interfaz.spec).
-  await page.route("https://www.youtube-nocookie.com/**", (route) => route.abort());
+  // Lo que se prueba es NUESTRO marcado, no que YouTube cargue: the iframe
+  // gets the fake YouTube of e2e/helpers.ts (it used to be aborted; the stub
+  // also fires `load`, like a real player would).
+  await fakeYouTubeEmbeds(page);
 
   await page.goto("/");
 
@@ -71,8 +83,27 @@ test("la portada pinta UFC TV en bucle, arrancando solo, mudo y en línea", asyn
   // En bucle no hay distintivo de directo: nada está «en directo».
   await expect(bloque.getByText("En directo", { exact: true })).toHaveCount(0);
 
+  // The player's box (TurnSlot): the poster, or the iframe while it has the turn.
+  const marco = bloque.locator("[data-turn]");
+  await expect(marco).toHaveAttribute("data-turn", "tv-bucle");
+  const debajo = await marco.evaluate((el) => el.getBoundingClientRect().top >= window.innerHeight);
+  if (debajo) {
+    // Below the fold nothing of it may play: this is what the turn fixed.
+    await expect(marco).toHaveAttribute("data-turn-state", "poster");
+    await expect(bloque.locator("iframe")).toHaveCount(0);
+    await expect(
+      marco.getByRole("button", { name: "Toca para ver. UFC TV · Peleas completas" }),
+    ).toBeVisible();
+  }
+
+  // Brought to the middle of the screen it starts on its own, and it is then
+  // the only autoplaying iframe of the page (the hero short never starts on
+  // its own: only a tap mounts it).
+  await marco.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(marco).toHaveAttribute("data-turn-state", "playing-auto");
   const iframe = bloque.locator("iframe");
   await expect(iframe).toHaveCount(1);
+  await expect(page.locator('iframe[src*="autoplay=1"]')).toHaveCount(1);
   await expect(iframe).toHaveAttribute("allow", /\bautoplay\b/);
   await expect(iframe).toHaveAttribute("title", /UFC TV/);
 

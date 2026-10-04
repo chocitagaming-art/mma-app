@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { fakeYouTubeEmbeds } from "./helpers";
+
 // ── Fase 13 · "que el buscador encuentre" ──────────────────────────────────
 //
 // Hasta hoy la suite E2E tenía UN solo `.click()` en 402 tests y CERO `.fill()`:
@@ -30,6 +32,12 @@ test.beforeEach(({}, testInfo) => {
     testInfo.project.name !== "escritorio-light",
     "todos estos tests golpean rutas con freno: se corren en un solo proyecto",
   );
+});
+
+// The home page, /en-vivo and the event pages mount YouTube players on their
+// own (the turn manager): they get the fake YouTube of e2e/helpers.ts.
+test.beforeEach(async ({ page }) => {
+  await fakeYouTubeEmbeds(page);
 });
 
 // Ids ESTABLES, los mismos que ya usa el resto de la suite. Anclarse a "el
