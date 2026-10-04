@@ -140,6 +140,33 @@ test("con predicción, pinta las probabilidades y la esquina favorita", async ({
   await expect(page.getByText("Predicción no disponible por ahora.")).toHaveCount(0);
 });
 
+test("un factor sin valor (null) se pinta como «N/D» y no tumba la predicción", async ({ page }) => {
+  // El servicio manda `value: null` cuando el valor de un factor no es finito
+  // (JSON no tiene NaN). La barra sale de la contribución, que sí llega, y el
+  // hueco se escribe «N/D», igual que «Calidad del rival» en «Señales por
+  // esquina». Nunca «null» ni «NaN».
+  const conHueco = {
+    ...PREDICCION,
+    topFeatures: PREDICCION.topFeatures.map((factor) =>
+      factor.name === "takedown_defense" ? { ...factor, value: null } : factor,
+    ),
+  };
+  await page.route("**/api/predict", (route) => route.fulfill({ status: 200, json: conHueco }));
+
+  await page.goto(PAREJA);
+  await page.getByRole("button", { name: "Predecir resultado" }).click();
+
+  const barras = page.getByRole("img", { name: /Barras de contribución por factor/ });
+  await expect(barras.getByText("valor N/D")).toBeVisible();
+  // El tooltip de la fila dice lo mismo, y la barra sigue empujando hacia azul.
+  await expect(
+    barras.locator('[title="Defensa de derribo · valor N/D · empuja 0.03 hacia Mateusz Gamrot"]'),
+  ).toHaveCount(1);
+  // Los otros factores conservan su número.
+  await expect(barras.getByText("valor 1.20")).toBeVisible();
+  await expect(barras).not.toContainText(/null|NaN/);
+});
+
 test("un 200 que trae un error se enseña como error, no como predicción", async ({ page }) => {
   // Caso fácil de pasar por alto: matchup-client.tsx:190-192 lanza si
   // `!response.ok` O si el cuerpo trae la clave `error`. Un 200 con {error} NO

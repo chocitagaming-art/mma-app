@@ -34,7 +34,10 @@ const rawPredictionSchema = z.looseObject({
   topFeatures: z.array(
     z.looseObject({
       name: z.string(),
-      value: z.number(),
+      // null cuando el servicio no tiene un valor finito que mandar (JSON no
+      // admite NaN): la barra sale de contribution y el hueco se pinta «N/D».
+      // Sigue sin admitir que falte, ni texto, ni NaN/Infinity.
+      value: z.number().nullable(),
       contribution: z.number(),
       direction: z.enum(["red", "blue"]),
     }),

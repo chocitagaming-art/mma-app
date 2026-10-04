@@ -203,4 +203,35 @@ describe("generatePredictionExplanation", () => {
     expect(vi.mocked(Anthropic)).not.toHaveBeenCalled();
     expect(createMock).not.toHaveBeenCalled();
   });
+
+  // El servicio manda value null cuando el valor de un factor no es finito.
+  // Interpolado tal cual, el prompt diría «Takedowns=null» y la IA podría
+  // copiar esa palabra en la explicación que lee el visitante.
+  it("un factor sin valor llega al prompt como «No disponible», nunca como null", async () => {
+    createMock.mockResolvedValueOnce({
+      content: [{ type: "text", text: "Análisis IA del combate." }],
+    });
+    const data = buildRawPrediction();
+    data.topFeatures[1] = { ...data.topFeatures[1]!, value: null };
+
+    await generatePredictionExplanation(data);
+
+    const prompt: string = createMock.mock.calls[0]![0].messages[0].content;
+    const factores = prompt.split("\n").find((line) => line.startsWith("Factores clave:"));
+    // Los factores con número se escriben igual que siempre.
+    expect(factores).toBe("Factores clave: Sig Strikes=12, Takedowns=No disponible, Reach=5");
+  });
+
+  it("la explicación de respaldo con un factor sin valor no escribe null", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const data = buildRawPrediction();
+    data.topFeatures[0] = { ...data.topFeatures[0]!, value: null };
+
+    const result = await generatePredictionExplanation(data);
+
+    expect(result.explanationSource).toBe("fallback");
+    // El factor sigue nombrado: le falta el valor, no el peso.
+    expect(result.explanation).toContain("Sig Strikes");
+    expect(result.explanation).not.toMatch(/null/iu);
+  });
 });

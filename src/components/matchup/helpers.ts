@@ -58,6 +58,8 @@ export function featureLabel(name: string) {
   return FEATURE_LABELS_ES[key] ?? humanizeFeatureName(name);
 }
 
+// null = the service had no finite value for this factor. Same "N/D" gap as
+// formatSignalPercent, so both prediction cards speak the same language.
 export function formatFeatureValue(value: number | null) {
   if (value === null) {
     return "N/D";
