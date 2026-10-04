@@ -1,5 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk";
 
+import type { PredictionAnchor } from "@/lib/prediction-schema";
+
 export type PredictionFeature = {
   name: string;
   // What the model saw for this feature. null when the service has no finite
@@ -102,6 +104,11 @@ export type PredictionResponse = {
     // null when a fighter has no usable history (debutant / missing stats).
     redHistory?: FighterHistorySummary | null;
     blueHistory?: FighterHistorySummary | null;
+    // Where the service anchored the prediction: the requested fight, the
+    // pair's pending bout, today, or nothing (neither fighter has a fight).
+    // OPTIONAL: a service older than 4-oct-2026 does not send them.
+    anchor?: PredictionAnchor;
+    anchorFightId?: number | null;
   };
   fighters: {
     red: PredictionFighterProfile;

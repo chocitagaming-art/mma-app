@@ -9,9 +9,15 @@ import { MethodBars } from "@/components/matchup/method-bars";
 import { ShapBarsChart } from "@/components/matchup/shap-bars";
 import { Button } from "@/components/ui/button";
 import { compareModelVsMarket, type MarketFavorite } from "@/lib/odds";
+import { buildPredictRequestBody } from "@/lib/predict-request";
 import type { PredictionResponse } from "@/lib/prediction";
 
 type MarketModelComparisonProps = {
+  // The fight this card belongs to. The model is asked for THIS fight, so the
+  // service anchors to its own date and conditions and its result can never
+  // leak in, even if the page was opened before the fight and the button is
+  // pressed after it.
+  fightId: number;
   redFighterId: number;
   blueFighterId: number;
   redName: string;
@@ -22,6 +28,7 @@ type MarketModelComparisonProps = {
 };
 
 export function MarketModelComparison({
+  fightId,
   redFighterId,
   blueFighterId,
   redName,
@@ -43,12 +50,14 @@ export function MarketModelComparison({
     setUnavailable(false);
 
     try {
-      // Modelo PURO: solo se envían ids de peleador; las cuotas nunca entran al
-      // modelo, únicamente a la comparación visual.
+      // Modelo PURO: solo se envían ids (peleadores y combate); las cuotas nunca
+      // entran al modelo, únicamente a la comparación visual.
       const response = await fetch("/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ redFighterId, blueFighterId }),
+        body: JSON.stringify(
+          buildPredictRequestBody(redFighterId, blueFighterId, fightId),
+        ),
       });
 
       // 503 = service not deployed / unreachable. Neutral "not available" state,

@@ -57,6 +57,16 @@ describe("contrato de /predict", () => {
     expect(bars!.filter((bar) => bar.isPredicted)).toHaveLength(1);
   });
 
+  it("the context says where the service anchored the prediction", () => {
+    // The fixture is a pure hypothetical (Miller vs Arlovski, never matched):
+    // the service predicted it "as if they fought today", the day it was captured.
+    const result = parsePredictionPayload(contract);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.context.anchor).toBe("today");
+    expect(result.data.context.anchorFightId).toBeNull();
+  });
+
   it("los campos opcionales del contrato siguen presentes", () => {
     // featureContributions y methodPrediction son opcionales en el tipo (un
     // bundle antiguo puede no traerlos), pero el servicio actual SÍ los manda:
