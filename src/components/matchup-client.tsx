@@ -266,7 +266,10 @@ export function MatchupClient({
             <div className="relative p-6 sm:p-8">
               <span className="absolute inset-y-0 left-0 hidden w-1 bg-corner-red sm:block" />
               <span className="absolute inset-y-0 right-0 hidden w-1 bg-corner-blue sm:block" />
-              <div className="relative grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-[minmax(0,1fr)_minmax(250px,330px)_minmax(0,1fr)] md:items-start md:gap-x-6 lg:gap-x-8">
+              <div
+                data-face-off="matchup"
+                className="relative grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-[minmax(0,1fr)_minmax(250px,330px)_minmax(0,1fr)] md:items-start md:gap-x-6 lg:gap-x-8"
+              >
                 {/* VS entre las dos fotos, solo móvil (en desktop separa la
                     columna central). */}
                 <span

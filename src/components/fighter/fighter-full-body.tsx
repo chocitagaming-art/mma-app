@@ -178,8 +178,23 @@ export function FighterFullBody({
     );
   }
 
+  // Encuadre que se pinta en el cara a cara, para e2e/careo-fotos.spec.ts:
+  // "standing" (de pie, asentada en la base), "bio" (recorte cabeza-muslo,
+  // anclado arriba), "silhouette" y "headshot" (sin foto de cuerpo).
+  const photoKind = !showPhoto
+    ? "headshot"
+    : isSilhouette
+      ? "silhouette"
+      : bodyFit === "cover-top"
+        ? "bio"
+        : "standing";
+
+  // data-testid="face-off-photo" marca lo que SE VE (el <img> o el cuadrado
+  // del headshot), no la caja: la caja mide lo mismo en las dos esquinas
+  // aunque la foto de dentro empiece más abajo.
   return (
     <div
+      data-photo-kind={photoKind}
       className={cn(
         "relative flex items-end justify-center overflow-hidden",
         className,
@@ -191,6 +206,8 @@ export function FighterFullBody({
           key={photoUrl}
           src={photoUrl}
           alt={altText}
+          data-testid="face-off-photo"
+          data-photo-corner={corner}
           className={cn(
             "h-full",
             // Las fotos athlete_bio_full_body de ufc.com son un recorte fijo
@@ -198,23 +215,36 @@ export function FighterFullBody({
             // letterbox flotante según el ancho de columna, así que llenan la
             // caja con cover anclado arriba (recorta laterales, no la cara).
             // El resto (standing, cuerpo completo) se asienta en la base.
+            // 🪤 Y LLENA SIEMPRE EL ALTO (11-oct-2026): con `max-w-full`, en
+            // una columna más estrecha que la foto, se encogía y BAJABA. La de
+            // Volkanovski (185×455) empezaba 80 px más abajo que la de Evloev a
+            // 768. Ahora mide el alto de la caja (`shrink-0`, y `max-w-none`
+            // contra el max-width: 100% que el preflight de Tailwind pone a
+            // todo <img>), va centrada y el overflow-hidden de la caja recorta
+            // los lados. La cabeza, que toca el borde de arriba de la foto,
+            // empieza arriba en las dos esquinas; si acaso se corta una mano.
             bodyFit === "cover-top"
               ? "w-full object-cover object-top"
-              : "w-auto max-w-full object-contain object-bottom",
+              : "w-auto max-w-none shrink-0 object-contain object-bottom",
             // F1: espejo para que la esquina mire hacia el centro.
             mirror && "-scale-x-100",
           )}
           onError={handleImageError}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <FighterHeadshot
-            name={name}
-            headshotUrl={headshotUrl}
-            division={division}
-            size="lg"
-            className="sm:size-36 md:size-44"
-          />
+        // Headshot de reserva ARRIBA, no centrado: centrado, su cara empezaba
+        // 54 px (móvil) a 122 px (escritorio) más abajo que la foto de cuerpo
+        // de la otra esquina. El hueco queda debajo.
+        <div className="flex h-full w-full items-start justify-center">
+          <div data-testid="face-off-photo" data-photo-corner={corner}>
+            <FighterHeadshot
+              name={name}
+              headshotUrl={headshotUrl}
+              division={division}
+              size="lg"
+              className="sm:size-36 md:size-44"
+            />
+          </div>
         </div>
       )}
     </div>

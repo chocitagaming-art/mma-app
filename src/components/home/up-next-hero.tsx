@@ -22,6 +22,7 @@ function RankBadge({ rank }: { rank: number | null }) {
 
   return (
     <span
+      data-testid="face-off-rank"
       className="inline-flex items-center rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold leading-none text-primary"
       title={rank === 0 ? "Campeón de su división" : `Nº ${rank} del ranking de su división`}
     >
@@ -64,42 +65,66 @@ function HeroCorner({
     />
   );
 
+  // 🪤 LA FOTO SE ALINEA POR LA FOTO, NO POR EL PIE (dueño, 9-oct-2026). Hasta
+  // entonces la rejilla iba con `items-end`: cada esquina se pegaba al fondo
+  // de la fila, y la que tenía más texto debajo (un nombre en tres líneas, la
+  // bandera sola en su línea, un ranking de más) subía su foto: 18 px con el
+  // estelar de aquella semana, hasta 77 px con nombres largos reales.
+  // Ahora cada esquina es un SUBGRID de dos filas (foto, textos) que comparte
+  // las filas del cara a cara: las dos fotos caen en la misma fila pase lo que
+  // pase debajo. `content-start` es para el navegador sin subgrid (Chrome <117,
+  // Safari <16): ahí la esquina es una rejilla normal, se estira a la fila y
+  // sin él repartiría el sobrante entre sus filas (hasta 25 px de desfase con
+  // nombres largos, medido el 11-oct quitando el subgrid a mano); con él las
+  // dos fotos empiezan arriba. Lo vigila e2e/careo-fotos.spec.ts.
   return (
     <div
+      data-face-off-corner={corner}
       className={cn(
-        "flex min-w-0 flex-col items-center gap-1.5 text-center",
+        "row-span-2 grid min-w-0 grid-rows-subgrid content-start justify-items-center gap-y-1.5 text-center",
         className,
       )}
     >
+      {/* self-end: si la columna central es más alta (md+), el hueco queda
+          ENCIMA de las fotos y siguen asentadas en la base, como antes. */}
       {href ? (
-        <Link href={href} className="w-full transition-opacity hover:opacity-85">
+        <Link href={href} className="w-full self-end transition-opacity hover:opacity-85">
           {photo}
         </Link>
       ) : (
-        <div className="w-full">{photo}</div>
+        <div className="w-full self-end">{photo}</div>
       )}
-      {/* Siempre presente (aunque no haya apodo) para que ambas columnas
-          queden alineadas, igual que en tale-of-the-tape.tsx. */}
-      <p className="min-h-4 font-mono text-xs italic leading-tight text-muted-foreground">
-        {fighter.nickname ? <>“{fighter.nickname}”</> : null}
-      </p>
-      {href ? (
-        <Link
-          href={href}
-          className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
+      <div className="flex w-full min-w-0 flex-col items-center gap-1.5 self-start">
+        {/* Siempre presente (aunque no haya apodo) para que ambas columnas
+            queden alineadas, igual que en tale-of-the-tape.tsx. */}
+        <p
+          data-testid="face-off-nickname"
+          className="min-h-4 font-mono text-xs italic leading-tight text-muted-foreground"
         >
-          <CountryFlag nationality={fighter.nationality} />
-          <span className="break-words">{fighter.name}</span>
-          <RankBadge rank={fighter.rank} />
-        </Link>
-      ) : (
-        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          <span className="break-words">{fighter.name}</span>
+          {fighter.nickname ? <>“{fighter.nickname}”</> : null}
         </p>
-      )}
-      <p className="tabular font-mono text-sm text-muted-foreground">
-        {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
-      </p>
+        {href ? (
+          <Link
+            href={href}
+            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
+          >
+            <CountryFlag nationality={fighter.nationality} />
+            <span data-testid="face-off-name" className="break-words">
+              {fighter.name}
+            </span>
+            <RankBadge rank={fighter.rank} />
+          </Link>
+        ) : (
+          <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-2xl lg:text-3xl">
+            <span data-testid="face-off-name" className="break-words">
+              {fighter.name}
+            </span>
+          </p>
+        )}
+        <p className="tabular font-mono text-sm text-muted-foreground">
+          {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
+        </p>
+      </div>
     </div>
   );
 }
@@ -230,17 +255,22 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
             className="pointer-events-none absolute inset-0 [background:radial-gradient(70%_55%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_72%)]"
           />
           {main ? (
-            <div className="relative grid grid-cols-2 items-end gap-x-3 gap-y-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,400px)_minmax(0,1fr)] md:gap-x-6 lg:gap-x-8">
+            <div
+              data-face-off="home-hero"
+              className="relative grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,400px)_minmax(0,1fr)] md:grid-rows-[1fr_auto] md:gap-x-6 lg:gap-x-8"
+            >
               {/* En móvil el bloque central va ARRIBA (order) y los dos
-                  luchadores quedan cara a cara debajo; en md+ es la columna
-                  central del cara a cara, como en tale-of-the-tape. */}
+                  luchadores quedan cara a cara debajo, cada uno en las filas
+                  2 (foto) y 3 (textos); en md+ es la columna central del cara a
+                  cara, como en tale-of-the-tape, y ocupa las dos filas: la 1
+                  (fotos, 1fr) se lleva lo que sobre si el centro es más alto. */}
               <HeroCorner
                 corner="red"
                 fighter={main.red}
                 weightClass={main.weightClass}
                 className="order-2 md:order-none"
               />
-              <div className="order-1 col-span-2 self-center md:order-none md:col-span-1">
+              <div className="order-1 col-span-2 self-center md:order-none md:col-span-1 md:row-span-2">
                 {centerInfo}
               </div>
               <HeroCorner
