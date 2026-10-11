@@ -173,15 +173,21 @@ function FaceOffCorner({
       <p className="min-h-4 font-mono text-xs italic leading-tight text-muted-foreground">
         {fighter.nickname ? <>“{fighter.nickname}”</> : null}
       </p>
+      {/* Una palabra más ancha que la columna se parte en vez de salirse
+          («MAGOMEDSHARIPOV» se salía 1,3 px por cada lado a 360 y 5 px a 345,
+          11-oct). 🪤 `break-words` SOLO no hace nada aquí: en una columna flex
+          con items-center el enlace mide lo que su palabra más larga, nunca
+          menos, así que no tiene nada que partir. Lo que lo activa es el
+          `max-w-full`, que lo deja en el ancho de la columna. */}
       {href ? (
         <Link
           href={href}
-          className="font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
+          className="max-w-full break-words font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
         >
           {fighter.name}
         </Link>
       ) : (
-        <p className="font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-2xl lg:text-3xl">
+        <p className="max-w-full break-words font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-2xl lg:text-3xl">
           {fighter.name}
         </p>
       )}
