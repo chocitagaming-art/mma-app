@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { searchEvents } from "@/lib/queries/events";
 import { searchFighters } from "@/lib/queries/fighters";
 import { searchNews } from "@/lib/queries/news";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 import { normalizeSearchQuery } from "@/lib/search-input";
 import type { GlobalSearchResults } from "@/lib/types";
 

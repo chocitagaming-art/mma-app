@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { getUpcomingBoutsForFighters } from "@/lib/queries/fighters";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 import type { FavoriteUpcomingBout } from "@/lib/types";
 
 export const runtime = "nodejs";

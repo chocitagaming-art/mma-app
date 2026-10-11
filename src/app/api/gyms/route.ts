@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { getGymsNearby } from "@/lib/queries/gyms";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 

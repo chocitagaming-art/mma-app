@@ -35,7 +35,7 @@ test("GET /api/health → 200 sin consultar la BD", async ({ request }) => {
 });
 
 // PRESUPUESTO DEL LIMITADOR (fase 13). El freno es 5 peticiones/10 s + 20/60 s
-// POR BUCKET Y POR IP (src/lib/maestro/security.ts:72-75), los buckets son
+// POR BUCKET Y POR IP (src/lib/request-security.ts:71-74), los buckets son
 // independientes por ruta, y este fichero es el ÚNICO consumidor de cupo de toda
 // la suite: seo.spec.ts no toca ninguna /api/, y las ~190 navegaciones de
 // routes.spec.ts tampoco, porque sin tecleo no hay fetch a los buscadores y sin
@@ -170,7 +170,7 @@ test("POST /api/revalidate sin token → rechazado (no revalida sin auth)", asyn
 // ni `Origin` ni `Referer` (comprobado en el código de su APIRequestContext y en
 // el log de una corrida real: las únicas cabeceras que salen son user-agent,
 // accept y accept-encoding), así que `isAllowedOrigin` devuelve false en
-// security.ts:24 y estos dos POST reciben un 403 del GUARD DE ORIGEN sin llegar
+// request-security.ts:23 y estos dos POST reciben un 403 del GUARD DE ORIGEN sin llegar
 // nunca a la validación del cuerpo — ni al limitador, por eso gastan cupo 0.
 // Medido contra producción: sin Origin → 403; con `Origin: https://mmastatus.app`
 // → 400, que es el contrato que el título promete.

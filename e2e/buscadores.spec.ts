@@ -11,7 +11,7 @@ import { fakeYouTubeEmbeds } from "./helpers";
 //
 // ⚠️ REGLA ESTRUCTURAL DE TODO EL FICHERO — UNA SOLA PETICIÓN REAL POR ENDPOINT
 // El freno es 5 peticiones/10 s + 20/60 s POR BUCKET Y POR IP
-// (src/lib/maestro/security.ts:72-75), y en el megatest local las tres corridas
+// (src/lib/request-security.ts:71-74), y en el megatest local las tres corridas
 // salen de la misma IP de loopback, así que el presupuesto es de la CORRIDA
 // ENTERA, no de este fichero. Por eso:
 //   · el guard de proyecto de abajo (si no, los 6 proyectos multiplican por 6),

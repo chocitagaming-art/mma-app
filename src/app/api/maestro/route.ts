@@ -7,14 +7,10 @@ import {
   sumarUso,
 } from "@/lib/maestro/presupuesto";
 import { MAESTRO_SYSTEM_PROMPT, MAESTRO_TOOLS } from "@/lib/maestro/prompt";
-import {
-  chatRequestSchema,
-  clientIpFromHeaders,
-  isAllowedOrigin,
-  normalizeConversation,
-} from "@/lib/maestro/security";
+import { chatRequestSchema, normalizeConversation } from "@/lib/maestro/security";
 import { runMaestroTool } from "@/lib/maestro/tools";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders, isAllowedOrigin } from "@/lib/request-security";
 
 // pg necesita Node, no Edge.
 export const runtime = "nodejs";

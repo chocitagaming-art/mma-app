@@ -44,6 +44,9 @@ const DIVISION_ORDER: { slug: string; label: string }[] = [
   { slug: "womens_featherweight", label: "Peso Pluma (F)" },
 ];
 
+// Los slugs de división válidos, en el orden canónico (P4P incluidos).
+export const DIVISION_SLUGS: readonly string[] = DIVISION_ORDER.map((d) => d.slug);
+
 function toEntry(row: RankingRow): RankingEntry {
   return {
     rankPosition: row.rank_position,

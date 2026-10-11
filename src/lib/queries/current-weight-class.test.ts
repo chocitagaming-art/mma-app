@@ -29,7 +29,6 @@ vi.mock("next/cache", () => ({
 import { sql } from "@/lib/db";
 import { formatDivision, formatWeightClass } from "@/lib/format";
 import { resueltoSqlPredicate } from "@/lib/fight-result";
-import { DIVISION_SLUGS } from "@/lib/maestro/prompt";
 import { runMaestroTool } from "@/lib/maestro/tools";
 import {
   RANKING_DIVISION_WEIGHT_CLASS,
@@ -40,13 +39,14 @@ import {
   getFighterDetail,
   getFighters,
 } from "@/lib/queries/fighters";
+import { DIVISION_SLUGS } from "@/lib/queries/rankings";
 
 const sqlMock = vi.mocked(sql);
 
 // Los slugs que había en `rankings` el 28-sep-2026, medidos con
 // `select distinct division from rankings` (13, los dos P4P incluidos). Si la
 // ingesta estrena uno, este test no lo sabe: por eso el mapa también se cruza
-// con las listas del código (DIVISION_SLUGS del Maestro), que sí se mantienen.
+// con la lista del código (DIVISION_SLUGS de `queries/rankings.ts`), que sí se mantiene.
 const SLUGS_EN_LA_BASE = [
   "bantamweight",
   "featherweight",

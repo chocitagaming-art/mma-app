@@ -10,7 +10,7 @@ vi.mock("@/lib/queries/gyms", () => ({
   getGymsNearby: getGymsNearbyMock,
 }));
 
-import { _resetRateLimitStore } from "@/lib/maestro/security";
+import { _resetRateLimitStore } from "@/lib/request-security";
 
 import { GET } from "./route";
 

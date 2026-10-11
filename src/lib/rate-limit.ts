@@ -4,7 +4,7 @@ import { Redis } from "@upstash/redis";
 import {
   rateLimit as inMemoryRateLimit,
   type RateLimitResult,
-} from "@/lib/maestro/security";
+} from "@/lib/request-security";
 
 // Rate-limit DISTRIBUIDO con fallback en memoria.
 //
