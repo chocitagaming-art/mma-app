@@ -31,7 +31,6 @@ const contentLinks = [
 ];
 
 const toolLinks = [
-  { href: "/gimnasios", label: "Gimnasios" },
   { href: "/videos", label: "Vídeos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
 ];

@@ -77,10 +77,11 @@ describe("POST /api/revalidate", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    // Los cuatro últimos se añadieron el 21-ago-2026 con las cachés de las fichas
+    // Los tres últimos se añadieron el 21-ago-2026 con las cachés de las fichas
     // de detalle: sin ellos, una ingesta escribía en la base y la web seguía
-    // enseñando lo anterior hasta que venciera el TTL.
-    const TAGS = ["home", "news", "events", "fights", "fighters", "gyms"];
+    // enseñando lo anterior hasta que venciera el TTL. ("gyms" se quitó el
+    // 11-oct-2026 con la sección de gimnasios: ya nadie cachea con esa etiqueta.)
+    const TAGS = ["home", "news", "events", "fights", "fighters"];
 
     expect(body).toEqual({ revalidated: true, path: "/", tags: TAGS });
     expect(revalidatePathMock).toHaveBeenCalledTimes(1);
