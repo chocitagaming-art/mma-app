@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 // AVISO PARA QUIEN TOQUE ESTA PÁGINA: cada afirmación de aquí se comprobó
 // contra el código y contra producción el 2-ago-2026 (respuestas sin
 // `set-cookie`, `rate-limit.ts`, `use-favorites.ts`, `use-live-now.ts`,
-// `api/maestro/route.ts`, `api/predict/route.ts`, `api/contacto/route.ts`).
+// `api/predict/route.ts`, `api/contacto/route.ts`).
 //
 // Y ya ha pasado una vez: el formulario de /contacto entró ese mismo día y
 // dejó FALSAS tres frases de aquí ("no pide datos a nadie", "no existe nada
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 // (ufc-tv.ts, playback/live-embed-player.tsx, event-live-embed.tsx,
 // home/shorts-hero.tsx, ufc-shorts.ts, playback-turn.ts, youtube-facade.tsx,
 // video-modal.tsx, security-headers.ts, next.config.ts `unoptimized`,
-// country-flag.tsx, map/leaflet-map.tsx, news-image.tsx) y contra lo medido:
+// country-flag.tsx, news-image.tsx) y contra lo medido:
 // maqueta-shorts/capturas/privacidad_medida.json (29-sep: 0 cookies, pero
 // localStorage, IndexedDB y Cache Storage bajo youtube-nocookie.com, y
 // conexiones a Google sin ningún clic) y producción el 30-sep en Chromium (8
@@ -47,8 +47,7 @@ export const metadata: Metadata = {
 // (noche): solo se baja su miniatura (i.ytimg.com), y al acabar uno no se
 // monta otro. El careo oficial (/en-vivo y /eventos/[id]), el pesaje
 // (event-weigh-ins.tsx), /videos, /tendencias, la columna de la portada y los
-// combates esperan al clic. /gimnasios: api/gyms/route.ts manda DESDE EL
-// SERVIDOR la ciudad escrita a nominatim.openstreetmap.org.
+// combates esperan al clic.
 //
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
@@ -57,12 +56,19 @@ export const metadata: Metadata = {
 // STYXKEY_region (2 días, sin SameSite) y www1-cdn.sherdog.com, en las
 // imágenes de noticias, __cf_bm (30 min). Las fotos de ESPN (a.espncdn.com)
 // son solo retratos de luchadores (fighters.headshot_url), no carteles.
+//
+// Revisado otra vez el 11-oct-2026, al quitar el Maestro y /gimnasios: se van
+// el párrafo del Maestro, OpenStreetMap (el mapa y la consulta a Nominatim) y
+// el Maestro del límite de peticiones. Anthropic SE QUEDA: /api/predict le
+// manda los nombres y las estadísticas de los dos luchadores para redactar la
+// explicación (lib/prediction.ts), nada del visitante. El límite por IP lo
+// llevan hoy los tres buscadores, upcoming, predict y contacto.
 
 export default function PrivacidadPage() {
   return (
     <LegalPage
       titulo="Privacidad"
-      actualizado="30 de septiembre de 2026"
+      actualizado="11 de octubre de 2026"
       entradilla={
         <>
           Resumen: <strong>no hay cuentas, esta web no usa cookies y no se vende
@@ -105,11 +111,12 @@ export default function PrivacidadPage() {
 
       <LegalSection numero={2} titulo="Lo que sí se trata, y para qué">
         <p>
-          <strong>Tu dirección IP.</strong> Las rutas de búsqueda y el Maestro
-          llevan un límite de peticiones para que nadie tumbe el servicio. Ese
-          límite necesita distinguir de dónde viene cada petición, así que se
-          guarda un contador asociado a tu IP en una base de datos temporal
-          (Upstash). Las ventanas de conteo son de{" "}
+          <strong>Tu dirección IP.</strong> Las búsquedas, las predicciones, el
+          formulario de contacto y la consulta de los próximos combates de tus
+          favoritos llevan un límite de peticiones para que nadie tumbe el
+          servicio. Ese límite necesita distinguir de dónde viene cada petición,
+          así que se guarda un contador asociado a tu IP en una base de datos
+          temporal (Upstash). Las ventanas de conteo son de{" "}
           <strong>10 y 60 segundos</strong>, y las entradas caducan solas: no se
           construye ningún histórico ni se cruza con nada. Base legal:{" "}
           <em>interés legítimo</em> en mantener el servicio disponible y protegido
@@ -125,13 +132,6 @@ export default function PrivacidadPage() {
           <strong>Registros técnicos del servidor.</strong> Como cualquier web,
           el proveedor de alojamiento anota las peticiones (IP, hora, ruta,
           navegador) durante un tiempo limitado, por seguridad y diagnóstico.
-        </p>
-        <p>
-          <strong>Si usas el Maestro.</strong> La pregunta que escribes se envía al
-          modelo de lenguaje de Anthropic para poder responderte. No pidas datos
-          personales tuyos ni de terceros en ese cuadro:{" "}
-          <strong>no hace falta ninguno</strong> para preguntar sobre MMA. Las
-          conversaciones no se guardan en la base de datos de esta web.
         </p>
         <p>
           <strong>
@@ -219,18 +219,13 @@ export default function PrivacidadPage() {
             peticiones.
           </li>
           <li>
-            <strong>Anthropic</strong> — solo si usas el Maestro, para generar la
-            respuesta.
+            <strong>Anthropic</strong> — solo si pides una predicción, para
+            redactar su explicación; recibe los nombres y las estadísticas
+            deportivas de los dos luchadores, nada tuyo.
           </li>
           <li>
             <strong>Render</strong> — solo si pides una predicción; recibe
             estadísticas deportivas de los dos luchadores, nada tuyo.
-          </li>
-          <li>
-            <strong>OpenStreetMap</strong> (Nominatim) — solo si buscas una
-            ciudad en /gimnasios: el servidor de esta web le envía el nombre de la
-            ciudad que escribes para situarla en el mapa. La petición sale del
-            servidor, así que tu dirección IP no le llega.
           </li>
         </ul>
         <p>
@@ -305,11 +300,11 @@ export default function PrivacidadPage() {
           luchadores (ufc.com y ESPN), los carteles de los eventos (ufc.com y, los
           de eventos antiguos, Wikimedia desde upload.wikimedia.org), las
           miniaturas y los avatares de canal de YouTube (i.ytimg.com y
-          yt3.ggpht.com), las banderas (flagcdn.com), las imágenes de las noticias
-          (del medio de cada una) y el mapa de /gimnasios (OpenStreetMap) se
-          descargan directamente de sus servidores. Tu navegador se conecta con
-          ellos para pedirlas y, como con cualquier imagen enlazada, les llegan tu
-          dirección IP y los datos técnicos del navegador.
+          yt3.ggpht.com), las banderas (flagcdn.com) y las imágenes de las
+          noticias (del medio de cada una) se descargan directamente de sus
+          servidores. Tu navegador se conecta con ellos para pedirlas y, como con
+          cualquier imagen enlazada, les llegan tu dirección IP y los datos
+          técnicos del navegador.
         </p>
         <p>
           <strong>Algunos de esos servidores mandan su propia cookie</strong> junto

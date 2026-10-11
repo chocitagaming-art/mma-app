@@ -11,7 +11,7 @@ import { fakeYouTubeEmbeds } from "./helpers";
 //
 // ⚠️ REGLA ESTRUCTURAL DE TODO EL FICHERO — UNA SOLA PETICIÓN REAL POR ENDPOINT
 // El freno es 5 peticiones/10 s + 20/60 s POR BUCKET Y POR IP
-// (src/lib/maestro/security.ts:72-75), y en el megatest local las tres corridas
+// (src/lib/request-security.ts:71-74), y en el megatest local las tres corridas
 // salen de la misma IP de loopback, así que el presupuesto es de la CORRIDA
 // ENTERA, no de este fichero. Por eso:
 //   · el guard de proyecto de abajo (si no, los 6 proyectos multiplican por 6),
@@ -59,9 +59,14 @@ function luchadorFalso(id: number, name: string) {
 test("el buscador de la portada encuentra a Charles Oliveira y lleva a su ficha", async ({
   page,
 }) => {
-  // ESTA es la única petición real a /api/search del fichero. Medido contra
-  // producción: `?q=Charles Oliveira` devuelve EXACTAMENTE un luchador (6493) y
-  // ni un evento ni una noticia, así que el listbox trae una sola opción.
+  // ESTA es la única petición real a /api/search del fichero. `?q=Charles
+  // Oliveira` devuelve EXACTAMENTE un luchador (6493), pero NO solo eso: las
+  // noticias también se buscan por texto y cualquier titular que lo nombre sale
+  // en el mismo listbox (el 11-oct-2026, una de Marca del 8-oct, «Diego Lopes…
+  // se enfrentará a Charles Oliveira», hizo que el `option` de abajo resolviera
+  // a DOS elementos y Playwright cayera en strict mode). Lo que salga en
+  // Noticias o en Eventos depende del día, así que se busca la opción DENTRO
+  // del grupo «Luchadores» (search-hero.tsx:287-295).
   await page.goto("/");
 
   // `fill` en vez de `pressSequentially` a propósito: un solo evento de cambio
@@ -73,7 +78,9 @@ test("el buscador de la portada encuentra a Charles Oliveira y lleva a su ficha"
   const listbox = page.getByRole("listbox", { name: "Resultados de búsqueda" });
   await expect(listbox).toBeVisible();
 
-  const opcion = listbox.getByRole("option", { name: new RegExp(OLIVEIRA.nombre, "i") });
+  const opcion = listbox
+    .getByRole("group", { name: "Luchadores" })
+    .getByRole("option", { name: new RegExp(OLIVEIRA.nombre, "i") });
   await expect(opcion).toBeVisible();
 
   // Encontrar Y navegar: lo segundo es lo que de verdad pide el sprint.

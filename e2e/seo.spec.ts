@@ -138,7 +138,7 @@ test("/eventos/357 emite un SportsEvent con fecha, sede y cartelera", async ({ r
   ).toBe(2);
 });
 
-test("/fighters/6493 emite un Person con récord y URL canónica", async ({ request }) => {
+test("/fighters/6493 emite un Person con récord, gimnasio y URL canónica", async ({ request }) => {
   const html = await (await request.get("/fighters/6493")).text();
   const bloques = extraerJsonLd(html);
 
@@ -152,6 +152,12 @@ test("/fighters/6493 emite un Person con récord y URL canónica", async ({ requ
   // La URL del marcado y la canónica tienen que contar lo MISMO, o Google recibe
   // dos señales en conflicto sobre cuál es la página buena.
   expect(ld.url).toBe(extraerCanonica(html));
+  // El gimnasio (fighters.trains_at) se quedó en la ficha al quitar /gimnasios el
+  // 11-oct-2026. En la base está como "Bronx&#039;s Gold Team": a Google tiene
+  // que llegarle descodificado (structured-data.ts).
+  const afiliacion = ld.affiliation as Record<string, unknown> | null | undefined;
+  expect(afiliacion?.["@type"], "Person sin su gimnasio").toBe("SportsOrganization");
+  expect(afiliacion?.name).toBe("Bronx's Gold Team");
 });
 
 // El bloque JSON-LD viaja dentro del HTML, así que un nombre con "</script>"

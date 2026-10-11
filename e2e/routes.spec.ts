@@ -2,8 +2,10 @@ import { test, expect } from "@playwright/test";
 
 import { collectHeadshots, expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
-// Las 20 rutas de página (16 + las dos legales y /contacto del 2-ago + /creditos
-// de la fase 13). Las dinámicas usan IDs ESTABLES que existen en prod:
+// Las 18 rutas de página (16 + las dos legales y /contacto del 2-ago + /creditos
+// de la fase 13, menos /gimnasios y /maestro, que se quitaron el 11-oct-2026 y
+// son un 308 a la portada: tienen su propio test más abajo y aquí solo
+// probarían la portada otra vez). Las dinámicas usan IDs ESTABLES que existen en prod:
 // evento 357 (UFC 306), luchador 6493 (ya lo vigila monitor.yml), combate 3821
 // (Merab vs O'Malley, de UFC 306). Si alguno desapareciera, su test fallaría con
 // un 404 claro en vez de un falso verde.
@@ -26,8 +28,6 @@ const ROUTES = [
   "/fighters",
   "/fighters/6493",
   "/fights/3821",
-  "/gimnasios",
-  "/maestro",
   "/predict",
   "/privacidad",
   "/salon-de-la-fama",
@@ -94,6 +94,25 @@ test("/compare sin parámetros lleva a /enfrentamiento limpio", async ({ page })
   expect(new URL(page.url()).pathname).toBe("/enfrentamiento");
 });
 
+// El Maestro y Gimnasios se quitaron el 11-oct-2026 (decisión del dueño del
+// 9-oct). Sus URLs siguen enlazadas desde fuera y guardadas en marcadores, así
+// que redirigen a la portada con un 308 REAL desde `next.config.ts` (no con
+// `permanentRedirect`, que aquí sería un 200, ver arriba). Se mira el código y
+// el `Location` SIN seguir la redirección: siguiéndola, cualquiera de estas
+// rutas acabaría en la portada con un 200 y el test no distinguiría un 308 de
+// una página que siguiera existiendo. La subruta vigila el `:path*`.
+for (const ruta of ["/maestro", "/maestro/historial", "/gimnasios", "/gimnasios/madrid"]) {
+  test(`${ruta} redirige a la portada con un 308`, async ({ request }) => {
+    const res = await request.get(ruta, { maxRedirects: 0 });
+    expect(res.status(), `HTTP ${res.status()} en ${ruta}`).toBe(308);
+    // `Location` puede llegar relativa ("/") o absoluta según quien la sirva:
+    // se resuelve contra la propia URL y se compara la ruta.
+    const destino = new URL(res.headers()["location"] ?? "", res.url());
+    expect(destino.pathname, `${ruta} no lleva a la portada`).toBe("/");
+    expect(destino.origin, `${ruta} se va a otro dominio`).toBe(new URL(res.url()).origin);
+  });
+}
+
 // FASE 9. El desglose por asaltos existe para 8.738 combates, pero si un día se
 // cayera de la ficha (un cambio en la query, un `return null` de más) la página
 // seguiría dando 200, sin error boundary y sin desbordarse: las tres cosas que
@@ -119,6 +138,31 @@ test("la ficha de combate trae el asalto a asalto con sus totales", async ({ pag
     seccion.getByText(/La película del combate/i),
     "el asalto a asalto se ha comido a la película del combate",
   ).toHaveCount(0);
+});
+
+// LO QUE SE QUEDA al quitar Gimnasios (11-oct-2026): el gimnasio de la ficha
+// del luchador. Sale de `fighters.trains_at`, no de la tabla `gyms`, y no
+// enlaza a ninguna parte. Oliveira es un id estable y su valor viene de la base
+// como "Bronx&#039;s Gold Team": el texto tiene que llegar DESCODIFICADO
+// (fighters.mappers.ts). Se compara `textContent` porque la etiqueta va en
+// mayúsculas solo por CSS.
+test("la ficha de Oliveira sigue enseñando su gimnasio, sin enlace", async ({ page }) => {
+  await page.goto("/fighters/6493", { waitUntil: "load" });
+
+  const etiqueta = page.locator("p").filter({ hasText: /^Gimnasio$/ });
+  await expect(etiqueta, "falta la fila «Gimnasio» en la ficha").toHaveCount(1);
+  expect(await etiqueta.textContent()).toBe("Gimnasio");
+
+  const valor = etiqueta.locator("xpath=following-sibling::p[1]");
+  expect(await valor.textContent(), "el gimnasio no llega descodificado").toBe(
+    "Bronx's Gold Team",
+  );
+  // Ni enlace dentro ni enlace alrededor: /gimnasios ya no existe.
+  await expect(valor.locator("a")).toHaveCount(0);
+  expect(
+    await valor.evaluate((el) => el.closest("a") === null),
+    "el gimnasio va dentro de un enlace",
+  ).toBe(true);
 });
 
 test("/eventos lista al menos un evento (no solo el estado vacío)", async ({ page }) => {
@@ -220,9 +264,7 @@ test("el pie enlaza las rutas que antes no tenían ni un enlace interno", async 
   const footer = page.locator("footer");
   for (const href of [
     "/en-vivo",
-    "/maestro",
     "/videos",
-    "/gimnasios",
     "/salon-de-la-fama",
     "/aviso-legal",
     "/privacidad",
@@ -232,6 +274,22 @@ test("el pie enlaza las rutas que antes no tenían ni un enlace interno", async 
       footer.locator(`a[href="${href}"]`),
       `el pie no enlaza ${href}`,
     ).toHaveCount(1);
+  }
+});
+
+// /maestro y /gimnasios se quitaron el 11-oct-2026: un enlace que quedara en la
+// cabecera, el pie o la portada llevaría a un 308 de vuelta a la portada.
+test("ni la portada, ni la cabecera, ni el pie enlazan /maestro o /gimnasios", async ({ page }) => {
+  await page.goto("/");
+  // Contar cero enlaces en una página que no ha pintado también da cero: antes,
+  // la prueba de que la cabecera y el pie están ahí.
+  await expect(page.locator('header a[href="/enfrentamiento"]').first()).toBeAttached();
+  await expect(page.locator('footer a[href="/videos"]')).toHaveCount(1);
+  for (const ruta of ["/maestro", "/gimnasios"]) {
+    await expect(
+      page.locator(`a[href="${ruta}"], a[href^="${ruta}/"], a[href^="${ruta}?"]`),
+      `queda un enlace a ${ruta}`,
+    ).toHaveCount(0);
   }
 });
 
@@ -266,9 +324,7 @@ test("el sitemap lista las rutas nuevas y sigue callando las que debe", async ({
 
   for (const ruta of [
     "/videos",
-    "/gimnasios",
     "/salon-de-la-fama",
-    "/maestro",
     "/creditos",
     "/aviso-legal",
     "/privacidad",
@@ -279,8 +335,16 @@ test("el sitemap lista las rutas nuevas y sigue callando las que debe", async ({
   // Lo importante son las EXCLUSIONES: /estado es un panel oculto y meterlo aquí
   // sería el cartel que se evita al no ponerlo en robots.txt; /offline es la
   // página de "sin conexión" y no debe salir en Google; /compare y /predict son
-  // redirecciones permanentes a /enfrentamiento.
-  for (const prohibida of ["/estado", "/offline", "/compare", "/predict"]) {
+  // redirecciones permanentes a /enfrentamiento, y /maestro y /gimnasios (que se
+  // quitaron el 11-oct-2026) un 308 a la portada.
+  for (const prohibida of [
+    "/estado",
+    "/offline",
+    "/compare",
+    "/predict",
+    "/maestro",
+    "/gimnasios",
+  ]) {
     expect(rutas, `${prohibida} NO debería estar en el sitemap`).not.toContain(prohibida);
   }
 });

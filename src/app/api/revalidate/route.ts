@@ -51,15 +51,18 @@ export async function POST(request: Request) {
   // las queries pasaron de ISR a unstable_cache (que el path por sí solo no invalida).
   // { expire: 0 } = expiración inmediata (el caso "webhook" del doc de Next 16: la
   // ingesta llama a este endpoint y la próxima visita debe ver datos frescos ya).
-  // "events", "fights", "fighters" y "gyms" se añadieron el 21-ago-2026, a la vez
-  // que las cachés de las fichas de detalle. Sin ellos una ingesta podía escribir
-  // en la base y la web seguir enseñando lo anterior hasta que venciera el TTL.
+  // "events", "fights" y "fighters" se añadieron el 21-ago-2026, a la vez que las
+  // cachés de las fichas de detalle. Sin ellos una ingesta podía escribir en la
+  // base y la web seguir enseñando lo anterior hasta que venciera el TTL. ("gyms"
+  // se quitó el 11-oct-2026, con la sección de gimnasios.)
   //
-  // Ojo al alcance real: hoy el ÚNICO que llama a este endpoint es
-  // refresh-news.yml (3 veces al día). El bucle del directo NO lo llama, y por eso
+  // Ojo al alcance real: hoy lo llaman refresh-news.yml (3 veces al día) y
+  // mma-ingesta/scripts/fijar_videos_evento.py al fijar el vídeo del directo, y
+  // los dos miran solo el código de estado, no el cuerpo. El bucle del directo
+  // NO lo llama, y por eso
   // las fichas de evento y de combate se cachean solo 60 s. Si algún día el bucle
   // empieza a llamar aquí al sellar un combate, esos dos TTL se pueden subir.
-  const tags = ["home", "news", "events", "fights", "fighters", "gyms"];
+  const tags = ["home", "news", "events", "fights", "fighters"];
   for (const tag of tags) {
     revalidateTag(tag, { expire: 0 });
   }

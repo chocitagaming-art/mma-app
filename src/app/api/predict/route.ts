@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { clientIpFromHeaders, isAllowedOrigin } from "@/lib/maestro/security";
 import { generatePredictionExplanation, type PredictionResponse } from "@/lib/prediction";
 import { parsePredictionPayload, type RawPrediction } from "@/lib/prediction-schema";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders, isAllowedOrigin } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 // El microservicio (Render free) se duerme a los 15 min y su arranque en frío
@@ -186,8 +186,8 @@ export async function POST(request: Request) {
   // de maxDuration tras los reintentos contra Render (ver más abajo).
   const startedAt = Date.now();
 
-  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking), igual
-  //    que el Maestro. Un cliente no-navegador sin Origin se rechaza aquí.
+  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking). Un
+  //    cliente no-navegador sin Origin se rechaza aquí.
   const origin = request.headers.get("origin") ?? request.headers.get("referer");
   const allowLoopback = process.env.NODE_ENV !== "production";
   if (!isAllowedOrigin(origin, request.headers.get("host"), allowLoopback)) {

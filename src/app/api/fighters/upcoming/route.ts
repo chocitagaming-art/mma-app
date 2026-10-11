@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { getUpcomingBoutsForFighters } from "@/lib/queries/fighters";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 import type { FavoriteUpcomingBout } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -38,8 +38,8 @@ export async function GET(request: Request) {
     }
 
     // Rate-limit por IP tras la validación barata y antes de tocar Neon (mismo
-    // patrón que /api/gyms): el espacio de combinaciones de ids es enorme y la
-    // CDN solo absorbe URLs repetidas.
+    // patrón que los buscadores): el espacio de combinaciones de ids es enorme y
+    // la CDN solo absorbe URLs repetidas.
     const ip = clientIpFromHeaders(request.headers);
     const limit = await checkRateLimit(`upcoming:${ip}`);
     if (!limit.allowed) {
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
 
     const response = NextResponse.json({ bouts });
     // Datos no personales (los ids van en la URL) que cambian poco: caché CDN
-    // corta, solo en el 200 (mismo criterio que /api/gyms).
+    // corta, solo en el 200.
     response.headers.set(
       "Cache-Control",
       "public, s-maxage=300, stale-while-revalidate=3600",

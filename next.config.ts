@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
         destination: "/tendencias?tipo=noticias",
         permanent: true,
       },
+      // El Maestro y Gimnasios se quitaron el 11-oct-2026 (decisión del dueño
+      // del 9-oct). `:path*` cubre la ruta sola y cualquier subruta. Solo las
+      // PÁGINAS: /api/maestro y /api/gyms dan 404, porque un 308 de un POST a
+      // la portada repetiría el POST contra ella. Ojo: el navegador guarda el
+      // 308 para siempre; si alguna vuelve, quien ya pasó seguirá saltando aquí.
+      { source: "/maestro/:path*", destination: "/", permanent: true },
+      { source: "/gimnasios/:path*", destination: "/", permanent: true },
     ];
   },
   // Cabeceras de seguridad ESTÁTICAS (HSTS, nosniff, …) a toda respuesta. La CSP NO

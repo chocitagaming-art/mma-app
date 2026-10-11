@@ -65,7 +65,7 @@ export const TIERS_SECUNDARIOS = EVENT_TIERS.filter(
  *
  * Va SOLO donde la pregunta es "¿cuál es EL evento que enseño / grabo /
  * vigilo?". Donde la pregunta es "¿qué eventos existen?" —la lista de /eventos,
- * la ficha del evento, el buscador, el sitemap, el Maestro, los favoritos—
+ * la ficha del evento, el buscador, el sitemap, los favoritos—
  * ponerlo es una REGRESIÓN: dejaría un evento de la UFC inaccesible.
  */
 export function eventoPrincipalSql(alias = "e"): string {

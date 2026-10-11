@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { _resetRateLimitStore } from "@/lib/maestro/security";
 import { checkRateLimit, combineLimitResults } from "@/lib/rate-limit";
+import { _resetRateLimitStore } from "@/lib/request-security";
 
 describe("combineLimitResults", () => {
   const NOW = 1_000_000;

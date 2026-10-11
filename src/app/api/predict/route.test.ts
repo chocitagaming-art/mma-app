@@ -11,7 +11,7 @@ vi.mock("@/lib/prediction", async (importOriginal) => ({
 }));
 
 import contract from "@/lib/__fixtures__/predict-response.json";
-import { _resetRateLimitStore } from "@/lib/maestro/security";
+import { _resetRateLimitStore } from "@/lib/request-security";
 
 import { POST } from "./route";
 

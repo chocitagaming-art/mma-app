@@ -24,7 +24,7 @@ vi.mock("@/lib/db", () => ({ sql: vi.fn() }));
 // `unstable_cache` necesita el contexto de petición de Next, que aquí no existe
 // (environment: "node", sin servidor), y las tres funciones se envuelven en él
 // al importar el módulo. Se sustituye por un paso directo, igual que en
-// `src/lib/queries/gyms.test.ts`. Sin esto, `getNextEventHero` lanzaría y
+// `event-videos.sql.test.ts`. Sin esto, `getNextEventHero` lanzaría y
 // `getUpcomingEvents` —que tiene try/catch— devolvería [] fingiendo que no hay
 // cartelera, o sea: el test fallaría mintiendo sobre la causa.
 vi.mock("next/cache", () => ({

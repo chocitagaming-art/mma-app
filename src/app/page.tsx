@@ -190,18 +190,6 @@ export default async function HomePage() {
               className="animate-rise col-span-2 row-start-5 mt-4 flex flex-wrap gap-3 min-[340px]:max-sm:pr-4"
               style={{ animationDelay: "320ms" }}
             >
-              <Link href="/maestro">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  // Borde rojo de marca (dueño 17-jul): mismo patrón que el CTA
-                  // "Ver historial completo" de la ficha. Los prefijos dark::
-                  // hacen falta porque outline trae dark:border-input/dark:bg-input.
-                  className="h-10 border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"
-                >
-                  Pregunta al Maestro de la UFC
-                </Button>
-              </Link>
               <Link href="/enfrentamiento">
                 <Button size="lg" className="h-10">
                   Predecir una pelea
@@ -324,7 +312,8 @@ export default async function HomePage() {
             <Button
               variant="outline"
               size="lg"
-              // Borde rojo de marca (mismo patrón que "Pregunta al Maestro"): era
+              // Borde rojo de marca (dueño 17-jul, mismo patrón que el CTA "Ver
+              // historial completo" de la ficha): era
               // variant="ghost" (sin borde ni fondo) y no se veía. Los prefijos
               // dark:: hacen falta porque outline trae dark:border-input/dark:bg-input.
               className="h-10 border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"

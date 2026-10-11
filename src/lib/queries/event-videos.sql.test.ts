@@ -19,8 +19,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/db", () => ({ sql: vi.fn() }));
 
 // `unstable_cache` necesita el contexto de petición de Next, que aquí no existe
-// (environment: "node"). Se sustituye por un paso directo, igual que hacen
-// `gyms.test.ts` y `proximo-evento.sql.test.ts`.
+// (environment: "node"). Se sustituye por un paso directo, igual que hace
+// `proximo-evento.sql.test.ts`.
 vi.mock("next/cache", () => ({
   unstable_cache: (fn: (...args: never[]) => unknown) => fn,
 }));

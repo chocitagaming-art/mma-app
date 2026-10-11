@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { searchFighters } from "@/lib/queries/fighters";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 import { normalizeSearchQuery } from "@/lib/search-input";
 
 // Solo para el 200. Los nombres de luchadores y eventos no cambian en cinco

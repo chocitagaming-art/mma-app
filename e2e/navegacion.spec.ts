@@ -181,7 +181,7 @@ for (const caso of CASOS) {
 // EL AGUJERO QUE ABRE EL PARCHE, clavado. Un volver en una página de primer
 // nivel —las que se alcanzan desde el menú en cualquier momento— es ruido: no
 // hay "arriba" al que subir. Este test es el que impide que el parche se
-// extienda por inercia a las 20 páginas restantes.
+// extienda por inercia a las demás páginas.
 //
 // Hoy sale VERDE (no hay ningún volver en ninguna de ellas) y su trabajo es
 // seguir verde.
@@ -193,17 +193,17 @@ const PRIMER_NIVEL = [
   "/tendencias",
   "/ufc-hoy",
   "/videos",
-  "/gimnasios",
   "/salon-de-la-fama",
   "/enfrentamiento",
-  "/maestro",
   "/en-vivo",
 ];
+// /gimnasios y /maestro estaban en esta lista hasta el 11-oct-2026, cuando se
+// quitaron. Hoy son un 308 a la portada, así que aquí solo volverían a probar "/".
 
 for (const ruta of PRIMER_NIVEL) {
   test(`${ruta} NO lleva enlace de volver`, async ({ page }, testInfo) => {
     // No depende del viewport ni del tema: con una pasada basta y así no se
-    // multiplican por 6 doce cargas más contra Neon.
+    // multiplican por 6 diez cargas más contra Neon.
     test.skip(
       testInfo.project.name !== "escritorio-light",
       "la decisión de qué páginas llevan volver no depende del viewport",

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { validarContacto } from "@/lib/contacto";
 import { insertarMensajeDeContacto } from "@/lib/db-write";
-import { clientIpFromHeaders } from "@/lib/maestro/security";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 // Nada que cachear: es un POST que escribe.

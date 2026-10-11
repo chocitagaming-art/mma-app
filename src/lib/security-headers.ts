@@ -44,7 +44,7 @@ function cspDirectives({ nonce, isDev = false }: CspOptions): Record<string, str
     "style-src": ["'self'", "'unsafe-inline'"],
     // 'self' = imágenes locales. data: = placeholders/blur. https: = posters y headshots
     // de CDNs de terceros arbitrarios (a.espncdn.com, ufc.com, *.ytimg.com, sherdog,
-    // tile.openstreetmap.org, upload.wikimedia.org, …) que no se pueden enumerar.
+    // upload.wikimedia.org, flagcdn.com, …) que no se pueden enumerar.
     "img-src": ["'self'", "data:", "https:"],
     // Fuentes locales (next/font las auto-hospeda); data: por si alguna se inlinea.
     "font-src": ["'self'", "data:"],

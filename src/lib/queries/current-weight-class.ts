@@ -61,8 +61,8 @@ export const RANKING_DIVISION_WEIGHT_CLASS: Readonly<Record<string, string>> = {
   womens_strawweight: "Women's Strawweight",
   womens_flyweight: "Women's Flyweight",
   womens_bantamweight: "Women's Bantamweight",
-  // Hoy no hay ranking del pluma femenino (desapareció en 2023), pero el
-  // Maestro y /clasificacion lo siguen conociendo.
+  // Hoy no hay ranking del pluma femenino (desapareció en 2023), pero
+  // /clasificacion y DIVISION_SLUGS de rankings.ts lo siguen conociendo.
   womens_featherweight: "Women's Featherweight",
 };
 

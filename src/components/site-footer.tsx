@@ -18,12 +18,10 @@ const explore = [
 const tools = [
   { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/tendencias", label: "Tendencias" },
-  { href: "/maestro", label: "Maestro" },
 ];
 
 const more = [
   { href: "/videos", label: "Vídeos" },
-  { href: "/gimnasios", label: "Gimnasios" },
   { href: "/salon-de-la-fama", label: "Salón de la Fama" },
 ];
 
