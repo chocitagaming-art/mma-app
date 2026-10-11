@@ -295,3 +295,43 @@ test("el menú móvil abierto ya no enseña «UFC hoy»", async ({ page }, testI
   await expect(navMovil.getByRole("link", { name: "Eventos", exact: true })).toBeVisible();
   await expect(navMovil.getByRole("link", { name: "Tendencias", exact: true })).toBeVisible();
 });
+
+// La cabecera de escritorio es una rejilla de tres zonas con el logo en medio.
+// Al quitar el Maestro y Gimnasios (11-oct-2026) la derecha se quedó con 2
+// enlaces frente a 4 y se veía coja (captura del dueño). Este test fija el
+// reparto: el MISMO número de enlaces a cada lado del logo, y el logo centrado.
+test("la cabecera de escritorio lleva los mismos enlaces a cada lado del logo", async ({
+  page,
+}, testInfo) => {
+  test.skip(!esEscritorio(testInfo.project.name), "las dos navs son hidden lg:flex");
+
+  await page.goto("/");
+  await esperarHidratacion(page);
+
+  // 🪤 Por el atributo y dentro de <header>: hay DOS navs «Navegación principal»
+  // (escritorio y #mobile-nav) y el pie tiene los mismos enlaces.
+  const izquierda = page.locator('header nav[aria-label="Navegación principal"]:not(#mobile-nav)');
+  const derecha = page.locator('header nav[aria-label="Navegación secundaria"]');
+  const logo = page.getByRole("link", { name: "MMA STATUS — inicio" });
+
+  for (const ancho of [1024, 1280, 1920]) {
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await expect(izquierda).toBeVisible();
+    await expect(derecha).toBeVisible();
+
+    // A la izquierda, «Luchadores» es el disparador del flyout (un <a> más su
+    // menú oculto): se cuentan solo los enlaces visibles de primer nivel.
+    const nIzquierda = await izquierda.locator(":scope > a, :scope > div > a[aria-haspopup]").count();
+    const nDerecha = await derecha.locator(":scope > a").count();
+    expect(nIzquierda, `enlaces a la izquierda a ${ancho} px`).toBe(3);
+    expect(nDerecha, `enlaces a la derecha a ${ancho} px`).toBe(nIzquierda);
+
+    // El logo en el centro de la ventana (la rejilla usa minmax(0,1fr) a los
+    // lados). 2 px de margen por el redondeo del subpíxel.
+    const caja = await logo.boundingBox();
+    expect(caja, "el logo no se ve").not.toBeNull();
+    const centro = caja!.x + caja!.width / 2;
+    const anchoUtil = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(Math.abs(centro - anchoUtil / 2), `logo descentrado a ${ancho} px`).toBeLessThanOrEqual(2);
+  }
+});

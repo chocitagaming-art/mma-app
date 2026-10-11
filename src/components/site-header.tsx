@@ -23,14 +23,20 @@ import { cn } from "@/lib/utils";
 // ("¿Hay UFC hoy?") y la línea de horarios de esa tarjeta, que ahora enlaza allí
 // (up-next-hero.tsx). Eso último no es adorno: /ufc-hoy es la única página del
 // sitio que hace y responde la pregunta, y es la que puede ganar esa búsqueda.
+//
+// TRES Y TRES, a propósito (11-oct-2026). Al quitar el Maestro y Gimnasios la
+// derecha se quedó en 2 contra 4 y la cabecera se veía coja (captura del dueño).
+// "Tendencias" pasa a la derecha, junto a "Vídeos": son las dos de contenido
+// de fuera. El orden del menú móvil no cambia. e2e/interfaz.spec.ts vigila que
+// los dos lados lleven los mismos enlaces y que el logo siga centrado.
 const contentLinks = [
   { href: "/fighters", label: "Luchadores" },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
-  { href: "/tendencias", label: "Tendencias" },
 ];
 
 const toolLinks = [
+  { href: "/tendencias", label: "Tendencias" },
   { href: "/videos", label: "Vídeos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
 ];
@@ -49,7 +55,6 @@ const mobileLinks: { href: string; label: string; sub?: boolean }[] = [
   { href: "/salon-de-la-fama", label: "Salón de la Fama", sub: true },
   { href: "/clasificacion", label: "Clasificación" },
   { href: "/eventos", label: "Eventos" },
-  { href: "/tendencias", label: "Tendencias" },
   ...toolLinks,
 ];
 
@@ -278,10 +283,10 @@ export function SiteHeader() {
           />
         </Link>
 
-        {/* Zona derecha: nav de herramientas (escritorio) + ThemeToggle */}
+        {/* Zona derecha: nav secundaria (escritorio) + ThemeToggle */}
         <div className="flex items-center justify-end gap-2">
           <nav
-            aria-label="Herramientas"
+            aria-label="Navegación secundaria"
             className="hidden items-center gap-1 lg:flex"
           >
             {toolLinks.map((link) => (
