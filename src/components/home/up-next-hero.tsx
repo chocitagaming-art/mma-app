@@ -22,6 +22,7 @@ function RankBadge({ rank }: { rank: number | null }) {
 
   return (
     <span
+      data-testid="face-off-rank"
       className="inline-flex items-center rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold leading-none text-primary"
       title={rank === 0 ? "Campeón de su división" : `Nº ${rank} del ranking de su división`}
     >
@@ -66,6 +67,7 @@ function HeroCorner({
 
   return (
     <div
+      data-face-off-corner={corner}
       className={cn(
         "flex min-w-0 flex-col items-center gap-1.5 text-center",
         className,
@@ -80,7 +82,10 @@ function HeroCorner({
       )}
       {/* Siempre presente (aunque no haya apodo) para que ambas columnas
           queden alineadas, igual que en tale-of-the-tape.tsx. */}
-      <p className="min-h-4 font-mono text-xs italic leading-tight text-muted-foreground">
+      <p
+        data-testid="face-off-nickname"
+        className="min-h-4 font-mono text-xs italic leading-tight text-muted-foreground"
+      >
         {fighter.nickname ? <>“{fighter.nickname}”</> : null}
       </p>
       {href ? (
@@ -89,12 +94,16 @@ function HeroCorner({
           className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground transition-colors hover:text-primary sm:text-2xl lg:text-3xl"
         >
           <CountryFlag nationality={fighter.nationality} />
-          <span className="break-words">{fighter.name}</span>
+          <span data-testid="face-off-name" className="break-words">
+            {fighter.name}
+          </span>
           <RankBadge rank={fighter.rank} />
         </Link>
       ) : (
         <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-display text-xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          <span className="break-words">{fighter.name}</span>
+          <span data-testid="face-off-name" className="break-words">
+            {fighter.name}
+          </span>
         </p>
       )}
       <p className="tabular font-mono text-sm text-muted-foreground">
@@ -230,7 +239,10 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
             className="pointer-events-none absolute inset-0 [background:radial-gradient(70%_55%_at_50%_0%,color-mix(in_oklch,var(--primary)_9%,transparent),transparent_72%)]"
           />
           {main ? (
-            <div className="relative grid grid-cols-2 items-end gap-x-3 gap-y-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,400px)_minmax(0,1fr)] md:gap-x-6 lg:gap-x-8">
+            <div
+              data-face-off="home-hero"
+              className="relative grid grid-cols-2 items-end gap-x-3 gap-y-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,400px)_minmax(0,1fr)] md:gap-x-6 lg:gap-x-8"
+            >
               {/* En móvil el bloque central va ARRIBA (order) y los dos
                   luchadores quedan cara a cara debajo; en md+ es la columna
                   central del cara a cara, como en tale-of-the-tape. */}

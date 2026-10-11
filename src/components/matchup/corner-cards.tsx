@@ -28,6 +28,7 @@ export function CornerBlock({
   const isRed = corner === "red";
   return (
     <div
+      data-face-off-corner={corner}
       className={cn(
         "flex min-w-0 flex-col items-center gap-1.5 text-center",
         className,

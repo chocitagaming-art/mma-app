@@ -214,10 +214,15 @@ export function EventBoutRow({
   const row = (
     <Link
       href={`/fights/${bout.fightId}`}
+      data-testid="bout-row"
       className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5"
     >
-      {/* Esquina roja */}
-      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+      {/* Esquina roja. data-bout-corner: e2e/careo-fotos.spec.ts mide que su
+          primer hijo (el headshot) empiece a la altura del de la azul. */}
+      <div
+        data-bout-corner="red"
+        className="flex min-w-0 items-center gap-2.5 sm:gap-3"
+      >
         <FighterHeadshot
           name={bout.red.name}
           headshotUrl={bout.red.headshotUrl}
@@ -315,7 +320,10 @@ export function EventBoutRow({
       </div>
 
       {/* Esquina azul */}
-      <div className="flex min-w-0 flex-row-reverse items-center gap-2.5 text-right sm:gap-3">
+      <div
+        data-bout-corner="blue"
+        className="flex min-w-0 flex-row-reverse items-center gap-2.5 text-right sm:gap-3"
+      >
         <FighterHeadshot
           name={bout.blue.name}
           headshotUrl={bout.blue.headshotUrl}

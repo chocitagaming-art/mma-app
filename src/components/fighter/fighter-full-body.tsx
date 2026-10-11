@@ -178,8 +178,23 @@ export function FighterFullBody({
     );
   }
 
+  // Encuadre que se pinta en el cara a cara, para e2e/careo-fotos.spec.ts:
+  // "standing" (de pie, asentada en la base), "bio" (recorte cabeza-muslo,
+  // anclado arriba), "silhouette" y "headshot" (sin foto de cuerpo).
+  const photoKind = !showPhoto
+    ? "headshot"
+    : isSilhouette
+      ? "silhouette"
+      : bodyFit === "cover-top"
+        ? "bio"
+        : "standing";
+
+  // data-testid="face-off-photo" marca lo que SE VE (el <img> o el cuadrado
+  // del headshot), no la caja: la caja mide lo mismo en las dos esquinas
+  // aunque la foto de dentro empiece más abajo.
   return (
     <div
+      data-photo-kind={photoKind}
       className={cn(
         "relative flex items-end justify-center overflow-hidden",
         className,
@@ -191,6 +206,8 @@ export function FighterFullBody({
           key={photoUrl}
           src={photoUrl}
           alt={altText}
+          data-testid="face-off-photo"
+          data-photo-corner={corner}
           className={cn(
             "h-full",
             // Las fotos athlete_bio_full_body de ufc.com son un recorte fijo
@@ -208,13 +225,15 @@ export function FighterFullBody({
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <FighterHeadshot
-            name={name}
-            headshotUrl={headshotUrl}
-            division={division}
-            size="lg"
-            className="sm:size-36 md:size-44"
-          />
+          <div data-testid="face-off-photo" data-photo-corner={corner}>
+            <FighterHeadshot
+              name={name}
+              headshotUrl={headshotUrl}
+              division={division}
+              size="lg"
+              className="sm:size-36 md:size-44"
+            />
+          </div>
         </div>
       )}
     </div>

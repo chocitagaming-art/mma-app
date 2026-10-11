@@ -147,6 +147,7 @@ function FaceOffCorner({
 
   return (
     <div
+      data-face-off-corner={corner}
       className={cn(
         "flex min-w-0 flex-col items-center gap-1.5 text-center",
         className,
@@ -391,7 +392,10 @@ export function TaleOfTheTape({
       <div className="relative p-4 pb-6 sm:p-6 lg:p-8">
         <span className="absolute inset-y-0 left-0 w-1 bg-corner-red" />
         <span className="absolute inset-y-0 right-0 w-1 bg-corner-blue" />
-        <div className="relative grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-[minmax(0,1fr)_minmax(250px,330px)_minmax(0,1fr)] md:items-start md:gap-x-6 lg:gap-x-8">
+        <div
+          data-face-off="fight"
+          className="relative grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-[minmax(0,1fr)_minmax(250px,330px)_minmax(0,1fr)] md:items-start md:gap-x-6 lg:gap-x-8"
+        >
           {/* VS entre las dos fotos, solo móvil (en desktop separa la columna). */}
           <span
             aria-hidden
