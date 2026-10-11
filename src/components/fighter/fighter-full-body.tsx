@@ -215,16 +215,27 @@ export function FighterFullBody({
             // letterbox flotante según el ancho de columna, así que llenan la
             // caja con cover anclado arriba (recorta laterales, no la cara).
             // El resto (standing, cuerpo completo) se asienta en la base.
+            // 🪤 Y LLENA SIEMPRE EL ALTO (11-oct-2026): con `max-w-full`, en
+            // una columna más estrecha que la foto, se encogía y BAJABA. La de
+            // Volkanovski (185×455) empezaba 80 px más abajo que la de Evloev a
+            // 768. Ahora mide el alto de la caja (`shrink-0`, y `max-w-none`
+            // contra el max-width: 100% que el preflight de Tailwind pone a
+            // todo <img>), va centrada y el overflow-hidden de la caja recorta
+            // los lados. La cabeza, que toca el borde de arriba de la foto,
+            // empieza arriba en las dos esquinas; si acaso se corta una mano.
             bodyFit === "cover-top"
               ? "w-full object-cover object-top"
-              : "w-auto max-w-full object-contain object-bottom",
+              : "w-auto max-w-none shrink-0 object-contain object-bottom",
             // F1: espejo para que la esquina mire hacia el centro.
             mirror && "-scale-x-100",
           )}
           onError={handleImageError}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
+        // Headshot de reserva ARRIBA, no centrado: centrado, su cara empezaba
+        // 54 px (móvil) a 122 px (escritorio) más abajo que la foto de cuerpo
+        // de la otra esquina. El hueco queda debajo.
+        <div className="flex h-full w-full items-start justify-center">
           <div data-testid="face-off-photo" data-photo-corner={corner}>
             <FighterHeadshot
               name={name}
