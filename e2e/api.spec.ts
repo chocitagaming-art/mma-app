@@ -229,8 +229,14 @@ test("/api/contacto no acepta GET", async ({ request }) => {
 
 // ── Las APIs del Maestro y de Gimnasios ya no existen (11-oct-2026) ───────
 // Las PÁGINAS redirigen a la portada (routes.spec.ts); las APIs NO: un 308 de un
-// POST a "/" repetiría el POST contra la portada. Tienen que dar 404, y se pide
-// con el mismo método que usaba su cliente (una pestaña vieja que siga abierta).
+// POST a "/" repetiría el POST contra la portada. Tienen que dar 404.
+//
+// 🪤 Se piden con GET, también /api/maestro, que solo aceptaba POST. Medido el
+// 11-oct-2026 en el primer smoke tras quitarlas: en Vercel, un POST a CUALQUIER
+// ruta que no existe (también /api/no-existe-xyz) contesta 200 con la página de
+// «no encontrado» (`x-matched-path: /_not-found`), mientras que `next start` en
+// local da 404. El GET sí distingue: la ruta vieja daba 405 (solo tenía POST) y
+// ahora da 404, en local y en producción.
 //
 // 🪤 Este fichero corre contra PRODUCCIÓN en smoke-prod.yml, y el cortafuegos de
 // Vercel tenía reglas con estas dos rutas que contestan 429 con
@@ -238,15 +244,9 @@ test("/api/contacto no acepta GET", async ({ request }) => {
 // comprueba PRIMERO que no ha contestado el cortafuegos y DESPUÉS el 404: así un
 // challenge sale con su nombre y no como «la ruta ha vuelto». Y un `>= 400` a
 // secas no valdría: el 405 o el 400 de la ruta vieja también lo cumplen.
-for (const { metodo, path } of [
-  { metodo: "POST", path: "/api/maestro" },
-  { metodo: "GET", path: "/api/gyms?city=madrid" },
-] as const) {
-  test(`${metodo} ${path} → 404 (la ruta se quitó)`, async ({ request }) => {
-    const res =
-      metodo === "POST"
-        ? await request.post(path, { data: {}, maxRedirects: 0 })
-        : await request.get(path, { maxRedirects: 0 });
+for (const path of ["/api/maestro", "/api/gyms?city=madrid"]) {
+  test(`GET ${path} → 404 (la ruta se quitó)`, async ({ request }) => {
+    const res = await request.get(path, { maxRedirects: 0 });
     expect(
       res.headers()["x-vercel-mitigated"],
       `respondió el cortafuegos de Vercel, no la app (HTTP ${res.status()})`,
