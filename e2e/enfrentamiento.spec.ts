@@ -12,7 +12,8 @@ import { fakeYouTubeEmbeds } from "./helpers";
 //   · una llamada desde el NAVEGADOR sí manda Origin, así que pasa el guard y
 //     GASTA cupo del limitador — al revés que los POST de api.spec.ts, que
 //     mueren en el 403 y cuestan cero;
-//   · y el Maestro cobra tokens de Anthropic por petición.
+//   · y la explicación de la predicción cobra tokens de Anthropic por petición
+//     (lib/prediction.ts).
 // Con el route puesto, la petición ni sale del navegador.
 //
 // ⚠️ UN SOLO PROYECTO. Aquí no hay nada que dependa del viewport y sí varias

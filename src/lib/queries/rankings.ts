@@ -157,8 +157,8 @@ type RankingHistoryRow = {
 };
 
 // Historial completo de ranking de un luchador (todas las divisiones y fechas),
-// ordenado cronológicamente. cache(): el detalle del luchador puede pedirlo más
-// de una vez por request (render + tool del Maestro) — dedupe intra-request.
+// ordenado cronológicamente. cache(): dedupe intra-request, por si el detalle
+// del luchador lo pide más de una vez en el mismo render.
 export const getFighterRankingHistory = cache(async (
   fighterId: number,
 ): Promise<FighterRankingHistoryEntry[]> => {

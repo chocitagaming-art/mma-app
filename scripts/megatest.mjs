@@ -4,11 +4,12 @@
 // Corre en orden las puertas de calidad de AMBOS repos y agrega un veredicto:
 //   mma-app     -> tsc --noEmit, eslint, vitest
 //   mma-ingesta -> pytest, ruff --select F (bugs reales)
-//   mma-app     -> playwright E2E (20 rutas x 3 viewports x 2 temas + 11 APIs).
-//                  Cifras medidas el 6-ago-2026 sobre 6e377c8: las 20 son el
-//                  array ROUTES de e2e/routes.spec.ts, el 3 x 2 son VIEWPORTS x
-//                  THEMES de playwright.config.ts y las 11 son las rutas /api
-//                  distintas que toca e2e/api.spec.ts.
+//   mma-app     -> playwright E2E (18 rutas x 3 viewports x 2 temas + 9 APIs).
+//                  Cifras del 11-oct-2026, al quitar el Maestro y Gimnasios: las
+//                  18 son el array ROUTES de e2e/routes.spec.ts, el 3 x 2 son
+//                  VIEWPORTS x THEMES de playwright.config.ts y las 9 son las
+//                  rutas /api vivas que toca e2e/api.spec.ts (más el 404 de
+//                  /api/maestro y /api/gyms, que ya no existen).
 //                  El build de producción lo hace el webServer de playwright, así
 //                  que si `next build` fallara, el E2E falla en claro.
 //

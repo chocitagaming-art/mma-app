@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // unstable_cache necesita el contexto de petición de Next, que aquí no existe
 // (environment: "node"). Se sustituye por un paso directo, igual que en
-// queries/gyms.test.ts: lo que se prueba aquí es la lógica, no la caché. Los
-// TTL se vigilan aparte, leyendo el fuente (ver «guardas de fuente», abajo).
+// queries/proximo-evento.sql.test.ts: lo que se prueba aquí es la lógica, no
+// la caché. Los TTL se vigilan aparte, leyendo el fuente (ver «guardas de
+// fuente», abajo).
 vi.mock("next/cache", () => ({
   unstable_cache: (fn: (...args: never[]) => unknown) => fn,
 }));

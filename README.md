@@ -4,7 +4,7 @@
 
 ### A UFC stats site with a model that predicts fights
 
-Fighter profiles, official rankings, head-to-head comparisons, market odds against the model, an AI assistant and fight videos — all on real data.
+Fighter profiles, official rankings, head-to-head comparisons, market odds against the model and fight videos — all on real data.
 
 [![Visit the site](https://img.shields.io/badge/visit_the_site-mmastatus.app-22c55e?style=flat-square)](https://mmastatus.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
@@ -47,11 +47,6 @@ Showing both side by side is unusual, and it is what makes the comparison
 honest.
 
 ![Market vs model](docs/screenshots/market-vs-model.png)
-
-**El Maestro**, an assistant that answers from the real database and shows where
-the numbers came from, instead of recalling them from memory.
-
-![El Maestro assistant](docs/screenshots/maestro.png)
 
 **Official rankings** by division and pound-for-pound, men's and women's, with
 movement since the last snapshot.

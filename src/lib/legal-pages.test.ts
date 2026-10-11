@@ -152,7 +152,6 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
       "i.ytimg.com",
       "yt3.ggpht.com",
       "flagcdn.com",
-      "OpenStreetMap",
     ]) {
       expect(parrafo, `falta ${servidor}`).toContain(servidor);
     }
@@ -227,14 +226,29 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     expect(texto).not.toMatch(/ni propias ni de terceros/i);
   });
 
-  it("nombra a OpenStreetMap (Nominatim), a quien el servidor manda la ciudad de /gimnasios", () => {
-    // api/gyms/route.ts: geocodeCity() pide nominatim.openstreetmap.org desde
-    // el servidor con la ciudad escrita; la IP del visitante no viaja.
+  it("ya no nombra OpenStreetMap ni /gimnasios, y nadie en la web llama a sus servidores", () => {
+    // /gimnasios se quitó el 11-oct-2026: con él se fueron el mapa (las
+    // teselas) y la consulta del servidor a Nominatim, los dos bajo
+    // openstreetmap.org. Si algo vuelve a llamarlos, esta página tiene que
+    // volver a contarlo.
+    const osm = FUENTES.filter(([, fuente]) => /openstreetmap\.org/i.test(fuente)).map(
+      ([ruta]) => ruta,
+    );
+    expect(osm).toEqual([]);
+    expect(texto).not.toMatch(/OpenStreetMap|Nominatim/);
+    expect(texto).not.toMatch(/\/gimnasios/);
+  });
+
+  it("Anthropic sigue en la lista por la explicación de la predicción, no por el Maestro", () => {
+    // El Maestro se quitó el 11-oct-2026, pero /api/predict sigue mandando a
+    // Anthropic los nombres y las estadísticas de los dos luchadores
+    // (lib/prediction.ts) para redactar la explicación. Nada del visitante.
     const inicio = texto.indexOf("Quién más interviene");
     const proveedores = texto.slice(inicio, texto.indexOf("Algunos están fuera", inicio));
     expect(inicio).toBeGreaterThan(-1);
-    expect(proveedores).toMatch(/OpenStreetMap \(Nominatim\)/);
-    expect(proveedores).toMatch(/\/gimnasios/);
+    expect(proveedores).toMatch(/Anthropic — solo si pides una predicción/);
+    expect(proveedores).toMatch(/nada tuyo/);
+    expect(texto).not.toMatch(/Maestro/);
   });
 
   it("cuenta los careos y los pesajes entre los vídeos, y que esperan al clic", () => {
@@ -264,7 +278,8 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
   });
 
   it("lleva la fecha del cambio", () => {
-    expect(texto).toContain("30 de septiembre de 2026");
+    // La del último cambio de la página: quitar el Maestro y /gimnasios.
+    expect(texto).toContain("Última actualización: 11 de octubre de 2026");
   });
 });
 

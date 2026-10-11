@@ -28,9 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // por dónde llegar. Son las MISMAS que le faltaban al pie de página, por
     // eso las dos cosas se arreglaron a la vez (ver `site-footer.tsx`).
     { url: `${SITE}/videos`, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${SITE}/gimnasios`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/salon-de-la-fama`, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${SITE}/maestro`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/creditos`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/contacto`, changeFrequency: "yearly", priority: 0.4 },
     { url: `${SITE}/aviso-legal`, changeFrequency: "yearly", priority: 0.3 },
@@ -42,6 +40,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   //  · `/offline` — la sirve el service worker cuando no hay red; indexarla
   //    pondría "sin conexión" en los resultados de búsqueda.
   //  · `/compare` y `/predict` — son `permanentRedirect` a `/enfrentamiento`.
+  //  · `/maestro` y `/gimnasios` — se quitaron el 11-oct-2026 y son un 308 a la
+  //    portada (`next.config.ts`). Una URL que redirige no va en un sitemap.
   //  · `/fights/[id]` — serían +8.800 URLs sobre una web que sirve todo con
   //    `no-store`. Decisión del 28-jul, sprint propio si algún día se hace.
 

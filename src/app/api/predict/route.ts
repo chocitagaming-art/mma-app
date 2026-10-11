@@ -186,8 +186,8 @@ export async function POST(request: Request) {
   // de maxDuration tras los reintentos contra Render (ver más abajo).
   const startedAt = Date.now();
 
-  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking), igual
-  //    que el Maestro. Un cliente no-navegador sin Origin se rechaza aquí.
+  // 1) Solo peticiones desde el propio origen (anti-CSRF / hotlinking). Un
+  //    cliente no-navegador sin Origin se rechaza aquí.
   const origin = request.headers.get("origin") ?? request.headers.get("referer");
   const allowLoopback = process.env.NODE_ENV !== "production";
   if (!isAllowedOrigin(origin, request.headers.get("host"), allowLoopback)) {

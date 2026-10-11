@@ -4,7 +4,7 @@
 
 ### Una web de estadísticas de UFC con un modelo que predice peleas
 
-Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuotas del mercado frente al modelo, un asistente con IA y vídeos de combates, todo sobre datos reales.
+Fichas de luchadores, clasificación oficial, comparativas cara a cara, las cuotas del mercado frente al modelo y vídeos de combates, todo sobre datos reales.
 
 [![Ver la web](https://img.shields.io/badge/ver_la_web-mmastatus.app-22c55e?style=flat-square)](https://mmastatus.app)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
@@ -48,11 +48,6 @@ margen de la casa, al lado de lo que cree el modelo, con la diferencia marcada.
 Ponerlos lado a lado es poco habitual, y es lo que hace la comparación honesta.
 
 ![Mercado vs modelo](docs/screenshots/market-vs-model.png)
-
-**El Maestro**, un asistente que responde con datos de la base real y enseña de
-dónde los saca, en vez de inventar de memoria.
-
-![Asistente El Maestro](docs/screenshots/maestro.png)
 
 **Clasificación oficial** por división y libra por libra, masculina y femenina,
 con el movimiento desde el último corte.

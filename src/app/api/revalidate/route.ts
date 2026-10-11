@@ -56,8 +56,10 @@ export async function POST(request: Request) {
   // base y la web seguir enseñando lo anterior hasta que venciera el TTL. ("gyms"
   // se quitó el 11-oct-2026, con la sección de gimnasios.)
   //
-  // Ojo al alcance real: hoy el ÚNICO que llama a este endpoint es
-  // refresh-news.yml (3 veces al día). El bucle del directo NO lo llama, y por eso
+  // Ojo al alcance real: hoy lo llaman refresh-news.yml (3 veces al día) y
+  // mma-ingesta/scripts/fijar_videos_evento.py al fijar el vídeo del directo, y
+  // los dos miran solo el código de estado, no el cuerpo. El bucle del directo
+  // NO lo llama, y por eso
   // las fichas de evento y de combate se cachean solo 60 s. Si algún día el bucle
   // empieza a llamar aquí al sellar un combate, esos dos TTL se pueden subir.
   const tags = ["home", "news", "events", "fights", "fighters"];

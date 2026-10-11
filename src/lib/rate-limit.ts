@@ -77,7 +77,8 @@ export function isDistributedRateLimitEnabled(): boolean {
   return getLimiters() !== null;
 }
 
-// Punto de entrada único para los endpoints (Maestro, predict). Async.
+// Punto de entrada único para los endpoints (buscadores, upcoming, predict,
+// contacto). Async.
 export async function checkRateLimit(key: string): Promise<RateLimitResult> {
   const l = getLimiters();
   if (!l) {

@@ -12,6 +12,8 @@ test.beforeEach(({}, testInfo) => {
 // Smoke de las 9 rutas API. Los GET deben responder 200; /api/health además
 // debe reportar la BD arriba. Los POST se prueban a nivel de CONTRATO (petición
 // inválida → 4xx) para NO gastar tokens de Anthropic ni depender del microservicio.
+// Y las dos que se quitaron el 11-oct-2026 (/api/maestro y /api/gyms) tienen que
+// dar 404: ver el final del fichero.
 
 // /api/health tiene DOS niveles desde el 21-ago-2026: el superficial no toca
 // Neon (para que el monitor pueda sondear cada 15 min sin despertar la base) y
@@ -41,9 +43,10 @@ test("GET /api/health → 200 sin consultar la BD", async ({ request }) => {
 // routes.spec.ts tampoco, porque sin tecleo no hay fetch a los buscadores y sin
 // favoritos en localStorage no hay fetch a /api/fighters/upcoming.
 // Gasto tras la fase 13A: search 1 · fighters-search 1 · eventos-search 1 ·
-// upcoming 1 · gyms 1 · contacto 4 · predict 0 · maestro 0.
-// (predict y maestro gastan CERO: Playwright no manda Origin ni Referer, así que
-// esos POST mueren en el guard de origen ANTES del limitador. Ver más abajo.)
+// upcoming 1 · contacto 4 · predict 0. (gyms y maestro se quitaron el
+// 11-oct-2026; sus 404 no llegan a ningún limitador.)
+// (predict gasta CERO: Playwright no manda Origin ni Referer, así que ese POST
+// muere en el guard de origen ANTES del limitador. Ver más abajo.)
 //
 // `?q=jo` en vez de `?q=silva`: por debajo del mínimo de 3 caracteres
 // (search-input.ts:17) la ruta devuelve las tres listas vacías con un 200 y
@@ -63,17 +66,6 @@ for (const path of GET_ROUTES) {
     expect(res.status(), `HTTP ${res.status()} en ${path}`).toBe(200);
   });
 }
-
-test("GET /api/gyms con ciudad → responde (requiere city o lat/lon)", async ({ request }) => {
-  // Geocodifica la ciudad (OSM/Nominatim) y busca gimnasios cercanos (Overpass);
-  // sin parametros responde 400 a proposito. Smoke tolerante: con una ciudad
-  // valida responde 200, o 502/503/504 si OSM esta caido (no es un bug nuestro,
-  // por eso NO lo tratamos como fallo — evita flakiness por dependencia externa).
-  const res = await request.get("/api/gyms?city=las%20vegas", { timeout: 30_000 });
-  expect([200, 502, 503, 504], `HTTP ${res.status()} en /api/gyms?city=`).toContain(
-    res.status(),
-  );
-});
 
 test("GET /api/search devuelve resultados reales", async ({ request }) => {
   const res = await request.get("/api/search?q=silva");
@@ -170,8 +162,9 @@ test("POST /api/revalidate sin token → rechazado (no revalida sin auth)", asyn
 // ni `Origin` ni `Referer` (comprobado en el código de su APIRequestContext y en
 // el log de una corrida real: las únicas cabeceras que salen son user-agent,
 // accept y accept-encoding), así que `isAllowedOrigin` devuelve false en
-// request-security.ts:23 y estos dos POST reciben un 403 del GUARD DE ORIGEN sin llegar
-// nunca a la validación del cuerpo — ni al limitador, por eso gastan cupo 0.
+// request-security.ts:23 y este POST recibe un 403 del GUARD DE ORIGEN sin llegar
+// nunca a la validación del cuerpo — ni al limitador, por eso gasta cupo 0.
+// (Hasta el 11-oct-2026 se probaba igual /api/maestro, que ya no existe.)
 // Medido contra producción: sin Origin → 403; con `Origin: https://mmastatus.app`
 // → 400, que es el contrato que el título promete.
 //
@@ -184,15 +177,13 @@ test("POST /api/revalidate sin token → rechazado (no revalida sin auth)", asyn
 //   expect(res.headers()["x-vercel-mitigated"]).toBeUndefined();
 //   expect(res.headers()["content-type"]).toContain("application/json");
 //   expect(res.status()).toBe(400);
-for (const path of ["/api/predict", "/api/maestro"]) {
-  test(`POST ${path} con cuerpo inválido → 4xx (contrato, sin gastar modelo)`, async ({ request }) => {
-    const res = await request.post(path, { data: {} });
-    // Contrato: una petición vacía se rechaza con error de cliente ANTES de
-    // llamar al modelo. Un 5xx aquí seria un bug real que queremos ver.
-    expect(res.status(), `HTTP ${res.status()} en ${path}`).toBeGreaterThanOrEqual(400);
-    expect(res.status(), `5xx en ${path} (¿crash?)`).toBeLessThan(500);
-  });
-}
+test("POST /api/predict con cuerpo inválido → 4xx (contrato, sin gastar modelo)", async ({ request }) => {
+  const res = await request.post("/api/predict", { data: {} });
+  // Contrato: una petición vacía se rechaza con error de cliente ANTES de
+  // llamar al modelo. Un 5xx aquí seria un bug real que queremos ver.
+  expect(res.status(), `HTTP ${res.status()} en /api/predict`).toBeGreaterThanOrEqual(400);
+  expect(res.status(), "5xx en /api/predict (¿crash?)").toBeLessThan(500);
+});
 
 // ── /contacto: la unica ruta que escribe en la base de datos (2-ago) ───────
 // Se prueba a nivel de CONTRATO y con la trampa de robots, que NO llega a
@@ -235,3 +226,31 @@ test("/api/contacto no acepta GET", async ({ request }) => {
     400,
   );
 });
+
+// ── Las APIs del Maestro y de Gimnasios ya no existen (11-oct-2026) ───────
+// Las PÁGINAS redirigen a la portada (routes.spec.ts); las APIs NO: un 308 de un
+// POST a "/" repetiría el POST contra la portada. Tienen que dar 404, y se pide
+// con el mismo método que usaba su cliente (una pestaña vieja que siga abierta).
+//
+// 🪤 Este fichero corre contra PRODUCCIÓN en smoke-prod.yml, y el cortafuegos de
+// Vercel tenía reglas con estas dos rutas que contestan 429 con
+// `x-vercel-mitigated: challenge` a lo que no parece un navegador. Por eso se
+// comprueba PRIMERO que no ha contestado el cortafuegos y DESPUÉS el 404: así un
+// challenge sale con su nombre y no como «la ruta ha vuelto». Y un `>= 400` a
+// secas no valdría: el 405 o el 400 de la ruta vieja también lo cumplen.
+for (const { metodo, path } of [
+  { metodo: "POST", path: "/api/maestro" },
+  { metodo: "GET", path: "/api/gyms?city=madrid" },
+] as const) {
+  test(`${metodo} ${path} → 404 (la ruta se quitó)`, async ({ request }) => {
+    const res =
+      metodo === "POST"
+        ? await request.post(path, { data: {}, maxRedirects: 0 })
+        : await request.get(path, { maxRedirects: 0 });
+    expect(
+      res.headers()["x-vercel-mitigated"],
+      `respondió el cortafuegos de Vercel, no la app (HTTP ${res.status()})`,
+    ).toBeUndefined();
+    expect(res.status(), `HTTP ${res.status()} en ${path}`).toBe(404);
+  });
+}
