@@ -18,7 +18,6 @@ const explore = [
 const tools = [
   { href: "/enfrentamiento", label: "Enfrentamiento" },
   { href: "/tendencias", label: "Tendencias" },
-  { href: "/maestro", label: "Maestro" },
 ];
 
 const more = [

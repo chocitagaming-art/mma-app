@@ -29,7 +29,6 @@ vi.mock("next/cache", () => ({
 import { sql } from "@/lib/db";
 import { formatDivision, formatWeightClass } from "@/lib/format";
 import { resueltoSqlPredicate } from "@/lib/fight-result";
-import { runMaestroTool } from "@/lib/maestro/tools";
 import {
   RANKING_DIVISION_WEIGHT_CLASS,
   currentWeightClassSql,
@@ -198,25 +197,10 @@ describe("🔴 todas las consultas que pintan la categoría usan el helper", () 
     expect(lista).toContain(`${helper} as latest_weight_class`);
   });
 
-  it("el Maestro (ficha_y_stats), para que no diga otra categoría que `comparar`", async () => {
-    sqlMock
-      .mockResolvedValueOnce([
-        { id: 6260, name: "Valentina Shevchenko", wins: 26, losses: 4, draws: 1 },
-      ] as never)
-      .mockResolvedValueOnce([{ total_fight_stats: "0", fights_with_control: "0" }] as never);
-
-    await runMaestroTool("ficha_y_stats", { id: 6260 });
-    expect(consultas()[0]).toContain(`${helper} as latest_weight_class`);
-  });
-
   // Guarda de fuente: la regla vieja no puede volver escrita a mano en ninguno
-  // de los tres ficheros. skill-radar.ts se queda FUERA a propósito (cambiarlo
+  // de los dos ficheros. skill-radar.ts se queda FUERA a propósito (cambiarlo
   // movería los percentiles del radar) y está apuntado en el BACKLOG.
-  for (const ruta of [
-    "./fighters.list.ts",
-    "./fighters.detail.ts",
-    "../maestro/tools.ts",
-  ]) {
+  for (const ruta of ["./fighters.list.ts", "./fighters.detail.ts"]) {
     it(`${ruta.split("/").pop()} no conserva ninguna copia del ORDER BY por updated_at`, () => {
       const fuente = readFileSync(fileURLToPath(new URL(ruta, import.meta.url)), "utf8");
       expect(fuente).not.toMatch(/fi2\.updated_at/);

@@ -34,7 +34,6 @@ const toolLinks = [
   { href: "/gimnasios", label: "Gimnasios" },
   { href: "/videos", label: "Vídeos" },
   { href: "/enfrentamiento", label: "Enfrentamiento" },
-  { href: "/maestro", label: "Maestro" },
 ];
 
 // Items del flyout de "Luchadores" (desktop) y del grupo en el menú móvil.
