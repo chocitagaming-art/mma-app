@@ -253,19 +253,38 @@ export function EventBoutRow({
               </span>
             ) : null}
           </p>
+          {/* Cada pieza (récord, cuota, GANA) puede bajar entera de línea pero
+              nunca partirse: a 390 px salía «28-7-0 -» / «118 GANA», y un «-118»
+              partido se lee como «+118» (15-oct, e2e/evento-columna.spec.ts).
+              🪤 Entre pieza y pieza va un ESPACIO de verdad, no un margen: con
+              nowrap y sin espacio la línea entera no salta nunca y pisa el «VS»
+              o la foto azul (lo cazó la revisión del 15-oct). */}
           <p className="font-mono text-xs tabular text-muted-foreground">
-            {formatRecord(bout.red.wins, bout.red.losses, bout.red.draws)}
+            <span className="whitespace-nowrap">
+              {formatRecord(bout.red.wins, bout.red.losses, bout.red.draws)}
+            </span>
             {redAmerican ? (
-              <span className="ml-1.5 text-muted-foreground/70">{redAmerican}</span>
+              <>
+                {" "}
+                <span className="whitespace-nowrap text-muted-foreground/70">{redAmerican}</span>
+              </>
             ) : null}
-            {redWon ? <span className="ml-1.5 font-semibold text-win">GANA</span> : null}
+            {redWon ? (
+              <>
+                {" "}
+                <span className="whitespace-nowrap font-semibold text-win">GANA</span>
+              </>
+            ) : null}
             {/* BE3: bono "Actuación de la Noche". Vive en la línea del récord:
                 en la del nombre (flex + truncate) el chip central de favorito
                 lo aplastaba a ~0px en pantallas de 375px. */}
             {bout.red.isPotn ? (
-              <GoldBadge title="Actuación de la Noche" className="ml-1.5 tracking-normal">
-                POTN
-              </GoldBadge>
+              <>
+                {" "}
+                <GoldBadge title="Actuación de la Noche" className="tracking-normal">
+                  POTN
+                </GoldBadge>
+              </>
             ) : null}
           </p>
         </div>
@@ -356,15 +375,25 @@ export function EventBoutRow({
             {/* BE3: bono "Actuación de la Noche" en la línea del récord
                 (espejo de la roja: el badge queda hacia el centro). */}
             {bout.blue.isPotn ? (
-              <GoldBadge title="Actuación de la Noche" className="mr-1.5 tracking-normal">
-                POTN
-              </GoldBadge>
+              <>
+                <GoldBadge title="Actuación de la Noche" className="tracking-normal">
+                  POTN
+                </GoldBadge>{" "}
+              </>
             ) : null}
-            {blueWon ? <span className="mr-1.5 font-semibold text-win">GANA</span> : null}
+            {blueWon ? (
+              <>
+                <span className="whitespace-nowrap font-semibold text-win">GANA</span>{" "}
+              </>
+            ) : null}
             {blueAmerican ? (
-              <span className="mr-1.5 text-muted-foreground/70">{blueAmerican}</span>
+              <>
+                <span className="whitespace-nowrap text-muted-foreground/70">{blueAmerican}</span>{" "}
+              </>
             ) : null}
-            {formatRecord(bout.blue.wins, bout.blue.losses, bout.blue.draws)}
+            <span className="whitespace-nowrap">
+              {formatRecord(bout.blue.wins, bout.blue.losses, bout.blue.draws)}
+            </span>
           </p>
         </div>
       </div>

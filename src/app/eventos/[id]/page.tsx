@@ -401,14 +401,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           saying?! #ufc331», la ficha del UFC 331 seguía diciendo «Careo oficial»
           tan tranquila. Con el título a la vista, un vídeo equivocado se delata
           solo. Los 29 careos casados antes de la migración no tienen título: ahí
-          se mantiene el comportamiento de siempre. */}
+          se mantiene el comportamiento de siempre.
+
+          Tarea 9 (15-oct): la columna de 768 px va en la SECCIÓN, rótulo
+          incluido, igual que el directo y el póster. En escritorio el careo
+          empezaba 96 px a la izquierda del directo; centrar solo el vídeo
+          habría dejado «Careo oficial» pegado a la izquierda. */}
       {event.faceoffVideoId ? (
-        <section className="mt-8">
+        <section className="mx-auto mt-8 w-full max-w-3xl">
           <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
             <Clapperboard className="size-4" />
             Careo oficial
           </h2>
-          <div className="w-full max-w-3xl">
+          <div className="w-full">
             <FightVideoPlayer
               videoId={event.faceoffVideoId}
               title={event.faceoffVideoTitle ?? `Careo · ${event.name}`}

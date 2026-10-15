@@ -22,6 +22,10 @@ import type { EventWeighIn } from "@/lib/types";
 //
 // (Y sin la etiqueta JSX escrita en este comentario a propósito:
 // live-embed-callsites.test.ts cuenta los ficheros que la mencionan.)
+//
+// La sección entera (rótulo, vídeo y tabla) va en la columna centrada de
+// 768 px, la misma del directo: en escritorio el vídeo se quedaba 96 px a la
+// izquierda (tarea 9, 15-oct). Vale igual en la ficha del evento y en /en-vivo.
 export function EventWeighInsSection({
   weighIns,
   videoId = null,
@@ -40,14 +44,14 @@ export function EventWeighInsSection({
   }
 
   return (
-    <section className="mt-8">
+    <section className="mx-auto mt-8 w-full max-w-3xl">
       <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">
         <Scale className="size-4" />
         Pesaje oficial
       </h2>
 
       {videoId ? (
-        <div className="mb-4 w-full max-w-3xl">
+        <div className="mb-4 w-full">
           {/* 🪤 EL MARCO NO SE TOCA AQUÍ: FightVideoPlayer es el mismo
               reproductor del careo y de la ficha de combate, y su 16:9 vive en
               youtube-facade.tsx. Cambiarlo mueve los otros dos sitios.
