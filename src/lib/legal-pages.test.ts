@@ -307,6 +307,10 @@ describe("/privacidad cuenta los enlaces a Instagram y X de la ficha", () => {
     const punto5 = texto.slice(inicio, texto.indexOf("Tus derechos", inicio));
     expect(inicio).toBeGreaterThan(-1);
     expect(punto5).toMatch(/Instagram y X tal como los publica ufc\.com/);
+    // The links carry target="_blank": the visitor does not leave the site,
+    // a new tab opens. The page has to say exactly that.
+    expect(punto5).toMatch(/se abre en otra pestaña/);
+    expect(punto5).not.toMatch(/sales de esta web/);
   });
 
   it("solo enlaces: nada de Instagram ni de X se incrusta en la web", () => {

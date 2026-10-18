@@ -5,8 +5,8 @@ import type { FighterSocialLink, SocialNetwork } from "@/lib/social-links";
 // R6 — the fighter's Instagram and X under the nickname and the record.
 //
 // Server component, plain links: NOTHING from Instagram or X is embedded or
-// loaded. The browser only talks to them when the visitor clicks and leaves
-// the site, which is why /privacidad needs one line (point 5) and not a new
+// loaded. The browser only talks to them when the visitor clicks (a new tab
+// opens), which is why /privacidad needs one line (point 5) and not a new
 // third-party paragraph like YouTube's.
 //
 // The icons are drawn here, not taken from a library: lucide-react ships no
@@ -58,8 +58,12 @@ export function FighterSocialLinks({ name, links }: FighterSocialLinksProps) {
   // "Redes" label would be noise.
   if (links.length === 0) return null;
 
+  // role="list" is explicit on purpose: Tailwind's preflight sets
+  // list-style:none, and WebKit/VoiceOver then stops exposing the <ul> as a
+  // list, which would also drop its aria-label.
   return (
     <ul
+      role="list"
       aria-label={`Redes sociales de ${name}`}
       data-testid="fighter-social-links"
       className="flex flex-wrap items-center gap-2 pt-2"

@@ -202,8 +202,8 @@ export default async function FighterDetailPage({
   // Enlaces externos (FE9): perfiles reales del luchador en la fuente de origen.
   const externalLinks = fighterExternalLinks(fighter);
 
-  // R6: Instagram and X as ufc.com lists them. Empty until migration 032 and
-  // the first fill; then empty for whoever has none (nothing is drawn).
+  // R6: Instagram and X as ufc.com lists them (mma-ingesta migration 032).
+  // Empty for whoever has none, and then nothing is drawn.
   const socialLinks = buildFighterSocialLinks(detail.socialProfiles, fighter.name);
 
   // 1A: preferimos los totales de CARRERA de ufc.com (guardados) — como el

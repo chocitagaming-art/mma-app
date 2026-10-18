@@ -3,32 +3,69 @@ import { test as base, expect, type Browser, type Page } from "@playwright/test"
 import { expectNoHorizontalOverflow } from "./helpers";
 
 // R6 — Instagram and X on the fighter page, in a real browser (Chromium and
-// WebKit, at 390 and 1280).
+// WebKit, light and dark, 360 to 1920 px).
 //
-// The data is whatever the database has, so both cases are decided per page:
-//   · a page WITH profiles: the list, its links and the JSON-LD sameAs agree;
-//   · a page WITHOUT them: nothing is drawn and nothing is published.
-// Until mma-ingesta's migration 032 and the first fill, no page has profiles
-// and the "with" case skips SAYING WHY (the markup of that case is pinned in
-// node by src/components/fighter/fighter-social-links.test.ts). A skip without
-// a reason would be a hole dressed as green.
+// ⚠️ THE EXPECTATIONS ARE FIXED, NOT READ FROM THE PAGE. An earlier version
+// sorted the pages into "with" and "without" profiles by looking at what the
+// page itself drew, so against a build without R6 it went green (the "with"
+// case skipped and every page counted as "without"). The values below are the
+// database's, read-only, on 18-oct-2026 (fighters.instagram_url / x_url, from
+// the ufc.com Person.sameAs). If ufc.com changes one, update it here.
+//
+// ⚠️ WAIT FOR THE PAGE TO SHOW. The fighter page streams: when goto() resolves
+// the content is still inside a hidden <div id="S:…"> behind the skeleton, so a
+// boundingBox() taken then reads 0×0. Every read waits for the visible h1.
 
 type Engine = "chromium" | "webkit";
+type Theme = "light" | "dark";
+type Network = "instagram" | "x";
 
-// Volkanovski (both profiles on ufc.com, 18-oct), Jon Jones, Royce Gracie
-// (retired) and ChangHo Lee (no ufc.com data at all: never any profile).
-const FIGHTER_IDS = [7029, 7127, 8742, 6324];
+type Expected = {
+  id: number;
+  name: string;
+  links: Array<{ network: Network; href: string }>;
+};
 
-const WIDTHS = [390, 1280];
+const EXPECTED: Expected[] = [
+  {
+    id: 7029,
+    name: "Alexander Volkanovski",
+    links: [
+      { network: "instagram", href: "https://www.instagram.com/alexvolkanovski/" },
+      { network: "x", href: "https://x.com/alexvolkanovski" },
+    ],
+  },
+  // Only Instagram.
+  {
+    id: 6782,
+    name: "Cody Chovancek",
+    links: [{ network: "instagram", href: "https://www.instagram.com/chovancekmma/" }],
+  },
+  // Only X (retired).
+  {
+    id: 8742,
+    name: "Royce Gracie",
+    links: [{ network: "x", href: "https://x.com/roycegraciemma" }],
+  },
+  // None: nothing drawn, nothing published.
+  { id: 4361, name: "Cristian Perez", links: [] },
+];
 
-const INSTAGRAM = /^https:\/\/www\.instagram\.com\/[a-z0-9._]{1,30}\/$/;
-const X = /^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}$/;
+const LABEL: Record<Network, string> = { instagram: "Instagram", x: "X" };
+
+// The owner's QA widths.
+const WIDTHS = [360, 390, 768, 1024, 1280, 1920];
+
 // Any link to those networks, in whatever form, anywhere in the page.
 const ANY_SOCIAL =
   'a[href*="instagram.com"], a[href*="//x.com"], a[href*="twitter.com"]';
 
-const test = base.extend<{ engine: Engine; page2: Page }, { launchWebkit: () => Promise<Browser> }>({
+const test = base.extend<
+  { engine: Engine; theme: Theme; page2: Page },
+  { launchWebkit: () => Promise<Browser> }
+>({
   engine: ["chromium", { option: true }],
+  theme: ["light", { option: true }],
   // WebKit is launched by hand, once per worker: the projects in
   // playwright.config.ts are all Chromium.
   launchWebkit: [
@@ -47,9 +84,13 @@ const test = base.extend<{ engine: Engine; page2: Page }, { launchWebkit: () => 
     { scope: "worker" },
   ],
   // Fresh context per test and no service worker: the PWA's one serves stale CSS.
-  page2: async ({ engine, browser, launchWebkit, baseURL }, provide) => {
+  page2: async ({ engine, theme, browser, launchWebkit, baseURL }, provide) => {
     const navigator = engine === "webkit" ? await launchWebkit() : browser;
-    const context = await navigator.newContext({ baseURL, serviceWorkers: "block" });
+    const context = await navigator.newContext({
+      baseURL,
+      serviceWorkers: "block",
+      colorScheme: theme,
+    });
     const page = await context.newPage();
     // The live strip depends on the real calendar.
     await page.route("**/api/live/now", (route) =>
@@ -60,135 +101,133 @@ const test = base.extend<{ engine: Engine; page2: Page }, { launchWebkit: () => 
   },
 });
 
-type PageSocials = {
-  id: number;
-  name: string;
-  list: number;
-  links: Array<{
-    href: string | null;
-    target: string | null;
-    rel: string | null;
-    label: string | null;
-    width: number;
-    height: number;
-  }>;
-  anySocial: number;
-  sameAs: string[] | null;
-};
+// Each test sets its own engine, theme and widths: one project is enough
+// (the megatest runs all six).
+test.beforeEach(({}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "escritorio-light",
+    "cada test fija su motor, su tema y sus anchos: basta un proyecto",
+  );
+});
 
-async function readSocials(page: Page, id: number): Promise<PageSocials> {
-  const response = await page.goto(`/fighters/${id}`);
-  expect(response?.status(), `/fighters/${id} responde`).toBe(200);
-  const name = (await page.locator("h1").first().textContent())?.trim() ?? "";
-  const list = page.getByTestId("fighter-social-links");
-  const anchors = list.locator("a");
-  const links = [];
-  for (let index = 0; index < (await anchors.count()); index += 1) {
-    const anchor = anchors.nth(index);
-    const box = await anchor.boundingBox();
-    links.push({
-      href: await anchor.getAttribute("href"),
-      target: await anchor.getAttribute("target"),
-      rel: await anchor.getAttribute("rel"),
-      label: await anchor.getAttribute("aria-label"),
-      width: box?.width ?? 0,
-      height: box?.height ?? 0,
-    });
-  }
-  const sameAs = await page.evaluate(() => {
+async function openFighter(page: Page, fighter: Expected): Promise<void> {
+  const response = await page.goto(`/fighters/${fighter.id}`);
+  expect(response?.status(), `/fighters/${fighter.id} responde`).toBe(200);
+  // Streaming: wait until the content replaces the skeleton.
+  const heading = page.locator("h1").first();
+  await expect(heading).toBeVisible();
+  await expect(heading).toContainText(fighter.name);
+}
+
+async function readSameAs(page: Page): Promise<string[] | null | "no-person"> {
+  return page.evaluate(() => {
     for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
       try {
-        const data = JSON.parse(script.textContent ?? "") as { "@type"?: string; sameAs?: string[] };
+        const data = JSON.parse(script.textContent ?? "") as {
+          "@type"?: string;
+          sameAs?: string[];
+        };
         if (data["@type"] === "Person") return data.sameAs ?? null;
       } catch {
         // Not ours.
       }
     }
-    return null;
+    return "no-person" as const;
   });
-  return {
-    id,
-    name,
-    list: await list.count(),
-    links,
-    anySocial: await page.locator(ANY_SOCIAL).count(),
-    sameAs,
-  };
+}
+
+async function expectSocials(page: Page, fighter: Expected): Promise<void> {
+  const where = `/fighters/${fighter.id} (${fighter.name})`;
+  const list = page.getByTestId("fighter-social-links");
+  const sameAs = await readSameAs(page);
+  expect(sameAs, `${where}: la ficha emite su Person`).not.toBe("no-person");
+
+  if (fighter.links.length === 0) {
+    await expect(list, `${where}: sin redes no se pinta la fila`).toHaveCount(0);
+    await expect(page.locator(ANY_SOCIAL), `${where}: ningún enlace a esas redes`).toHaveCount(0);
+    expect(sameAs, `${where}: sin sameAs en el JSON-LD`).toBeNull();
+    return;
+  }
+
+  await expect(list, `${where}: una sola fila de redes`).toHaveCount(1);
+  await expect(list).toBeVisible();
+  await expect(list).toHaveAttribute("role", "list");
+  await expect(list).toHaveAttribute("aria-label", `Redes sociales de ${fighter.name}`);
+
+  const anchors = list.locator("a");
+  await expect(anchors, `${where}: exactamente sus redes`).toHaveCount(fighter.links.length);
+  for (const [index, expected] of fighter.links.entries()) {
+    const anchor = anchors.nth(index);
+    await expect(anchor, `${where}: ${expected.network} en su sitio`).toHaveAttribute(
+      "href",
+      expected.href,
+    );
+    await expect(anchor).toHaveAttribute("target", "_blank");
+    await expect(anchor).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(anchor).toHaveAttribute(
+      "aria-label",
+      `${LABEL[expected.network]} de ${fighter.name}`,
+    );
+  }
+  // And no other social link anywhere (the @ufc footer trap).
+  await expect(page.locator(ANY_SOCIAL), `${where}: solo los de la fila`).toHaveCount(
+    fighter.links.length,
+  );
+  expect(sameAs, `${where}: sameAs = sus redes, en el mismo orden`).toEqual(
+    fighter.links.map((link) => link.href),
+  );
 }
 
 for (const engine of ["chromium", "webkit"] as const) {
-  for (const width of WIDTHS) {
-    test.describe(`${engine} · ${width} px`, () => {
-      test.use({ engine });
+  for (const theme of ["light", "dark"] as const) {
+    test.describe(`${engine} · ${theme}`, () => {
+      test.use({ engine, theme });
 
-      test("ficha CON redes: pinta los enlaces correctos y los publica en sameAs", async ({
+      test("cada ficha pinta exactamente las redes de la base y las publica en sameAs", async ({
         page2,
       }) => {
-        await page2.setViewportSize({ width, height: 900 });
-        const withSocials: PageSocials[] = [];
-        for (const id of FIGHTER_IDS) {
-          const socials = await readSocials(page2, id);
-          if (socials.list > 0) withSocials.push(socials);
+        await page2.setViewportSize({ width: 390, height: 844 });
+        for (const fighter of EXPECTED) {
+          await openFighter(page2, fighter);
+          await expectSocials(page2, fighter);
+          await expectNoHorizontalOverflow(page2, `/fighters/${fighter.id} a 390 px (${theme})`);
         }
-        test.skip(
-          withSocials.length === 0,
-          `Ninguna de las fichas ${FIGHTER_IDS.join(", ")} tiene redes: la base aún no tiene ` +
-            "instagram_url/x_url (migración 032 de mma-ingesta sin aplicar o sin el primer " +
-            "relleno). El marcado de este caso lo fija fighter-social-links.test.ts.",
-        );
-
-        for (const socials of withSocials) {
-          const where = `/fighters/${socials.id} (${socials.name})`;
-          expect(socials.list, `${where}: una sola lista`).toBe(1);
-          expect(socials.links.length, `${where}: Instagram y/o X`).toBeGreaterThan(0);
-          expect(socials.links.length).toBeLessThanOrEqual(2);
-          for (const link of socials.links) {
-            const network = link.href && INSTAGRAM.test(link.href) ? "Instagram" : "X";
-            expect(
-              link.href && (INSTAGRAM.test(link.href) || X.test(link.href)),
-              `${where}: ${link.href} tiene la forma guardada`,
-            ).toBeTruthy();
-            expect(link.target, where).toBe("_blank");
-            expect(link.rel, where).toBe("noopener noreferrer");
-            expect(link.label, where).toBe(`${network} de ${socials.name}`);
-            // 44×44 px hit area.
-            expect(link.width, `${where}: ancho táctil`).toBeGreaterThanOrEqual(44);
-            expect(link.height, `${where}: alto táctil`).toBeGreaterThanOrEqual(44);
-          }
-          // Instagram first; and no other social link anywhere (the @ufc trap).
-          if (socials.links.length === 2) {
-            expect(socials.links[0].href, `${where}: Instagram primero`).toMatch(INSTAGRAM);
-            expect(socials.links[1].href, `${where}: X después`).toMatch(X);
-          }
-          expect(socials.anySocial, `${where}: solo los de la lista`).toBe(socials.links.length);
-          expect(socials.sameAs, `${where}: sameAs = los enlaces pintados`).toEqual(
-            socials.links.map((link) => link.href),
-          );
-        }
-        await expectNoHorizontalOverflow(page2, `ficha con redes a ${width} px`);
-      });
-
-      test("ficha SIN redes: no pinta nada y no publica sameAs", async ({ page2 }) => {
-        await page2.setViewportSize({ width, height: 900 });
-        const without: PageSocials[] = [];
-        for (const id of FIGHTER_IDS) {
-          const socials = await readSocials(page2, id);
-          if (socials.list === 0) without.push(socials);
-        }
-        test.skip(
-          without.length === 0,
-          `Todas las fichas ${FIGHTER_IDS.join(", ")} tienen redes: ChangHo Lee (6324) no ` +
-            "tiene datos de ufc.com, revisa de dónde le han llegado.",
-        );
-
-        for (const socials of without) {
-          const where = `/fighters/${socials.id} (${socials.name})`;
-          expect(socials.links, where).toEqual([]);
-          expect(socials.anySocial, `${where}: ningún enlace a Instagram, X o Twitter`).toBe(0);
-          expect(socials.sameAs, `${where}: sin sameAs en el JSON-LD`).toBeNull();
-        }
-        await expectNoHorizontalOverflow(page2, `ficha sin redes a ${width} px`);
       });
     });
   }
+
+  test.describe(`${engine} · anchos`, () => {
+    test.use({ engine });
+
+    test("de 360 a 1920 px: 44×44 táctiles, bajo el nombre y sin desbordar", async ({ page2 }) => {
+      const [volkanovski] = EXPECTED;
+      await page2.setViewportSize({ width: WIDTHS[0], height: 900 });
+      await openFighter(page2, volkanovski);
+      const heading = page2.locator("h1").first();
+      const anchors = page2.getByTestId("fighter-social-links").locator("a");
+      await expect(anchors).toHaveCount(2);
+
+      for (const width of WIDTHS) {
+        await page2.setViewportSize({ width, height: 900 });
+        const headingBox = await heading.boundingBox();
+        expect(headingBox, `h1 visible a ${width} px`).not.toBeNull();
+        for (let index = 0; index < 2; index += 1) {
+          await expect(anchors.nth(index)).toBeVisible();
+          const box = await anchors.nth(index).boundingBox();
+          expect(box, `enlace ${index} medible a ${width} px`).not.toBeNull();
+          // 44×44 px hit area on every width.
+          expect(box!.width, `ancho táctil a ${width} px`).toBeGreaterThanOrEqual(44);
+          expect(box!.height, `alto táctil a ${width} px`).toBeGreaterThanOrEqual(44);
+          // Under the name (and so under the nickname and the record).
+          expect(box!.y, `los iconos van bajo el nombre a ${width} px`).toBeGreaterThan(
+            headingBox!.y + headingBox!.height,
+          );
+          // Inside the viewport, horizontally.
+          expect(box!.x).toBeGreaterThanOrEqual(0);
+          expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+        }
+        await expectNoHorizontalOverflow(page2, `/fighters/7029 a ${width} px`);
+      }
+    });
+  });
 }

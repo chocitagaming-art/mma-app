@@ -352,7 +352,7 @@ export default function PrivacidadPage() {
           récord, estadísticas de combate, fecha de nacimiento y enlaces a sus
           perfiles públicos de Instagram y X tal como los publica ufc.com (son
           enlaces normales: no se carga nada de Instagram ni de X hasta que
-          pulsas uno y sales de esta web). Son datos{" "}
+          pulsas uno, y entonces se abre en otra pestaña). Son datos{" "}
           <strong>ya públicos</strong>, difundidos por la propia promotora y por
           medios deportivos, y se tratan con fines informativos sobre la actividad{" "}
           <strong>profesional</strong> de personas con proyección pública.

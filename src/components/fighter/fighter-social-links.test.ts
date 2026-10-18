@@ -5,9 +5,8 @@ import { describe, expect, it } from "vitest";
 import { FighterSocialLinks } from "@/components/fighter/fighter-social-links";
 import { buildFighterSocialLinks } from "@/lib/social-links";
 
-// The "with profiles" case of the fighter page, rendered in node. The e2e
-// (e2e/ficha-redes.spec.ts) can only see it once the database has the columns
-// and the first fill; until then this is where the markup is pinned.
+// The markup of the fighter page's social row, rendered in node. The real
+// pages, with the database's data, are pinned by e2e/ficha-redes.spec.ts.
 
 function render(urls: { instagramUrl?: string | null; xUrl?: string | null }, name: string) {
   return renderToStaticMarkup(
@@ -25,7 +24,9 @@ describe("FighterSocialLinks", () => {
   );
 
   it("one labelled list with the two profiles, Instagram first", () => {
-    expect(html).toMatch(/^<ul aria-label="Redes sociales de Alexander Volkanovski"/);
+    // role="list": without it WebKit/VoiceOver drops the list (and its label)
+    // once preflight removes the bullets.
+    expect(html).toMatch(/^<ul role="list" aria-label="Redes sociales de Alexander Volkanovski"/);
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
     expect(hrefs).toEqual([
       "https://www.instagram.com/alexvolkanovski/",
