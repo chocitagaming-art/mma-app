@@ -152,9 +152,12 @@ export default async function HomePage() {
           🪤 overflow-x-clip and NOT overflow-hidden: hidden also clipped the
           search box's dropdown at the hero's bottom edge (on mobile, after
           five results). clip keeps the horizontal cut and lets the list hang
-          below; z-10 puts it over the sections that follow. */}
+          below; z-10 puts it over the sections that follow.
+          scheme-dark: .dark only swaps the tokens; with the light theme
+          next-themes leaves color-scheme: light on <html>, and the native
+          bits (the dropdown's scrollbar, the caret, autofill) came out light. */}
       <section
-        className={`${sairaXc.variable} home-hero dark relative isolate z-10 overflow-x-clip border-b border-border bg-background text-foreground`}
+        className={`${sairaXc.variable} home-hero dark scheme-dark relative isolate z-10 overflow-x-clip border-b border-border bg-background text-foreground`}
       >
         <div className="@container mx-auto grid max-w-7xl grid-cols-[1fr_minmax(0,7.5rem)] items-start gap-x-3.5 gap-y-0 px-4 py-12 max-md:grid-rows-[auto_auto_1fr_auto_auto] min-[340px]:max-sm:grid-cols-[minmax(0,1fr)_12.5rem] min-[340px]:max-sm:gap-x-3 min-[340px]:max-sm:pr-0 sm:px-6 sm:max-md:grid-cols-[1fr_12.5rem] md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-6 md:pb-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
           {/* Copy. ⚠️ En móvil, con `contents`, su «relative z-10» no se aplica:

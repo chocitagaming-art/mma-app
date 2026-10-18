@@ -379,7 +379,22 @@
      z-index -1 inside the section's own stacking context (isolate + z-10 on
      it): behind the content, above the section's background.
      ⚠️ LCP: the photo is a CSS background, never an <img> with priority or a
-     preload. It IS still an LCP candidate (see the mobile block below). */
+     preload. But a CSS background IS a Largest Contentful Paint candidate in
+     Chromium, and the section is the largest thing on screen: the photo
+     replaces the header logo as the LCP element. What keeps that cost small:
+     - AVIF first (image-set), webp for browsers without it: 63 KB instead
+       of 104 KB on desktop.
+     - A year of immutable cache for /hero/* (next.config.ts). From /public
+       it was max-age=0: every visit revalidated the photo before painting
+       it. Hence the version in the names: NEVER overwrite one of these
+       files, add a .v2. (Not hashed by Next from app/: Turbopack does not
+       rewrite the url()s inside image-set() and left them broken.)
+     - The phone gets its own crop (below).
+     It still costs something, and it is NOT level with main. Measured with
+     Playwright on the same build against the photo blocked (≈ main's hero),
+     median of 7 (18-oct-2026): phone (390 px, 3x, 4x CPU, 1.6 Mbps, 150 ms)
+     +56 ms (2580 vs 2524 ms; the 780 px webp was +100); desktop (1280 px,
+     10 Mbps, 40 ms) +256 ms (656 vs 400 ms; the 104 KB webp was +356). */
   .home-hero::before,
   .home-hero::after {
     content: "";
@@ -390,7 +405,11 @@
   }
   .home-hero::before {
     opacity: 0.7;
-    background: url("/hero/arena.webp") center 40% / cover no-repeat;
+    background: url("/hero/arena.v1.webp") center 40% / cover no-repeat;
+    background-image: image-set(
+      url("/hero/arena.v1.avif") type("image/avif"),
+      url("/hero/arena.v1.webp") type("image/webp")
+    );
   }
   /* Two fades to the background colour: left to right, so the headline reads
      as on plain dark, and bottom to top (30 %), so the section ends cleanly. */
@@ -404,6 +423,25 @@
       ),
       linear-gradient(0deg, var(--background) 0%, transparent 30%);
   }
+  /* Tablet and small laptop (768-1279): the text column is wider than the
+     validated 1280's 38 %, so the photo showed through it: the eyebrow's
+     «EN VIVO» (12 px red) sat on the spotlights at 3.3:1 at 1024 px, the
+     mesh crossed the search box (its fill is translucent) and the red «UFC»
+     touched the description at 768. More dark over the text column; the
+     photo still shows behind the short. */
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .home-hero::after {
+      background:
+        linear-gradient(
+          90deg,
+          var(--background) 0%,
+          color-mix(in oklch, var(--background) 85%, transparent) 40%,
+          color-mix(in oklch, var(--background) 50%, transparent) 56%,
+          transparent 80%
+        ),
+        linear-gradient(0deg, var(--background) 0%, transparent 30%);
+    }
+  }
   /* Wide screens (from ~1330 px the photo is scaled by WIDTH): a red «UFC»
      of the arena, always ~35 % across, landed under the description and the
      search box, clearly at 1920 px. The fade holds more dark over the text
@@ -412,7 +450,7 @@
      move, anchoring it to the top drops the logo below the search box, next
      to «Predecir una pelea» where there is no text. Higher than 0 % it slides
      under the headline. Measured on screenshots at 1440, 1600 and 1920
-     (18-oct-2026). Under 1440, the validated 1280 look, untouched. */
+     (18-oct-2026). Under 1280, see the block above. */
   @media (min-width: 1440px) {
     .home-hero::after {
       background:
@@ -433,17 +471,18 @@
   }
   /* Mobile: the photo stays in the top part and the search box and buttons
      sit on PLAIN dark. Without this the mesh crossed the search box's text.
-     🪤 ITS OWN, LIGHTER FILE, and it is about the LCP: a CSS background IS a
-     Largest Contentful Paint candidate in Chromium (the section is the
-     largest thing on screen), so the photo's download became the phone's LCP.
-     Measured with Playwright (390 px, 4x CPU, 1.6 Mbps, 150 ms): the full
-     104 KB photo took the LCP from ~3.4 s (main, the header logo) to ~5 s;
-     this one (the centre 1040x940 the phone ever shows, at 780 px, webp q40,
-     30 KB) leaves it at ~3.3-3.9 s, level with main. Only the matching
-     background is downloaded, so the phone never fetches the big one. */
+     Its own file: the centre 1040x940 of the photo, the only part a phone
+     ever shows, at full resolution (a 3x screen enlarges it ~2x; the 780 px
+     webp, kept as the fallback, looked soft there) and in AVIF, 27 KB. The full photo here
+     took the phone's LCP from ~3.4 s to ~5 s. Only the matching background
+     is downloaded, so the phone never fetches the big one. */
   @media (max-width: 767px) {
     .home-hero::before {
-      background-image: url("/hero/arena-movil.webp");
+      background-image: url("/hero/arena-movil.v1.webp");
+      background-image: image-set(
+        url("/hero/arena-movil.v1.avif") type("image/avif"),
+        url("/hero/arena-movil.v1.webp") type("image/webp")
+      );
       background-position: center 25%;
       opacity: 0.75;
     }

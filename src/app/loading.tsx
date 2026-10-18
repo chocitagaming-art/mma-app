@@ -6,9 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HomeLoading() {
   return (
     <div className="pb-16">
-      {/* Hero: always dark, like the real one (app/page.tsx), so that the
-          skeleton does not flash light before a dark hero. No photo here. */}
-      <section className="dark relative overflow-hidden border-b border-border bg-background">
+      {/* Hero: it follows the theme, NOT always dark like the real one. This
+          is the ROOT loading.tsx, so it also shows on a client navigation to
+          the routes without their own (/directo, /estado, /compare,
+          /predict...), and a dark band flashed before those light pages. The
+          home itself is ISR and the header logo prefetches it whole, so it
+          hardly ever gets to show this skeleton. */}
+      <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
           {/* Copy */}
           <div className="order-2 space-y-6 lg:order-1">

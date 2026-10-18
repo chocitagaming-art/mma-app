@@ -126,8 +126,14 @@ for (const motor of ["chromium", "webkit"] as const) {
       for (const width of [390, 1280]) {
         for (const tema of ["light", "dark"] as const) {
           const donde = `[${motor}] ${width} px, tema ${tema}`;
-          // The phone gets its own lighter file (the LCP, see globals.css).
-          const foto = width < 768 ? "/hero/arena-movil.webp" : "/hero/arena.webp";
+          // The phone gets its own crop (the LCP, see globals.css). AVIF where
+          // the browser decodes it and webp elsewhere: Playwright's WebKit on
+          // Windows has no AVIF and takes the webp from the image-set().
+          const movil = width < 768;
+          const foto = movil ? "/hero/arena-movil.v" : "/hero/arena.v";
+          const fotoPedida = movil
+            ? /^\/hero\/arena-movil\.v\d+\.(avif|webp)$/
+            : /^\/hero\/arena\.v\d+\.(avif|webp)$/;
           const page = await abrir(tema, width);
           await abrirPortada(page);
           const seccion = hero(page);
@@ -135,29 +141,58 @@ for (const motor of ["chromium", "webkit"] as const) {
           const medida = await seccion.evaluate((el) => {
             const estilo = getComputedStyle(el);
             const capa = getComputedStyle(el, "::before");
+            const degradados = getComputedStyle(el, "::after");
             const input = el.querySelector<HTMLElement>('[role="combobox"]');
             const titular = el.querySelector("h1");
             return {
               fondo: estilo.backgroundColor,
+              esquema: estilo.colorScheme,
               texto: titular ? getComputedStyle(titular).color : "",
               capaImagen: capa.backgroundImage,
+              capaEncuadre: capa.backgroundPosition,
               capaOpacidad: capa.opacity,
               capaZ: capa.zIndex,
               capaPosicion: capa.position,
+              degradadosImagen: degradados.backgroundImage,
+              degradadosZ: degradados.zIndex,
               inputTexto: input ? getComputedStyle(input).color : "",
             };
           });
           expect(medida.fondo, `${donde}: fondo del hero`).toBe(FONDO_OSCURO);
           expect(medida.texto, `${donde}: color del titular`).toBe(TEXTO_OSCURO);
           expect(medida.inputTexto, `${donde}: texto del buscador del hero`).toBe(TEXTO_OSCURO);
+          // Native controls (the dropdown's scrollbar, the caret) dark as well,
+          // not only the tokens.
+          expect(medida.esquema, `${donde}: color-scheme del hero`).toBe("dark");
           // La foto es una capa decorativa DETRÁS del contenido.
           expect(medida.capaImagen, `${donde}: imagen de la capa`).toContain(foto);
           expect(medida.capaPosicion, `${donde}: capa absoluta`).toBe("absolute");
           expect(medida.capaZ, `${donde}: capa detrás del contenido`).toBe("-1");
           expect(Number(medida.capaOpacidad), `${donde}: opacidad de la foto`).toBeCloseTo(
-            width < 768 ? 0.75 : 0.7,
+            movil ? 0.75 : 0.7,
             2,
           );
+          // The framing: on the phone higher (center 25 %), so the photo stays
+          // in the top part.
+          expect(medida.capaEncuadre, `${donde}: encuadre de la foto`).toBe(movil ? "50% 25%" : "50% 40%");
+          // Over the photo, the fades to the background colour. On the phone,
+          // the top-to-bottom one (180deg, the default, which the browsers
+          // serialize WITHOUT the angle) that reaches the solid background at
+          // 72 % is what leaves the search box and the buttons on plain dark:
+          // without it the mesh crossed the search text.
+          expect(medida.degradadosZ, `${donde}: degradados detrás del contenido`).toBe("-1");
+          expect(medida.degradadosImagen, `${donde}: degradado izquierda→derecha`).toContain(
+            "linear-gradient(90deg",
+          );
+          if (movil) {
+            expect(medida.degradadosImagen, `${donde}: degradado vertical del móvil`).toMatch(
+              /linear-gradient\((180deg, )?rgba\(0, 0, 0, 0\) 0%.*rgb\(11, 11, 13\) 72%\)$/,
+            );
+          } else {
+            expect(medida.degradadosImagen, `${donde}: el de abajo a arriba`).toContain(
+              "linear-gradient(0deg",
+            );
+          }
 
           // Cargada de verdad: el navegador la pidió (desde el CSS) y decodifica.
           const pedidas = () =>
@@ -168,17 +203,23 @@ for (const motor of ["chromium", "webkit"] as const) {
                 .filter((ruta) => ruta.startsWith("/hero/")),
             );
           await expect
-            .poll(pedidas, { message: `${donde}: el navegador no pidió ${foto}` })
-            .toContain(foto);
-          // Only the matching one: the phone never downloads the big photo.
-          expect(await pedidas(), `${donde}: fotos del hero descargadas`).toEqual([foto]);
+            .poll(pedidas, { message: `${donde}: el navegador no pidió la foto del hero` })
+            .toHaveLength(1);
+          // Only ONE, the matching one: the phone never downloads the big
+          // photo, and of the image-set only the format the browser takes.
+          const [pedida] = await pedidas();
+          expect(pedida, `${donde}: foto del hero descargada`).toMatch(fotoPedida);
           const tamano = await page.evaluate(async (src) => {
             const img = new Image();
             img.src = src;
             await img.decode();
             return { w: img.naturalWidth, h: img.naturalHeight };
-          }, foto);
+          }, pedida);
           expect(tamano.w, `${donde}: la foto no decodifica`).toBeGreaterThan(700);
+          // A year of immutable cache (next.config.ts): it is the LCP element,
+          // and with /public's default max-age=0 every visit revalidated it.
+          const respuesta = await page.request.get(pedida);
+          expect(respuesta.headers()["cache-control"], `${donde}: caché de la foto`).toContain("immutable");
 
           // Lo de después sigue el tema elegido: los contadores van sobre
           // --card, blanco en claro y casi negro en oscuro.

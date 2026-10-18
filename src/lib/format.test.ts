@@ -48,8 +48,9 @@ describe("ageFromBirthDate", () => {
 
 describe("formatCount", () => {
   it("pone el punto de miles también con cuatro cifras (es-ES no lo hace por defecto)", () => {
-    // The trap: Intl es-ES with the default grouping prints 2892 as "2892".
-    expect(new Intl.NumberFormat("es-ES").format(2892)).toBe("2892");
+    // The trap: Intl es-ES with the default grouping prints 2892 as "2892"
+    // (CLDR's minimumGroupingDigits 2). Not asserted here: that would test
+    // the platform's ICU data, not our code.
     expect(formatCount(2892)).toBe("2.892");
     expect(formatCount(8974)).toBe("8.974");
   });
