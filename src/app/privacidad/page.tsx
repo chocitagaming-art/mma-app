@@ -47,7 +47,9 @@ export const metadata: Metadata = {
 // (noche): solo se baja su miniatura (i.ytimg.com), y al acabar uno no se
 // monta otro. El careo oficial (/en-vivo y /eventos/[id]), el pesaje
 // (event-weigh-ins.tsx), /videos, /tendencias, la columna de la portada y los
-// combates esperan al clic.
+// combates esperan al clic. Las peleas del Ala de Combate del Salón de la Fama
+// (18-oct-2026, components/playback/click-to-play.tsx) también, y con un póster
+// propio: hasta el clic no se descarga nada de Google, ni la miniatura.
 //
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
@@ -242,8 +244,9 @@ export default function PrivacidadPage() {
           <strong>Los vídeos: YouTube.</strong> Los shorts de la UFC de la
           cabecera de la portada, UFC TV, el directo de la velada, el careo
           oficial y el vídeo del pesaje (en /en-vivo y en la página de
-          cada evento), /videos, /tendencias, la columna de vídeos de la portada y
-          los vídeos de cada combate se ven con el reproductor de{" "}
+          cada evento), /videos, /tendencias, la columna de vídeos de la portada,
+          los vídeos de cada combate y las peleas del Ala de Combate del Salón de
+          la Fama se ven con el reproductor de{" "}
           <strong>YouTube</strong>, un servicio de <strong>Google</strong> (en la
           Unión Europea lo presta <strong>Google Ireland Limited</strong>),
           incrustado en su versión{" "}
@@ -285,6 +288,9 @@ export default function PrivacidadPage() {
             cada combate se ve primero una miniatura, y el reproductor solo se
             carga cuando pulsas «play» (en los shorts, también «Siguiente»). La
             miniatura sí se descarga de un servidor de YouTube (i.ytimg.com).
+            En las peleas del Ala de Combate del Salón de la Fama, el reproductor
+            también espera a que pulses, y el cartel es nuestro: hasta ese
+            momento no se descarga nada de YouTube, ni siquiera la miniatura.
             Cuando un short acaba, no se carga otro por sí solo.
           </li>
           <li>

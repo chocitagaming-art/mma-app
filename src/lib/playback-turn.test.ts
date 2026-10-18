@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   PRIORITY,
+  clipEmbedUrl,
+  clipWatchUrl,
   decideTurn,
   fitsMinimum,
+  isYouTubeVideoId,
   loopEmbedUrl,
+  normalizeClipRange,
   orderShorts,
   shortEmbedUrl,
   timerAction,
@@ -386,5 +390,50 @@ describe("embed URLs", () => {
     ]) {
       expect(url).not.toMatch(/enablejsapi|origin=|iframe_api/);
     }
+  });
+});
+
+// The Hall of Fame's fights (click-to-play, unmuted: the visitor started it).
+// Values are the seed's: Hughes–Trigg II and Coleman–Williams share a marathon.
+describe("clip URLs", () => {
+  it("clipEmbedUrl · start only (the fight is the marathon's last chapter)", () => {
+    expect(clipEmbedUrl("E2fUq7gT8z4", { start: 6646 })).toBe(
+      "https://www.youtube-nocookie.com/embed/E2fUq7gT8z4?autoplay=1&playsinline=1&start=6646",
+    );
+  });
+
+  it("clipEmbedUrl · start and end (a chapter in the middle)", () => {
+    expect(clipEmbedUrl("E2fUq7gT8z4", { start: 3016, end: 3909 })).toBe(
+      "https://www.youtube-nocookie.com/embed/E2fUq7gT8z4?autoplay=1&playsinline=1&start=3016&end=3909",
+    );
+  });
+
+  it("clipEmbedUrl · a whole upload carries no range and no mute", () => {
+    const url = clipEmbedUrl("vdY36eZZ6IY");
+    expect(url).toBe("https://www.youtube-nocookie.com/embed/vdY36eZZ6IY?autoplay=1&playsinline=1");
+    expect(url).not.toMatch(/mute|enablejsapi|origin=/);
+  });
+
+  it("normalizeClipRange · drops what YouTube would not take", () => {
+    expect(normalizeClipRange({ start: -5, end: 10 })).toEqual({ start: null, end: 10 });
+    expect(normalizeClipRange({ start: 12.5, end: null })).toEqual({ start: null, end: null });
+    expect(normalizeClipRange({ start: 100, end: 100 })).toEqual({ start: 100, end: null });
+    expect(normalizeClipRange({ start: 100, end: 50 })).toEqual({ start: 100, end: null });
+    expect(normalizeClipRange({ start: null, end: 0 })).toEqual({ start: null, end: null });
+  });
+
+  it("clipEmbedUrl and clipWatchUrl · refuse anything that is not a video id", () => {
+    for (const bad of ["", "short", "E2fUq7gT8z4&x=1", "../../evil1", "E2fUq7gT8z44"]) {
+      expect(isYouTubeVideoId(bad)).toBe(false);
+      expect(() => clipEmbedUrl(bad)).toThrow();
+      expect(() => clipWatchUrl(bad)).toThrow();
+    }
+  });
+
+  it("clipWatchUrl · youtube.com/watch with the start as t=", () => {
+    expect(clipWatchUrl("E2fUq7gT8z4", { start: 6646, end: 7000 })).toBe(
+      "https://www.youtube.com/watch?v=E2fUq7gT8z4&t=6646s",
+    );
+    expect(clipWatchUrl("vdY36eZZ6IY")).toBe("https://www.youtube.com/watch?v=vdY36eZZ6IY");
   });
 });

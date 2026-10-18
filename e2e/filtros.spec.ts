@@ -29,25 +29,32 @@ test.beforeEach(({}, testInfo) => {
   );
 });
 
-// Cada fila de /fighters es un <Link> que envuelve la fila entera
-// (fighters/page.tsx:109-113), así que hay exactamente un <a href="/fighters/N">
-// por resultado. Verificado en producción: 8 filas para ?nationality=Spain.
+// Cada tarjeta de /fighters es UN <Link> que envuelve la tarjeta entera
+// (fighter-roster-card.tsx, rediseño del 17-oct), así que hay exactamente un
+// <a href="/fighters/N"> por resultado. Verificado en producción: 8 para
+// ?nationality=Spain.
+//
+// La tarjeta solo PINTA bandera y categoría, pero lleva la nacionalidad (cruda,
+// "Spain") y la guardia (traducida, "Zurda") en un texto sr-only que también
+// lee el lector de pantalla: está en el textContent, y por eso los asertos de
+// contenido de abajo siguen valiendo tal cual.
 const FILAS = 'a[href^="/fighters/"]';
 
-// "Mostrando <n> of <total> luchadores" — el conector va en INGLÉS
-// (fighters/page.tsx:86); una regex con "de" no casaría nunca. Y el número no
-// lleva separador de millares aquí (a diferencia de /eventos, que usa
-// toLocaleString("es")), así que \d+ es seguro EN ESTA PÁGINA.
+// "Mostrando <n> de <total> luchadores", con punto de millares es-ES desde el
+// 17-oct (formatCount: "2.892"). Antes era "of" y sin punto; e2e/luchadores.spec.ts
+// vigila que no vuelva. Por eso el número se lee con puntos y se le quitan.
+const RESUMEN = /Mostrando\s+[\d.]+\s+de\s+[\d.]+\s+luchadores/;
 async function leerResumen(texto: string) {
-  const m = texto.match(/Mostrando\s+(\d+)\s+of\s+(\d+)\s+luchadores/);
+  const m = texto.match(/Mostrando\s+([\d.]+)\s+de\s+([\d.]+)\s+luchadores/);
   expect(m, `no se encontró el resumen en: ${texto.slice(0, 120)}`).not.toBeNull();
-  return { mostrados: Number(m![1]), total: Number(m![2]) };
+  const numero = (s: string) => Number(s.replaceAll(".", ""));
+  return { mostrados: numero(m![1]), total: numero(m![2]) };
 }
 
 test("/fighters filtra por nacionalidad y ordena por victorias", async ({ page }) => {
   await page.goto("/fighters?nationality=Spain&sort=wins");
 
-  const resumen = page.getByText(/Mostrando\s+\d+\s+of\s+\d+\s+luchadores/);
+  const resumen = page.getByText(RESUMEN);
   await expect(resumen).toBeVisible();
   const { mostrados, total } = await leerResumen((await resumen.textContent()) ?? "");
 
@@ -64,8 +71,8 @@ test("/fighters filtra por nacionalidad y ordena por victorias", async ({ page }
   expect(total, "el filtro de nacionalidad no está recortando nada").toBeLessThan(200);
 
   // Segundo detector, independiente del primero: TODAS las filas son españolas.
-  // Se asserta "Spain" (valor crudo de la BD) y no "España": la columna pinta
-  // `fighter.nationality` sin traducir (fighters/page.tsx:152).
+  // Se asserta "Spain" (valor crudo de la BD) y no "España": el texto sr-only
+  // de la tarjeta lleva `fighter.nationality` sin traducir.
   const textos = await filas.allTextContents();
   for (const [i, texto] of textos.entries()) {
     expect(texto, `la fila ${i} no es española`).toContain("Spain");
@@ -88,7 +95,7 @@ test("/fighters filtra por nacionalidad y ordena por victorias", async ({ page }
 test("/fighters sin resultados lo dice, y no se queda en blanco", async ({ page }) => {
   await page.goto("/fighters?q=zzzzz");
 
-  const resumen = page.getByText(/Mostrando\s+\d+\s+of\s+\d+\s+luchadores/);
+  const resumen = page.getByText(RESUMEN);
   const { mostrados, total } = await leerResumen((await resumen.textContent()) ?? "");
   expect(mostrados).toBe(0);
   expect(total).toBe(0);
@@ -99,7 +106,7 @@ test("/fighters sin resultados lo dice, y no se queda en blanco", async ({ page 
   // se prerrellena desde ?q= y abre su popup al recibir la lista vacía, así que
   // ~300 ms después de hidratar hay dos coincidencias y el aserto sería flaky
   // por carrera, no por interacción. Este otro texto solo existe en el estado
-  // vacío de la página (fighters/page.tsx:180).
+  // vacío de la página (fighters/page.tsx).
   await expect(
     page.getByText("Intenta ampliar tu búsqueda o quitar uno de los filtros activos."),
   ).toBeVisible();
@@ -125,7 +132,7 @@ test("elegir una nacionalidad en el desplegable filtra de verdad", async ({ page
   await page.goto("/fighters");
 
   const antes = await leerResumen(
-    (await page.getByText(/Mostrando\s+\d+\s+of\s+\d+\s+luchadores/).textContent()) ?? "",
+    (await page.getByText(RESUMEN).textContent()) ?? "",
   );
 
   // El id del trigger está escrito a mano en el código (fighters-filter-bar.tsx:252)
@@ -137,7 +144,7 @@ test("elegir una nacionalidad en el desplegable filtra de verdad", async ({ page
 
   await page.waitForURL(/nationality=Spain/);
   const despues = await leerResumen(
-    (await page.getByText(/Mostrando\s+\d+\s+of\s+\d+\s+luchadores/).textContent()) ?? "",
+    (await page.getByText(RESUMEN).textContent()) ?? "",
   );
   expect(despues.total, "pulsar el filtro no cambió el total").toBeLessThan(antes.total);
   // `toContainText` y no `toHaveText`: el trigger de base-ui mete el chevron

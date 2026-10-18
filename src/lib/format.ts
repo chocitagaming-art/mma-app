@@ -26,6 +26,21 @@ export function formatWeight(weightGrams: number | null) {
   return `${(weightGrams / 1000).toFixed(1)} kg`;
 }
 
+// 🪤 `useGrouping: "always"` IS the fix. With the default ("auto" in es-ES,
+// which means "min2") Spanish only groups from five digits: 2892 → "2892" but
+// 17784 → "17.784", two styles side by side in the home counters. And a bare
+// toLocaleString() takes the server's locale: on Vercel that is en-US, which
+// printed "2,892" in production.
+const COUNT_FORMAT = new Intl.NumberFormat("es-ES", {
+  useGrouping: "always",
+  maximumFractionDigits: 0,
+});
+
+/** A count with Spanish thousands separators, always: 2892 → "2.892". */
+export function formatCount(value: number): string {
+  return COUNT_FORMAT.format(value);
+}
+
 export function formatPercentage(value: number) {
   return `${Math.round(value * 100)}%`;
 }

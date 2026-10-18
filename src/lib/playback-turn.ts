@@ -191,3 +191,50 @@ export function shortEmbedUrl(id: string, opts: EmbedOptions): string {
 export function loopEmbedUrl(ids: string[], opts: EmbedOptions): string {
   return `${EMBED}${ids[0]}?playlist=${ids.join(",")}&loop=1&${playerParams(opts)}`;
 }
+
+// ── Click-to-play clips (components/playback/click-to-play.tsx) ─────────────
+// A video the visitor starts with a tap, inside the turn: the Hall of Fame's
+// fight wing today (its own poster, nothing from Google until the tap), and
+// the weigh-in / face-off facades later. Unmuted: the visitor started it.
+// `start`/`end` cut a fight out of a marathon upload (4 of the 11 fights).
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export type ClipRange = { start?: number | null; end?: number | null };
+
+/** A YouTube video id as YouTube writes it (11 characters). */
+export function isYouTubeVideoId(id: string | null | undefined): id is string {
+  return typeof id === "string" && YOUTUBE_ID.test(id);
+}
+
+function wholeSeconds(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+/**
+ * The range YouTube will accept: whole seconds, start >= 0, end after start.
+ * Anything else is dropped (the whole video plays) rather than sent broken.
+ */
+export function normalizeClipRange(range: ClipRange): { start: number | null; end: number | null } {
+  const start = wholeSeconds(range.start);
+  const end = wholeSeconds(range.end);
+  return { start, end: end != null && end > (start ?? 0) ? end : null };
+}
+
+/** youtube-nocookie player for a clip the visitor started. Throws on a bad id. */
+export function clipEmbedUrl(id: string, range: ClipRange = {}): string {
+  if (!isYouTubeVideoId(id)) throw new Error(`Not a YouTube video id: ${id}`);
+  const { start, end } = normalizeClipRange(range);
+  return `${EMBED}${id}?autoplay=1&playsinline=1${start != null ? `&start=${start}` : ""}${end != null ? `&end=${end}` : ""}`;
+}
+
+/**
+ * The poster's link (youtube.com/watch, leaving the site, not embedding): what
+ * a visitor without the page's JavaScript gets, and what a tap opens under the
+ * 200x200 minimum. lib/ufc-tv.ts has one too, but it is server-only.
+ */
+export function clipWatchUrl(id: string, range: ClipRange = {}): string {
+  if (!isYouTubeVideoId(id)) throw new Error(`Not a YouTube video id: ${id}`);
+  const { start } = normalizeClipRange(range);
+  return `https://www.youtube.com/watch?v=${id}${start ? `&t=${start}s` : ""}`;
+}

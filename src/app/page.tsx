@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { getLastEventResults, getNextEventHero } from "@/lib/queries/events";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
 import { p4pDescription } from "@/lib/p4p-description";
+import { formatCount } from "@/lib/format";
 import { getRecentNews } from "@/lib/queries/news";
 import { getUfcShorts } from "@/lib/ufc-shorts";
 import type { FighterCardData } from "@/lib/types";
@@ -99,15 +100,19 @@ export default async function HomePage() {
   // pinta aquí, en servidor, y no cambia al alternar pestaña.
   const p4pText = p4pDescription(p4pPanels) ?? undefined;
 
+  // Formatted HERE, on the server, with the Spanish separator in every size
+  // (2.892, not "2,892" from Vercel's en-US nor "2892" from es-ES by default).
   const statItems = [
-    { value: stats.fighters.toLocaleString(), label: "Luchadores" },
-    { value: stats.fights.toLocaleString(), label: "Peleas" },
-    { value: stats.events.toLocaleString(), label: "Eventos" },
-    { value: stats.fightStats.toLocaleString(), label: "Registros de stats" },
+    { value: formatCount(stats.fighters), label: "Luchadores" },
+    { value: formatCount(stats.fights), label: "Peleas" },
+    { value: formatCount(stats.events), label: "Eventos" },
+    { value: formatCount(stats.fightStats), label: "Registros de stats" },
   ];
 
   return (
-    <div className="pb-16">
+    // .no-watermark: the home goes without the avatar watermark of body::after
+    // (globals.css); every other page keeps it.
+    <div className="no-watermark pb-16">
       {/* T3-A: franja EN DIRECTO (cliente; no rompe el ISR de la home). Solo
           aparece con un evento en marcha — la fase previa ya la cubre Up Next. */}
       <LiveBanner />
@@ -140,8 +145,20 @@ export default async function HomePage() {
           The description row is `1fr`: it takes the spare height, so the
           headline does not drift away from it. `md:pb-24` leaves room for the
           short's buttons, which from md sit absolutely under the frame
-          without off-centering it. */}
-      <section className={`${sairaXc.variable} relative overflow-hidden border-b border-border`}>
+          without off-centering it.
+          ALWAYS DARK (owner, 17-oct-2026): `dark` on the section gives its
+          whole subtree the dark tokens, also with the light theme; the arena
+          photo and its fades are .home-hero's pseudo-elements (globals.css).
+          🪤 overflow-x-clip and NOT overflow-hidden: hidden also clipped the
+          search box's dropdown at the hero's bottom edge (on mobile, after
+          five results). clip keeps the horizontal cut and lets the list hang
+          below; z-10 puts it over the sections that follow.
+          scheme-dark: .dark only swaps the tokens; with the light theme
+          next-themes leaves color-scheme: light on <html>, and the native
+          bits (the dropdown's scrollbar, the caret, autofill) came out light. */}
+      <section
+        className={`${sairaXc.variable} home-hero dark scheme-dark relative isolate z-10 overflow-x-clip border-b border-border bg-background text-foreground`}
+      >
         <div className="@container mx-auto grid max-w-7xl grid-cols-[1fr_minmax(0,7.5rem)] items-start gap-x-3.5 gap-y-0 px-4 py-12 max-md:grid-rows-[auto_auto_1fr_auto_auto] min-[340px]:max-sm:grid-cols-[minmax(0,1fr)_12.5rem] min-[340px]:max-sm:gap-x-3 min-[340px]:max-sm:pr-0 sm:px-6 sm:max-md:grid-cols-[1fr_12.5rem] md:grid-cols-[1.15fr_0.85fr] md:items-center md:gap-6 md:pb-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
           {/* Copy. ⚠️ En móvil, con `contents`, su «relative z-10» no se aplica:
               el desplegable del buscador sube por su propio z-20. */}
@@ -242,18 +259,21 @@ export default async function HomePage() {
 
       {/* Stat strip */}
       <section className="border-b border-border bg-card">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-border lg:grid-cols-4">
+        {/* Mobile (< md): ONE row of four small tiles, ~78 px tall instead of
+            the 250 px of the 2x2 grid (owner, 17-oct-2026). From md on, as it
+            always was: 2x2 on tablet and a row of four big ones on desktop. */}
+        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-px bg-border md:grid-cols-2 lg:grid-cols-4">
           {statItems.map((stat, i) => (
             <div
               key={stat.label}
-              className="animate-rise group relative overflow-hidden bg-card px-4 py-7 sm:px-6 lg:px-8"
+              className="animate-rise group relative overflow-hidden bg-card px-1 py-3.5 text-center md:px-6 md:py-7 md:text-left lg:px-8"
               style={{ animationDelay: `${i * 70}ms` }}
             >
               <span className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-primary transition-transform duration-300 ease-out group-hover:scale-x-100" />
-              <p className="tabular font-display text-4xl font-extrabold leading-none text-foreground sm:text-5xl">
+              <p className="tabular font-display text-[1.4rem] font-extrabold leading-none text-foreground md:text-5xl">
                 {stat.value}
               </p>
-              <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground max-md:leading-tight md:mt-2 md:text-xs md:tracking-[0.18em]">
                 {stat.label}
               </p>
             </div>

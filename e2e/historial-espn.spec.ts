@@ -99,10 +99,15 @@ test("una pelea del Contender Series lleva la etiqueta violeta", async ({ page }
     await expect(badge).toHaveClass(new RegExp(`(^|\\s)${clase}(\\s|$)`));
   }
   await expect(badge).not.toHaveClass(/(^|\s)bg-muted(\s|$)/);
+});
 
-  // Y el tile «Última pelea» del hero: 6782 no tiene combate UFC disputado (su
-  // única fila en `fights` es la próxima), así que el tile cae a su última fila
-  // ESPN, esta misma, y tiene que llevar el mismo badge violeta.
+test("el tile «Última pelea» cae a la fila ESPN del Contender Series", async ({ page }) => {
+  // Hace falta un luchador SIN ninguna fila en `fights` (ni disputada ni
+  // programada): con una pelea UFC disputada el tile la enseña a ella. Antes
+  // era 6782 (Chovancek), que debutó en UFC el 17-oct y rompió el test. 6815
+  // (Nuftillaev) perdió en el Contender Series de 2025 y no tiene contrato.
+  await page.goto("/fighters/6815");
+
   const tile = page
     .locator("p", { hasText: /^Última pelea$/ })
     .locator("xpath=..")

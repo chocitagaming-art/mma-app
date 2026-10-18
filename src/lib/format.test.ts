@@ -4,6 +4,7 @@ import {
   ageFromBirthDate,
   cleanNationality,
   formatControlTime,
+  formatCount,
   formatDate,
   formatHeight,
   formatMethod,
@@ -42,6 +43,28 @@ describe("ageFromBirthDate", () => {
   it("returns null for implausible ages (future or >120 years)", () => {
     expect(ageFromBirthDate("2030-01-01", ref)).toBeNull();
     expect(ageFromBirthDate("1880-01-01", ref)).toBeNull();
+  });
+});
+
+describe("formatCount", () => {
+  it("pone el punto de miles también con cuatro cifras (es-ES no lo hace por defecto)", () => {
+    // The trap: Intl es-ES with the default grouping prints 2892 as "2892"
+    // (CLDR's minimumGroupingDigits 2). Not asserted here: that would test
+    // the platform's ICU data, not our code.
+    expect(formatCount(2892)).toBe("2.892");
+    expect(formatCount(8974)).toBe("8.974");
+  });
+
+  it("agrupa igual los números grandes y deja los pequeños tal cual", () => {
+    expect(formatCount(17784)).toBe("17.784");
+    expect(formatCount(1234567)).toBe("1.234.567");
+    expect(formatCount(800)).toBe("800");
+    expect(formatCount(0)).toBe("0");
+  });
+
+  it("nunca usa la coma inglesa ni decimales", () => {
+    expect(formatCount(2892)).not.toContain(",");
+    expect(formatCount(2892.6)).toBe("2.893");
   });
 });
 
@@ -266,5 +289,21 @@ describe("formatControlTime y el hueco del acta", () => {
     expect(formatControlTime(0)).toBe("0:00");
     expect(formatControlTime(61)).toBe("1:01");
     expect(formatControlTime(600)).toBe("10:00");
+  });
+});
+
+describe("formatCount", () => {
+  it("groups thousands with a dot, four-digit numbers included", () => {
+    // Plain es-ES would print "2892" here: this is the case that bites.
+    expect(formatCount(2892)).toBe("2.892");
+    expect(formatCount(1000)).toBe("1.000");
+    expect(formatCount(17758)).toBe("17.758");
+    expect(formatCount(1234567)).toBe("1.234.567");
+  });
+
+  it("leaves small numbers alone", () => {
+    expect(formatCount(0)).toBe("0");
+    expect(formatCount(12)).toBe("12");
+    expect(formatCount(999)).toBe("999");
   });
 });
