@@ -35,14 +35,6 @@ const CREDITS: Credit[] = [
     fileUrl: "https://commons.wikimedia.org/wiki/File:Bas_Rutten.jpg",
   },
   {
-    subject: "Antônio Rodrigo Nogueira",
-    author: "Assembleia Legislativa do Espírito Santo / Reinaldo Carvalho",
-    license: "CC BY-SA 2.0",
-    licenseUrl: "https://creativecommons.org/licenses/by-sa/2.0/",
-    fileUrl:
-      "https://commons.wikimedia.org/wiki/File:Sess%C3%A3o_Solene_em_homenagem_ao_Dia_Estadual_do_MMA_-_12.11.2015_(22957902296)_CROPPED.jpg",
-  },
-  {
     subject: "Kazushi Sakuraba",
     author: "Yuzunet",
     license: "CC BY-SA 4.0",
@@ -84,19 +76,9 @@ const CREDITS: Credit[] = [
     license: "Dominio público",
     fileUrl: "https://commons.wikimedia.org/wiki/File:FrankTrigg.jpg",
   },
-  {
-    subject: "Art Davie",
-    author: "Ufccreator1",
-    license: "CC BY-SA 4.0",
-    licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
-    fileUrl: "https://commons.wikimedia.org/wiki/File:Art_Davie_-_photo_credit_Art_Davie.jpg",
-  },
-  {
-    subject: 'Charles "Mask" Lewis Jr.',
-    author: "ZoterX",
-    license: "Dominio público",
-    fileUrl: "https://commons.wikimedia.org/wiki/File:TPAR2009.jpg",
-  },
+  // Art Davie y Charles «Mask» Lewis se quitaron el 18-oct-2026: el Salón les
+  // pone, como al resto de la Contribuidora, el retrato oficial de ufc.com
+  // (enlazado desde hall_of_fame.photo_url, no alojado aquí).
 ];
 
 function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
