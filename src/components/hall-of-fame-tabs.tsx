@@ -202,8 +202,9 @@ function Card({
 }
 
 // La última promoción, destacada ENCIMA de las pestañas (decisión del dueño,
-// 18-oct): sus tarjetas más grandes, con la etiqueta de su ala. La pelea ocupa
-// dos columnas, como en su pestaña ocupa una más ancha.
+// 18-oct): sus tarjetas más grandes (4 columnas como mucho, frente a las 5 de
+// la pestaña), con la etiqueta de su ala. La pelea ocupa dos columnas; si las
+// personas llenan sus filas, va centrada debajo.
 function LatestClassBlock({
   year,
   items,
@@ -216,6 +217,7 @@ function LatestClassBlock({
   onSelect: (inductee: HofInductee) => void;
 }) {
   const headingId = useId();
+  const people = items.filter((i) => i.wing !== "fight").length;
   return (
     <section
       aria-labelledby={headingId}
@@ -231,11 +233,15 @@ function LatestClassBlock({
       <p className="mt-1 text-sm text-muted-foreground">
         {items.length === 1 ? "1 nuevo miembro" : `${items.length} nuevos miembros`} del Salón de la Fama.
       </p>
-      <ul className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-6">
+      <ul className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {items.map((inductee) => (
           <li
             key={`${inductee.wing}-${inductee.displayName}`}
-            className={cn(inductee.wing === "fight" ? "col-span-2" : "col-span-1", "min-w-0")}
+            className={cn(
+              "min-w-0",
+              inductee.wing === "fight" ? "col-span-2" : "col-span-1",
+              inductee.wing === "fight" && people % 4 === 0 && "lg:col-start-2",
+            )}
           >
             <Card inductee={inductee} cutouts={cutouts} size="feature" onSelect={onSelect} />
           </li>
@@ -308,7 +314,8 @@ export function HallOfFameTabs({ data }: { data: HallOfFameData }) {
               )}
             >
               {wing.label}
-              <span className={cn("ml-2 tabular", isActive ? "opacity-80" : "opacity-60")}>{data[wing.key].length}</span>
+              {/* Sin opacidad: con ella el contador no llegaba a 4,5:1 (axe, 18-oct). */}
+              <span className="ml-2 font-normal tabular">{data[wing.key].length}</span>
             </button>
           );
         })}
