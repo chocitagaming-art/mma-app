@@ -1,0 +1,271 @@
+/* Salón de la Fama: gold relief cards and the fight wing's face-off poster.
+   Taken from the mockup the owner validated on 17-oct-2026
+   (docs/ARCHIVO/planes/rediseno-2026-10-17/prototipo/proto.cjs, .hof-*), as
+   real classes instead of !important overrides. Its own file, imported by the
+   page, so the Hall of Fame does not grow globals.css.
+
+   Which photo goes in relief and which in the frame is decided in
+   lib/hall-of-fame-display.ts (photoMode) from what mma-ingesta measured:
+   each card carries data-photo="cut|framed". */
+
+.hof-card,
+.hof-fight {
+  --hof-gold: #d4a017;
+  --hof-gold-hot: rgb(230 180 50 / 0.8);
+  position: relative;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--hof-gold) 30%, var(--border));
+  border-radius: var(--radius-lg, 0.5rem);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--hof-gold) 8%, var(--card)), var(--card) 60%);
+  padding-bottom: 14px;
+  text-align: center;
+  color: var(--card-foreground, var(--foreground));
+  transition: border-color 0.25s ease;
+}
+
+/* The gold bar that lights up along the bottom. */
+.hof-card::after,
+.hof-fight::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, #b8860b, #f5c542, #b8860b);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+:is(a, button).hof-card:hover,
+:is(a, button).hof-card:focus-visible,
+.hof-fight:hover,
+.hof-fight:focus-visible {
+  border-color: var(--hof-gold-hot);
+}
+:is(a, button).hof-card:hover::after,
+:is(a, button).hof-card:focus-visible::after,
+.hof-fight:hover::after,
+.hof-fight:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* ---- person cards ---- */
+
+.hof-card__stage {
+  position: relative;
+  display: flex;
+  height: 150px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+.hof-card[data-photo="cut"] .hof-card__stage {
+  align-items: flex-end;
+  border-bottom: 1px solid rgb(212 160 23 / 0.45);
+  background: radial-gradient(55% 80% at 50% 100%, rgb(212 160 23 / 0.28), transparent 72%);
+}
+.hof-card--feature .hof-card__stage {
+  height: 200px;
+}
+@media (min-width: 1024px) {
+  .hof-card__stage {
+    height: 170px;
+  }
+  .hof-card--feature .hof-card__stage {
+    height: 230px;
+  }
+}
+
+.hof-card__info {
+  padding: 12px 12px 0;
+}
+
+/* ---- the photo itself ---- */
+
+.hof-photo {
+  position: relative;
+  flex: none;
+}
+.hof-photo img {
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease;
+}
+
+/* Relief: the cut-out stands on the bottom of its box, with a gold rim light. */
+.hof-photo--cut {
+  height: 100%;
+  width: 100%;
+}
+.hof-photo--cut img {
+  object-fit: contain;
+  object-position: bottom;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0 1px rgb(255 215 120 / 0.55)) drop-shadow(0 10px 12px rgb(0 0 0 / 0.5));
+}
+
+/* Frame: photos with a background, and the silhouette. */
+.hof-photo--framed {
+  width: 128px;
+  height: 128px;
+  overflow: hidden;
+  border: 2px solid rgb(212 160 23 / 0.85);
+  border-radius: 6px;
+  background: var(--muted);
+  box-shadow: 0 0 22px rgb(212 160 23 / 0.25);
+  transition: box-shadow 0.25s ease;
+}
+.hof-photo--framed img {
+  object-fit: cover;
+  object-position: top center;
+  /* A 16:9 ufc.com portrait sets --hof-zoom (~1.7) and its transform-origin
+     at the face (hof-photo.tsx); everything else stays at 1. */
+  transform: scale(var(--hof-zoom, 1));
+}
+.hof-photo--feature.hof-photo--framed {
+  width: 160px;
+  height: 160px;
+}
+.hof-photo--modal.hof-photo--framed {
+  width: 224px;
+  height: 224px;
+}
+.hof-photo--modal.hof-photo--wide {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+:is(a, button).hof-card:is(:hover, :focus-visible) .hof-photo--framed {
+  box-shadow: 0 0 26px rgb(245 190 60 / 0.55);
+}
+:is(a, button).hof-card:is(:hover, :focus-visible) .hof-photo--cut img {
+  filter: drop-shadow(0 0 14px rgb(245 190 60 / 0.7)) drop-shadow(0 10px 12px rgb(0 0 0 / 0.5));
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(a, button).hof-card:is(:hover, :focus-visible) .hof-photo--cut img {
+    transform: scale(1.07);
+  }
+  :is(a, button).hof-card:is(:hover, :focus-visible) .hof-photo--framed img {
+    transform: scale(calc(var(--hof-zoom, 1) * 1.07));
+  }
+}
+
+/* ---- the fight wing: each bout as a face-off poster ---- */
+
+.hof-fight {
+  text-align: left;
+}
+.hof-fight__stage {
+  position: relative;
+  display: flex;
+  height: 190px;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid rgb(212 160 23 / 0.45);
+  background:
+    radial-gradient(40% 70% at 25% 100%, color-mix(in oklch, var(--corner-red) 30%, transparent), transparent 70%),
+    radial-gradient(40% 70% at 75% 100%, color-mix(in oklch, var(--corner-blue) 30%, transparent), transparent 70%);
+}
+.hof-fight--feature .hof-fight__stage {
+  height: 220px;
+}
+
+.hof-fight__corner {
+  position: relative;
+  display: flex;
+  width: 46%;
+  max-width: 185px;
+  aspect-ratio: 185 / 150;
+  align-items: flex-end;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+.hof-fight--feature .hof-fight__corner {
+  max-width: 220px;
+}
+.hof-photo--corner.hof-photo--cut img {
+  filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.55));
+}
+.hof-photo--corner.hof-photo--framed {
+  width: min(110px, 72%);
+  height: auto;
+  aspect-ratio: 1;
+  margin-bottom: 30px;
+  border-color: rgb(212 160 23 / 0.7);
+}
+
+.hof-fight__name {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  z-index: 2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.65);
+  padding: 2px 6px;
+  color: #fff;
+  font-family: var(--font-saira), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+
+.hof-fight__vs {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-saira), sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: #b8860b;
+  text-shadow:
+    0 0 18px rgb(245 190 60 / 0.45),
+    0 1px 0 rgb(0 0 0 / 0.35);
+}
+.dark .hof-fight__vs {
+  color: #f5c542;
+  text-shadow:
+    0 0 18px rgb(245 190 60 / 0.6),
+    0 2px 0 rgb(0 0 0 / 0.6);
+}
+
+.hof-fight__info {
+  padding: 12px 16px 0;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hof-fight:is(:hover, :focus-visible) .hof-fight__corner--a {
+    transform: translateX(10px);
+  }
+  .hof-fight:is(:hover, :focus-visible) .hof-fight__corner--b {
+    transform: translateX(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hof-card,
+  .hof-fight,
+  .hof-card::after,
+  .hof-fight::after,
+  .hof-photo,
+  .hof-photo img,
+  .hof-fight__corner {
+    transition: none;
+  }
+}

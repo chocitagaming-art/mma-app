@@ -5,6 +5,8 @@ import { HallOfFameTabs } from "@/components/hall-of-fame-tabs";
 import { SectionHeading } from "@/components/section-heading";
 import { getHallOfFame } from "@/lib/queries/hall-of-fame";
 
+import "./salon.css";
+
 // El Salón de la Fama es una lista curada casi estática (se actualiza ~1 vez al
 // año con la nueva clase). ISR: servir estático y revalidar a diario.
 export const revalidate = 86400;

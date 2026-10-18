@@ -54,7 +54,9 @@ export async function POST(request: Request) {
   // "events", "fights" y "fighters" se añadieron el 21-ago-2026, a la vez que las
   // cachés de las fichas de detalle. Sin ellos una ingesta podía escribir en la
   // base y la web seguir enseñando lo anterior hasta que venciera el TTL. ("gyms"
-  // se quitó el 11-oct-2026, con la sección de gimnasios.)
+  // se quitó el 11-oct-2026, con la sección de gimnasios.) "hall-of-fame" se
+  // añadió el 18-oct-2026: el Salón se cachea un día, y sin esto un seed nuevo
+  // (vídeos del Ala de Combate, fotos) tardaba hasta 24 h en verse.
   //
   // Ojo al alcance real: hoy lo llaman refresh-news.yml (3 veces al día) y
   // mma-ingesta/scripts/fijar_videos_evento.py al fijar el vídeo del directo, y
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
   // NO lo llama, y por eso
   // las fichas de evento y de combate se cachean solo 60 s. Si algún día el bucle
   // empieza a llamar aquí al sellar un combate, esos dos TTL se pueden subir.
-  const tags = ["home", "news", "events", "fights", "fighters"];
+  const tags = ["home", "news", "events", "fights", "fighters", "hall-of-fame"];
   for (const tag of tags) {
     revalidateTag(tag, { expire: 0 });
   }

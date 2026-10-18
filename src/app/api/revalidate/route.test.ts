@@ -81,7 +81,7 @@ describe("POST /api/revalidate", () => {
     // de detalle: sin ellos, una ingesta escribía en la base y la web seguía
     // enseñando lo anterior hasta que venciera el TTL. ("gyms" se quitó el
     // 11-oct-2026 con la sección de gimnasios: ya nadie cachea con esa etiqueta.)
-    const TAGS = ["home", "news", "events", "fights", "fighters"];
+    const TAGS = ["home", "news", "events", "fights", "fighters", "hall-of-fame"];
 
     expect(body).toEqual({ revalidated: true, path: "/", tags: TAGS });
     expect(revalidatePathMock).toHaveBeenCalledTimes(1);
