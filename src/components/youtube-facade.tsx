@@ -5,6 +5,7 @@ import { Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { VideoModal } from "@/components/video-modal";
+import { cn } from "@/lib/utils";
 
 // Shared "facade": render the thumbnail + play button first and only mount the
 // player after the user clicks (keeps pages fast, no 3rd-party player scripts
@@ -34,6 +35,10 @@ export function YouTubeFacade({
   const [playing, setPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Lightbox: the focus goes back to this ▶ when the modal closes. After the
+  // modal has unmounted, not in its onClose: while it is open the rest of the
+  // page is `inert` (video-modal.tsx), and an inert button refuses the focus.
+  const returnFocus = useRef(false);
 
   // In-place mode: move focus to the iframe so keyboard / screen-reader users
   // don't lose context when the trigger button unmounts.
@@ -42,6 +47,13 @@ export function YouTubeFacade({
       iframeRef.current?.focus();
     }
   }, [playing, lightbox]);
+
+  useEffect(() => {
+    if (!playing && returnFocus.current) {
+      returnFocus.current = false;
+      buttonRef.current?.focus();
+    }
+  }, [playing]);
 
   if (playing && !lightbox) {
     return (
@@ -62,7 +74,13 @@ export function YouTubeFacade({
         ref={buttonRef}
         onClick={() => setPlaying(true)}
         aria-label={`Reproducir: ${title}`}
-        className="group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted"
+        // Lightbox: the ring goes INSIDE the button. On the home and on
+        // /tendencias the button is as wide as its card, whose overflow-hidden
+        // cut the ring drawn 2 px outside down to a line under the thumbnail.
+        className={cn(
+          "group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted",
+          lightbox && "focus-visible:outline-offset-[-3px]",
+        )}
       >
         <Image
           src={thumbnail}
@@ -82,8 +100,8 @@ export function YouTubeFacade({
           videoId={videoId}
           title={title}
           onClose={() => {
+            returnFocus.current = true;
             setPlaying(false);
-            buttonRef.current?.focus();
           }}
         />
       )}

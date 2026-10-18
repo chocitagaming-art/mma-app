@@ -31,11 +31,13 @@ import {
 //     not start on its own until the focus leaves (focusChanged): mounting
 //     would remove the focused poster and drop the focus on <body>;
 //   · one at a time for what the visitor starts too: a start takes the turn
-//     from whoever had it. If that was the VISITOR's own player (a short, UFC
-//     TV they touched), it is "parked": back to its poster, and it does not
-//     start again on its own when the new one goes (the videos modal closing,
-//     for instance) — only when the visitor starts it. What had started on
-//     its own may come back, as before (the owner's decision, 18-oct-2026);
+//     from whoever had it. When the videos modal opens and takes it from the
+//     VISITOR's own player (a short, UFC TV they touched), that one is
+//     "parked": back to its poster, and it does not start again on its own
+//     when the modal closes — only when the visitor starts it. What had
+//     started on its own may come back, as before (the owner's decision,
+//     18-oct-2026, about the modal). Any other start of the visitor (the
+//     hero short over their UFC TV) parks nothing: as before R10;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
 //     the hero's timer leaves it alone. As a net, every decision and every
@@ -87,8 +89,9 @@ export type PlayerRegistration = {
   onMount?: (owner: TurnOwner) => void;
   // The name of the blocker the player itself puts up (the videos modal is
   // one: it covers the page, so it blocks the automatic players while it is
-  // open). userStart does not refuse a start because of THAT blocker, only
-  // because of another one (the menu).
+  // open). Such a player sits ABOVE the page, and so above whatever else
+  // blocks it (the modal covers the open mobile menu too): userStart never
+  // refuses it as "blocked". And its start parks the visitor's player.
   ownBlocker?: string;
 };
 
@@ -122,8 +125,8 @@ type Entry = {
   element: Element;
   onMount?: (owner: TurnOwner) => void;
   ownBlocker: string | null;
-  // The visitor's player that another start of the visitor took away: no
-  // automatic start any more, until the visitor starts it again.
+  // The visitor's player that the videos modal took away: no automatic start
+  // any more, until the visitor starts it again.
   parked: boolean;
   iframe: unknown;
   ratio: number;
@@ -317,22 +320,21 @@ export function createTurnController(env: TurnEnvironment) {
   // ▶ is the only way to watch it. A refused start leaves the current holder
   // alone.
   //
-  // Its own blocker does not count (ownBlocker: the videos modal blocks the
-  // automatic players while it is open, and still plays its video); any
-  // other one does (under the open menu, nothing starts).
+  // Under a blocker (the open menu) nothing starts, except a player that
+  // puts up its own (ownBlocker: the videos modal). That one is above every
+  // blocker, its own and the menu's: under the open menu its start used to be
+  // refused, and the modal's «Ver en YouTube» did nothing (QA of R10).
   function userStart(id: string): StartResult {
     const p = players.get(id);
     if (!p) return "unknown";
-    for (const name of blockers) {
-      if (name !== p.ownBlocker) return "blocked";
-    }
+    if (p.ownBlocker == null && blockers.size > 0) return "blocked";
     if (!fitsMinimum(p.element.getBoundingClientRect())) return "too-small";
     // A tap inside the holder's iframe just before this start made it theirs.
     noticeTouch();
     const holder = current ? players.get(current.id) : undefined;
     if (holder) {
-      // The visitor's player, taken by another start of the visitor: parked.
-      if (holder !== p && current?.owner === "user") holder.parked = true;
+      // The visitor's player, taken by the videos modal: parked.
+      if (holder !== p && current?.owner === "user" && p.ownBlocker != null) holder.parked = true;
       unmount(holder);
     }
     current = null;

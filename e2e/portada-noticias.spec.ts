@@ -9,8 +9,9 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds, whyN
 //
 //   · 9 piezas: 6 noticias + 3 vídeos (los de la antigua columna «Lo último
 //     en vídeo»), mezcladas con la regla de /tendencias, en UNA rejilla a todo
-//     el ancho: 1 columna en el móvil, 2 desde 640 px (la 9.ª se esconde: 4
-//     filas llenas), 3 desde 1024. La columna de vídeos ya no existe.
+//     el ancho: 1 columna en el móvil, 2 desde 640 px (se esconde la última
+//     NOTICIA, nunca un vídeo: 4 filas llenas y los 3 vídeos), 3 desde 1024.
+//     La columna de vídeos ya no existe.
 //   · Ningún vídeo repetido (Next MMA estaba dos veces en la lista de canales).
 //   · Los vídeos: miniatura y ▶, NADA del reproductor hasta el clic (se mira
 //     en el registro de red: una captura de Playwright concede activación de
@@ -20,6 +21,9 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds, whyN
 //     solo, sí.
 //   · El reproductor del modal mide al menos 200×200 por dentro a 360 px; por
 //     debajo de eso (una pantalla de 220 px) no se monta: «Ver en YouTube».
+//   · Con el menú móvil abierto el vídeo se ve igual: el modal tapa también
+//     al menú. El foco no sale del modal, y el ✕ se ve con el móvil en
+//     horizontal (QA de R10).
 //
 // Corre en Chromium Y en WebKit (el dueño mira en su iPhone). Un solo
 // proyecto: cada test fija su tamaño.
@@ -102,6 +106,7 @@ const dialogo = (page: Page) => page.getByRole("dialog");
 const reproductorDelModal = (page: Page) => dialogo(page).locator("[data-turn]");
 const tv = (page: Page) => page.locator("section[data-ufc-tv] [data-turn]");
 const hero = (page: Page) => page.locator('[data-turn="hero"]');
+const hamburguesa = (page: Page) => page.locator('button[aria-controls="mobile-nav"]');
 const autoplay = (page: Page) => page.locator('iframe[src*="autoplay=1"]');
 
 async function abrirPortada(page: Page, width: number, height = 900) {
@@ -134,6 +139,8 @@ async function medirRejilla(page: Page) {
       visibles: visibles.length,
       columnas: xs.size,
       ancho: Math.round(visibles[0]?.getBoundingClientRect().width ?? 0),
+      videos: cards.filter((c) => c.dataset.feedItem === "video").length,
+      videosVisibles: visibles.filter((c) => c.dataset.feedItem === "video").length,
       ids: cards.map((c) => c.dataset.feedId ?? ""),
     };
   });
@@ -181,6 +188,8 @@ for (const motor of ["chromium", "webkit"] as const) {
         expect(rejilla.total, `piezas en el HTML a ${w}`).toBe(9);
         expect(rejilla.visibles, `piezas visibles a ${w}`).toBe(quiero.visibles);
         expect(new Set(rejilla.ids).size, `piezas repetidas a ${w}: ${rejilla.ids.join(", ")}`).toBe(9);
+        // Lo que se esconde a 2 columnas es una noticia: todos los vídeos se ven.
+        expect(rejilla.videosVisibles, `vídeos visibles a ${w}`).toBe(rejilla.videos);
         anchos[w] = rejilla.ancho;
         await expectNoHorizontalOverflow(pagina, `portada a ${w} px (${motor})`);
       }
@@ -251,10 +260,79 @@ for (const motor of ["chromium", "webkit"] as const) {
       await expect(reproductorDelModal(pagina)).toHaveAttribute("data-turn-state", "poster");
       await expect(pagina.locator("iframe")).toHaveCount(0);
       expect(pedidos(pagina)).toEqual([]);
-      const enlace = reproductorDelModal(pagina).getByRole("button", { name: /Ver en YouTube/ });
+      // Un enlace (no un botón: solo puede abrir YouTube), y se anuncia en ese orden.
+      const enlace = reproductorDelModal(pagina).getByRole("link", {
+        name: "Ver en YouTube (se abre en otra pestaña)",
+        exact: true,
+      });
       await expect(enlace).toHaveAttribute("href", `https://www.youtube.com/watch?v=${id}`);
       await expect(enlace).toHaveAttribute("target", "_blank");
     });
+
+    // El menú móvil solo se cierra al navegar, con Escape o al ensanchar: con
+    // él abierto se puede bajar y tocar un vídeo. Antes el arranque salía
+    // «blocked» y el póster «Ver en YouTube» no hacía nada (QA de R10).
+    for (const ancho of [390, 768]) {
+      test(`a ${ancho} px, con el menú móvil abierto, el vídeo se ve dentro del modal`, async ({ pagina }) => {
+        await abrirPortada(pagina, ancho, 844);
+        await necesitaVideos(pagina);
+        await hamburguesa(pagina).click();
+        await expect(pagina.locator("#mobile-nav")).toBeVisible();
+        const pieza = videos(pagina).first();
+        const id = (await pieza.getAttribute("data-feed-id"))!.slice(2);
+        // Abajo de la pantalla, lejos del menú (que acaba hacia y=425).
+        await pieza.evaluate((el) => el.scrollIntoView({ block: "end" }));
+        await facadeDe(pieza).click();
+        await expect(dialogo(pagina)).toBeVisible();
+        await expect(reproductorDelModal(pagina)).toHaveAttribute("data-turn-state", "playing-user");
+        expect(pedidos(pagina).map((u) => new URL(u).pathname)).toEqual([`/embed/${id}`]);
+        await pagina.keyboard.press("Escape");
+        await expect(dialogo(pagina)).toHaveCount(0);
+        await expect(pagina.locator("iframe")).toHaveCount(0);
+      });
+    }
+
+    test("el foco no sale del modal: lo de detrás queda inert y Tab da la vuelta dentro", async ({ pagina }) => {
+      await pagina.emulateMedia({ reducedMotion: "reduce" });
+      await abrirPortada(pagina, 1280);
+      await necesitaVideos(pagina);
+      await abrirVideo(pagina, videos(pagina).first());
+      const cerrar = dialogo(pagina).getByRole("button", { name: "Cerrar vídeo" });
+      await expect(cerrar).toBeFocused();
+      await expect(pagina.locator("body > :not([role=dialog])").first()).toHaveJSProperty("inert", true);
+      const dentro = () => pagina.evaluate(() => !!document.activeElement?.closest("[role=dialog]"));
+      for (let i = 0; i < 6; i++) {
+        await pagina.keyboard.press("Tab");
+        expect(await dentro(), `Tab ${i + 1}`).toBe(true);
+      }
+      await cerrar.focus();
+      await pagina.keyboard.press("Shift+Tab");
+      expect(await dentro(), "Mayús+Tab desde el ✕").toBe(true);
+      await cerrar.focus();
+      await pagina.keyboard.press("Enter");
+      await expect(dialogo(pagina)).toHaveCount(0);
+      await expect(pagina.locator("body > *").first()).toHaveJSProperty("inert", false);
+    });
+
+    for (const [w, h] of [
+      [844, 390],
+      [740, 360],
+      [667, 375],
+    ] as const) {
+      test(`móvil en horizontal (${w}×${h}): el ✕ del modal se ve entero`, async ({ pagina }) => {
+        await abrirPortada(pagina, w, h);
+        await necesitaVideos(pagina);
+        await abrirVideo(pagina, videos(pagina).first());
+        const caja = await dialogo(pagina)
+          .getByRole("button", { name: "Cerrar vídeo" })
+          .evaluate((b) => {
+            const r = b.getBoundingClientRect();
+            return { arriba: r.top, abajo: r.bottom };
+          });
+        expect(caja.arriba, "el ✕ se sale por arriba").toBeGreaterThanOrEqual(0);
+        expect(caja.abajo).toBeLessThanOrEqual(h);
+      });
+    }
 
     test("uno a la vez: el UFC TV que arrancó solo se quita y VUELVE al cerrar", async ({ pagina }) => {
       await abrirPortada(pagina, 1280, 800);

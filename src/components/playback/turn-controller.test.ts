@@ -565,36 +565,81 @@ describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-
 // only what had started on its own comes back when it closes.
 describe("turn controller · the videos modal: its own blocker, one at a time", () => {
   // As VideoModal mounts: its box registers, it starts, its blocker goes up.
-  function openModal(controller: TurnController, size: [number, number] = [1024, 576]) {
+  // Each VideoModal has its own blocker name (`video-modal-${useId()}`).
+  function openModal(
+    controller: TurnController,
+    size: [number, number] = [1024, 576],
+    id = "modal",
+  ) {
     const modal = box(...size);
-    const unregister = controller.register({ id: "modal", element: modal, ownBlocker: "video-modal" });
-    const result = controller.userStart("modal");
-    controller.addBlocker("video-modal");
+    const blocker = `video-modal-${id}`;
+    const unregister = controller.register({ id, element: modal, ownBlocker: blocker });
+    const result = controller.userStart(id);
+    controller.addBlocker(blocker);
     return {
       result,
       // As it unmounts: React runs the parent's cleanup (the blocker) first.
       close() {
-        controller.removeBlocker("video-modal");
+        controller.removeBlocker(blocker);
         unregister();
       },
     };
   }
 
-  it("its own blocker does not stop its start; another blocker (the menu) does", () => {
+  it("its own blocker does not stop its start", () => {
     const { controller } = setup();
-    controller.register({ id: "modal", element: box(1024, 576), ownBlocker: "video-modal" });
-    controller.addBlocker("video-modal");
+    controller.register({ id: "modal", element: box(1024, 576), ownBlocker: "video-modal-a" });
+    controller.addBlocker("video-modal-a");
     expect(controller.userStart("modal")).toBe("started");
     expect(controller.getView("modal")).toMatchObject({ mounted: true, owner: "user" });
+  });
 
-    const other = setup().controller;
-    other.register({ id: "modal", element: box(1024, 576), ownBlocker: "video-modal" });
-    other.addBlocker("menu");
-    expect(other.userStart("modal")).toBe("blocked");
-    // Nor does someone else's ownBlocker let a player through.
-    other.removeBlocker("menu");
-    other.addBlocker("video-modal");
-    expect(other.userStart("tv-bucle")).toBe("blocked");
+  // QA of R10: the mobile menu only closes on navigation, Escape or a wider
+  // window, so a video card can be tapped under it (390 and 768 px). The
+  // modal covers the menu too (z-100 over z-40): its start was "blocked" and
+  // its «Ver en YouTube» poster did nothing.
+  it("nor does the open mobile menu: the modal is above it", () => {
+    const { controller, see, advance, tv } = setup();
+    see(tv, 1);
+    controller.addBlocker("menu");
+    const modal = openModal(controller);
+    expect(modal.result).toBe("started");
+    expect(controller.getView("modal")).toMatchObject({ mounted: true, owner: "user" });
+    modal.close();
+    // The menu is still open: nothing automatic starts.
+    advance(5_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(controller.getView("modal").mounted).toBe(false);
+  });
+
+  it("a player WITHOUT a blocker of its own is still refused under any blocker, a modal's included", () => {
+    const { controller, see, tv } = setup();
+    see(tv, 1);
+    controller.addBlocker("menu");
+    expect(controller.userStart("tv-bucle")).toBe("blocked");
+    controller.removeBlocker("menu");
+    controller.addBlocker("video-modal-a");
+    expect(controller.userStart("tv-bucle")).toBe("blocked");
+  });
+
+  // Two stacked modals (Tab used to leave the first one and Enter opened a
+  // second): one shared blocker name was ONE entry in the Set, and closing
+  // the top modal lifted the block of the one still open.
+  it("two stacked modals: closing the top one keeps the block of the other", () => {
+    const { controller, see, advance, tv, worst } = setup();
+    see(tv, 1);
+    advance(500);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    const first = openModal(controller, [1024, 576], "modal-1");
+    const second = openModal(controller, [1024, 576], "modal-2");
+    expect(second.result).toBe("started");
+    second.close();
+    advance(5_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    first.close();
+    advance(500);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
   });
 
   it("under 200x200 it still says too-small (the modal then shows the link to YouTube)", () => {
@@ -674,6 +719,21 @@ describe("turn controller · the videos modal: its own blocker, one at a time", 
     expect(controller.getView("hero").mounted).toBe(false);
     // UFC TV was never playing: it is not the visitor's, it may start on its own.
     advance(500);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
+  });
+
+  // Parking is the modal's (the owner's decision was about opening a video):
+  // the hero short over the visitor's UFC TV parks nothing, as before R10.
+  it("the hero short over the visitor's UFC TV parks nothing: when the short ends, UFC TV comes back on its own", () => {
+    const { controller, see, advance, hero, tv, worst } = setup();
+    see(tv, 0.9);
+    expect(controller.userStart("tv-bucle")).toBe("started");
+    see(hero, 0.6);
+    expect(controller.userStart("hero")).toBe("started");
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    advance(1_000);
+    expect(controller.timerFired("hero")).toBe("release");
     expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
     expect(worst.mounted).toBe(1);
   });
@@ -902,11 +962,11 @@ describe("source guards of the turn manager", () => {
     expect(provider).not.toMatch(/decideTurn|timerAction\(/);
   });
 
-  it("TurnSlot registers its ownBlocker, and userStart lets only THAT blocker through", () => {
+  it("TurnSlot registers its ownBlocker, and userStart refuses as blocked only a player without one", () => {
     const provider = files[1][1];
     expect(provider).toMatch(/ownBlocker\?: string;/);
     expect(provider).toMatch(/controller\.register\(\{[\s\S]*?\bownBlocker,[\s\S]*?\}\)/);
-    expect(files[0][1]).toMatch(/if \(name !== p\.ownBlocker\) return "blocked";/);
+    expect(files[0][1]).toMatch(/if \(p\.ownBlocker == null && blockers\.size > 0\) return "blocked";/);
   });
 
   it("TurnSlot registers autoStart, and it is false unless the player asks for it", () => {
