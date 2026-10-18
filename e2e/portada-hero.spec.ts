@@ -273,14 +273,20 @@ for (const motor of ["chromium", "webkit"] as const) {
           })
           .not.toBe("none");
 
-        // Y cargando las páginas de cero.
+        await page.context().close();
+
+        // Y cargando las páginas de cero, cada una en una pestaña nueva. 🪤 Un
+        // page.goto() justo después de la navegación de cliente lo corta en WebKit
+        // el replaceState con el que Next hidrata («interrupted by another
+        // navigation»): no es una segunda carga, la red pide UN documento.
         for (const ruta of ["/fighters", "/eventos"]) {
-          await page.goto(ruta, { waitUntil: "load" });
-          const otra = await marca(page);
+          const nueva = await abrir(tema, 1280);
+          await nueva.goto(ruta, { waitUntil: "load" });
+          const otra = await marca(nueva);
           expect(otra.display, `${donde}: avatar en ${ruta}`).not.toBe("none");
           expect(otra.imagen, `${donde}: imagen del avatar en ${ruta}`).toContain("hero-watermark.webp");
+          await nueva.context().close();
         }
-        await page.context().close();
       }
     });
 
