@@ -98,8 +98,14 @@ function twoStepSrcSet(
 //     answers 403 without its itok (an HMAC only ufc.com can sign).
 //   · The style is a focal-point crop (the `h=` in the query) from 16:9 to
 //     1.760:1, ~1% of the width for the 16:9 originals. Piligian's 1.669:1 one
-//     loses ~5% of its height in the style, so his original shows a hair more
-//     at the bottom of the modal; the face stays where photo_focus puts it.
+//     loses ~5% of its height in the style, so at 2x/3x his original shows a
+//     hair more at the TOP of the modal: the face sits ~3 CSS px (~2% of the
+//     frame) lower than at 1x. Not visible side by side (review, 18-oct).
+//   · Same for the faces above: the 500×325 originals (1.538:1, 10 of the 25
+//     sampled) are not exactly the 256×160 (1.6:1) crop. With the SAME css,
+//     a relief face at 2x/3x is ~4% taller and its top edge 4-7 px higher,
+//     and a covered corner face ~4% narrower. Mode, object-position and zoom
+//     are identical; only the file differs. Accepted, as in R5.
 // Sharpness of the stored copy (file px / painted px × DPR), measured on
 // production: grid card 0.69 at 3x and 1.03 at 2x; the «Clase» feature card
 // 0.55-0.61 at 3x and 0.82 at 2x; the modal 0.84-0.93 at 3x and 0.83 at 2x.

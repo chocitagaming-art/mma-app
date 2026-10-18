@@ -7,6 +7,7 @@ import {
   inferFighterGender,
   silhouetteHeadshot,
 } from "@/lib/fighter-silhouette";
+import { HdImg } from "@/components/hd-img";
 import { headshotSrcSet } from "@/lib/headshot-hd";
 import { localHeadshot, localHeadshotOverride } from "@/lib/local-headshots";
 import { cn } from "@/lib/utils";
@@ -129,29 +130,15 @@ export function FighterHeadshot({
         className,
       )}
     >
-      {resolvedUrl && !imageFailed && useSrcSet ? (
-        // A plain <img>: with images.unoptimized next/image drops any srcSet or
-        // sizes it is given (get-img-props.js), and the srcset is the whole
-        // point. Same precedent as fighter-full-body.tsx.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+      {resolvedUrl && !imageFailed && useSrcSet && srcSet ? (
+        <HdImg
           src={resolvedUrl}
           srcSet={srcSet}
           sizes={srcSetSizes}
           alt={`Foto de ${name}`}
-          data-headshot-quality="hd"
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : undefined}
-          decoding="async"
+          priority={priority}
           className={cn("absolute inset-0 h-full w-full text-transparent", photoFitClass, imageClassName)}
-          onError={() => setHdFailedFor(resolvedUrl)}
-          ref={(img) => {
-            // An error BEFORE hydration never reaches onError (the same hole
-            // next/image plugs): a finished image with no pixels is a failure.
-            if (img && img.complete && img.naturalWidth === 0 && img.currentSrc) {
-              setHdFailedFor(resolvedUrl);
-            }
-          }}
+          onHdFail={() => setHdFailedFor(resolvedUrl)}
         />
       ) : resolvedUrl && !imageFailed ? (
         <Image

@@ -116,10 +116,17 @@ export type HofPhotoHd = { srcSet: string; sizes: string };
 //   · corner (the Ala de Combate poster): 150, 164, 161, 141-181; 220 at most
 //     in the «Clase» feature poster.
 //   · modal: the 224 px box (frame) or a 224 px high stage (relief) → 358.
+// 🪤 The fluid part must stop where the box hits its cap, not at 640: below
+// 640 the card's stage is 150 px high, so a relief face is never wider than
+// 240 (150 × 1.6), which `calc(50vw - 24px)` reaches at 528 px; and a corner
+// is at most 185 px in the grid and 220 in the «Clase» poster, which
+// `calc(46vw - 14px)` reaches at ~504 px. With the old 640 cut-off a 1x
+// window of 528-639 px asked for 260-296 px and downloaded the 500 original
+// for a face painted at 240 (review, 18-oct).
 const FACE_SIZES: Record<HofPhotoVariant, string> = {
-  card: "(min-width: 640px) 240px, calc(50vw - 24px)",
+  card: "(min-width: 528px) 240px, calc(50vw - 24px)",
   feature: "(min-width: 1024px) 292px, (min-width: 640px) 320px, calc(50vw - 20px)",
-  corner: "(min-width: 640px) 220px, calc(46vw - 14px)",
+  corner: "(min-width: 504px) 220px, calc(46vw - 14px)",
   modal: "358px",
 };
 
@@ -137,6 +144,16 @@ const MODAL_WIDE = "(min-width: 544px) 464px, calc(100vw - 80px)";
  *     same 256 → 500 upgrade as R5 (src/lib/headshot-hd.ts).
  *   · A 382x217_2 portrait: ONLY where it is shown alone (feature, modal);
  *     never in the grid or a corner (see headshot-hd.ts for the weights).
+ *     🪤 The feature cap is in the DATA, not here: every portrait of the
+ *     newest class gets it. Counted on 18-oct-2026 (read-only): a class has
+ *     carried 0-2 of them (2 in 2018, 2016 and 2017; 1 in 2026, Gerbasi,
+ *     whose original is the lightest: 42 KB AVIF). So the «Clase» may cost
+ *     up to ~2 × 102-187 KB in AVIF (233-351 KB each in WebP) at 2x/3x, and
+ *     it is preloaded: React preloads every non-lazy <img> of the shell, so
+ *     dropping fetchPriority would not avoid it, and a lazy LCP card is worse.
+ *     A modal costs one original per click: +85-161 KB AVIF, +200-316 KB
+ *     WebP over the 764 copy, for 0.83 → 1.6-2.3 of sharpness (no style in
+ *     between can be had: see headshot-hd.ts).
  *   · Anything else (ESPN, local files, silhouettes): null.
  * `zoom` is the --hof-zoom the photo is painted with (1 when none), `wide`
  * the modal's 16:9 frame.

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 
+import { HdImg } from "@/components/hd-img";
 import { inferFighterGender, silhouetteHeadshot } from "@/lib/fighter-silhouette";
 import {
   hofPhotoHd,
@@ -27,7 +28,8 @@ import { cn } from "@/lib/utils";
 // URL (photo_cutout is keyed by it), and the style below is the same.
 //
 // Not FighterHeadshot: that one forces a square with object-cover, and the
-// relief needs object-contain at the bottom of a wide box.
+// relief needs object-contain at the bottom of a wide box. The HD <img> and
+// its failure detection ARE shared with it (components/hd-img.tsx).
 //
 // The look lives in app/salon-de-la-fama/salon.css (.hof-photo…), validated in
 // the 17-oct mockup.
@@ -102,25 +104,15 @@ export function HofPhoto({
       )}
     >
       {photo.src && hd ? (
-        // A plain <img>: with images.unoptimized next/image drops any srcSet
-        // (same as fighter-headshot.tsx). Same box as next/image's `fill`.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        // Same box as next/image's `fill`.
+        <HdImg
           src={photo.src}
           srcSet={hd.srcSet}
           sizes={hd.sizes}
           alt={`Foto de ${name}`}
-          data-headshot-quality="hd"
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : undefined}
-          decoding="async"
+          priority={priority}
           style={{ ...FILL, ...style }}
-          onError={failHd}
-          ref={(img) => {
-            // An error BEFORE hydration never reaches onError: a finished
-            // image with no pixels is a failure.
-            if (img && img.complete && img.naturalWidth === 0 && img.currentSrc) failHd();
-          }}
+          onHdFail={failHd}
         />
       ) : photo.src ? (
         <Image

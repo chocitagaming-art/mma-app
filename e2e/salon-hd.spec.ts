@@ -34,6 +34,9 @@ type Opciones = {
   // Retiene los originales hasta que se resuelve: el fallo llega DESPUÉS de
   // hidratar (el camino del onError, no el de la ref).
   soltarOriginal?: Promise<void>;
+  // Retiene el JS de la página (/_next/static/chunks) hasta que se resuelve:
+  // sin React, un fallo de imagen SOLO puede recogerlo la ref al hidratar.
+  retenerJs?: Promise<void>;
 };
 type Abrir = (pantalla: Pantalla, opciones?: Opciones) => Promise<Page>;
 
@@ -90,7 +93,10 @@ const test = base.extend<
       await page.route("**/*", async (route) => {
         const peticion = route.request();
         const url = peticion.url();
-        if (url.startsWith(baseURL ?? "http://localhost")) return route.continue();
+        if (url.startsWith(baseURL ?? "http://localhost")) {
+          if (opciones.retenerJs && /\/_next\/static\/chunks\/.+\.js/.test(url)) await opciones.retenerJs;
+          return route.continue();
+        }
         if (peticion.resourceType() !== "image") return route.abort();
         if (ORIGINAL.test(url)) {
           pedidas.original.push(url);
@@ -178,7 +184,11 @@ async function fotos(pagina: Page, selector: string): Promise<Foto[]> {
               estilo: (() => {
                 const cs = getComputedStyle(img);
                 const zoom = cs.getPropertyValue("--hof-zoom").trim() || "-";
-                return `${cs.objectFit} | ${cs.objectPosition} | ${cs.transformOrigin} | zoom ${zoom}`;
+                // transform-origin se computa en px de la caja: en % de la caja
+                // se puede comparar entre pantallas de distinto ancho.
+                const [ox, oy] = cs.transformOrigin.split(" ").map(parseFloat);
+                const origen = `${Math.round((ox / img.offsetWidth) * 100)}% ${Math.round((oy / img.offsetHeight) * 100)}%`;
+                return `${cs.objectFit} | ${cs.objectPosition} | ${origen} | zoom ${zoom}`;
               })(),
             };
           }),
@@ -239,18 +249,31 @@ for (const motor of ["chromium", "webkit"] as const) {
         expect(cara.actual, `[${motor}] esquina ${cara.alt} a 3x`).toMatch(ORIGINAL);
       }
 
-      const normal = await abrir({ width: 390, height: 844, dpr: 1 });
-      await abrirSalon(normal);
-      await pestana(normal, /Ala Moderna/);
-      const en1x = await fotos(normal, FOTOS_PANEL);
-      for (const cara of en1x.filter((f) => CARA.test(f.src))) {
-        expect(cara.actual, `[${motor}] ${cara.alt} a 1x: sigue con la de 256`).toMatch(CARA);
-        expect(cara.ancho, `[${motor}] ${cara.alt} a 1x`).toBe(256);
+      // A 1x, la de 256 en el móvil, en una ventana de 600 (la franja de 528 a
+      // 639 donde el sizes se pasaba de largo) y en escritorio.
+      for (const ancho of [390, 600, 1280]) {
+        const normal = await abrir({ width: ancho, height: 900, dpr: 1 });
+        await abrirSalon(normal);
+        await pestana(normal, /Ala Moderna/);
+        const en1x = await fotos(normal, FOTOS_PANEL);
+        // 🪤 Chromium reutiliza un candidato MÁS denso si ya lo tiene en caché:
+        // la cara que también está en la Clase (su tarjeta grande sí pide el
+        // original a 600 y a 1280, pintada a más de 256) sale con el original
+        // sin bajar nada nuevo. Esas se apartan.
+        const yaEnClase = new Set(
+          (await fotos(normal, FOTOS_CLASE)).map((f) => f.actual).filter((u) => ORIGINAL.test(u)),
+        );
+        const caras1x = en1x.filter((f) => CARA.test(f.src) && !yaEnClase.has(f.actual));
+        expect(caras1x.length, `[${motor}] caras a ${ancho}@1x`).toBeGreaterThan(0);
+        for (const cara of caras1x) {
+          expect(cara.actual, `[${motor}] ${cara.alt} a ${ancho}@1x: sigue con la de 256`).toMatch(CARA);
+          expect(cara.ancho, `[${motor}] ${cara.alt} a ${ancho}@1x`).toBe(256);
+        }
+        // Relieve o marco y encuadre: idénticos a 1x y a 3x.
+        expect(huella(en1x), `[${motor}] el modo y el encuadre no dependen de la densidad (${ancho})`).toEqual(
+          huella(en3x),
+        );
       }
-      // Relieve o marco y encuadre: idénticos a 1x y a 3x.
-      expect(huella(en3x), `[${motor}] el modo y el encuadre no dependen de la densidad`).toEqual(
-        huella(en1x),
-      );
     });
 
     test("los retratos 16:9: original solos (Clase y modal), la de 764 en la rejilla", async ({
@@ -259,14 +282,20 @@ for (const motor of ["chromium", "webkit"] as const) {
     }) => {
       const retina = await abrir({ width: 390, height: 844, dpr: 3 });
       await abrirSalon(retina);
+      // La Clase de 2026 trae uno (Gerbasi); una clase futura puede no traer
+      // ninguno: entonces esa parte se salta, con aviso, y el resto sigue.
       const clase = (await fotos(retina, FOTOS_CLASE)).filter((f) => RETRATO.test(f.src));
-      expect(clase.length, `[${motor}] la «Clase» tiene un retrato 382x217_2 (Gerbasi, 2026)`).toBeGreaterThan(0);
+      if (clase.length === 0) {
+        test.info().annotations.push({
+          type: "aviso",
+          description: `[${motor}] la «Clase» no trae ningún retrato 382x217_2: no se prueba su original`,
+        });
+      }
       for (const retrato of clase) {
         expect(retrato.modo, `[${motor}] ${retrato.alt}: enmarcado`).toBe("framed");
         expect(retrato.srcset, `[${motor}] ${retrato.alt}: srcset`).toMatch(/ 764w, https:\/\/www\.ufc\.com\/images\/.+ 1439w$/);
         expect(retrato.actual, `[${motor}] ${retrato.alt} en la Clase a 3x`).toMatch(ORIGINAL);
         expect(retrato.ancho, `[${motor}] ${retrato.alt}`).toBe(2000);
-        expect(retrato.estilo, `[${motor}] ${retrato.alt}: su zoom`).toMatch(/zoom 1\.7$/);
       }
 
       // La rejilla del Ala Contribuidora: los 9 retratos, SIN srcset.
@@ -291,12 +320,27 @@ for (const motor of ["chromium", "webkit"] as const) {
       expect(modal.actual, `[${motor}] el modal a 3x baja el original`).toMatch(ORIGINAL);
       expect(modal.ancho, `[${motor}] el modal`).toBe(2000);
 
-      // A 1x, la Clase y el modal siguen con la de 764.
+      // A 1x, la Clase y el modal siguen con la de 764, con el mismo modo y
+      // encuadre (zoom incluido) que a 3x.
       const normal = await abrir({ width: 1280, height: 900, dpr: 1 });
       await abrirSalon(normal);
-      for (const retrato of (await fotos(normal, FOTOS_CLASE)).filter((f) => RETRATO.test(f.src))) {
+      const clase1x = (await fotos(normal, FOTOS_CLASE)).filter((f) => RETRATO.test(f.src));
+      for (const retrato of clase1x) {
+        expect(retrato.actual, `[${motor}] ${retrato.alt} en la Clase a 1x`).toBe(retrato.src);
         expect(retrato.ancho, `[${motor}] ${retrato.alt} en la Clase a 1x`).toBe(764);
       }
+      expect(huella(clase1x), `[${motor}] la Clase: mismo modo y encuadre a 1x y a 3x`).toEqual(huella(clase));
+      await pestana(normal, /Ala Contribuidora/);
+      await normal
+        .locator("[role=tabpanel] [data-hof-card]")
+        .filter({ has: normal.locator(`img[src*="382x217_2"]`) })
+        .first()
+        .click();
+      await expect(normal.getByRole("dialog")).toBeVisible();
+      const [modal1x] = await fotos(normal, "[role=dialog] .hof-photo img");
+      expect(modal1x.srcset, `[${motor}] el modal a 1x ofrece el original`).toMatch(/ 1439w$/);
+      expect(modal1x.actual, `[${motor}] el modal a 1x: la guardada`).toBe(modal1x.src);
+      expect(modal1x.ancho, `[${motor}] el modal a 1x`).toBe(764);
     });
 
     test("en el modal de una pelea, las caras de las esquinas piden el original a 3x", async ({ abrir }) => {
@@ -336,8 +380,35 @@ for (const motor of ["chromium", "webkit"] as const) {
       await pestana(sana, /Ala Moderna/);
       const modernaSana = await fotos(sana, FOTOS_PANEL);
 
-      const rota = await abrir({ width: 390, height: 844, dpr: 3 }, { originalRoto: true });
-      await abrirSalon(rota);
+      // 🪤 El JS se retiene hasta que las HD de la Clase YA han fallado sin
+      // React: así el fallo solo puede recogerlo la ref (si llegara después de
+      // hidratar, pasaría por el onError y el test no probaría la ref).
+      const soltarJs: { ya: () => void } = { ya: () => undefined };
+      const retenerJs = new Promise<void>((resolver) => {
+        soltarJs.ya = resolver;
+      });
+      const rota = await abrir({ width: 390, height: 844, dpr: 3 }, { originalRoto: true, retenerJs });
+      await rota.goto("/salon-de-la-fama", { waitUntil: "commit" });
+      const hdClase = rota.locator(`${FOTOS_CLASE}[data-headshot-quality="hd"]`);
+      await expect
+        .poll(
+          () =>
+            hdClase.evaluateAll(
+              (lista) =>
+                lista.length > 0 &&
+                lista.every((img) => {
+                  const i = img as HTMLImageElement;
+                  const sinReact = !Object.keys(i).some((k) => k.startsWith("__react"));
+                  return i.complete && i.naturalWidth === 0 && sinReact;
+                }),
+            ),
+          { message: `[${motor}] las HD de la Clase han fallado ANTES de hidratar` },
+        )
+        .toBe(true);
+      expect(pedidas.rotas.length, `[${motor}] se pidió (y falló) algún original antes de hidratar`).toBeGreaterThan(0);
+      soltarJs.ya();
+      await esperarHidratacion(rota);
+      await expect(rota.getByRole("tab")).toHaveCount(4);
       const clasesRota = await fotos(rota, FOTOS_CLASE);
       await pestana(rota, /Ala Moderna/);
       const modernaRota = await fotos(rota, FOTOS_PANEL);
