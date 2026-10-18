@@ -71,6 +71,14 @@ export function FighterHeadshot({
     (size === "sm" ? "48px" : size === "md" ? "64px" : size === "lg" ? "112px" : "224px");
   const isCutout = variant === "cutout";
   const fitClass = isCutout ? "object-contain object-bottom" : "object-cover object-top";
+  // ufc.com's athlete_bio_full_body shots (~60 fighters) are a tall head-to-thigh
+  // cut: contained, they shrink to a small doll in a row of faces. In the cutout
+  // they fill the box from the top instead (head to waist, cut on the baseline),
+  // the same split fighter-full-body.tsx makes for the profile hero.
+  const photoFitClass =
+    isCutout && resolvedUrl?.includes("athlete_bio_full_body")
+      ? "object-cover object-top"
+      : fitClass;
 
   return (
     <div
@@ -89,7 +97,7 @@ export function FighterHeadshot({
           fill
           preload={priority}
           sizes={imageSizes}
-          className={cn(fitClass, imageClassName)}
+          className={cn(photoFitClass, imageClassName)}
           onError={() => setImageFailed(true)}
         />
       ) : !silhouetteFailed ? (

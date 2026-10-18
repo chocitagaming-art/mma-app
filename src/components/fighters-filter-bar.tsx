@@ -226,7 +226,7 @@ export function FightersFilterBar({
         aria-expanded={filtersOpen}
         aria-controls="fighters-filters"
         onClick={() => setFiltersOpen((open) => !open)}
-        className="flex h-11 w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3.5 text-[15px] text-foreground md:hidden"
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-3.5 text-[15px] text-foreground md:hidden"
       >
         <span>Filtros y orden</span>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -391,15 +391,6 @@
     filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
     transition: filter 0.25s ease;
   }
-  .roster-card:hover .roster-card-cutout,
-  .roster-card:focus-visible .roster-card-cutout {
-    transform: scale(1.07);
-  }
-  .roster-card:hover .roster-card-cutout img,
-  .roster-card:focus-visible .roster-card-cutout img {
-    filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 60%, transparent))
-      drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
-  }
   .roster-card::after {
     content: "";
     position: absolute;
@@ -410,10 +401,34 @@
     transform-origin: left;
     transition: transform 0.3s ease;
   }
-  .roster-card:hover::after,
+  /* Keyboard focus always; the mouse only where hover is real. Tailwind puts
+     its hover: utilities (the red border) inside @media (hover: hover), so
+     these go there too: on a touch screen a sticky :hover after a tap would
+     otherwise light the bar and grow the photo WITHOUT the red border. */
+  .roster-card:focus-visible .roster-card-cutout {
+    transform: scale(1.07);
+  }
+  .roster-card:focus-visible .roster-card-cutout img {
+    filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 60%, transparent))
+      drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+  }
   .roster-card:focus-visible::after {
     transform: scaleX(1);
   }
+  @media (hover: hover) {
+    .roster-card:hover .roster-card-cutout {
+      transform: scale(1.07);
+    }
+    .roster-card:hover .roster-card-cutout img {
+      filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 60%, transparent))
+        drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+    }
+    .roster-card:hover::after {
+      transform: scaleX(1);
+    }
+  }
+  /* Belt and braces: the global reduced-motion rule below already cuts every
+     transition to 0.01ms; this keeps the card still even if that rule moves. */
   @media (prefers-reduced-motion: reduce) {
     .roster-card-cutout,
     .roster-card-cutout img,

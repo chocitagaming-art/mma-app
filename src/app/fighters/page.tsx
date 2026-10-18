@@ -71,7 +71,11 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
         description="Filtra por categoría de peso, guardia y nacionalidad, y luego ordena la plantilla para encontrar los perfiles que buscas."
       />
 
-      <Card className="border-border bg-card">
+      {/* overflow-visible: the base Card clips, and the search suggestions are
+          an absolute dropdown INSIDE it. With the selects folded away on phones
+          the card ends 44 px under the search box, so it cut the list to 2 of 10
+          results (on desktop it already cut it). Nothing in here needs clipping. */}
+      <Card className="overflow-visible border-border bg-card">
         <CardContent className="space-y-6 p-4 md:p-6">
           <FightersFilterBar
             weightClasses={result.filterOptions.weightClasses}
