@@ -1,12 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { CountryFlag } from "@/components/country-flag";
+import { FighterRosterCard } from "@/components/fighter-roster-card";
 import { FightersFilterBar } from "@/components/fighters-filter-bar";
-import { FighterHeadshot } from "@/components/fighter-headshot";
 import { PaginationControls } from "@/components/pagination-controls";
 import { SectionHeading } from "@/components/section-heading";
-import { formatRecord, formatStance, formatWeightClass } from "@/lib/format";
+import { formatCount } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getFighters } from "@/lib/queries/fighters";
@@ -72,8 +71,12 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
         description="Filtra por categoría de peso, guardia y nacionalidad, y luego ordena la plantilla para encontrar los perfiles que buscas."
       />
 
-      <Card className="border-border bg-card">
-        <CardContent className="space-y-6 p-6">
+      {/* overflow-visible: the base Card clips, and the search suggestions are
+          an absolute dropdown INSIDE it. With the selects folded away on phones
+          the card ends 44 px under the search box, so it cut the list to 2 of 10
+          results (on desktop it already cut it). Nothing in here needs clipping. */}
+      <Card className="overflow-visible border-border bg-card">
+        <CardContent className="space-y-6 p-4 md:p-6">
           <FightersFilterBar
             weightClasses={result.filterOptions.weightClasses}
             stances={result.filterOptions.stances}
@@ -83,8 +86,8 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>
               Mostrando{" "}
-              <span className="font-semibold text-foreground">{result.fighters.length}</span> of{" "}
-              <span className="font-semibold text-foreground">{result.total}</span> luchadores
+              <span className="font-semibold text-foreground">{formatCount(result.fighters.length)}</span> de{" "}
+              <span className="font-semibold text-foreground">{formatCount(result.total)}</span> luchadores
             </p>
             <Link href="/fighters">
               <Button variant="ghost" className="text-muted-foreground hover:bg-accent hover:text-foreground">
@@ -97,73 +100,19 @@ export default async function FightersPage({ searchParams }: FightersPageProps) 
 
       {result.fighters.length ? (
         <>
-          <div className="overflow-hidden rounded-3xl border border-border bg-card">
-            <div className="hidden grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] gap-4 border-b border-border px-6 py-4 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground md:grid">
-              <span>Luchador</span>
-              <span>Récord</span>
-              <span>Categoría de peso</span>
-              <span>Nacionalidad</span>
-              <span>Guardia</span>
-            </div>
+          {/* 2 columns on phones, 3 from 640 px, 4 from 1024 px: a page of 12 is 4×3. */}
+          <div
+            data-testid="roster-grid"
+            className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-[18px] lg:grid-cols-4 lg:gap-5"
+          >
             {result.fighters.map((fighter, i) => (
-              <Link
+              <FighterRosterCard
                 key={fighter.id}
-                href={`/fighters/${fighter.id}`}
+                fighter={fighter}
+                priority={i < 4}
                 style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
-                className="animate-rise grid gap-4 border-b border-border px-6 py-5 transition hover:bg-accent md:grid-cols-[minmax(0,2.2fr)_repeat(4,minmax(0,1fr))] md:items-center"
-              >
-                <div className="flex items-center gap-4">
-                  <FighterHeadshot
-                    name={fighter.name}
-                    headshotUrl={fighter.headshotUrl}
-                    division={fighter.latestWeightClass}
-                    size="sm"
-                    className="shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate font-display text-lg font-bold uppercase leading-tight tracking-tight text-foreground">{fighter.name}</p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {fighter.nickname ? `"${fighter.nickname}"` : "Sin apodo registrado"}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
-                    Récord
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-foreground md:mt-0">
-                    {formatRecord(fighter.wins, fighter.losses, fighter.draws)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
-                    Categoría de peso
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground md:mt-0">
-                    {fighter.latestWeightClass ? formatWeightClass(fighter.latestWeightClass) : "Sin límite"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
-                    Nacionalidad
-                  </p>
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground md:mt-0">
-                    <CountryFlag nationality={fighter.nationality} />
-                    {fighter.nationality ?? "Desconocida"}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground md:hidden">
-                      Guardia
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground md:mt-0">
-                      {fighter.stance ? formatStance(fighter.stance) : "Desconocida"}
-                    </p>
-                  </div>
-                  <span className="text-sm font-medium text-primary">Ver perfil →</span>
-                </div>
-              </Link>
+                className="animate-rise"
+              />
             ))}
           </div>
           <PaginationControls

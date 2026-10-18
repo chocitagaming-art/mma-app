@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { FighterHeadshot } from "@/components/fighter-headshot";
@@ -114,6 +115,15 @@ export function FightersFilterBar({
 
   const showEmpty = trimmedQuery.length >= 1 && !loading && results.length === 0;
 
+  // On phones (< md) only the search box shows; the four selects hide behind
+  // one "Filtros y orden" button. It starts CLOSED even with filters active
+  // (the button says how many), so the cards stay near the top of the screen.
+  // From md up the selects are always visible and the button does not exist.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilters =
+    [current.weightClass, current.nationality, current.stance].filter(Boolean).length +
+    (current.sort && current.sort !== "relevance" ? 1 : 0);
+
   const weightClassItems = {
     all: "Todas las categorías de peso",
     ...Object.fromEntries(
@@ -136,7 +146,7 @@ export function FightersFilterBar({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       <div ref={searchRef} className="relative">
         <Input
           value={query}
@@ -211,7 +221,28 @@ export function FightersFilterBar({
           </div>
         ) : null}
       </div>
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+      <button
+        type="button"
+        aria-expanded={filtersOpen}
+        aria-controls="fighters-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-3.5 text-[15px] text-foreground md:hidden"
+      >
+        <span>Filtros y orden</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          {activeFilters
+            ? `${activeFilters} ${activeFilters === 1 ? "activo" : "activos"}`
+            : "Peso, país, guardia"}
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-4 transition-transform motion-reduce:transition-none ${filtersOpen ? "rotate-180" : ""}`}
+          />
+        </span>
+      </button>
+      <div
+        id="fighters-filters"
+        className={`${filtersOpen ? "grid" : "hidden md:grid"} gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4`}
+      >
       <div>
         <label
           htmlFor="filter-weight-class"
