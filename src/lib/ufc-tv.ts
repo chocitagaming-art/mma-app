@@ -30,8 +30,9 @@ import { isPlayableInSpain, parseIsoDuration, type VideoDetail } from "@/lib/you
 // Por eso scripts/fijar_videos_evento.py (mma-ingesta) llama a /api/revalidate
 // al tocar el directo si tiene REVALIDATE_SECRET, y si no avisa del retraso.
 //
-// CUOTA. La clave es la misma que usan /videos y la columna de vídeos de la
-// portada (~1.650 unidades/día medidas el 28-sep-2026, tope 10.000):
+// CUOTA. La clave es la misma que usan /videos, /tendencias y las noticias y
+// vídeos de la portada (antes, su columna de vídeos; ~1.650 unidades/día
+// medidas el 28-sep-2026, tope 10.000):
 //
 //   · directos: 2 playlistItems (50 subidas del canal inglés + 25 de UFC
 //     Español) + 2 videos.list (75 ids, de 50 en 50) = 4 unidades por

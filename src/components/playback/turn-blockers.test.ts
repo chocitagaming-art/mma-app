@@ -18,9 +18,36 @@ describe("turn blockers", () => {
   it("the videos lightbox (video-modal.tsx) blocks the turn for as long as it is mounted, i.e. open", () => {
     const modal = source("../video-modal.tsx");
     expect(modal).toMatch(/import \{ useTurnBlocker \} from "@\/components\/playback\/playback-turn-provider";/);
-    expect(modal).toMatch(/useTurnBlocker\("video-modal", true\);/);
+    // One name per modal (useId): two stacked modals were one entry in the
+    // turn manager's Set, and closing the top one lifted the other's block.
+    expect(modal).toMatch(/const blocker = `video-modal-\$\{useId\(\)\}`;/);
+    expect(modal).toMatch(/useTurnBlocker\(blocker, true\);/);
     // It is only mounted while open: the facade renders it on `playing`.
     expect(source("../youtube-facade.tsx")).toMatch(/\{playing && lightbox && \(\s*<VideoModal/);
+  });
+
+  // R10 (18-oct-2026): its player is a TurnSlot (through ClickToPlay), started
+  // on mount as the visitor's, and exempt from the modal's own blocker. No
+  // iframe of its own any more: that one played outside the turn, and the
+  // visitor's UFC TV went on playing behind it.
+  it("and its player is in the turn: a ClickToPlay started on mount, with the modal's blocker as its own", () => {
+    const modal = source("../video-modal.tsx");
+    expect(modal).toMatch(/<ClickToPlay[\s\S]*?\bstartOnMount\b[\s\S]*?ownBlocker=\{blocker\}[\s\S]*?\/>/);
+    expect(modal).not.toMatch(/<iframe/);
+    const clip = source("./click-to-play.tsx");
+    expect(clip).toMatch(/if \(!startOnMount\) return;\s*const result = userStart\(\);/);
+    // Refused: the poster is a plain link to YouTube, announced as one.
+    expect(clip).toMatch(/playsHere=\{!refused\}/);
+    expect(clip).toMatch(/ownBlocker=\{ownBlocker\}/);
+  });
+
+  // Like the Hall of Fame's: what is behind is inert and two sentinels keep
+  // Tab inside. Tab used to leave it and Enter opened a second modal on top.
+  it("the videos lightbox keeps the focus inside: the page behind is inert, two sentinels wrap Tab", () => {
+    const modal = source("../video-modal.tsx");
+    expect(modal).toMatch(/for \(const el of silenced\) el\.inert = true;/);
+    expect(modal).toMatch(/for \(const el of silenced\) el\.inert = false;/);
+    expect(modal.match(/data-focus-sentinel onFocus=/g)).toHaveLength(2);
   });
 
   it("the mobile menu blocks the turn while it is open", () => {

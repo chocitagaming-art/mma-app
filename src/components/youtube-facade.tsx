@@ -5,6 +5,7 @@ import { Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { VideoModal } from "@/components/video-modal";
+import { cn } from "@/lib/utils";
 
 // Shared "facade": render the thumbnail + play button first and only mount the
 // player after the user clicks (keeps pages fast, no 3rd-party player scripts
@@ -14,7 +15,8 @@ import { VideoModal } from "@/components/video-modal";
 //  - in-place (default): the youtube-nocookie iframe replaces the thumbnail in
 //    the same slot. Used by the hero reel and the fight-page player.
 //  - lightbox: clicking opens a large centered <VideoModal> overlay; the
-//    thumbnail stays in place. Used by the /videos grid and the home column.
+//    thumbnail stays in place. Used by /videos, /tendencias and the home's
+//    «Noticias y vídeos». The modal's player is in the turn manager.
 export function YouTubeFacade({
   videoId,
   title,
@@ -33,6 +35,10 @@ export function YouTubeFacade({
   const [playing, setPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Lightbox: the focus goes back to this ▶ when the modal closes. After the
+  // modal has unmounted, not in its onClose: while it is open the rest of the
+  // page is `inert` (video-modal.tsx), and an inert button refuses the focus.
+  const returnFocus = useRef(false);
 
   // In-place mode: move focus to the iframe so keyboard / screen-reader users
   // don't lose context when the trigger button unmounts.
@@ -41,6 +47,13 @@ export function YouTubeFacade({
       iframeRef.current?.focus();
     }
   }, [playing, lightbox]);
+
+  useEffect(() => {
+    if (!playing && returnFocus.current) {
+      returnFocus.current = false;
+      buttonRef.current?.focus();
+    }
+  }, [playing]);
 
   if (playing && !lightbox) {
     return (
@@ -61,7 +74,16 @@ export function YouTubeFacade({
         ref={buttonRef}
         onClick={() => setPlaying(true)}
         aria-label={`Reproducir: ${title}`}
-        className="group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted"
+        // Lightbox: the focus ring is drawn by an ::after ON TOP of the
+        // thumbnail. On the home and on /tendencias the button is as wide as its
+        // card, whose overflow-hidden cut the global outline (2 px outside) down
+        // to a line; an outline pulled inside is painted UNDER the positioned
+        // next/image fill, so it did not show at all (18-oct QA, 0 px changed).
+        className={cn(
+          "group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted",
+          lightbox &&
+            "focus-visible:outline-none after:pointer-events-none after:absolute after:inset-0 after:z-10 after:rounded-[inherit] focus-visible:after:ring-[3px] focus-visible:after:ring-inset focus-visible:after:ring-ring",
+        )}
       >
         <Image
           src={thumbnail}
@@ -81,8 +103,8 @@ export function YouTubeFacade({
           videoId={videoId}
           title={title}
           onClose={() => {
+            returnFocus.current = true;
             setPlaying(false);
-            buttonRef.current?.focus();
           }}
         />
       )}

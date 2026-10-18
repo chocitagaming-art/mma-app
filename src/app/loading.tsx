@@ -1,8 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Loading UI for the home page (/). Mirrors the real layout: hero with copy +
-// video reel, the four-cell stat strip, the news marquee and the recent-news
-// grid alongside the UFC videos column.
+// video reel, the four-cell stat strip, the news marquee and the news-and-
+// videos grid (R10: 9 cards, full width, 1/2/3 columns).
 export default function HomeLoading() {
   return (
     <div className="pb-16">
@@ -60,47 +60,26 @@ export default function HomeLoading() {
         </div>
       </div>
 
-      {/* Recent news + videos column */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-7">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-72" />
-              <Skeleton className="h-4 w-80" />
+      {/* News and videos: the same grid as HomeNewsSection */}
+      <section className="mx-auto max-w-7xl space-y-7 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div
+              key={i}
+              className={`overflow-hidden rounded-lg border border-border bg-card${i === 8 ? " sm:max-lg:hidden" : ""}`}
+            >
+              <Skeleton className="aspect-video w-full rounded-none" />
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="overflow-hidden rounded-lg border border-border bg-card"
-                >
-                  <Skeleton className="aspect-video w-full rounded-none" />
-                  <div className="space-y-2 p-4">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Videos column */}
-          <aside className="space-y-5">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-8 w-48" />
-            </div>
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-video w-full rounded-lg" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              ))}
-            </div>
-          </aside>
+          ))}
         </div>
       </section>
 

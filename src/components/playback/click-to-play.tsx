@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import {
   POSTER_FOCUS_CLASS,
@@ -21,13 +21,20 @@ import { cn } from "@/lib/utils";
 // becomes a ▶ button once React runs, useKeyboardStartFocus sends the focus
 // into the player after Enter or Space.
 //
-// Used by the Hall of Fame's fight wing. Built to serve the face-off and
-// weigh-in facades too (pass `poster` to show a thumbnail instead).
+// Used by the Hall of Fame's fight wing and by the videos modal
+// (video-modal.tsx: the home's «Noticias y vídeos», /videos, /tendencias),
+// which mounts it with `startOnMount`: the tap that opened the modal is the
+// start, and the poster only stays if the turn manager refused it. Then it is
+// a plain link to the video on YouTube, announced as one (playsHere false): a
+// tap on it can only open YouTube. Built to serve the face-off and weigh-in
+// facades too (pass `poster` to show a thumbnail instead).
 //
 // 🪤 Two traps, both measured:
-//   · Do NOT put a useTurnBlocker around it (a modal is tempted to, like
-//     VideoModal): a blocker refuses every start, the visitor's too
+//   · A useTurnBlocker around it refuses every start, the visitor's too
 //     ("blocked", turn-controller.ts userStart), and the ▶ would do nothing.
+//     A modal that must block (VideoModal) passes its blocker's name as
+//     `ownBlocker`: a player that puts up its own blocker sits above the
+//     page, and no blocker refuses its start (the open menu neither).
 //   · The box needs min-h-[202px]: inside a 360 px phone's modal 16:9 alone
 //     gives ~157 px, under the 200x200 minimum, and the turn manager answers
 //     "too-small" (the link then opens YouTube instead of playing here).
@@ -49,9 +56,12 @@ export function ClickToPlay({
   title,
   label,
   hint = "Toca para ver",
+  linkLabel,
   note,
   poster,
   tone = "brand",
+  startOnMount = false,
+  ownBlocker,
   className,
 }: {
   // An 11-character YouTube id (check it with isYouTubeVideoId first).
@@ -64,12 +74,19 @@ export function ClickToPlay({
   // What the poster says it plays («Ver combate · UFC 52»).
   label: string;
   hint?: string;
+  // The poster's accessible name. Defaults to «hint. label».
+  linkLabel?: string;
   // A small line under the hint (the channel, «Pelea completa»…).
   note?: string;
   // Replaces the drawn poster's inside (a thumbnail). It goes INSIDE the link:
   // no links of its own.
   poster?: ReactNode;
   tone?: ClickToPlayTone;
+  // Start as the visitor's as soon as it mounts: for a player mounted BY a
+  // tap (the videos modal), never for one that is just on the page.
+  startOnMount?: boolean;
+  // The blocker the surrounding modal puts up, which must not stop this one.
+  ownBlocker?: string;
   className?: string;
 }) {
   // Unique per mount: two of these on a page are two players for the turn.
@@ -77,6 +94,21 @@ export function ClickToPlay({
   const { view, userStart } = usePlaybackTurn(id);
   const focusPlayer = useKeyboardStartFocus(view);
   const range = { start, end };
+
+  // A start on mount the turn manager refused ("too-small"): the poster is
+  // then only a link to YouTube.
+  const [refused, setRefused] = useState(false);
+
+  // After TurnSlot's own effect (a child's effects run first): it is
+  // registered by now. A refused start leaves the poster, a link to YouTube.
+  useEffect(() => {
+    if (!startOnMount) return;
+    const result = userStart();
+    // The turn manager's answer to a start made once, when it mounts: there is
+    // nothing to render it from before the effect (as in use-live-now.ts).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (result !== "started") setRefused(true);
+  }, [startOnMount, userStart]);
 
   const gold = tone === "gold";
   const drawn = (
@@ -113,7 +145,8 @@ export function ClickToPlay({
   const posterLink = (
     <PosterLink
       href={clipWatchUrl(videoId, range)}
-      label={`${hint}. ${label}`}
+      label={linkLabel ?? `${hint}. ${label}`}
+      playsHere={!refused}
       onStart={userStart}
       onKeyboardStart={focusPlayer}
       className={cn(
@@ -131,6 +164,7 @@ export function ClickToPlay({
       src={clipEmbedUrl(videoId, range)}
       title={title}
       poster={posterLink}
+      ownBlocker={ownBlocker}
       className={cn("aspect-video min-h-[202px] w-full overflow-hidden bg-black", className)}
     />
   );

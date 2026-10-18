@@ -43,13 +43,17 @@ import { cn } from "@/lib/utils";
 // the home hero's short (components/home/shorts-hero.tsx), which only plays
 // when the visitor starts it and is in the turn so that there is still ONE
 // player at a time. Nothing else of the site starts a YouTube player on its
-// own: the click-to-play facades and the /videos modal mount only on a tap,
-// and stay outside the turn for now, except the Hall of Fame's fights
-// (components/playback/click-to-play.tsx, 18-oct-2026: our own poster, the
-// player mounts as the visitor's, inside the turn; built to take the face-off
-// and weigh-in facades next). The videos modal is a blocker, though
-// (useTurnBlocker, like the mobile menu): it covers the page, and nothing may
-// be in front of a player.
+// own. What the visitor opens with a tap is in the turn too, through
+// components/playback/click-to-play.tsx (our own poster, the player mounts as
+// the visitor's): the Hall of Fame's fights, and the videos modal of the home,
+// /videos and /tendencias (video-modal.tsx, R10, 18-oct-2026). Opening a
+// video there takes away whatever was playing, the visitor's UFC TV or short
+// included, and that one does not come back on its own when the modal closes
+// (turn-controller.ts, "parked"). The modal is also a blocker
+// (useTurnBlocker, like the mobile menu): it covers the page, and nothing
+// automatic may play behind it; its own player is exempt (ownBlocker). Left
+// outside the turn: the face-off and weigh-in facades and the fight pages'
+// player (BACKLOG, task 8).
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -203,6 +207,7 @@ export function TurnSlot({
   poster,
   className,
   autoStart = false,
+  ownBlocker,
   onMount,
   onIframeLoad,
 }: {
@@ -216,6 +221,9 @@ export function TurnSlot({
   // Starts on its own when it is seen (UFC TV, the event's broadcast). False
   // by default: then it only plays when the visitor starts it (the hero short).
   autoStart?: boolean;
+  // The blocker this player itself puts up (the videos modal): it does not
+  // stop the visitor's start of THIS player (turn-controller.ts userStart).
+  ownBlocker?: string;
   onMount?: (owner: TurnOwner) => void;
   // The hero starts its short's timer here (duration + 2.5 s, as in the mockup).
   onIframeLoad?: () => void;
@@ -236,9 +244,10 @@ export function TurnSlot({
       priority,
       element,
       autoStart,
+      ownBlocker,
       onMount: (owner) => latest.current.onMount?.(owner),
     });
-  }, [controller, id, priority, autoStart]);
+  }, [controller, id, priority, autoStart, ownBlocker]);
 
   const view: PlayerView = useSyncExternalStore(
     controller.subscribe,
