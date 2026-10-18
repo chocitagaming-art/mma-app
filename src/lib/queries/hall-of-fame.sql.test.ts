@@ -114,6 +114,7 @@ function database({ bio, salon, cutout }: { bio: boolean; salon: boolean; cutout
 beforeEach(() => {
   sqlMock.mockReset();
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {}).mockClear();
 });
 
 describe("getHallOfFame con la migración 031 aplicada", () => {
@@ -168,6 +169,9 @@ describe("getHallOfFame SIN la migración 031 (la reserva)", () => {
     expect(sqlMock).toHaveBeenCalledTimes(2);
     expect(data.fight[0].videoId).toBe("E2fUq7gT8z4");
     expect(data.fight[0].cornerACutout).toBeNull();
+    // Y deja rastro: un GRANT olvidado no puede pasar en silencio un día entero.
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(String(vi.mocked(console.warn).mock.calls[0][0])).toContain("42501");
   });
 
   it("ni siquiera la 014: el último escalón, sin bio, y el Salón sigue entero", async () => {

@@ -67,9 +67,21 @@
   align-items: flex-end;
   border-bottom: 1px solid rgb(212 160 23 / 0.45);
   background: radial-gradient(55% 80% at 50% 100%, rgb(212 160 23 / 0.28), transparent 72%);
+  /* The cut-out's drop shadow stops at the gold line: it used to spill onto
+     the text below and sink the amber wing tag to ~4:1 in light theme (QA,
+     18-oct). Open on the other three sides, so the head and the hover zoom
+     are never clipped (the card's overflow:hidden still bounds them). */
+  clip-path: inset(-40px -40px 0 -40px);
 }
+/* On a phone the feature card is barely wider than a normal one: a 200 px
+   stage only left ~100 px of air above the head. */
 .hof-card--feature .hof-card__stage {
-  height: 200px;
+  height: 170px;
+}
+@media (min-width: 640px) {
+  .hof-card--feature .hof-card__stage {
+    height: 200px;
+  }
 }
 @media (min-width: 1024px) {
   .hof-card__stage {
@@ -126,9 +138,13 @@
      at the face (hof-photo.tsx); everything else stays at 1. */
   transform: scale(var(--hof-zoom, 1));
 }
+/* Never wider than its card: at 360 px a feature card is ~160 px wide, and a
+   fixed 160 px frame lost its side borders to the card's overflow (QA,
+   18-oct). Square through aspect-ratio (the <img> inside is absolute). */
 .hof-photo--feature.hof-photo--framed {
-  width: 160px;
-  height: 160px;
+  width: min(160px, calc(100% - 16px));
+  height: auto;
+  aspect-ratio: 1;
 }
 .hof-photo--modal.hof-photo--framed {
   width: 224px;
@@ -171,6 +187,9 @@
   background:
     radial-gradient(40% 70% at 25% 100%, color-mix(in oklch, var(--corner-red) 30%, transparent), transparent 70%),
     radial-gradient(40% 70% at 75% 100%, color-mix(in oklch, var(--corner-blue) 30%, transparent), transparent 70%);
+  /* Same as the person cards: the corners' shadows stop at the gold line and
+     never grey the title and the class line below it. */
+  clip-path: inset(-40px -40px 0 -40px);
 }
 .hof-fight--feature .hof-fight__stage {
   height: 220px;

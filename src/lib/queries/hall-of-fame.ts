@@ -186,6 +186,14 @@ async function getHallOfFameUncached(): Promise<HallOfFameData> {
       break;
     } catch (error) {
       if (!isSchemaError(error) || index === SCHEMA_LADDER.length - 1) throw error;
+      // Bajar un escalón deja el Salón sin vídeos o sin relieve DURANTE UN DÍA
+      // (va dentro de la caché): que quede en el log de Vercel por qué. Un
+      // 42501 aquí es un GRANT olvidado, no una migración pendiente.
+      const code = (error as { code?: string }).code;
+      console.warn(
+        `getHallOfFame: escalón ${index} (${JSON.stringify(schema)}) rechazado por el esquema (${code}); se sirve el siguiente:`,
+        (error as { message?: string }).message,
+      );
     }
   }
 

@@ -16,10 +16,13 @@ import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
 //   · «Ver combate» dentro del modal: póster propio, NADA de Google hasta el
 //     clic, y el reproductor dentro del turnero (nunca dos a la vez).
 //
-// 🪤 La base de producción puede no tener aún la migración 031 (vídeos,
-// photo_focus y photo_cutout): entonces todo va enmarcado y sin vídeo, y la
-// página tiene que aguantar igual. Los asertos que necesitan esos datos se
-// SALTAN diciendo por qué; lo que comprueba la reserva no se salta nunca.
+// 🪤 La base de producción YA tiene la migración 031 y sus datos (seed del
+// 18-oct: 11 vídeos, 12 photo_focus, photo_cutout medido). Por eso los asertos
+// que los necesitan se EXIGEN: si un cruce roto o un escalón de la escalera
+// (lib/queries/hall-of-fame.ts) los quitara, todo quedaría enmarcado y sin
+// vídeo, la reserva pasaría… y un salto lo habría escondido (QA, 18-oct). Solo
+// con SALON_SIN_031=1 (una base sin migrar, a propósito) se comprueba la
+// reserva y se salta lo demás. Al leer la salida: 0 saltados en el Salón.
 //
 // Corre en Chromium Y en WebKit (el dueño mira en su iPhone; el zoom de las
 // fotos de ufc.com va con transform), como careo-fotos.spec.ts. Un solo
@@ -32,6 +35,11 @@ import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
 type Motor = "chromium" | "webkit";
 
 const HEADSHOT = readFileSync(path.join(__dirname, "fixtures", "careo-headshot.png"));
+
+// Una base SIN la migración 031, pedida a propósito: solo entonces se aceptan
+// la reserva (todo enmarcado, sin vídeo) y los saltos.
+const SIN_031 = process.env.SALON_SIN_031 === "1";
+const MOTIVO_031 = "SALON_SIN_031=1: base sin la migración 031, se comprueba la reserva";
 
 // Lo que delataría que se habló con Google: el reproductor, la miniatura, el vídeo.
 const GOOGLE = /youtube|ytimg|googlevideo|ggpht|doubleclick|google/;
@@ -177,24 +185,66 @@ for (const motor of ["chromium", "webkit"] as const) {
       expect(Math.round(caja.width)).toBe(128);
       expect(Math.round(caja.height)).toBe(128);
 
-      // Una foto 16:9 de ufc.com con su punto de la cara lleva el zoom.
-      const conZoom = panel(pagina).locator('.hof-photo--framed img[style*="--hof-zoom"]');
-      if ((await conZoom.count()) > 0) {
-        const transform = await conZoom.first().evaluate((img) => getComputedStyle(img).transform);
-        expect(transform).not.toBe("none");
+      // Los retratos 16:9 de ufc.com con su punto de la cara llevan el zoom.
+      if (SIN_031) return;
+      for (const nombre of ["Don Frye", "Maurice Smith", "Dan Severn"]) {
+        const img = tarjeta(panel(pagina), nombre).locator('.hof-photo--framed img[style*="--hof-zoom"]');
+        await expect(img, `${nombre}: sin photo_focus`).toHaveCount(1);
+        const transform = await img.evaluate((el) => getComputedStyle(el).transform);
+        expect(transform, nombre).not.toBe("none");
+      }
+    });
+
+    test("móvil y 1024: las tarjetas de la Clase son MÁS grandes que las de la pestaña, y nada se sale ni se corta", async ({ pagina }) => {
+      for (const ancho of [360, 390, 1024]) {
+        await pagina.setViewportSize({ width: ancho, height: 900 });
+        await abrirSalon(pagina);
+        const bloque = clase(pagina);
+        const grande = bloque.locator("[data-hof-card]").first();
+        const normal = panel(pagina).locator("[data-hof-card]").first();
+        const anchoGrande = (await grande.boundingBox())!.width;
+        const anchoNormal = (await normal.boundingBox())!.width;
+        expect(anchoGrande, `a ${ancho} px`).toBeGreaterThan(anchoNormal);
+
+        // El marco dorado cabe ENTERO en su tarjeta (a 360 se comía los bordes).
+        for (const tarjetaClase of await bloque.locator("[data-hof-card]").all()) {
+          const t = (await tarjetaClase.boundingBox())!;
+          const marco = tarjetaClase.locator(".hof-photo--framed");
+          if ((await marco.count()) === 0) continue;
+          const m = (await marco.boundingBox())!;
+          expect(m.x, `a ${ancho} px`).toBeGreaterThanOrEqual(t.x);
+          expect(m.x + m.width, `a ${ancho} px`).toBeLessThanOrEqual(t.x + t.width);
+          expect(Math.round(m.width)).toBe(Math.round(m.height));
+        }
+
+        // Ningún nombre cortado con puntos suspensivos, ni la etiqueta del ala partida.
+        const cortes = await bloque.locator("[data-hof-card]").evaluateAll((tarjetas) =>
+          tarjetas.flatMap((t) => {
+            const nombre = t.querySelector("[data-hof-name]") as HTMLElement | null;
+            const ala = t.querySelector(".hof-card__info > span") as HTMLElement | null;
+            const fallos: string[] = [];
+            if (nombre && (nombre.scrollHeight > nombre.clientHeight + 1 || nombre.scrollWidth > nombre.clientWidth + 1)) {
+              fallos.push(`nombre: ${nombre.textContent}`);
+            }
+            if (ala && ala.getBoundingClientRect().height > 24) fallos.push(`ala partida: ${ala.textContent}`);
+            return fallos;
+          }),
+        );
+        expect(cortes, `a ${ancho} px`).toEqual([]);
       }
     });
 
     test("relieve SOLO con la medida de photo_cutout (Gracie sí; Severn y Frye, enmarcados)", async ({ pagina }) => {
       await abrirSalon(pagina, "?wing=pioneer");
-      const enRelieve = panel(pagina).locator('[data-photo="cut"]');
-      if ((await enRelieve.count()) === 0) {
-        // La reserva: sin la tabla, NADA en relieve. Esto se comprueba siempre.
+      if (SIN_031) {
+        // La reserva: sin la tabla, NADA en relieve.
         await expect(panel(pagina).locator('[data-hof-card][data-photo="framed"]')).toHaveCount(
           await panel(pagina).locator("[data-hof-card]").count(),
         );
-        test.skip(true, "la base aún no tiene photo_cutout (migración 031 + measure_photo_cutout): todo va enmarcado, que es la reserva");
+        test.skip(true, MOTIVO_031);
       }
+      // Con los datos, la Pionera TIENE recortes: 0 sería un cruce roto.
+      expect(await panel(pagina).locator('[data-hof-card][data-photo="cut"]').count()).toBeGreaterThan(0);
       await expect(tarjeta(panel(pagina), "Royce Gracie")).toHaveAttribute("data-photo", "cut");
       // ufc.com, pero CON fondo: el error del prototipo, que lo ponía en relieve.
       await expect(tarjeta(panel(pagina), "Dan Severn")).toHaveAttribute("data-photo", "framed");
@@ -221,7 +271,7 @@ for (const motor of ["chromium", "webkit"] as const) {
       expect(Math.round((await dialogo.locator(":scope > div").boundingBox())!.width)).toBe(768);
 
       const caja = dialogo.locator("[data-turn]");
-      if ((await caja.count()) === 0) {
+      if (SIN_031) {
         // La reserva: sin vídeo guardado, el botón de búsqueda de siempre.
         await expect(dialogo.getByRole("link", { name: "Ver combate" })).toHaveAttribute(
           "href",
@@ -229,8 +279,9 @@ for (const motor of ["chromium", "webkit"] as const) {
         );
         await expect(pagina.locator("iframe")).toHaveCount(0);
         expect(google).toEqual([]);
-        test.skip(true, "la base aún no tiene los vídeos del Ala de Combate (migración 031 + seed): queda la búsqueda en YouTube");
+        test.skip(true, MOTIVO_031);
       }
+      await expect(caja).toHaveCount(1);
 
       // Antes del clic: el póster, ni un iframe, ni una petición a Google.
       const poster = caja.getByRole("button", { name: /Ver combate · UFC 52/ });
@@ -270,8 +321,10 @@ for (const motor of ["chromium", "webkit"] as const) {
       await abrirSalon(pagina, "?wing=fight");
       await pelea(panel(pagina), /Hughes vs\. Frank Trigg II/).click();
       const dialogo = pagina.getByRole("dialog");
+      await expect(dialogo).toBeVisible();
+      test.skip(SIN_031, MOTIVO_031);
       const caja = dialogo.locator("[data-turn]");
-      test.skip((await caja.count()) === 0, "la base aún no tiene los vídeos del Ala de Combate (migración 031 + seed)");
+      await expect(caja).toHaveCount(1);
 
       const medida = (await caja.boundingBox())!;
       expect(medida.width).toBeGreaterThanOrEqual(200);
@@ -286,6 +339,71 @@ for (const motor of ["chromium", "webkit"] as const) {
       await expect
         .poll(() => pagina.evaluate(() => document.activeElement?.tagName))
         .toBe("IFRAME");
+    });
+
+    test("el foco no sale del modal y, tras arrancar con Enter, se cierra con el teclado", async ({ pagina }) => {
+      test.skip(SIN_031, MOTIVO_031);
+      await abrirSalon(pagina, "?wing=fight");
+      await pelea(panel(pagina), /Hughes vs\. Frank Trigg II/).click();
+      const dialogo = pagina.getByRole("dialog");
+      await expect(dialogo).toBeVisible();
+      const cerrar = dialogo.getByRole("button", { name: "Cerrar" });
+      await expect(cerrar).toBeFocused();
+
+      // Lo de detrás no se alcanza: la página queda inert mientras está abierto.
+      await expect(pagina.locator("body > :not([role=dialog])").first()).toHaveJSProperty("inert", true);
+
+      // Tab y Mayús+Tab dan la vuelta DENTRO del diálogo.
+      const dentro = () => pagina.evaluate(() => !!document.activeElement?.closest("[role=dialog]"));
+      for (let i = 0; i < 8; i++) {
+        await pagina.keyboard.press("Tab");
+        expect(await dentro(), `Tab ${i + 1}`).toBe(true);
+      }
+      await cerrar.focus();
+      await pagina.keyboard.press("Shift+Tab");
+      expect(await dentro(), "Mayús+Tab desde el ✕").toBe(true);
+
+      // Arranca con Enter: el foco entra en el reproductor (y Escape ya no llega).
+      const caja = dialogo.locator("[data-turn]");
+      await caja.getByRole("button", { name: /Ver combate/ }).focus();
+      await pagina.keyboard.press("Enter");
+      await expect(caja).toHaveAttribute("data-turn-state", "playing-user");
+      await expect.poll(() => pagina.evaluate(() => document.activeElement?.tagName)).toBe("IFRAME");
+
+      // Mayús+Tab recorre los controles del reproductor y sale al ✕.
+      for (let i = 0; i < 6 && !(await cerrar.evaluate((b) => b === document.activeElement)); i++) {
+        await pagina.keyboard.press("Shift+Tab");
+      }
+      await expect(cerrar).toBeFocused();
+      await pagina.keyboard.press("Enter");
+      await expect(dialogo).toHaveCount(0);
+      await expect(pagina.locator("iframe")).toHaveCount(0);
+      // Y la página vuelve a ser alcanzable.
+      await expect(pagina.locator("body > *").first()).toHaveJSProperty("inert", false);
+    });
+
+    test("móvil en horizontal: el reproductor cabe en el modal, con sus controles a la vista", async ({ pagina }) => {
+      test.skip(SIN_031, MOTIVO_031);
+      for (const [ancho, alto] of [
+        [740, 360],
+        [844, 390],
+      ] as const) {
+        await pagina.setViewportSize({ width: ancho, height: alto });
+        await abrirSalon(pagina, "?wing=fight");
+        await pelea(panel(pagina), /Hughes vs\. Frank Trigg II/).click();
+        const dialogo = pagina.getByRole("dialog");
+        await expect(dialogo).toBeVisible();
+        const caja = dialogo.locator("[data-turn]");
+        await caja.getByRole("button", { name: /Ver combate/ }).click();
+        await expect(caja).toHaveAttribute("data-turn-state", "playing-user");
+        const reproductor = (await dialogo.locator("iframe").boundingBox())!;
+        const marco = (await dialogo.locator(":scope > div").boundingBox())!;
+        expect(reproductor.height, `${ancho}×${alto}`).toBeGreaterThanOrEqual(200);
+        expect(reproductor.width, `${ancho}×${alto}`).toBeGreaterThanOrEqual(200);
+        expect(reproductor.y + reproductor.height, `${ancho}×${alto}`).toBeLessThanOrEqual(marco.y + marco.height);
+        await pagina.keyboard.press("Escape");
+        await expect(dialogo).toHaveCount(0);
+      }
     });
 
     test("con «menos movimiento» las fotos no se animan", async ({ pagina }) => {

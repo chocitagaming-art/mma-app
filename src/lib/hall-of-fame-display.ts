@@ -134,3 +134,34 @@ export function fightClip(inductee: HofInductee): FightClip | null {
   const { start, end } = normalizeClipRange({ start: inductee.videoStart, end: inductee.videoEnd });
   return { videoId: inductee.videoId, start, end };
 }
+
+// ── The corners' names ─────────────────────────────────────────────────────
+
+// Same person, spelled differently: accents, spaces and case aside.
+function nameKey(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
+
+/**
+ * What each corner of a fight says. fighters.name has no accents and its own
+ * spacing («JOANNA JEDRZEJCZYK», «DOOHO CHOI») under a title that has them
+ * («Zhang Weili vs. Joanna Jędrzejczyk I»), so the title's spelling wins, but
+ * ONLY when it is the same name once accents, spaces and case are set aside.
+ * Anything else (a title that says just «Hughes») keeps fighters.name.
+ */
+export function cornerLabels(inductee: HofInductee): { a: string | null; b: string | null } {
+  const parts = inductee.displayName
+    .split(/\s+vs\.?\s+/i)
+    .map((part) => part.replace(/\s+(?:[IVX]+|\d+)$/, "").trim())
+    .filter(Boolean);
+  const pick = (name: string | null): string | null => {
+    if (!name) return name;
+    const key = nameKey(name);
+    return parts.find((part) => key !== "" && nameKey(part) === key) ?? name;
+  };
+  return { a: pick(inductee.cornerAName), b: pick(inductee.cornerBName) };
+}

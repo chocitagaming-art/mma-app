@@ -4,6 +4,7 @@ import {
   FRAME_ZOOM,
   buildCutoutIndex,
   compareByClass,
+  cornerLabels,
   fightClip,
   latestClass,
   orderByClass,
@@ -284,5 +285,34 @@ describe("the fight's video (fightClip)", () => {
       start: 3909,
       end: null,
     });
+  });
+});
+
+describe("the corners' names (cornerLabels)", () => {
+  const fight = (displayName: string, a: string | null, b: string | null) =>
+    inductee({ wing: "fight", displayName, cornerAName: a, cornerBName: b });
+
+  it("takes the title's spelling when it is the same person (accents, spaces)", () => {
+    expect(cornerLabels(fight("Zhang Weili vs. Joanna Jędrzejczyk I", "Zhang Weili", "Joanna Jedrzejczyk"))).toEqual({
+      a: "Zhang Weili",
+      b: "Joanna Jędrzejczyk",
+    });
+    expect(cornerLabels(fight("Cub Swanson vs. Doo Ho Choi", "Cub Swanson", "DooHo Choi")).b).toBe("Doo Ho Choi");
+    expect(cornerLabels(fight("Dan Henderson vs. Maurício Rua I", "Dan Henderson", "Mauricio Rua")).b).toBe("Maurício Rua");
+  });
+
+  it("matches by name, not by side, and strips the rematch numeral", () => {
+    expect(cornerLabels(fight("Robbie Lawler vs. Rory MacDonald II", "Rory MacDonald", "Robbie Lawler"))).toEqual({
+      a: "Rory MacDonald",
+      b: "Robbie Lawler",
+    });
+  });
+
+  it("keeps fighters.name when the title says something else", () => {
+    expect(cornerLabels(fight("Hughes vs. Frank Trigg II", "Matt Hughes", "Frank Trigg"))).toEqual({
+      a: "Matt Hughes",
+      b: "Frank Trigg",
+    });
+    expect(cornerLabels(fight("Una pelea sin vs", "A", null))).toEqual({ a: "A", b: null });
   });
 });

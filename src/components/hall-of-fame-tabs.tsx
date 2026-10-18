@@ -11,6 +11,7 @@ import { HofPhoto, useHofPhoto } from "@/components/hof-photo";
 import {
   WING_LABEL,
   buildCutoutIndex,
+  cornerLabels,
   latestClass,
   orderByClass,
   personPhotoUrl,
@@ -40,7 +41,10 @@ function YearLine({ year }: { year: number | null }) {
 
 function WingTag({ wing }: { wing: HofWing }) {
   return (
-    <span className="mb-1 inline-block rounded-full border border-amber-500/40 px-2 py-0.5 font-mono text-[0.625rem] uppercase tracking-[0.14em] text-amber-700 dark:text-amber-400">
+    // amber-800 in light: amber-700 at 10 px sat right at the 4.5:1 line over
+    // the card's gold tint (QA, 18-oct). One line always: tighter tracking on
+    // a phone, where «ALA CONTRIBUIDORA» used to break in two.
+    <span className="mb-1 inline-block whitespace-nowrap rounded-full border border-amber-500/40 px-2 py-0.5 font-mono text-[0.625rem] uppercase tracking-[0.06em] text-amber-800 sm:tracking-[0.14em] dark:text-amber-400">
       {WING_LABEL[wing]}
     </span>
   );
@@ -77,11 +81,12 @@ function PersonCard({
         <p
           className={cn(
             "flex items-center justify-center gap-1.5 font-display font-bold uppercase leading-tight tracking-tight text-foreground",
-            feature ? "text-lg" : "text-base",
+            feature ? "text-base sm:text-lg" : "text-base",
           )}
         >
           {inductee.nationality ? <CountryFlag nationality={inductee.nationality} /> : null}
-          <span className="truncate">{inductee.displayName}</span>
+          {/* Two lines before an ellipsis: «DOMINICK C…» said nothing. */}
+          <span data-hof-name className="line-clamp-2 min-w-0 break-words">{inductee.displayName}</span>
         </p>
         <YearLine year={inductee.inducteeYear} />
       </div>
@@ -120,11 +125,16 @@ function PersonCard({
 function Corner({
   side,
   name,
+  label,
   headshot,
   cutouts,
 }: {
   side: "a" | "b";
+  // fighters.name: the key for the photo (local headshots go by it).
   name: string | null;
+  // What the poster says: the fight title's spelling when it is the same
+  // person (cornerLabels), so «Jędrzejczyk» keeps its accents.
+  label: string | null;
   headshot: string | null;
   cutouts: ReadonlyMap<string, boolean>;
 }) {
@@ -132,8 +142,8 @@ function Corner({
   const photo = useHofPhoto(url, photoMode(url, cutouts));
   return (
     <div className={`hof-fight__corner hof-fight__corner--${side}`} data-corner={side} data-photo={photo.mode}>
-      <HofPhoto name={name ?? "?"} photo={photo} variant="corner" />
-      <span className="hof-fight__name">{name ?? "—"}</span>
+      <HofPhoto name={label ?? name ?? "?"} photo={photo} variant="corner" />
+      <span className="hof-fight__name">{label ?? "—"}</span>
     </div>
   );
 }
@@ -150,6 +160,7 @@ function FightCard({
   onSelect: () => void;
 }) {
   const feature = size === "feature";
+  const labels = cornerLabels(inductee);
   return (
     <button
       type="button"
@@ -159,11 +170,11 @@ function FightCard({
       className={cn("hof-fight", feature && "hof-fight--feature")}
     >
       <div className="hof-fight__stage">
-        <Corner side="a" name={inductee.cornerAName} headshot={inductee.cornerAHeadshot} cutouts={cutouts} />
+        <Corner side="a" name={inductee.cornerAName} label={labels.a} headshot={inductee.cornerAHeadshot} cutouts={cutouts} />
         <span className="hof-fight__vs" aria-hidden>
           VS
         </span>
-        <Corner side="b" name={inductee.cornerBName} headshot={inductee.cornerBHeadshot} cutouts={cutouts} />
+        <Corner side="b" name={inductee.cornerBName} label={labels.b} headshot={inductee.cornerBHeadshot} cutouts={cutouts} />
       </div>
       <div className="hof-fight__info">
         {feature ? <WingTag wing="fight" /> : null}
@@ -202,9 +213,13 @@ function Card({
 }
 
 // La última promoción, destacada ENCIMA de las pestañas (decisión del dueño,
-// 18-oct): sus tarjetas más grandes (4 columnas como mucho, frente a las 5 de
-// la pestaña), con la etiqueta de su ala. La pelea ocupa dos columnas; si las
-// personas llenan sus filas, va centrada debajo.
+// 18-oct): sus tarjetas más grandes, con la etiqueta de su ala. La pelea ocupa
+// dos columnas; si las personas llenan sus filas de 4, va centrada debajo.
+//
+// Que sean MÁS grandes de verdad (QA, 18-oct): con el relleno del bloque, a
+// 360/390 y a 1024 salían más pequeñas que las de la pestaña. En el móvil el
+// bloque va a sangre (sin bordes laterales, relleno de 12 px) y a 1024 tiene 3
+// columnas; las 4 esperan a xl, donde la pestaña tiene 5.
 function LatestClassBlock({
   year,
   items,
@@ -222,25 +237,27 @@ function LatestClassBlock({
     <section
       aria-labelledby={headingId}
       data-hof-latest-class={year}
-      className="mb-10 rounded-xl border border-amber-500/30 bg-[linear-gradient(180deg,color-mix(in_oklch,#d4a017_9%,var(--card)),transparent_70%)] p-4 sm:p-6"
+      className="-mx-4 mb-10 border-y border-amber-500/30 bg-[linear-gradient(180deg,color-mix(in_oklch,#d4a017_9%,var(--card)),transparent_70%)] px-3 py-5 sm:mx-0 sm:rounded-xl sm:border-x sm:p-6"
     >
-      <p className="font-mono text-xs uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">
-        La promoción más reciente
-      </p>
-      <h2 id={headingId} className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
-        Clase de {year}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {items.length === 1 ? "1 nuevo miembro" : `${items.length} nuevos miembros`} del Salón de la Fama.
-      </p>
-      <ul className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="px-1 sm:px-0">
+        <p className="font-mono text-xs uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">
+          La promoción más reciente
+        </p>
+        <h2 id={headingId} className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight text-foreground sm:text-3xl">
+          Clase de {year}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {items.length === 1 ? "1 nuevo miembro" : `${items.length} nuevos miembros`} del Salón de la Fama.
+        </p>
+      </div>
+      <ul className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((inductee) => (
           <li
             key={`${inductee.wing}-${inductee.displayName}`}
             className={cn(
               "min-w-0",
               inductee.wing === "fight" ? "col-span-2" : "col-span-1",
-              inductee.wing === "fight" && people % 4 === 0 && "lg:col-start-2",
+              inductee.wing === "fight" && people % 4 === 0 && "xl:col-start-2",
             )}
           >
             <Card inductee={inductee} cutouts={cutouts} size="feature" onSelect={onSelect} />
@@ -348,7 +365,15 @@ export function HallOfFameTabs({ data }: { data: HallOfFameData }) {
       </div>
 
       {selected ? (
-        <HallOfFameInducteeModal inductee={selected} cutouts={cutouts} onClose={closeModal} />
+        // key: otra pelea es OTRO modal. Sin ella React reutilizaba el mismo
+        // (y su ClickToPlay, con el mismo id de turno): la pelea nueva heredaba
+        // el reproductor de la anterior y arrancaba sola, con sonido (QA, 18-oct).
+        <HallOfFameInducteeModal
+          key={`${selected.wing}-${selected.displayName}`}
+          inductee={selected}
+          cutouts={cutouts}
+          onClose={closeModal}
+        />
       ) : null}
     </div>
   );
