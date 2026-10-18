@@ -6,7 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HomeLoading() {
   return (
     <div className="pb-16">
-      {/* Hero */}
+      {/* Hero: it follows the theme, NOT always dark like the real one. This
+          is the ROOT loading.tsx, so it also shows on a client navigation to
+          the routes without their own (/directo, /estado, /compare,
+          /predict...), and a dark band flashed before those light pages. The
+          home itself is ISR and the header logo prefetches it whole, so it
+          hardly ever gets to show this skeleton. */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-8 lg:py-20">
           {/* Copy */}
@@ -34,13 +39,13 @@ export default function HomeLoading() {
         </div>
       </section>
 
-      {/* Stat strip */}
+      {/* Stat strip: one row of four on mobile, as in the real one */}
       <section className="border-b border-border bg-card">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-border lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl grid-cols-4 gap-px bg-border md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-card px-4 py-7 sm:px-6 lg:px-8">
-              <Skeleton className="h-10 w-28" />
-              <Skeleton className="mt-3 h-3 w-24" />
+            <div key={i} className="bg-card px-1 py-3.5 md:px-6 md:py-7 lg:px-8">
+              <Skeleton className="mx-auto h-6 w-12 md:mx-0 md:h-10 md:w-28" />
+              <Skeleton className="mx-auto mt-1.5 h-2.5 w-14 md:mx-0 md:mt-3 md:h-3 md:w-24" />
             </div>
           ))}
         </div>

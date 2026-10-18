@@ -95,6 +95,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // The home hero's arena photo (globals.css, .home-hero) is that page's
+      // LCP element: with /public's default max-age=0 every visit revalidated
+      // it before painting. A year, immutable: the files carry a version in
+      // their name (arena.v1.avif) and are NEVER overwritten, only bumped.
+      {
+        source: "/hero/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
     ];
   },
 };

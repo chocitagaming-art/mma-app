@@ -2,15 +2,6 @@ export function formatRecord(wins: number, losses: number, draws: number) {
   return `${wins}-${losses}-${draws}`;
 }
 
-// Spanish thousands separator for counts: "2.892", never "2,892" nor "2892".
-// 🪤 Plain es-ES does NOT group four-digit numbers (CLDR minimumGroupingDigits
-// is 2, so it prints "2892"): `useGrouping: "always"` forces the dot.
-const COUNT_FORMAT = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
-
-export function formatCount(value: number): string {
-  return COUNT_FORMAT.format(value);
-}
-
 export function formatHeight(heightCm: number | null) {
   if (!heightCm) {
     return "—";
@@ -33,6 +24,21 @@ export function formatWeight(weightGrams: number | null) {
   }
 
   return `${(weightGrams / 1000).toFixed(1)} kg`;
+}
+
+// 🪤 `useGrouping: "always"` IS the fix. With the default ("auto" in es-ES,
+// which means "min2") Spanish only groups from five digits: 2892 → "2892" but
+// 17784 → "17.784", two styles side by side in the home counters. And a bare
+// toLocaleString() takes the server's locale: on Vercel that is en-US, which
+// printed "2,892" in production.
+const COUNT_FORMAT = new Intl.NumberFormat("es-ES", {
+  useGrouping: "always",
+  maximumFractionDigits: 0,
+});
+
+/** A count with Spanish thousands separators, always: 2892 → "2.892". */
+export function formatCount(value: number): string {
+  return COUNT_FORMAT.format(value);
 }
 
 export function formatPercentage(value: number) {
