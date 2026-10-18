@@ -4,6 +4,7 @@ import {
   ageFromBirthDate,
   cleanNationality,
   formatControlTime,
+  formatCount,
   formatDate,
   formatHeight,
   formatMethod,
@@ -42,6 +43,27 @@ describe("ageFromBirthDate", () => {
   it("returns null for implausible ages (future or >120 years)", () => {
     expect(ageFromBirthDate("2030-01-01", ref)).toBeNull();
     expect(ageFromBirthDate("1880-01-01", ref)).toBeNull();
+  });
+});
+
+describe("formatCount", () => {
+  it("pone el punto de miles también con cuatro cifras (es-ES no lo hace por defecto)", () => {
+    // The trap: Intl es-ES with the default grouping prints 2892 as "2892".
+    expect(new Intl.NumberFormat("es-ES").format(2892)).toBe("2892");
+    expect(formatCount(2892)).toBe("2.892");
+    expect(formatCount(8974)).toBe("8.974");
+  });
+
+  it("agrupa igual los números grandes y deja los pequeños tal cual", () => {
+    expect(formatCount(17784)).toBe("17.784");
+    expect(formatCount(1234567)).toBe("1.234.567");
+    expect(formatCount(800)).toBe("800");
+    expect(formatCount(0)).toBe("0");
+  });
+
+  it("nunca usa la coma inglesa ni decimales", () => {
+    expect(formatCount(2892)).not.toContain(",");
+    expect(formatCount(2892.6)).toBe("2.893");
   });
 });
 

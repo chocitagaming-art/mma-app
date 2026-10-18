@@ -330,9 +330,23 @@
       transparent 76%
     );
     opacity: 0.06;
+    display: var(--body-watermark-display, block);
   }
   .dark body::after {
     opacity: 0.08;
+  }
+  /* The home has the arena photo in its hero and no watermark (owner, 17-oct-
+     2026: «quitarlo solo de la portada, lo dejamos en el resto de la web»).
+     The home's root carries .no-watermark: no client JS, and on a client
+     navigation away from / that root unmounts and the watermark comes back.
+     🪤 Through a custom property on body and NOT with
+     `body:has(.no-watermark)::after { display: none }`: WebKit does not
+     re-style the pseudo-element when the matching element goes away, and the
+     watermark stayed hidden on every page reached from the home by a client
+     navigation (measured with Playwright's WebKit; Chromium was fine). Body's
+     own style IS re-evaluated, and its ::after reads the variable. */
+  body:has(.no-watermark) {
+    --body-watermark-display: none;
   }
   html {
     @apply font-sans;
@@ -356,6 +370,101 @@
 }
 
 @layer components {
+  /* The home hero: ALWAYS dark (the section carries .dark, so the tokens and
+     the dark: variants apply inside it even with the light theme) with the
+     arena behind it. Validated by the owner on the 17-oct prototype
+     (docs ARCHIVO/planes/rediseno-2026-10-17). Both layers are pseudo-elements
+     of the section: decorative, out of the accessibility tree and out of the
+     DOM (e2e/maquetacion.spec.ts reads the section's first child as the grid).
+     z-index -1 inside the section's own stacking context (isolate + z-10 on
+     it): behind the content, above the section's background.
+     ⚠️ LCP: the photo is a CSS background, never an <img> with priority or a
+     preload. It IS still an LCP candidate (see the mobile block below). */
+  .home-hero::before,
+  .home-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .home-hero::before {
+    opacity: 0.7;
+    background: url("/hero/arena.webp") center 40% / cover no-repeat;
+  }
+  /* Two fades to the background colour: left to right, so the headline reads
+     as on plain dark, and bottom to top (30 %), so the section ends cleanly. */
+  .home-hero::after {
+    background:
+      linear-gradient(
+        90deg,
+        var(--background) 0%,
+        color-mix(in oklch, var(--background) 55%, transparent) 38%,
+        transparent 70%
+      ),
+      linear-gradient(0deg, var(--background) 0%, transparent 30%);
+  }
+  /* Wide screens (from ~1330 px the photo is scaled by WIDTH): a red «UFC»
+     of the arena, always ~35 % across, landed under the description and the
+     search box, clearly at 1920 px. The fade holds more dark over the text
+     column (≈90 % of background at 36 %), which leaves that logo barely a
+     trace from 1440 on; and from 1760, where the photo is tall enough to
+     move, anchoring it to the top drops the logo below the search box, next
+     to «Predecir una pelea» where there is no text. Higher than 0 % it slides
+     under the headline. Measured on screenshots at 1440, 1600 and 1920
+     (18-oct-2026). Under 1440, the validated 1280 look, untouched. */
+  @media (min-width: 1440px) {
+    .home-hero::after {
+      background:
+        linear-gradient(
+          90deg,
+          var(--background) 0%,
+          color-mix(in oklch, var(--background) 90%, transparent) 36%,
+          color-mix(in oklch, var(--background) 55%, transparent) 50%,
+          transparent 72%
+        ),
+        linear-gradient(0deg, var(--background) 0%, transparent 30%);
+    }
+  }
+  @media (min-width: 1760px) {
+    .home-hero::before {
+      background-position: center 0%;
+    }
+  }
+  /* Mobile: the photo stays in the top part and the search box and buttons
+     sit on PLAIN dark. Without this the mesh crossed the search box's text.
+     🪤 ITS OWN, LIGHTER FILE, and it is about the LCP: a CSS background IS a
+     Largest Contentful Paint candidate in Chromium (the section is the
+     largest thing on screen), so the photo's download became the phone's LCP.
+     Measured with Playwright (390 px, 4x CPU, 1.6 Mbps, 150 ms): the full
+     104 KB photo took the LCP from ~3.4 s (main, the header logo) to ~5 s;
+     this one (the centre 1040x940 the phone ever shows, at 780 px, webp q40,
+     30 KB) leaves it at ~3.3-3.9 s, level with main. Only the matching
+     background is downloaded, so the phone never fetches the big one. */
+  @media (max-width: 767px) {
+    .home-hero::before {
+      background-image: url("/hero/arena-movil.webp");
+      background-position: center 25%;
+      opacity: 0.75;
+    }
+    .home-hero::after {
+      background:
+        linear-gradient(
+          90deg,
+          var(--background) 0%,
+          color-mix(in oklch, var(--background) 45%, transparent) 55%,
+          transparent 90%
+        ),
+        linear-gradient(
+          180deg,
+          transparent 0%,
+          transparent 38%,
+          color-mix(in oklch, var(--background) 85%, transparent) 60%,
+          var(--background) 72%
+        );
+    }
+  }
+
   /* Octagon — the signature motif (logo monogram, VS badge) */
   .octagon {
     clip-path: polygon(
