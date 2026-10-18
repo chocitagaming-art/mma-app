@@ -6,6 +6,7 @@ import {
   compareByClass,
   cornerLabels,
   fightClip,
+  hofPhotoHd,
   latestClass,
   orderByClass,
   parsePhotoFocus,
@@ -314,5 +315,91 @@ describe("the corners' names (cornerLabels)", () => {
       b: "Frank Trigg",
     });
     expect(cornerLabels(fight("Una pelea sin vs", "A", null))).toEqual({ a: "A", b: null });
+  });
+});
+
+describe("sharper photos (hofPhotoHd)", () => {
+  const FACE =
+    "https://www.ufc.com/images/styles/event_results_athlete_headshot/s3/2026-01/VOLKANOVSKI_ALEXANDER_BELT_01-31.png?itok=GscR5oi8";
+  const FACE_HD = "https://www.ufc.com/images/2026-01/VOLKANOVSKI_ALEXANDER_BELT_01-31.png";
+  const FRYE_HD = "https://www.ufc.com/images/2023-11/HOF_DFrye_16x9.jpg";
+
+  it("a ufc.com face gets the 256/500 srcset in every variant", () => {
+    for (const variant of ["card", "feature", "corner", "modal"] as const) {
+      const hd = hofPhotoHd(FACE, variant);
+      expect(hd?.srcSet, variant).toBe(`${FACE} 256w, ${FACE_HD} 500w`);
+    }
+  });
+
+  it("the face's sizes keep the 256 at 1x on a phone grid, and ask for more than 128 px everywhere", () => {
+    expect(hofPhotoHd(FACE, "card")?.sizes).toBe("(min-width: 528px) 240px, calc(50vw - 24px)");
+    expect(hofPhotoHd(FACE, "corner")?.sizes).toBe("(min-width: 504px) 220px, calc(46vw - 14px)");
+    expect(hofPhotoHd(FACE, "modal")?.sizes).toBe("358px");
+  });
+
+  // The slot width a browser computes from `sizes` at a given viewport, for
+  // the subset of the syntax used here: "(min-width: Npx) Wpx, …, fallback",
+  // with px or calc(Avw - Bpx) lengths.
+  function slotWidth(sizes: string, viewport: number): number {
+    const length = (value: string) => {
+      const calc = value.match(/^calc\((\d+(?:\.\d+)?)vw - (\d+)px\)$/);
+      if (calc) return (Number(calc[1]) * viewport) / 100 - Number(calc[2]);
+      const px = value.match(/^(\d+)px$/);
+      if (px) return Number(px[1]);
+      throw new Error(`unsupported length: ${value}`);
+    };
+    for (const entry of sizes.split(/,\s*(?![^(]*\))/)) {
+      const query = entry.match(/^\(min-width: (\d+)px\) (.+)$/);
+      if (!query) return length(entry.trim());
+      if (viewport >= Number(query[1])) return length(query[2]);
+    }
+    throw new Error(`no fallback in: ${sizes}`);
+  }
+
+  it("a 1x screen never asks the grid or a corner for more than the 256 copy, at any width", () => {
+    // Review, 18-oct: with the cut-off at 640, a 600 px window asked for 276
+    // (card) and 262 (corner) and took the 500 original for a 240 px face.
+    expect(slotWidth(hofPhotoHd(FACE, "card")!.sizes, 600)).toBe(240);
+    expect(slotWidth(hofPhotoHd(FACE, "corner")!.sizes, 600)).toBe(220);
+    for (let viewport = 320; viewport <= 2560; viewport++) {
+      for (const variant of ["card", "corner"] as const) {
+        expect(slotWidth(hofPhotoHd(FACE, variant)!.sizes, viewport), `${variant} @ ${viewport}`).toBeLessThanOrEqual(256);
+      }
+    }
+    // And every variant still asks for more than 128, so 2x takes the original.
+    for (const viewport of [320, 360, 390, 768, 1024, 1920]) {
+      for (const variant of ["card", "feature", "corner", "modal"] as const) {
+        expect(slotWidth(hofPhotoHd(FACE, variant)!.sizes, viewport), `${variant} @ ${viewport}`).toBeGreaterThan(128);
+      }
+    }
+  });
+
+  it("a 382x217_2 portrait gets the original ONLY alone: feature and modal, never the grid", () => {
+    expect(hofPhotoHd(FRYE_PORTRAIT, "card", { zoom: FRAME_ZOOM })).toBeNull();
+    expect(hofPhotoHd(FRYE_PORTRAIT, "corner")).toBeNull();
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature", { zoom: FRAME_ZOOM })?.srcSet).toBe(
+      `${FRYE_PORTRAIT} 764w, ${FRYE_HD} 1439w`,
+    );
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal", { wide: true })?.srcSet).toBe(
+      `${FRYE_PORTRAIT} 764w, ${FRYE_HD} 1439w`,
+    );
+  });
+
+  it("the portrait's sizes are the width it is painted at: frame × 1.76 × zoom, or the modal panel", () => {
+    // 160 × 764/434 × 1.7 = 479: 1x keeps the 764 copy, 2x takes the original.
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature", { zoom: FRAME_ZOOM })?.sizes).toBe("479px");
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature")?.sizes).toBe("282px");
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal", { wide: true })?.sizes).toBe(
+      "(min-width: 544px) 464px, calc(100vw - 80px)",
+    );
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal")?.sizes).toBe("394px");
+  });
+
+  it("ESPN, local files, other ufc.com styles and no photo: null (painted as stored)", () => {
+    expect(hofPhotoHd("https://a.espncdn.com/i/headshots/mma/players/full/2516131.png", "card")).toBeNull();
+    expect(hofPhotoHd("/fighters/forrest-griffin.webp", "feature")).toBeNull();
+    expect(hofPhotoHd(UFC_HEADSHOT("x"), "card")).toBeNull();
+    expect(hofPhotoHd(SEVERN_GALLERY, "modal")).toBeNull();
+    expect(hofPhotoHd(null, "card")).toBeNull();
   });
 });

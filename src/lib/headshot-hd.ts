@@ -37,6 +37,15 @@
 const HD_SOURCE =
   /^https?:\/\/(?:www\.)?ufc\.com\/images\/styles\/event_results_athlete_headshot\/s3\/([^?#]+)/i;
 
+// The original behind a stored ufc.com style URL that `source` matches: the
+// same path under /images/, with the query dropped and the path copied as is.
+function originalBehind(source: RegExp, url: string | null | undefined): string | null {
+  if (!url) return null;
+  const match = source.exec(url.trim());
+  if (!match) return null;
+  return `https://www.ufc.com/images/${match[1]}`;
+}
+
 // Intrinsic widths for the srcset descriptors. The stored copy is 256 wide;
 // the original is 500 or 520: declaring the smaller one never claims pixels
 // the file does not have.
@@ -46,10 +55,7 @@ export const HD_HEADSHOT_WIDTH = 500;
 // The full-size original behind a stored ufc.com face, or null when the URL is
 // anything else (ESPN, local files, other ufc.com styles, an original already).
 export function hdHeadshotUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const match = HD_SOURCE.exec(url.trim());
-  if (!match) return null;
-  return `https://www.ufc.com/images/${match[1]}`;
+  return originalBehind(HD_SOURCE, url);
 }
 
 // A srcset candidate URL may not contain whitespace nor end in a comma (the
@@ -63,7 +69,66 @@ function srcSetSafe(url: string): string {
 // original, so the browser picks by the painted size × devicePixelRatio. No
 // srcset (undefined) when there is no original to offer.
 export function headshotSrcSet(url: string | null | undefined): string | undefined {
-  const hd = hdHeadshotUrl(url);
+  return twoStepSrcSet(url, hdHeadshotUrl(url), BASE_HEADSHOT_WIDTH, HD_HEADSHOT_WIDTH);
+}
+
+function twoStepSrcSet(
+  url: string | null | undefined,
+  hd: string | null,
+  baseWidth: number,
+  hdWidth: number,
+): string | undefined {
   if (!url || !hd) return undefined;
-  return `${srcSetSafe(url.trim())} ${BASE_HEADSHOT_WIDTH}w, ${srcSetSafe(hd)} ${HD_HEADSHOT_WIDTH}w`;
+  return `${srcSetSafe(url.trim())} ${baseWidth}w, ${srcSetSafe(hd)} ${hdWidth}w`;
+}
+
+// ── The Hall of Fame's 16:9 portraits (Salón HD, 18-oct-2026) ──────────────
+//
+// mma-ingesta seeds 12 official Hall of Fame portraits from ufc.com
+// (seed_hall_of_fame.py, _UFC_HOF) in the `382x217_2` style: the 9
+// contributors and 3 pioneers (Severn, Frye, Maurice Smith). Measured on
+// 18-oct-2026 (read-only, all 12):
+//   · The stored copy is already a 2x one: 764×434 (1.760:1), 8-26 KB in AVIF,
+//     13-35 KB in WebP.
+//   · The original at the same path without "/styles/382x217_2/s3" answers 200
+//     in 12/12: 2000×1125 in 10, 1920×1080 (Gerbasi) and 1439×862 (Piligian,
+//     1.669:1). Weight: AVIF 42-187 KB (median ~140), WebP 79-351 KB, JPEG
+//     143-358 KB. Ten times the stored copy.
+//   · No intermediate style can be had: any other style of these paths
+//     answers 403 without its itok (an HMAC only ufc.com can sign).
+//   · The style is a focal-point crop (the `h=` in the query) from 16:9 to
+//     1.760:1, ~1% of the width for the 16:9 originals. Piligian's 1.669:1 one
+//     loses ~5% of its height in the style, so at 2x/3x his original shows a
+//     hair more at the TOP of the modal: the face sits ~3 CSS px (~2% of the
+//     frame) lower than at 1x. Not visible side by side (review, 18-oct).
+//   · Same for the faces above: the 500×325 originals (1.538:1, 10 of the 25
+//     sampled) are not exactly the 256×160 (1.6:1) crop. With the SAME css,
+//     a relief face at 2x/3x is ~4% taller and its top edge 4-7 px higher,
+//     and a covered corner face ~4% narrower. Mode, object-position and zoom
+//     are identical; only the file differs. Accepted, as in R5.
+// Sharpness of the stored copy (file px / painted px × DPR), measured on
+// production: grid card 0.69 at 3x and 1.03 at 2x; the «Clase» feature card
+// 0.55-0.61 at 3x and 0.82 at 2x; the modal 0.84-0.93 at 3x and 0.83 at 2x.
+// So the original is offered ONLY where the portrait is shown alone (the
+// feature card and the modal, one image each), through srcset so a 1x screen
+// keeps the 764 copy. Never in the grid: 9 contributors at 3x would add
+// ~1.3 MB in AVIF (~2.7 MB in WebP) for a card that is already 1.03 at 2x.
+
+const PORTRAIT_SOURCE = /^https?:\/\/(?:www\.)?ufc\.com\/images\/styles\/382x217_2\/s3\/([^?#]+)/i;
+
+// The stored copy is 764 wide; the smallest original measured is 1439
+// (Piligian): declaring it never claims pixels a file does not have.
+export const BASE_PORTRAIT_WIDTH = 764;
+export const HD_PORTRAIT_WIDTH = 1439;
+// Width ÷ height of the stored portrait, to know how wide it is painted.
+export const PORTRAIT_ASPECT = 764 / 434;
+
+/** The full-size original behind a stored 382x217_2 Hall of Fame portrait. */
+export function hdPortraitUrl(url: string | null | undefined): string | null {
+  return originalBehind(PORTRAIT_SOURCE, url);
+}
+
+/** srcset for a portrait shown alone: the stored 764 copy and the original. */
+export function portraitSrcSet(url: string | null | undefined): string | undefined {
+  return twoStepSrcSet(url, hdPortraitUrl(url), BASE_PORTRAIT_WIDTH, HD_PORTRAIT_WIDTH);
 }
