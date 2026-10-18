@@ -278,8 +278,16 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
   });
 
   it("lleva la fecha del cambio", () => {
-    // La del último cambio de la página: quitar el Maestro y /gimnasios.
-    expect(texto).toContain("Última actualización: 11 de octubre de 2026");
+    // La del último cambio de la página: los vídeos del Salón de la Fama.
+    expect(texto).toContain("Última actualización: 18 de octubre de 2026");
+  });
+
+  it("cuenta las peleas del Salón entre los vídeos, y que esperan al clic sin miniatura", () => {
+    expect(texto).toMatch(/Ala de Combate del Salón de la Fama se ven con el reproductor/);
+    const inicio = texto.indexOf("Lo que espera a que pulses.");
+    const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
+    expect(vineta).toMatch(/Ala de Combate del Salón de la Fama/);
+    expect(vineta).toMatch(/ni siquiera la miniatura/);
   });
 });
 
@@ -305,7 +313,11 @@ describe("/aviso-legal dice con qué reproductor van los vídeos", () => {
     expect(parrafo).toMatch(/shorts/);
   });
 
+  it("cuenta las peleas del Salón de la Fama entre los vídeos incrustados", () => {
+    expect(texto).toMatch(/Ala de Combate del Salón de la Fama\) se incrustan/);
+  });
+
   it("lleva la fecha del cambio", () => {
-    expect(texto).toContain("30 de septiembre de 2026");
+    expect(texto).toContain("18 de octubre de 2026");
   });
 });

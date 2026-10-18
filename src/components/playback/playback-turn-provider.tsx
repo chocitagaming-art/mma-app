@@ -44,7 +44,10 @@ import { cn } from "@/lib/utils";
 // when the visitor starts it and is in the turn so that there is still ONE
 // player at a time. Nothing else of the site starts a YouTube player on its
 // own: the click-to-play facades and the /videos modal mount only on a tap,
-// and stay outside the turn for now. The videos modal is a blocker, though
+// and stay outside the turn for now, except the Hall of Fame's fights
+// (components/playback/click-to-play.tsx, 18-oct-2026: our own poster, the
+// player mounts as the visitor's, inside the turn; built to take the face-off
+// and weigh-in facades next). The videos modal is a blocker, though
 // (useTurnBlocker, like the mobile menu): it covers the page, and nothing may
 // be in front of a player.
 
