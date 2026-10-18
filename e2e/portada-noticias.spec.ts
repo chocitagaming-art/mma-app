@@ -314,6 +314,39 @@ for (const motor of ["chromium", "webkit"] as const) {
       await expect(pagina.locator("body > *").first()).toHaveJSProperty("inert", false);
     });
 
+    test("con el teclado, el anillo de foco del vídeo se ve ENCIMA de la miniatura", async ({ pagina }) => {
+      // 18-oct: el anillo dibujado hacia dentro quedaba DEBAJO de la miniatura
+      // (next/image con fill va posicionada y se pinta encima del contorno de su
+      // padre), y el de fuera lo recortaba el overflow-hidden de la tarjeta:
+      // con Tab no cambiaba ni un píxel. Se compara la fachada antes y después.
+      await pagina.emulateMedia({ reducedMotion: "reduce" });
+      await abrirPortada(pagina, 1280);
+      await necesitaVideos(pagina);
+      const pieza = videos(pagina).first();
+      await pieza.evaluate((el) => el.scrollIntoView({ block: "center" }));
+      const boton = facadeDe(pieza);
+      await expect
+        .poll(() => boton.locator("img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+        .toBe(true);
+      await pagina.mouse.move(0, 0);
+      const antes = await boton.screenshot({ animations: "disabled" });
+      // Al botón por teclado (Mayús+Tab y Tab), para que cuente :focus-visible.
+      await boton.focus();
+      await pagina.keyboard.press("Shift+Tab");
+      await pagina.keyboard.press("Tab");
+      await expect(boton).toBeFocused();
+      expect(await boton.evaluate((el) => el.matches(":focus-visible")), "foco de teclado").toBe(true);
+      const anillo = await boton.evaluate((el) => {
+        const after = getComputedStyle(el, "::after");
+        return { sombra: after.boxShadow, z: after.zIndex, posicion: after.position };
+      });
+      expect(anillo.sombra, "el ::after dibuja el anillo").not.toBe("none");
+      expect(anillo.posicion).toBe("absolute");
+      expect(anillo.z, "el anillo va por encima de la miniatura").toBe("10");
+      const despues = await boton.screenshot({ animations: "disabled" });
+      expect(despues.equals(antes), "con el foco, la fachada tiene que cambiar (el anillo se ve)").toBe(false);
+    });
+
     for (const [w, h] of [
       [844, 390],
       [740, 360],

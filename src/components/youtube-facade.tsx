@@ -74,12 +74,15 @@ export function YouTubeFacade({
         ref={buttonRef}
         onClick={() => setPlaying(true)}
         aria-label={`Reproducir: ${title}`}
-        // Lightbox: the ring goes INSIDE the button. On the home and on
-        // /tendencias the button is as wide as its card, whose overflow-hidden
-        // cut the ring drawn 2 px outside down to a line under the thumbnail.
+        // Lightbox: the focus ring is drawn by an ::after ON TOP of the
+        // thumbnail. On the home and on /tendencias the button is as wide as its
+        // card, whose overflow-hidden cut the global outline (2 px outside) down
+        // to a line; an outline pulled inside is painted UNDER the positioned
+        // next/image fill, so it did not show at all (18-oct QA, 0 px changed).
         className={cn(
           "group relative block aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted",
-          lightbox && "focus-visible:outline-offset-[-3px]",
+          lightbox &&
+            "focus-visible:outline-none after:pointer-events-none after:absolute after:inset-0 after:z-10 after:rounded-[inherit] focus-visible:after:ring-[3px] focus-visible:after:ring-inset focus-visible:after:ring-ring",
         )}
       >
         <Image
