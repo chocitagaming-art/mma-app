@@ -41,6 +41,7 @@ import {
   mapFighterFacts,
   mapFighterQa,
   mapNewsArticle,
+  mapSocialProfiles,
   mapStrikeBreakdown,
   mapWinMethods,
   strikeBreakdownSelect,
@@ -474,6 +475,7 @@ async function getFighterDetailUncached(
 
   return {
     fighter: mappedFighter,
+    socialProfiles: mapSocialProfiles(fighterRow),
     latestWeightClass: fighterRow.latest_weight_class ?? null,
     fightCount: mappedFighter.fightCount,
     ufcFightCount: mappedFighter.ufcFightCount,

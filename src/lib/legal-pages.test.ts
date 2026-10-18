@@ -278,8 +278,37 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
   });
 
   it("lleva la fecha del cambio", () => {
-    // La del último cambio de la página: quitar el Maestro y /gimnasios.
-    expect(texto).toContain("Última actualización: 11 de octubre de 2026");
+    // La del último cambio de la página: los enlaces a Instagram y X (R6).
+    expect(texto).toContain("Última actualización: 18 de octubre de 2026");
+  });
+});
+
+describe("/privacidad cuenta los enlaces a Instagram y X de la ficha", () => {
+  const texto = textoDe(renderToStaticMarkup(PrivacidadPage()));
+
+  it("la ficha SÍ enlaza a esas redes hoy (si deja de hacerlo, revisa esta página)", () => {
+    const sitios = FUENTES.filter(([, fuente]) =>
+      fuente.includes("<FighterSocialLinks"),
+    ).map(([ruta]) => ruta);
+    expect(sitios).toEqual(["app/fighters/[id]/page.tsx"]);
+  });
+
+  it("los nombra entre los datos de los deportistas, con su origen", () => {
+    const inicio = texto.indexOf("Datos de los deportistas");
+    const punto5 = texto.slice(inicio, texto.indexOf("Tus derechos", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(punto5).toMatch(/Instagram y X tal como los publica ufc\.com/);
+  });
+
+  it("solo enlaces: nada de Instagram ni de X se incrusta en la web", () => {
+    // Si un día se incrusta una publicación, el punto 4 tiene que contar lo
+    // medido (como con YouTube) y esta prueba obliga a volver aquí.
+    const incrustan = FUENTES.filter(([, fuente]) =>
+      /instagram\.com\/embed|platform\.twitter\.com|platform\.x\.com|twitter-tweet|instagram-media/.test(
+        fuente,
+      ),
+    ).map(([ruta]) => ruta);
+    expect(incrustan).toEqual([]);
   });
 });
 

@@ -63,12 +63,17 @@ export const metadata: Metadata = {
 // manda los nombres y las estadísticas de los dos luchadores para redactar la
 // explicación (lib/prediction.ts), nada del visitante. El límite por IP lo
 // llevan hoy los tres buscadores, upcoming, predict y contacto.
+//
+// 18-oct-2026 (R6): the fighter page links to the fighter's Instagram and X
+// (fighter-social-links.tsx). Plain links, nothing embedded: nothing from Meta
+// or X loads until the visitor clicks and leaves the site, so point 4 does not
+// change. Point 5 lists them among the athletes' published data.
 
 export default function PrivacidadPage() {
   return (
     <LegalPage
       titulo="Privacidad"
-      actualizado="11 de octubre de 2026"
+      actualizado="18 de octubre de 2026"
       entradilla={
         <>
           Resumen: <strong>no hay cuentas, esta web no usa cookies y no se vende
@@ -338,7 +343,10 @@ export default function PrivacidadPage() {
       <LegalSection numero={5} titulo="Datos de los deportistas">
         <p>
           La web publica información sobre luchadores profesionales: nombre, país,
-          récord, estadísticas de combate y fecha de nacimiento. Son datos{" "}
+          récord, estadísticas de combate, fecha de nacimiento y enlaces a sus
+          perfiles públicos de Instagram y X tal como los publica ufc.com (son
+          enlaces normales: no se carga nada de Instagram ni de X hasta que
+          pulsas uno y sales de esta web). Son datos{" "}
           <strong>ya públicos</strong>, difundidos por la propia promotora y por
           medios deportivos, y se tratan con fines informativos sobre la actividad{" "}
           <strong>profesional</strong> de personas con proyección pública.

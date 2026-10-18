@@ -54,6 +54,12 @@ export type FighterRow = {
   wins_by_ko?: number | null;
   wins_by_submission?: number | null;
   first_round_finishes?: number | null;
+  // R6 (mma-ingesta migration 032): Instagram and X profiles from the athlete's
+  // ufc.com JSON-LD (Person.sameAs). Optional: they arrive through `f.*`, so
+  // before the migration is applied the keys are simply absent and the page
+  // draws no links (the query never names them, so it cannot fail on them).
+  instagram_url?: string | null;
+  x_url?: string | null;
 };
 
 export type HistoryRow = {
