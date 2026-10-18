@@ -298,8 +298,16 @@ export type FighterQaItem = {
   a: string;
 };
 
+// R6: the fighter's Instagram and X, already validated (src/lib/social-links.ts).
+// null = none, or the columns do not exist yet (migration 032 not applied).
+export type FighterSocialProfiles = {
+  instagramUrl: string | null;
+  xUrl: string | null;
+};
+
 export type FighterDetail = {
   fighter: Fighter;
+  socialProfiles: FighterSocialProfiles;
   latestWeightClass: string | null;
   // Mismo criterio que FighterCardData (récord; respaldo UFC disputadas). Hoy
   // no se pinta: la ficha enseña su propio «N peleas registradas».

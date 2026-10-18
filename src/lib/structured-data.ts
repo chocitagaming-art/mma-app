@@ -22,6 +22,7 @@
 import { parseEventTimestamp } from "@/lib/event-time";
 import { decodeHtmlEntitiesOrNull } from "@/lib/html-entities";
 import { SITE_URL } from "@/lib/site-url";
+import { socialSameAs } from "@/lib/social-links";
 
 /** Convierte una ruta interna en la URL absoluta que exige schema.org. */
 export function absoluteUrl(path: string): string {
@@ -112,6 +113,9 @@ export type FighterJsonLdInput = {
   birthPlace?: string | null;
   heightCm?: number | null;
   trainsAt?: string | null;
+  // R6: Instagram and X as stored (validated again here, see below).
+  instagramUrl?: string | null;
+  xUrl?: string | null;
   wins: number;
   losses: number;
   draws: number;
@@ -157,6 +161,11 @@ export function buildFighterJsonLd(fighter: FighterJsonLdInput): Record<string, 
       : null,
     // El gimnasio es la organización deportiva a la que pertenece, no un equipo.
     affiliation: trainsAt ? { "@type": "SportsOrganization", name: trainsAt } : null,
+    // R6: the same profiles ufc.com lists in its own Person.sameAs. Passed
+    // through the social-links validators because this is the last gate before
+    // publishing: a URL that is not exactly the stored shape never reaches a
+    // search engine. No profiles -> no key (compact drops the empty list).
+    sameAs: socialSameAs({ instagramUrl: fighter.instagramUrl, xUrl: fighter.xUrl }),
   });
 }
 

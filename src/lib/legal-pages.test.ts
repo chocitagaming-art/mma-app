@@ -278,7 +278,8 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
   });
 
   it("lleva la fecha del cambio", () => {
-    // La del último cambio de la página: los vídeos del Salón de la Fama.
+    // La del último cambio de la página: los vídeos del Salón de la Fama y los
+    // enlaces a Instagram y X de la ficha (R8 y R6, los dos el 18-oct).
     expect(texto).toContain("Última actualización: 18 de octubre de 2026");
   });
 
@@ -288,6 +289,39 @@ describe("/privacidad cuenta lo que hace el reproductor de YouTube", () => {
     const vineta = texto.slice(inicio, texto.indexOf("Lo que hace el reproductor", inicio));
     expect(vineta).toMatch(/Ala de Combate del Salón de la Fama/);
     expect(vineta).toMatch(/ni siquiera la miniatura/);
+  });
+});
+
+describe("/privacidad cuenta los enlaces a Instagram y X de la ficha", () => {
+  const texto = textoDe(renderToStaticMarkup(PrivacidadPage()));
+
+  it("la ficha SÍ enlaza a esas redes hoy (si deja de hacerlo, revisa esta página)", () => {
+    const sitios = FUENTES.filter(([, fuente]) =>
+      fuente.includes("<FighterSocialLinks"),
+    ).map(([ruta]) => ruta);
+    expect(sitios).toEqual(["app/fighters/[id]/page.tsx"]);
+  });
+
+  it("los nombra entre los datos de los deportistas, con su origen", () => {
+    const inicio = texto.indexOf("Datos de los deportistas");
+    const punto5 = texto.slice(inicio, texto.indexOf("Tus derechos", inicio));
+    expect(inicio).toBeGreaterThan(-1);
+    expect(punto5).toMatch(/Instagram y X tal como los publica ufc\.com/);
+    // The links carry target="_blank": the visitor does not leave the site,
+    // a new tab opens. The page has to say exactly that.
+    expect(punto5).toMatch(/se abre en otra pestaña/);
+    expect(punto5).not.toMatch(/sales de esta web/);
+  });
+
+  it("solo enlaces: nada de Instagram ni de X se incrusta en la web", () => {
+    // Si un día se incrusta una publicación, el punto 4 tiene que contar lo
+    // medido (como con YouTube) y esta prueba obliga a volver aquí.
+    const incrustan = FUENTES.filter(([, fuente]) =>
+      /instagram\.com\/embed|platform\.twitter\.com|platform\.x\.com|twitter-tweet|instagram-media/.test(
+        fuente,
+      ),
+    ).map(([ruta]) => ruta);
+    expect(incrustan).toEqual([]);
   });
 });
 

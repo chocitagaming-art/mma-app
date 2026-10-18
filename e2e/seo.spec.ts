@@ -158,6 +158,12 @@ test("/fighters/6493 emite un Person con récord, gimnasio y URL canónica", asy
   const afiliacion = ld.affiliation as Record<string, unknown> | null | undefined;
   expect(afiliacion?.["@type"], "Person sin su gimnasio").toBe("SportsOrganization");
   expect(afiliacion?.name).toBe("Bronx's Gold Team");
+  // R6: his Instagram and X as ufc.com lists them (fighters.instagram_url /
+  // x_url, 18-oct-2026), Instagram first. The same two links the page draws.
+  expect(ld.sameAs, "Person sin sus redes en sameAs").toEqual([
+    "https://www.instagram.com/charlesdobronxs/",
+    "https://x.com/CharlesDoBronxs",
+  ]);
 });
 
 // El bloque JSON-LD viaja dentro del HTML, así que un nombre con "</script>"

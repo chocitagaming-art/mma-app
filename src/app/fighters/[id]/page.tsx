@@ -17,6 +17,7 @@ import { CountryFlag } from "@/components/country-flag";
 import { FavoriteToggle } from "@/components/favorites/favorite-toggle";
 import { DefenseMeter } from "@/components/fighter/defense-meter";
 import { FighterFullBody } from "@/components/fighter/fighter-full-body";
+import { FighterSocialLinks } from "@/components/fighter/fighter-social-links";
 import { PerFightBars } from "@/components/fighter/per-fight-bars";
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
 import { RankingTrajectory } from "@/components/fighter/ranking-trajectory";
@@ -75,6 +76,7 @@ import {
 } from "@/lib/queries/fighters";
 import { getFighterRankingHistory } from "@/lib/queries/rankings";
 import { parseId } from "@/lib/route-params";
+import { buildFighterSocialLinks } from "@/lib/social-links";
 import { buildFighterJsonLd, serializeJsonLd } from "@/lib/structured-data";
 
 type FighterDetailPageProps = {
@@ -200,6 +202,10 @@ export default async function FighterDetailPage({
   // Enlaces externos (FE9): perfiles reales del luchador en la fuente de origen.
   const externalLinks = fighterExternalLinks(fighter);
 
+  // R6: Instagram and X as ufc.com lists them (mma-ingesta migration 032).
+  // Empty for whoever has none, and then nothing is drawn.
+  const socialLinks = buildFighterSocialLinks(detail.socialProfiles, fighter.name);
+
   // 1A: preferimos los totales de CARRERA de ufc.com (guardados) — como el
   // record del hero; sin ficha ufc.com caemos al cálculo UFC-only (winMethods).
   const finishHighlights = resolveFinishHighlights(
@@ -321,6 +327,8 @@ export default async function FighterDetailPage({
       birthPlace: fighter.birthPlace,
       heightCm: fighter.heightCm,
       trainsAt: fighter.trainsAt,
+      instagramUrl: detail.socialProfiles.instagramUrl,
+      xUrl: detail.socialProfiles.xUrl,
       wins: fighter.wins,
       losses: fighter.losses,
       draws: fighter.draws,
@@ -413,6 +421,8 @@ export default async function FighterDetailPage({
                   En UFC: <span className="tabular">{ufcRecordLabel}</span>
                 </p>
               ) : null}
+              {/* R6: Instagram and X, under the nickname and the record. */}
+              <FighterSocialLinks name={fighter.name} links={socialLinks} />
             </div>
           </div>
 
