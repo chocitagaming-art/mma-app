@@ -35,14 +35,6 @@ const CREDITS: Credit[] = [
     fileUrl: "https://commons.wikimedia.org/wiki/File:Bas_Rutten.jpg",
   },
   {
-    subject: "Antônio Rodrigo Nogueira",
-    author: "Assembleia Legislativa do Espírito Santo / Reinaldo Carvalho",
-    license: "CC BY-SA 2.0",
-    licenseUrl: "https://creativecommons.org/licenses/by-sa/2.0/",
-    fileUrl:
-      "https://commons.wikimedia.org/wiki/File:Sess%C3%A3o_Solene_em_homenagem_ao_Dia_Estadual_do_MMA_-_12.11.2015_(22957902296)_CROPPED.jpg",
-  },
-  {
     subject: "Kazushi Sakuraba",
     author: "Yuzunet",
     license: "CC BY-SA 4.0",
