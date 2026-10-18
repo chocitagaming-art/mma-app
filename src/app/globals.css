@@ -369,6 +369,58 @@
       0% 29%
     );
   }
+
+  /* /fighters roster card (fighter-roster-card.tsx). Redesign of 17-oct-2026,
+     ported from the prototype the owner validated (docs: ARCHIVO/planes/
+     rediseno-2026-10-17). The cut-out photo stands on the photo zone's bottom
+     border with a soft red halo behind it; on hover AND keyboard focus it grows
+     7 % with a red glow and a 3 px red bar lights up along the bottom. The
+     border colour change is a Tailwind utility on the card itself. */
+  .roster-card-photo {
+    background: radial-gradient(
+      55% 75% at 50% 100%,
+      color-mix(in oklch, var(--primary) 18%, transparent),
+      transparent 72%
+    );
+  }
+  .roster-card-cutout {
+    transform-origin: bottom center;
+    transition: transform 0.25s ease;
+  }
+  .roster-card-cutout img {
+    filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+    transition: filter 0.25s ease;
+  }
+  .roster-card:hover .roster-card-cutout,
+  .roster-card:focus-visible .roster-card-cutout {
+    transform: scale(1.07);
+  }
+  .roster-card:hover .roster-card-cutout img,
+  .roster-card:focus-visible .roster-card-cutout img {
+    filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 60%, transparent))
+      drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+  }
+  .roster-card::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .roster-card:hover::after,
+  .roster-card:focus-visible::after {
+    transform: scaleX(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .roster-card-cutout,
+    .roster-card-cutout img,
+    .roster-card::after {
+      transition: none;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

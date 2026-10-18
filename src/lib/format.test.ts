@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ageFromBirthDate,
   cleanNationality,
+  formatCount,
   formatControlTime,
   formatDate,
   formatHeight,
@@ -266,5 +267,21 @@ describe("formatControlTime y el hueco del acta", () => {
     expect(formatControlTime(0)).toBe("0:00");
     expect(formatControlTime(61)).toBe("1:01");
     expect(formatControlTime(600)).toBe("10:00");
+  });
+});
+
+describe("formatCount", () => {
+  it("groups thousands with a dot, four-digit numbers included", () => {
+    // Plain es-ES would print "2892" here: this is the case that bites.
+    expect(formatCount(2892)).toBe("2.892");
+    expect(formatCount(1000)).toBe("1.000");
+    expect(formatCount(17758)).toBe("17.758");
+    expect(formatCount(1234567)).toBe("1.234.567");
+  });
+
+  it("leaves small numbers alone", () => {
+    expect(formatCount(0)).toBe("0");
+    expect(formatCount(12)).toBe("12");
+    expect(formatCount(999)).toBe("999");
   });
 });

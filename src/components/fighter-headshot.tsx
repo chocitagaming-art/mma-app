@@ -18,6 +18,12 @@ type FighterHeadshotProps = {
   // dato (buscadores, pesajes, Salón) caen a la silueta masculina.
   division?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
+  // "square": the framed thumbnail used across the app. "cutout": no frame at
+  // all, the transparent ufc.com PNG standing on its baseline (object-contain,
+  // anchored to the bottom); the caller sizes and positions it via className.
+  variant?: "square" | "cutout";
+  // Overrides the `sizes` hint derived from `size` (the cutout has no fixed size).
+  sizes?: string;
   className?: string;
   imageClassName?: string;
   priority?: boolean;
@@ -44,6 +50,8 @@ export function FighterHeadshot({
   headshotUrl,
   division = null,
   size = "md",
+  variant = "square",
+  sizes,
   className,
   imageClassName,
   priority = false,
@@ -59,14 +67,18 @@ export function FighterHeadshot({
   const silhouetteSrc = silhouetteHeadshot(inferFighterGender(name, division));
 
   const imageSizes =
-    size === "sm" ? "48px" : size === "md" ? "64px" : size === "lg" ? "112px" : "224px";
+    sizes ??
+    (size === "sm" ? "48px" : size === "md" ? "64px" : size === "lg" ? "112px" : "224px");
+  const isCutout = variant === "cutout";
+  const fitClass = isCutout ? "object-contain object-bottom" : "object-cover object-top";
 
   return (
     <div
       key={resolvedUrl ?? name}
       className={cn(
-        "relative overflow-hidden rounded-md border border-border bg-muted",
-        sizeClasses[size],
+        isCutout
+          ? "relative"
+          : cn("relative overflow-hidden rounded-md border border-border bg-muted", sizeClasses[size]),
         className,
       )}
     >
@@ -77,7 +89,7 @@ export function FighterHeadshot({
           fill
           preload={priority}
           sizes={imageSizes}
-          className={cn("object-cover object-top", imageClassName)}
+          className={cn(fitClass, imageClassName)}
           onError={() => setImageFailed(true)}
         />
       ) : !silhouetteFailed ? (
@@ -87,11 +99,16 @@ export function FighterHeadshot({
           fill
           preload={priority}
           sizes={imageSizes}
-          className={cn("object-cover object-top", imageClassName)}
+          className={cn(fitClass, imageClassName)}
           onError={() => setSilhouetteFailed(true)}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-secondary text-center">
+        <div
+          className={cn(
+            "flex h-full w-full items-center justify-center text-center",
+            isCutout ? "items-end pb-[12%]" : "bg-secondary",
+          )}
+        >
           <span
             className={cn(
               "font-display font-bold tracking-wide text-muted-foreground",
