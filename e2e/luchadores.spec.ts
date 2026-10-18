@@ -300,13 +300,13 @@ for (const motor of ["chromium", "webkit"] as const) {
           .poll(() =>
             pagina.evaluate((selector) =>
               [...document.querySelectorAll<HTMLImageElement>(`${selector} [data-testid="roster-card-photo"] img`)].every(
-                (img) => img.complete && img.naturalWidth > 0,
+                (img) => img.complete && img.naturalWidth > 0 && img.naturalHeight > 0,
               ),
             TARJETAS),
           )
           .toBe(true);
 
-        const medidas = await pagina.evaluate((selector) => {
+        const medir = () => pagina.evaluate((selector) => {
           return [...document.querySelectorAll<HTMLElement>(selector)].map((tarjeta) => {
             const zona = tarjeta.querySelector<HTMLElement>('[data-testid="roster-card-photo"]');
             const img = zona?.querySelector("img");
@@ -337,6 +337,23 @@ for (const motor of ["chromium", "webkit"] as const) {
             };
           });
         }, TARJETAS);
+        // R5: a 1x, al cruzar los 1024 px el sizes de la tarjeta pasa de 208 a
+        // 280 px y el srcset cambia al original de 500w. WebKit hace el cambio
+        // 20-30 ms DESPUÉS del resize: el poll de arriba aún ve la de 256
+        // completa y la medida cae a mitad del cambio (naturalWidth 0 → NaN).
+        // Se repite la medida hasta que todo lo pintado sea un número.
+        let medidas: Awaited<ReturnType<typeof medir>> = [];
+        await expect
+          .poll(
+            async () => {
+              medidas = await medir();
+              return medidas.every(
+                (m) => m === null || [m.pintadoArriba, m.pintadoIzq, m.pintadoDer].every(Number.isFinite),
+              );
+            },
+            { message: `[${motor}] ${ancho} px: las fotos terminan de cambiar de candidato del srcset` },
+          )
+          .toBe(true);
 
         expect(medidas.length, `${ancho} px: tarjetas`).toBe(12);
         for (const [i, m] of medidas.entries()) {
