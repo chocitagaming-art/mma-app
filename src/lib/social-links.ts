@@ -31,10 +31,15 @@ const ORGANISATION_HANDLES = new Set(["ufc", "ufcespanol", "ufc_espanol", "ufceu
 
 export type SocialNetwork = "instagram" | "x";
 
+// Both links open in a new tab (target="_blank"): said in their name.
+const NEW_TAB = " (se abre en otra pestaña)";
+
 export type FighterSocialLink = {
   network: SocialNetwork;
   url: string;
-  // Accessible name of the icon-only link: «Instagram de <nombre>».
+  // Accessible name of the icon-only link: «Instagram de <nombre> (se abre en
+  // otra pestaña)», so a screen reader warns before the new tab (like «Ver en
+  // YouTube» in the video modal).
   label: string;
   // Visible on hover (title) so a mouse user can see which account it is.
   handle: string;
@@ -82,7 +87,7 @@ export function buildFighterSocialLinks(
     links.push({
       network: "instagram",
       url: instagram,
-      label: `Instagram de ${fighterName}`,
+      label: `Instagram de ${fighterName}${NEW_TAB}`,
       handle: `@${handleOf(instagram)}`,
     });
   }
@@ -91,7 +96,7 @@ export function buildFighterSocialLinks(
     links.push({
       network: "x",
       url: x,
-      label: `X de ${fighterName}`,
+      label: `X de ${fighterName}${NEW_TAB}`,
       handle: `@${handleOf(x)}`,
     });
   }

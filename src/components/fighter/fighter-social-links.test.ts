@@ -44,8 +44,8 @@ describe("FighterSocialLinks", () => {
       expect(anchor).toContain("size-11");
       expect(anchor).toContain("focus-visible:outline-2");
     }
-    expect(anchors[0]).toContain('aria-label="Instagram de Alexander Volkanovski"');
-    expect(anchors[1]).toContain('aria-label="X de Alexander Volkanovski"');
+    expect(anchors[0]).toContain('aria-label="Instagram de Alexander Volkanovski (se abre en otra pestaña)"');
+    expect(anchors[1]).toContain('aria-label="X de Alexander Volkanovski (se abre en otra pestaña)"');
   });
 
   it("the icons are decoration: hidden from assistive tech, no text of their own", () => {
@@ -58,7 +58,7 @@ describe("FighterSocialLinks", () => {
 
   it("only X when that is all ufc.com lists", () => {
     const solo = render({ instagramUrl: null, xUrl: "https://x.com/navajostirling" }, "Navajo Stirling");
-    expect(solo).toContain('aria-label="X de Navajo Stirling"');
+    expect(solo).toContain('aria-label="X de Navajo Stirling (se abre en otra pestaña)"');
     expect(solo).not.toContain("instagram.com");
   });
 
@@ -71,6 +71,6 @@ describe("FighterSocialLinks", () => {
 
   it("escapes the name like any other text", () => {
     const tricky = render({ xUrl: "https://x.com/someone" }, 'A "B" <C>');
-    expect(tricky).toContain('aria-label="X de A &quot;B&quot; &lt;C&gt;"');
+    expect(tricky).toContain('aria-label="X de A &quot;B&quot; &lt;C&gt; (se abre en otra pestaña)"');
   });
 });
