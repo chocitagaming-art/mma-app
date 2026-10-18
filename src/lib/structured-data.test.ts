@@ -196,6 +196,46 @@ describe("buildFighterJsonLd", () => {
     });
     expect(ld.birthPlace).toEqual({ "@type": "Place", name: "Ponte dell'Olio, Italy" });
   });
+
+  it("publica Instagram y X en sameAs, igual que el Person de ufc.com", () => {
+    const ld = buildFighterJsonLd({
+      ...FIGHTER,
+      instagramUrl: "https://www.instagram.com/charlesdobronxs/",
+      xUrl: "https://x.com/CharlesDoBronxs",
+    });
+
+    expect(ld.sameAs).toEqual([
+      "https://www.instagram.com/charlesdobronxs/",
+      "https://x.com/CharlesDoBronxs",
+    ]);
+  });
+
+  it("sin redes (o sin las columnas todavía) no emite sameAs", () => {
+    expect(buildFighterJsonLd(FIGHTER)).not.toHaveProperty("sameAs");
+    expect(buildFighterJsonLd({ ...FIGHTER, instagramUrl: null, xUrl: null })).not.toHaveProperty(
+      "sameAs",
+    );
+  });
+
+  it("no manda a Google una URL que no tenga la forma guardada, ni la cuenta de la UFC", () => {
+    const ld = buildFighterJsonLd({
+      ...FIGHTER,
+      instagramUrl: "https://www.instagram.com/ufc/",
+      xUrl: "https://twitter.com/CharlesDoBronxs",
+    });
+    expect(ld).not.toHaveProperty("sameAs");
+
+    const soloX = buildFighterJsonLd({ ...FIGHTER, xUrl: "https://x.com/CharlesDoBronxs" });
+    expect(soloX.sameAs).toEqual(["https://x.com/CharlesDoBronxs"]);
+  });
+
+  it("una URL con </script> no puede cerrar la etiqueta (ni siquiera llega)", () => {
+    const html = serializeJsonLd(
+      buildFighterJsonLd({ ...FIGHTER, xUrl: "https://x.com/a</script><script>alert(1)" }),
+    );
+    expect(html).not.toContain("</script>");
+    expect(html).not.toContain("sameAs");
+  });
 });
 
 describe("resolveEventStartDate", () => {

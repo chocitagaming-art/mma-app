@@ -4,6 +4,7 @@ import type {
   FighterCardData,
   FighterDefenseStats,
   FighterQaItem,
+  FighterSocialProfiles,
   FighterStrikeBreakdown,
   FighterWinMethods,
   StrikeZoneStat,
@@ -11,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { recordFightTotal } from "@/lib/fight-count";
 import { decodeHtmlEntitiesOrNull } from "@/lib/html-entities";
+import { safeInstagramUrl, safeXUrl } from "@/lib/social-links";
 import type {
   AggregateRow,
   DefenseRow,
@@ -57,6 +59,18 @@ export function mapFighter(row: FighterRow): FighterCardData {
     winsByKo: row.wins_by_ko ?? null,
     winsBySubmission: row.wins_by_submission ?? null,
     firstRoundFinishes: row.first_round_finishes ?? null,
+  };
+}
+
+// R6: Instagram and X. A row without the keys (database before migration 032)
+// and a value that does not have the stored shape both map to null: the page
+// draws no link, it never breaks.
+export function mapSocialProfiles(
+  row: Pick<FighterRow, "instagram_url" | "x_url">,
+): FighterSocialProfiles {
+  return {
+    instagramUrl: safeInstagramUrl(row.instagram_url),
+    xUrl: safeXUrl(row.x_url),
   };
 }
 

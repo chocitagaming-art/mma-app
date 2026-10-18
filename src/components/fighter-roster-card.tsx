@@ -54,8 +54,15 @@ export function FighterRosterCard({ fighter, priority = false, className, style 
           division={fighter.latestWeightClass}
           variant="cutout"
           priority={priority}
-          // The box is 112 % of the card wide (the validated bleed) and 94 % tall.
-          sizes="(min-width: 1024px) 330px, (min-width: 640px) 260px, 200px"
+          // R5: the card is where a face is shown big, so it offers the ufc.com
+          // original too (srcset 256w/500w). `sizes` is the width the PICTURE is
+          // painted at, not the box's: the box is 112 % of the card wide and
+          // 94 % of 138/186 px tall, and the 1.6:1 face is contained in it, so
+          // it is never wider than 130×1.6 ≈ 208 px below lg nor 175×1.6 = 280
+          // px from lg (measured on 18-oct from 360 to 1920). A 1x phone keeps
+          // downloading the 256 copy; retina screens and desktop take the 500.
+          quality="hd"
+          sizes="(min-width: 1024px) 280px, 208px"
           className="roster-card-cutout absolute -inset-x-[6%] bottom-0 h-[94%]"
         />
       </div>
