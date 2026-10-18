@@ -9,8 +9,10 @@ import {
   isAgeRestricted,
   isShort,
   isPlayableInSpain,
+  uniqueVideos,
   YOUTUBE_CATEGORIES,
   type VideoDetail,
+  type YouTubeVideo,
 } from "@/lib/youtube";
 
 describe("parseIsoDuration", () => {
@@ -281,6 +283,72 @@ describe("getUfcVideos (con API key)", () => {
 
     const videos = await getUfcVideos({ category: "resumenes", limit: 6 });
     expect(videos.map((v) => v.videoId).sort()).toEqual(["e2", "n2"]);
+  });
+});
+
+describe("uniqueVideos", () => {
+  const video = (videoId: string, category: YouTubeVideo["category"]): YouTubeVideo => ({
+    videoId,
+    title: videoId,
+    thumbnail: "",
+    publishedAt: null,
+    url: `https://www.youtube.com/watch?v=${videoId}`,
+    channelTitle: "Next MMA",
+    category,
+  });
+
+  it("deja la PRIMERA aparición de cada videoId, en el mismo orden, y no muta la entrada", () => {
+    const entrada = [video("a", "resumenes"), video("b", "historias"), video("a", "analisis"), video("c", "entrevistas")];
+    const copia = [...entrada];
+    const salida = uniqueVideos(entrada);
+    expect(salida.map((v) => `${v.videoId}:${v.category}`)).toEqual(["a:resumenes", "b:historias", "c:entrevistas"]);
+    expect(entrada).toEqual(copia);
+  });
+});
+
+// Next MMA está DOS veces en CHANNELS (resumenes con filtro «resumen» y
+// analisis sin filtro): sin categoría, cada resumen suyo llegaba dos veces
+// (18-oct-2026: 35 tarjetas y 31 videoId distintos en /tendencias).
+describe("getUfcVideos sin categoría: ningún vídeo repetido", () => {
+  beforeEach(() => {
+    process.env.YOUTUBE_API_KEY = "test-key";
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.YOUTUBE_API_KEY;
+  });
+
+  it("el resumen de Next MMA sale UNA vez, y `limit` cuenta vídeos distintos", async () => {
+    const fetchMock = vi.fn((input: unknown) => {
+      const u = String(input);
+      if (u.includes("playlistItems") && u.includes("UU3v8OQyx4D_WP3RDiQ9I9_A")) {
+        return Promise.resolve(
+          json({
+            items: [
+              snippet("resumen1", "UFC Edmonton Resumen", "2026-10-18T08:00:00Z"),
+              snippet("picks1", "Predicciones picks", "2026-10-17T08:00:00Z"),
+            ],
+          }),
+        );
+      }
+      if (u.includes("playlistItems") && u.includes("UUYXJFtx4SUkrb2p_8mhLPzQ")) {
+        return Promise.resolve(json({ items: [snippet("ufces1", "Rueda de prensa", "2026-10-16T08:00:00Z")] }));
+      }
+      if (u.includes("/videos?")) {
+        const ids = new URL(u).searchParams.get("id")?.split(",") ?? [];
+        return Promise.resolve(
+          json({ items: ids.map((id) => ({ id, contentDetails: { duration: "PT10M" }, status: { embeddable: true } })) }),
+        );
+      }
+      return Promise.resolve(json({ items: [] }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const todos = await getUfcVideos({ limit: 12 });
+    expect(todos.map((v) => v.videoId)).toEqual(["resumen1", "picks1", "ufces1"]);
+    // Con limit 3 entran tres DISTINTOS (antes: resumen1, resumen1, picks1).
+    const tres = await getUfcVideos({ limit: 3 });
+    expect(tres.map((v) => v.videoId)).toEqual(["resumen1", "picks1", "ufces1"]);
   });
 });
 

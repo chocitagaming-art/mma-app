@@ -46,10 +46,15 @@ export const metadata: Metadata = {
 // Los shorts del hero de la portada esperan al toque desde el 30-sep-2026
 // (noche): solo se baja su miniatura (i.ytimg.com), y al acabar uno no se
 // monta otro. El careo oficial (/en-vivo y /eventos/[id]), el pesaje
-// (event-weigh-ins.tsx), /videos, /tendencias, la columna de la portada y los
+// (event-weigh-ins.tsx), /videos, /tendencias, «Noticias y vídeos» de la
+// portada (R10, 18-oct-2026: sustituye a la antigua columna de vídeos) y los
 // combates esperan al clic. Las peleas del Ala de Combate del Salón de la Fama
 // (18-oct-2026, components/playback/click-to-play.tsx) también, y con un póster
-// propio: hasta el clic no se descarga nada de Google, ni la miniatura.
+// propio: hasta el clic no se descarga nada de Google, ni la miniatura. El
+// modal de vídeos (video-modal.tsx) y esas peleas están dentro del turnero: al
+// abrir uno se quita el reproductor que hubiera, también el que puso el
+// visitante (UFC TV, un short). El careo, el pesaje y los combates, todavía no
+// (BACKLOG, tarea 8): por eso el texto los deja fuera de esa frase.
 //
 // Esas 8 páginas no incluían ninguna ficha de evento antiguo. Medido después,
 // el 30-sep-2026 en Chromium: /eventos/319 y /eventos/361 (carteles de
@@ -239,7 +244,7 @@ export default function PrivacidadPage() {
           <strong>Los vídeos: YouTube.</strong> Los shorts de la UFC de la
           cabecera de la portada, UFC TV, el directo de la velada, el careo
           oficial y el vídeo del pesaje (en /en-vivo y en la página de
-          cada evento), /videos, /tendencias, la columna de vídeos de la portada,
+          cada evento), /videos, /tendencias, las noticias y vídeos de la portada,
           los vídeos de cada combate y las peleas del Ala de Combate del Salón de
           la Fama se ven con el reproductor de{" "}
           <strong>YouTube</strong>, un servicio de <strong>Google</strong> (en la
@@ -279,14 +284,19 @@ export default function PrivacidadPage() {
             <strong>Lo que espera a que pulses.</strong> En los shorts de la UFC
             de la cabecera de la portada, en el careo oficial y en el vídeo del
             pesaje (en /en-vivo y en la página de cada evento), en /videos, en
-            /tendencias, en la columna de vídeos de la portada y en los vídeos de
+            /tendencias, en las noticias y vídeos de la portada y en los vídeos de
             cada combate se ve primero una miniatura, y el reproductor solo se
             carga cuando pulsas «play» (en los shorts, también «Siguiente»). La
             miniatura sí se descarga de un servidor de YouTube (i.ytimg.com).
             En las peleas del Ala de Combate del Salón de la Fama, el reproductor
             también espera a que pulses, y el cartel es nuestro: hasta ese
             momento no se descarga nada de YouTube, ni siquiera la miniatura.
-            Cuando un short acaba, no se carga otro por sí solo.
+            Cuando un short acaba, no se carga otro por sí solo. En /videos, en
+            /tendencias, en las noticias y vídeos de la portada y en el Salón de
+            la Fama, al abrir un vídeo se quita el reproductor que hubiera
+            (UFC TV, el directo o un short, aunque lo hubieras puesto tú): nunca
+            suenan dos a la vez, y al cerrarlo lo que habías puesto no vuelve
+            solo.
           </li>
           <li>
             <strong>Lo que hace el reproductor al cargarse</strong> (medido el 29

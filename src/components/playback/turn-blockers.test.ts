@@ -18,9 +18,23 @@ describe("turn blockers", () => {
   it("the videos lightbox (video-modal.tsx) blocks the turn for as long as it is mounted, i.e. open", () => {
     const modal = source("../video-modal.tsx");
     expect(modal).toMatch(/import \{ useTurnBlocker \} from "@\/components\/playback\/playback-turn-provider";/);
-    expect(modal).toMatch(/useTurnBlocker\("video-modal", true\);/);
+    expect(modal).toMatch(/const VIDEO_MODAL_BLOCKER = "video-modal";/);
+    expect(modal).toMatch(/useTurnBlocker\(VIDEO_MODAL_BLOCKER, true\);/);
     // It is only mounted while open: the facade renders it on `playing`.
     expect(source("../youtube-facade.tsx")).toMatch(/\{playing && lightbox && \(\s*<VideoModal/);
+  });
+
+  // R10 (18-oct-2026): its player is a TurnSlot (through ClickToPlay), started
+  // on mount as the visitor's, and exempt from the modal's own blocker. No
+  // iframe of its own any more: that one played outside the turn, and the
+  // visitor's UFC TV went on playing behind it.
+  it("and its player is in the turn: a ClickToPlay started on mount, with the modal's blocker as its own", () => {
+    const modal = source("../video-modal.tsx");
+    expect(modal).toMatch(/<ClickToPlay[\s\S]*?\bstartOnMount\b[\s\S]*?ownBlocker=\{VIDEO_MODAL_BLOCKER\}[\s\S]*?\/>/);
+    expect(modal).not.toMatch(/<iframe/);
+    const clip = source("./click-to-play.tsx");
+    expect(clip).toMatch(/if \(startOnMount\) userStart\(\);/);
+    expect(clip).toMatch(/ownBlocker=\{ownBlocker\}/);
   });
 
   it("the mobile menu blocks the turn while it is open", () => {

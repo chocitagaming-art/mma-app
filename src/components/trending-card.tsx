@@ -10,6 +10,7 @@ import { cn, safeExternalUrl } from "@/lib/utils";
 // terceros: img nativa + no-referrer, jamás next/image); vídeo = YtLite que
 // reproduce IN-PAGE (no navega), con el chip rojo VÍDEO superpuesto.
 // featured: tarjeta grande (2 columnas en sm+), una cada ~7 ítems.
+// La portada la reutiliza tal cual en «Noticias y vídeos» (R10), sin featured.
 
 function CardChip({
   children,
@@ -50,10 +51,13 @@ export function TrendingCard({
   item,
   featured = false,
   priority = false,
+  className,
 }: {
   item: TrendingItem;
   featured?: boolean;
   priority?: boolean;
+  // Clases de rejilla para la tarjeta (la portada esconde la 9.ª a 2 columnas).
+  className?: string;
 }) {
   const titleClass = cn(
     "line-clamp-2 font-display font-bold uppercase leading-tight tracking-tight text-foreground",
@@ -67,9 +71,12 @@ export function TrendingCard({
         href={safeExternalUrl(article.url)}
         target="_blank"
         rel="noreferrer"
+        data-feed-item="news"
+        data-feed-id={`n-${article.id}`}
         className={cn(
           "group block overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:border-primary/50 hover:shadow-lg",
           featured && "sm:col-span-2",
+          className,
         )}
       >
         <div className="relative overflow-hidden">
@@ -93,9 +100,12 @@ export function TrendingCard({
   const { video } = item;
   return (
     <div
+      data-feed-item="video"
+      data-feed-id={`v-${video.videoId}`}
       className={cn(
         "group overflow-hidden rounded-lg border border-border bg-card transition-all duration-200 hover:border-primary/50 hover:shadow-lg",
         featured && "sm:col-span-2",
+        className,
       )}
     >
       <div className="relative">

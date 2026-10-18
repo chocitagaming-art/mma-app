@@ -14,7 +14,8 @@ import { VideoModal } from "@/components/video-modal";
 //  - in-place (default): the youtube-nocookie iframe replaces the thumbnail in
 //    the same slot. Used by the hero reel and the fight-page player.
 //  - lightbox: clicking opens a large centered <VideoModal> overlay; the
-//    thumbnail stays in place. Used by the /videos grid and the home column.
+//    thumbnail stays in place. Used by /videos, /tendencias and the home's
+//    «Noticias y vídeos». The modal's player is in the turn manager.
 export function YouTubeFacade({
   videoId,
   title,

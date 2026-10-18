@@ -559,6 +559,138 @@ describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-
   });
 });
 
+// R10 (18-oct-2026): the videos modal (video-modal.tsx) plays its video
+// INSIDE the turn, as the visitor's, while it is also a blocker (it covers the
+// page). «Uno a la vez»: what was playing goes, the visitor's included, and
+// only what had started on its own comes back when it closes.
+describe("turn controller · the videos modal: its own blocker, one at a time", () => {
+  // As VideoModal mounts: its box registers, it starts, its blocker goes up.
+  function openModal(controller: TurnController, size: [number, number] = [1024, 576]) {
+    const modal = box(...size);
+    const unregister = controller.register({ id: "modal", element: modal, ownBlocker: "video-modal" });
+    const result = controller.userStart("modal");
+    controller.addBlocker("video-modal");
+    return {
+      result,
+      // As it unmounts: React runs the parent's cleanup (the blocker) first.
+      close() {
+        controller.removeBlocker("video-modal");
+        unregister();
+      },
+    };
+  }
+
+  it("its own blocker does not stop its start; another blocker (the menu) does", () => {
+    const { controller } = setup();
+    controller.register({ id: "modal", element: box(1024, 576), ownBlocker: "video-modal" });
+    controller.addBlocker("video-modal");
+    expect(controller.userStart("modal")).toBe("started");
+    expect(controller.getView("modal")).toMatchObject({ mounted: true, owner: "user" });
+
+    const other = setup().controller;
+    other.register({ id: "modal", element: box(1024, 576), ownBlocker: "video-modal" });
+    other.addBlocker("menu");
+    expect(other.userStart("modal")).toBe("blocked");
+    // Nor does someone else's ownBlocker let a player through.
+    other.removeBlocker("menu");
+    other.addBlocker("video-modal");
+    expect(other.userStart("tv-bucle")).toBe("blocked");
+  });
+
+  it("under 200x200 it still says too-small (the modal then shows the link to YouTube)", () => {
+    const { controller } = setup();
+    expect(openModal(controller, [190, 107]).result).toBe("too-small");
+    expect(controller.getView("modal").mounted).toBe(false);
+  });
+
+  it("UFC TV that started on its own: goes while it is open, comes back on its own when it closes", () => {
+    const { controller, see, advance, tv, worst } = setup();
+    see(tv, 1);
+    advance(500);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    const modal = openModal(controller);
+    expect(modal.result).toBe("started");
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    advance(5_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    modal.close();
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("UFC TV the VISITOR put on (touched inside): goes too, and does NOT come back on its own", () => {
+    const { controller, see, advance, tv, page, worst } = setup();
+    const ids = watchSinglePlayer(controller, ["hero", "tv-bucle", "modal"]);
+    see(tv, 1);
+    advance(500);
+    const iframe = {};
+    controller.setIframe("tv-bucle", iframe);
+    page.active = iframe;
+    controller.windowBlurred();
+    advance(0);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+
+    page.active = null;
+    const modal = openModal(controller);
+    expect(modal.result).toBe("started");
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    modal.close();
+    // Fully in view, far past the dwell, tab hidden and back: still its poster.
+    advance(10_000);
+    controller.setPageVisible(false);
+    controller.setPageVisible(true);
+    see(tv, 0.9);
+    advance(10_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    // The visitor starts it again: theirs, and from then on as before.
+    expect(controller.userStart("tv-bucle")).toBe("started");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    expect(worst.mounted).toBe(1);
+    expect(ids.mounted).toBe(1);
+  });
+
+  it("UFC TV started with a tap on its poster: the same, back to its poster for good", () => {
+    const { controller, see, advance, tv } = setup();
+    see(tv, 0.9);
+    expect(controller.userStart("tv-bucle")).toBe("started");
+    const modal = openModal(controller);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    modal.close();
+    advance(10_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+  });
+
+  it("the visitor's short goes too, and nothing starts behind the open modal", () => {
+    const { controller, see, advance, hero, tv, worst } = setup();
+    see(hero, 1);
+    controller.userStart("hero");
+    see(tv, 1);
+    const modal = openModal(controller);
+    expect(controller.getView("hero").mounted).toBe(false);
+    advance(10_000);
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(controller.getView("modal")).toMatchObject({ mounted: true, owner: "user" });
+    modal.close();
+    expect(controller.getView("hero").mounted).toBe(false);
+    // UFC TV was never playing: it is not the visitor's, it may start on its own.
+    advance(500);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(worst.mounted).toBe(1);
+  });
+
+  it("a refused start of the modal leaves the visitor's player alone and not parked", () => {
+    const { controller, see, advance, tv } = setup();
+    see(tv, 0.9);
+    controller.userStart("tv-bucle");
+    const modal = openModal(controller, [150, 84]);
+    expect(modal.result).toBe("too-small");
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    modal.close();
+    advance(1_000);
+    expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+  });
+});
+
 describe("turn controller · the end of the hero short (its timer)", () => {
   it("untouched and fully in view: back to its poster, and no short starts on its own after it", () => {
     const { controller, see, advance, hero, mounts } = setup();
@@ -768,6 +900,13 @@ describe("source guards of the turn manager", () => {
     expect(controller).toMatch(/timerAction\(p\.touched\)/);
     const provider = files[1][1];
     expect(provider).not.toMatch(/decideTurn|timerAction\(/);
+  });
+
+  it("TurnSlot registers its ownBlocker, and userStart lets only THAT blocker through", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/ownBlocker\?: string;/);
+    expect(provider).toMatch(/controller\.register\(\{[\s\S]*?\bownBlocker,[\s\S]*?\}\)/);
+    expect(files[0][1]).toMatch(/if \(name !== p\.ownBlocker\) return "blocked";/);
   });
 
   it("TurnSlot registers autoStart, and it is false unless the player asks for it", () => {

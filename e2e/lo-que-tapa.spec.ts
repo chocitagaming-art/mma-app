@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 
@@ -9,9 +9,14 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop } from "./helpers";
 // open, and brings it back when it closes; what the visitor chose stays.
 // Two blockers, fixed in the final review of the shorts branch:
 //
-//   · The videos lightbox (video-modal.tsx: the home's videos column and
-//     /videos) covers the page with an 80 % black backdrop, and UFC TV kept
-//     playing behind it.
+//   · The videos lightbox (video-modal.tsx: the home's «Noticias y vídeos»,
+//     /videos and /tendencias) covers the page with an 80 % black backdrop,
+//     and UFC TV kept playing behind it. Since R10 (18-oct-2026, the owner:
+//     «uno a la vez») its player is in the turn manager too: opening a video
+//     also takes away the UFC TV the VISITOR had on, and that one does not
+//     come back on its own when the modal closes (until then it went on
+//     playing behind the modal: two players at once, and this file checked
+//     exactly that). e2e/portada-noticias.spec.ts checks it in WebKit too.
 //   · The mobile menu (site-header.tsx) did not close when the visitor left
 //     with the logo or the EN VIVO chip: /en-vivo opened with the menu open,
 //     every player blocked and the broadcast's ▶ dead until it was closed.
@@ -41,11 +46,22 @@ test.beforeEach(async ({ page, baseURL }, testInfo) => {
 
 const tv = (page: Page) => page.locator("section[data-ufc-tv] [data-turn]");
 const dialog = (page: Page) => page.getByRole("dialog");
-// The lightbox facades of the home's videos column.
+// The lightbox facades of the home's «Noticias y vídeos» (its video cards).
 const videoFacade = (page: Page) => page.locator('button[aria-label^="Reproducir: "]').first();
 
+// 🪤 The videos come from the REAL YouTube API (there is no fixture for
+// getUfcVideos): a day it brings none, these skip. Read the skip reasons.
 async function needsVideoColumn(page: Page) {
-  test.skip((await videoFacade(page).count()) === 0, "la portada no trae la columna de vídeos hoy");
+  test.skip(
+    (await videoFacade(page).count()) === 0,
+    "«Noticias y vídeos» de la portada no trae ningún vídeo hoy (la API de YouTube no devolvió ninguno)",
+  );
+}
+
+async function clickCenter(locator: Locator, page: Page) {
+  const box = await locator.boundingBox();
+  expect(box, "no box to click").not.toBeNull();
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
 }
 
 // Opened without scrolling: a click from Playwright would first scroll the
@@ -94,18 +110,31 @@ test.describe("el modal de vídeos", () => {
     await centerTvUntilItPlays(page);
   });
 
-  test("no quita el UFC TV que puso el visitante, como el menú", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
-    await tv(page).getByRole("button", { name: /^Toca para reproducir\. UFC TV/ }).click();
+  // Inverted on 18-oct-2026 (R10): it used to REQUIRE the visitor's UFC TV
+  // to keep playing behind the modal.
+  test("quita también el UFC TV que puso el visitante: uno solo a la vez, y al cerrar sigue en su póster", async ({
+    page,
+  }) => {
+    await centerTvUntilItPlays(page);
+    // A tap inside the player (sound, pause...): from now on it is theirs.
+    await clickCenter(tv(page).locator("iframe"), page);
     await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
 
     await openVideoModal(page);
-    await page.waitForTimeout(1_000);
-    await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+    await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+    await expect(dialog(page).locator("[data-turn]")).toHaveAttribute("data-turn-state", "playing-user");
+    // The only player of the page is the one the visitor just opened.
+    await expect(page.locator("iframe")).toHaveCount(1);
+    await expect(dialog(page).locator("iframe")).toHaveCount(1);
+
     await page.keyboard.press("Escape");
     await expect(dialog(page)).toHaveCount(0);
-    await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-user");
+    // In the middle of the screen again, far past the 400 ms: it does NOT
+    // come back on its own (an automatic one would: the test above).
+    await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(1_500);
+    await expect(tv(page)).toHaveAttribute("data-turn-state", "poster");
+    await expect(page.locator("iframe")).toHaveCount(0);
   });
 });
 

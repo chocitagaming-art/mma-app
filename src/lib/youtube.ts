@@ -195,7 +195,23 @@ export async function getUfcVideos(
   const all = lists.flat();
   // Más reciente primero (las fechas ISO 8601 ordenan lexicográficamente).
   all.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  return all.slice(0, limit);
+  // Sin repetidos ANTES de cortar: si no, `limit` contaría dos veces el mismo.
+  return uniqueVideos(all).slice(0, limit);
+}
+
+// Next MMA está dos veces en CHANNELS («resumenes» con su filtro y
+// «analisis» sin él), así que sin categoría sus resúmenes llegaban DOS veces:
+// medido el 18-oct-2026, /tendencias enseñaba 35 tarjetas con 31 videoId
+// distintos, y la portada habría pintado el mismo vídeo dos veces (con clave
+// de React repetida). Se queda la PRIMERA aparición: tras el sort estable es
+// la del canal que va antes en CHANNELS. Puro: no muta la entrada.
+export function uniqueVideos(videos: YouTubeVideo[]): YouTubeVideo[] {
+  const seen = new Set<string>();
+  return videos.filter((v) => {
+    if (seen.has(v.videoId)) return false;
+    seen.add(v.videoId);
+    return true;
+  });
 }
 
 type ChannelMeta = {

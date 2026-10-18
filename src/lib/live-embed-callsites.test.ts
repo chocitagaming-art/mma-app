@@ -546,10 +546,22 @@ describe("los reproductores miden al menos 200 px de alto por dentro", () => {
     expect(iframe).toContain("border-0");
   });
 
-  it("el modal de vídeo de /videos (va por un portal: en node no se pinta, se lee el fuente)", () => {
-    const encontrados = iframes(leerFuente("components/video-modal.tsx"));
-    expect(encontrados, "video-modal.tsx ya no pinta ningún iframe").toHaveLength(1);
-    expect(encontrados[0]).toContain(MINIMO);
+  // Desde R10 (18-oct-2026) el modal no pinta un iframe propio: su reproductor
+  // es un ClickToPlay, dentro del turnero, y el mínimo va en la caja del turno
+  // (la que mide el turnero). El modal le añade el borde de 1 px: por eso 202.
+  // e2e/portada-noticias.spec.ts lo mide a 360 px.
+  it("el modal de vídeo de /videos, /tendencias y la portada (va por un portal: en node no se pinta, se lee el fuente)", () => {
+    const modal = leerFuente("components/video-modal.tsx");
+    expect(iframes(modal), "video-modal.tsx vuelve a pintar un iframe fuera del turnero").toHaveLength(0);
+    const llamada = /<ClickToPlay[\s\S]*?\/>/.exec(modal)?.[0] ?? "";
+    expect(llamada, "el modal ya no usa ClickToPlay").not.toBe("");
+    expect(/className="([^"]*)"/.exec(llamada)?.[1].split(/\s+/)).toContain("border");
+
+    const clip = leerFuente("components/playback/click-to-play.tsx");
+    const caja = /<TurnSlot[\s\S]*?className=\{cn\("([^"]*)"/.exec(clip)?.[1].split(/\s+/) ?? [];
+    for (const clase of [MINIMO, "aspect-video", "w-full"]) {
+      expect(caja, `a la caja del turno de ClickToPlay le falta ${clase}`).toContain(clase);
+    }
   });
 });
 

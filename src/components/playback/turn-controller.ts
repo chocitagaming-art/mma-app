@@ -30,6 +30,12 @@ import {
 //   · the keyboard focus inside a player's box (its poster) → that one does
 //     not start on its own until the focus leaves (focusChanged): mounting
 //     would remove the focused poster and drop the focus on <body>;
+//   · one at a time for what the visitor starts too: a start takes the turn
+//     from whoever had it. If that was the VISITOR's own player (a short, UFC
+//     TV they touched), it is "parked": back to its poster, and it does not
+//     start again on its own when the new one goes (the videos modal closing,
+//     for instance) — only when the visitor starts it. What had started on
+//     its own may come back, as before (the owner's decision, 18-oct-2026);
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
 //     the hero's timer leaves it alone. As a net, every decision and every
@@ -79,6 +85,11 @@ export type PlayerRegistration = {
   autoStart?: boolean;
   // Called synchronously on every mount: the hero picks its short here.
   onMount?: (owner: TurnOwner) => void;
+  // The name of the blocker the player itself puts up (the videos modal is
+  // one: it covers the page, so it blocks the automatic players while it is
+  // open). userStart does not refuse a start because of THAT blocker, only
+  // because of another one (the menu).
+  ownBlocker?: string;
 };
 
 export type PlayerView = {
@@ -110,6 +121,10 @@ type Entry = {
   autoStart: boolean;
   element: Element;
   onMount?: (owner: TurnOwner) => void;
+  ownBlocker: string | null;
+  // The visitor's player that another start of the visitor took away: no
+  // automatic start any more, until the visitor starts it again.
+  parked: boolean;
   iframe: unknown;
   ratio: number;
   area: number;
@@ -198,7 +213,8 @@ export function createTurnController(env: TurnEnvironment) {
       players: [...players.values()].map((p) => ({
         id: p.id,
         priority: p.priority,
-        autoStart: p.autoStart,
+        // A parked player is, for decideTurn, one that does not start on its own.
+        autoStart: p.autoStart && !p.parked,
         ratio: p.ratio,
         area: p.area,
         aboveSince: p.aboveSince,
@@ -300,14 +316,27 @@ export function createTurnController(env: TurnEnvironment) {
   // minimum holds for a tap too. Nothing else is waited for: the hero short's
   // ▶ is the only way to watch it. A refused start leaves the current holder
   // alone.
+  //
+  // Its own blocker does not count (ownBlocker: the videos modal blocks the
+  // automatic players while it is open, and still plays its video); any
+  // other one does (under the open menu, nothing starts).
   function userStart(id: string): StartResult {
     const p = players.get(id);
     if (!p) return "unknown";
-    if (blockers.size > 0) return "blocked";
+    for (const name of blockers) {
+      if (name !== p.ownBlocker) return "blocked";
+    }
     if (!fitsMinimum(p.element.getBoundingClientRect())) return "too-small";
+    // A tap inside the holder's iframe just before this start made it theirs.
+    noticeTouch();
     const holder = current ? players.get(current.id) : undefined;
-    if (holder) unmount(holder);
+    if (holder) {
+      // The visitor's player, taken by another start of the visitor: parked.
+      if (holder !== p && current?.owner === "user") holder.parked = true;
+      unmount(holder);
+    }
     current = null;
+    p.parked = false;
     mount(p, "user");
     current = { id: p.id, owner: "user" };
     commit();
@@ -322,6 +351,8 @@ export function createTurnController(env: TurnEnvironment) {
         autoStart: reg.autoStart ?? false,
         element: reg.element,
         onMount: reg.onMount,
+        ownBlocker: reg.ownBlocker ?? null,
+        parked: false,
         iframe: null,
         ratio: 0,
         area: 0,

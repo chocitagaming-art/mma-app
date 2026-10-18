@@ -6,16 +6,15 @@ import { Saira_Extra_Condensed } from "next/font/google";
 import { FavoritesStrip } from "@/components/home/favorites-strip";
 import { FighterCard } from "@/components/fighter-card";
 import { HomeLiveSlot } from "@/components/home/home-live-slot";
+import { HomeNewsSection } from "@/components/home/home-news-section";
 import { LastEventSection } from "@/components/home/last-event-section";
 import { P4PTabs } from "@/components/home/p4p-tabs";
 import { LiveBanner } from "@/components/live/live-banner";
 import { UpNextHero } from "@/components/home/up-next-hero";
-import { RecentNewsGrid } from "@/components/recent-news-grid";
 import { SearchHero } from "@/components/search-hero";
 import { SectionHeading } from "@/components/section-heading";
 import { ShortsAttributionSlot, ShortsHeroSlot } from "@/components/home/shorts-hero-slot";
 import { ShortsHeroPlaceholder } from "@/components/home/shorts-hero";
-import { UfcVideosColumn } from "@/components/ufc-videos-column";
 import { Button } from "@/components/ui/button";
 import { getLastEventResults, getNextEventHero } from "@/lib/queries/events";
 import { getFeaturedFighters, getHomeStats } from "@/lib/queries/fighters";
@@ -70,9 +69,9 @@ export default async function HomePage() {
   // getUfcShorts never throws.
   const shortsPromise = getUfcShorts();
 
-  // Noticias recientes (12; RecentNewsGrid escoge de ese conjunto sus 6 con
-  // foto, paridad visual exacta). Con ISR la consulta solo corre al revalidar,
-  // así que el coste es irrelevante (#68/#33).
+  // Noticias recientes (12; HomeNewsSection escoge de ese conjunto sus 6 con
+  // foto y las mezcla con 3 vídeos, R10). Con ISR la consulta solo corre al
+  // revalidar, así que el coste es irrelevante (#68/#33).
   const [stats, featuredMen, featuredWomen, recentNews, nextEvent, lastEvent] =
     await Promise.all([
       getHomeStats(),
@@ -291,34 +290,9 @@ export default async function HomePage() {
         <LastEventSection event={lastEvent} />
       ) : null}
 
-      {/* Noticias recientes + columna de vídeos UFC (estilo ufc.com) */}
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-7">
-            <SectionHeading
-              eyebrow="Lo último"
-              title="Noticias recientes"
-              description="Lo más reciente del mundo UFC, con foto y titular."
-            />
-            <RecentNewsGrid limit={6} articles={recentNews} />
-            {/* CTAs bajo las noticias: más noticias (→ Tendencias) y próximas
-                carteleras (→ Eventos próximos), estética UFC. */}
-            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-center">
-              <Link href="/tendencias" className="w-full sm:w-auto">
-                <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
-                  Más noticias →
-                </Button>
-              </Link>
-              <Link href="/eventos?view=proximos" className="w-full sm:w-auto">
-                <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
-                  Próximas carteleras →
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <UfcVideosColumn limit={5} />
-        </div>
-      </section>
+      {/* Noticias y vídeos (R10): 6 noticias + 3 vídeos mezclados, a todo el
+          ancho, y los botones de «Más noticias y vídeos» y carteleras. */}
+      <HomeNewsSection articles={recentNews} />
 
       {/* Mejores libra por libra (reubicado más abajo) */}
       <section className="mx-auto max-w-7xl space-y-7 border-t border-border px-4 pt-12 sm:px-6 lg:px-8">

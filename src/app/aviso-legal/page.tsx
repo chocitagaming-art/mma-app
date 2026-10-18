@@ -139,7 +139,7 @@ export default function AvisoLegalPage() {
           Los vídeos de YouTube que se ven aquí (los shorts de la UFC de la
           cabecera de la portada, UFC TV, el directo de la velada, el careo
           oficial y el vídeo del pesaje de /en-vivo y de cada evento,
-          /videos, /tendencias, la columna de vídeos de la portada, los vídeos de
+          /videos, /tendencias, las noticias y vídeos de la portada, los vídeos de
           cada combate y las peleas del Ala de Combate del Salón de la Fama) se
           incrustan con el{" "}
           <strong>reproductor oficial de YouTube</strong>: los sirve YouTube desde
