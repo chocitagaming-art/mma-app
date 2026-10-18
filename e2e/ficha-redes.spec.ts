@@ -166,7 +166,7 @@ async function expectSocials(page: Page, fighter: Expected): Promise<void> {
     await expect(anchor).toHaveAttribute("rel", "noopener noreferrer");
     await expect(anchor).toHaveAttribute(
       "aria-label",
-      `${LABEL[expected.network]} de ${fighter.name}`,
+      `${LABEL[expected.network]} de ${fighter.name} (se abre en otra pestaña)`,
     );
   }
   // And no other social link anywhere (the @ufc footer trap).

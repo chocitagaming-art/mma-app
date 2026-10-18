@@ -96,18 +96,18 @@ describe("safeXUrl", () => {
 });
 
 describe("buildFighterSocialLinks", () => {
-  it("Instagram first, then X, with «<red> de <nombre>» as the accessible name", () => {
+  it("Instagram first, then X, with «<red> de <nombre> (se abre en otra pestaña)» as the accessible name", () => {
     expect(buildFighterSocialLinks(VOLKANOVSKI, "Alexander Volkanovski")).toEqual([
       {
         network: "instagram",
         url: VOLKANOVSKI.instagramUrl,
-        label: "Instagram de Alexander Volkanovski",
+        label: "Instagram de Alexander Volkanovski (se abre en otra pestaña)",
         handle: "@alexvolkanovski",
       },
       {
         network: "x",
         url: VOLKANOVSKI.xUrl,
-        label: "X de Alexander Volkanovski",
+        label: "X de Alexander Volkanovski (se abre en otra pestaña)",
         handle: "@alexvolkanovski",
       },
     ]);
