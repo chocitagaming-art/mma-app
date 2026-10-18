@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   ageFromBirthDate,
   cleanNationality,
-  formatCount,
   formatControlTime,
   formatCount,
   formatDate,
