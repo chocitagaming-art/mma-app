@@ -2,6 +2,15 @@ export function formatRecord(wins: number, losses: number, draws: number) {
   return `${wins}-${losses}-${draws}`;
 }
 
+// Spanish thousands separator for counts: "2.892", never "2,892" nor "2892".
+// 🪤 Plain es-ES does NOT group four-digit numbers (CLDR minimumGroupingDigits
+// is 2, so it prints "2892"): `useGrouping: "always"` forces the dot.
+const COUNT_FORMAT = new Intl.NumberFormat("es-ES", { useGrouping: "always" });
+
+export function formatCount(value: number): string {
+  return COUNT_FORMAT.format(value);
+}
+
 export function formatHeight(heightCm: number | null) {
   if (!heightCm) {
     return "—";
