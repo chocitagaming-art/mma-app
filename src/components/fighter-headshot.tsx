@@ -80,7 +80,9 @@ export function FighterHeadshot({
   // same slot) starts the chain again instead of inheriting a fallback.
   const [hdFailedFor, setHdFailedFor] = useState<string | null>(null);
   const [imageFailedFor, setImageFailedFor] = useState<string | null>(null);
-  const [silhouetteFailed, setSilhouetteFailed] = useState(false);
+  // The silhouette too: another fighter in the same slot may need the other
+  // file (male/female), so one failed silhouette must not skip theirs.
+  const [silhouetteFailedFor, setSilhouetteFailedFor] = useState<string | null>(null);
   const initials = getInitials(name);
   // Prioridad: override curado (color) > BD > fallback curado. El override cubre
   // headshots ausentes o malos (p.ej. la cabeza B/N de Forrest en la BD).
@@ -100,6 +102,7 @@ export function FighterHeadshot({
   // Sin foto: silueta oficial de UFC (gender-aware) en vez de iniciales; las
   // iniciales quedan como último recurso si la propia silueta fallara.
   const silhouetteSrc = silhouetteHeadshot(inferFighterGender(name, division));
+  const silhouetteFailed = silhouetteFailedFor === silhouetteSrc;
 
   const imageSizes =
     sizes ??
@@ -168,7 +171,7 @@ export function FighterHeadshot({
           preload={priority}
           sizes={imageSizes}
           className={cn(fitClass, imageClassName)}
-          onError={() => setSilhouetteFailed(true)}
+          onError={() => setSilhouetteFailedFor(silhouetteSrc)}
         />
       ) : (
         <div
