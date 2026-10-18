@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { headshotSrcSet, hdHeadshotUrl } from "./headshot-hd";
+import { hdPortraitUrl, headshotSrcSet, hdHeadshotUrl, portraitSrcSet } from "./headshot-hd";
 
 // Real stored URLs (fighters.headshot_url, read-only query of 18-oct-2026).
 const RECENT =
@@ -95,5 +95,46 @@ describe("headshotSrcSet", () => {
       "https://www.ufc.com/images/styles/event_results_athlete_headshot/s3/2026-05/A%20B%2CC.png?itok=1 256w, " +
         "https://www.ufc.com/images/2026-05/A%20B%2CC.png 500w",
     );
+  });
+});
+
+// The Hall of Fame's 16:9 portraits (hall_of_fame.photo_url, read-only query
+// of 18-oct-2026): 764×434 copies of 2000×1125 originals (1439×862 Piligian).
+const FRYE_PORTRAIT =
+  "https://www.ufc.com/images/styles/382x217_2/s3/2023-11/HOF_DFrye_16x9.jpg?h=854a7be2&itok=62V__v7c";
+const GERBASI_PORTRAIT =
+  "https://www.ufc.com/images/styles/382x217_2/s3/2026-05/DO-NOT-USE-050926-thomas-gerbasi-hall-of-fame-announcement-HERO.jpg?h=d1cb525d&itok=OdcEKvzb";
+
+describe("hdPortraitUrl", () => {
+  it("drops the 382x217_2 style chunk and its query (focal hash and itok)", () => {
+    expect(hdPortraitUrl(FRYE_PORTRAIT)).toBe("https://www.ufc.com/images/2023-11/HOF_DFrye_16x9.jpg");
+    expect(hdPortraitUrl(GERBASI_PORTRAIT)).toBe(
+      "https://www.ufc.com/images/2026-05/DO-NOT-USE-050926-thomas-gerbasi-hall-of-fame-announcement-HERO.jpg",
+    );
+  });
+
+  it("is only for portraits: faces, bodies, ESPN and local files are not", () => {
+    expect(hdPortraitUrl(RECENT)).toBeNull();
+    expect(hdPortraitUrl(BODY_AS_FACE)).toBeNull();
+    expect(hdPortraitUrl(ESPN)).toBeNull();
+    expect(hdPortraitUrl("/fighters/forrest-griffin.webp")).toBeNull();
+    expect(hdPortraitUrl(null)).toBeNull();
+  });
+
+  it("and faces are not portraits either", () => {
+    expect(hdHeadshotUrl(FRYE_PORTRAIT)).toBeNull();
+  });
+});
+
+describe("portraitSrcSet", () => {
+  it("offers the stored copy at 764w and the original at its smallest measured width, 1439w", () => {
+    expect(portraitSrcSet(FRYE_PORTRAIT)).toBe(
+      `${FRYE_PORTRAIT} 764w, https://www.ufc.com/images/2023-11/HOF_DFrye_16x9.jpg 1439w`,
+    );
+  });
+
+  it("is undefined for anything that is not a 382x217_2 portrait", () => {
+    expect(portraitSrcSet(RECENT)).toBeUndefined();
+    expect(portraitSrcSet(null)).toBeUndefined();
   });
 });

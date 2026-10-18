@@ -271,7 +271,15 @@ function CornerLink({
 }) {
   const inner = (
     <div className="flex w-24 flex-col items-center gap-1.5">
-      <FighterHeadshot name={name ?? "?"} headshotUrl={headshot} size="md" className="border border-amber-400/50" />
+      {/* quality="hd" (Salón HD): the 64 px face is painted 102 px wide, so a
+          3x phone takes the 500 original and 1x/2x keep the stored 256. */}
+      <FighterHeadshot
+        name={name ?? "?"}
+        headshotUrl={headshot}
+        size="md"
+        quality="hd"
+        className="border border-amber-400/50"
+      />
       <span className="line-clamp-2 text-center font-display text-sm font-bold uppercase leading-tight tracking-tight text-foreground">{label ?? "—"}</span>
     </div>
   );

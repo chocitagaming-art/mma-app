@@ -6,6 +6,7 @@ import {
   compareByClass,
   cornerLabels,
   fightClip,
+  hofPhotoHd,
   latestClass,
   orderByClass,
   parsePhotoFocus,
@@ -314,5 +315,54 @@ describe("the corners' names (cornerLabels)", () => {
       b: "Frank Trigg",
     });
     expect(cornerLabels(fight("Una pelea sin vs", "A", null))).toEqual({ a: "A", b: null });
+  });
+});
+
+describe("sharper photos (hofPhotoHd)", () => {
+  const FACE =
+    "https://www.ufc.com/images/styles/event_results_athlete_headshot/s3/2026-01/VOLKANOVSKI_ALEXANDER_BELT_01-31.png?itok=GscR5oi8";
+  const FACE_HD = "https://www.ufc.com/images/2026-01/VOLKANOVSKI_ALEXANDER_BELT_01-31.png";
+  const FRYE_HD = "https://www.ufc.com/images/2023-11/HOF_DFrye_16x9.jpg";
+
+  it("a ufc.com face gets the 256/500 srcset in every variant", () => {
+    for (const variant of ["card", "feature", "corner", "modal"] as const) {
+      const hd = hofPhotoHd(FACE, variant);
+      expect(hd?.srcSet, variant).toBe(`${FACE} 256w, ${FACE_HD} 500w`);
+    }
+  });
+
+  it("the face's sizes keep the 256 at 1x on a phone grid, and ask for more than 128 px everywhere", () => {
+    expect(hofPhotoHd(FACE, "card")?.sizes).toBe("(min-width: 640px) 240px, calc(50vw - 24px)");
+    expect(hofPhotoHd(FACE, "corner")?.sizes).toBe("(min-width: 640px) 220px, calc(46vw - 14px)");
+    expect(hofPhotoHd(FACE, "modal")?.sizes).toBe("358px");
+  });
+
+  it("a 382x217_2 portrait gets the original ONLY alone: feature and modal, never the grid", () => {
+    expect(hofPhotoHd(FRYE_PORTRAIT, "card", { zoom: FRAME_ZOOM })).toBeNull();
+    expect(hofPhotoHd(FRYE_PORTRAIT, "corner")).toBeNull();
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature", { zoom: FRAME_ZOOM })?.srcSet).toBe(
+      `${FRYE_PORTRAIT} 764w, ${FRYE_HD} 1439w`,
+    );
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal", { wide: true })?.srcSet).toBe(
+      `${FRYE_PORTRAIT} 764w, ${FRYE_HD} 1439w`,
+    );
+  });
+
+  it("the portrait's sizes are the width it is painted at: frame × 1.76 × zoom, or the modal panel", () => {
+    // 160 × 764/434 × 1.7 = 479: 1x keeps the 764 copy, 2x takes the original.
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature", { zoom: FRAME_ZOOM })?.sizes).toBe("479px");
+    expect(hofPhotoHd(FRYE_PORTRAIT, "feature")?.sizes).toBe("282px");
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal", { wide: true })?.sizes).toBe(
+      "(min-width: 544px) 464px, calc(100vw - 80px)",
+    );
+    expect(hofPhotoHd(FRYE_PORTRAIT, "modal")?.sizes).toBe("394px");
+  });
+
+  it("ESPN, local files, other ufc.com styles and no photo: null (painted as stored)", () => {
+    expect(hofPhotoHd("https://a.espncdn.com/i/headshots/mma/players/full/2516131.png", "card")).toBeNull();
+    expect(hofPhotoHd("/fighters/forrest-griffin.webp", "feature")).toBeNull();
+    expect(hofPhotoHd(UFC_HEADSHOT("x"), "card")).toBeNull();
+    expect(hofPhotoHd(SEVERN_GALLERY, "modal")).toBeNull();
+    expect(hofPhotoHd(null, "card")).toBeNull();
   });
 });
