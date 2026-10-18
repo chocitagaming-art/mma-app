@@ -243,6 +243,9 @@ export function FighterFullBody({
               division={division}
               size="lg"
               className="sm:size-36 md:size-44"
+              // R5: the box grows to 144 px (sm) and 176 px (md); the 1.6:1
+              // face covering it is 1.6 × as wide. This picks the srcset file.
+              sizes="(min-width: 768px) 282px, (min-width: 640px) 231px, 179px"
             />
           </div>
         </div>
