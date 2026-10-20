@@ -4,7 +4,8 @@
 //
 // Ported one to one from the owner's mockup (maqueta-shorts/escena.js, 29-sep-
 // 2026, table tests in turno.test.js → lib/playback-turn.test.ts). The rules
-// changed twice on 30-sep-2026, in both the same way (see below).
+// changed twice on 30-sep-2026, in both the same way, and once more on
+// 21-oct-2026 for the hero short out of view (see below).
 // The browser wiring (IntersectionObserver, hidden tab, "touched" detection)
 // lives in components/playback/turn-controller.ts and only feeds this module.
 //
@@ -41,17 +42,39 @@
 // pagehide too: the page may come back from the back/forward cache) and under
 // an open menu, and nothing automatic starts while it holds the turn: if the
 // visitor puts a short on, UFC TV makes way. It only goes when the visitor
-// starts another player (one at a time still), or when it drops under the
-// 200x200 minimum. Out of view is the PiP case: the page cannot see a PiP
-// inside a cross-origin iframe, the visitor scrolls or changes tab while it
-// plays, and removing the iframe would close it.
+// starts another player (one at a time still), when it drops under the
+// 200x200 minimum, or in the one exception below. Out of view is the PiP
+// case: the page cannot see a PiP inside a cross-origin iframe, the visitor
+// scrolls or changes tab while it plays, and removing the iframe would close
+// it.
+//
+// The exception, the hero short out of view (the owner, 21-oct-2026: «cuando
+// haga scroll hacia abajo y llegue al UFC TV en directo, que se pare el vídeo
+// de arriba y se ponga el directo sin pulsar»). A short is a minute of
+// something the visitor is leaving behind; the slot under it is the live
+// broadcast they scrolled down to. So once half or less of the short is in
+// view (yieldsToAuto: only the hero registers it), an automatic player that
+// may start on its own right now (every rule above: more than half in view
+// for DWELL_MS, 200x200, no focus inside, tab visible, no blocker, no reduced
+// motion) takes the turn from it: the short's iframe goes (its PiP closes,
+// accepted when the owner asked for it) and the automatic one mounts muted,
+// as always. A short still more than half in view (a tall screen) keeps it.
+// One guard of ours: the visitor's tap is never undone on the spot. With no
+// next event (no Up Next block) the slot sits right under the hero, and on a
+// phone «Siguiente ›» can show under a frame scrolled half away with UFC TV
+// playing below it; started there, the short makes way only once something
+// moves after the tap (it leaves the view, or the automatic one comes into
+// it: startedAt, leftAt), or the tap would only restart UFC TV. Back up, the
+// short does not start again on its own: its poster shows that same short
+// (shorts-hero.tsx, onYield), for a tap. Nothing else changes: the videos
+// modal, a Hall of Fame fight and UFC TV the visitor put on stay as above.
 //
 // One more exit, the hero short's end (timerAction): without the JS API its
 // timer cannot tell the end from a pause. Untouched inside, it goes back to
-// its poster (which shows the next short, ready for a tap) and the turn is
-// free, so UFC TV may start on its own if it is seen; a PiP opened with the
-// browser's own button, with no tap inside, closes there. Touched inside, it
-// stays as the visitor left it.
+// its poster (which shows the next short, ready for a tap: this one ended,
+// it was not cut) and the turn is free, so UFC TV may start on its own if it
+// is seen; a PiP opened with the browser's own button, with no tap inside,
+// closes there. Touched inside, it stays as the visitor left it.
 //
 // No iframe_api, no enablejsapi, no postMessage (Developer Policies III.D.7:
 // no undocumented APIs): "stop" means removing the iframe, and each short the
@@ -95,6 +118,14 @@ export type TurnPlayer = {
   eligible: boolean;
   // The keyboard focus is inside its box (its poster): no automatic start.
   focused?: boolean;
+  // The visitor's player that makes way for an automatic one once half or
+  // less of it is in view: the hero short, and only it (21-oct-2026).
+  yieldsToAuto?: boolean;
+  // When its current mount started, and when it last went from more than
+  // half visible to half or less (same clock as `now`), or null. Only the
+  // exception above reads them: what moved since the visitor's tap.
+  startedAt?: number | null;
+  leftAt?: number | null;
 };
 
 export type TurnState = {
@@ -124,6 +155,25 @@ function isAutoCandidate(p: TurnPlayer, now: number): boolean {
   );
 }
 
+// The automatic player that would start now: the larger visible area, then
+// PRIORITY. `also` narrows the candidates further.
+function bestCandidate(state: TurnState, also: (p: TurnPlayer) => boolean = () => true): TurnPlayer | undefined {
+  const candidates = state.players.filter((p) => isAutoCandidate(p, state.now) && also(p));
+  candidates.sort((a, b) => b.area - a.area || b.priority - a.priority);
+  return candidates[0];
+}
+
+// The hero short out of view makes way (21-oct-2026) for `taker`, a
+// candidate, only if something moved after the visitor's tap: the short left
+// the view, or the automatic one came into it. Never in the very scroll
+// position of the tap. With no start time known, the tap is long gone.
+function makesWayFor(holder: TurnPlayer, taker: TurnPlayer): boolean {
+  if (!holder.yieldsToAuto || holder.ratio > HALF || taker.id === holder.id) return false;
+  const tap = holder.startedAt;
+  if (tap == null) return true;
+  return (holder.leftAt != null && holder.leftAt >= tap) || (taker.aboveSince != null && taker.aboveSince >= tap);
+}
+
 /** Who may have a mounted player right now. Returns { id, owner } or null. */
 export function decideTurn(state: TurnState): Turn | null {
   const autoplayAllowed = state.pageVisible && !state.blocked && !state.reducedMotion;
@@ -132,8 +182,10 @@ export function decideTurn(state: TurnState): Turn | null {
   const holder = current ? state.players.find((p) => p.id === current.id) : undefined;
   if (current && holder && holder.eligible) {
     // The visitor's player is theirs: out of view, tab hidden, menu open.
+    // Except the hero short out of view, when an automatic player may start.
     if (current.owner === "user") {
-      return { id: holder.id, owner: "user" };
+      const taker = autoplayAllowed ? bestCandidate(state, (p) => makesWayFor(holder, p)) : undefined;
+      return taker ? { id: taker.id, owner: "auto" } : { id: holder.id, owner: "user" };
     }
     // An automatic one only while it may start on its own and MORE than half
     // of it is visible.
@@ -143,10 +195,8 @@ export function decideTurn(state: TurnState): Turn | null {
   }
 
   if (!autoplayAllowed) return null;
-  const candidates = state.players.filter((p) => isAutoCandidate(p, state.now));
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => b.area - a.area || b.priority - a.priority);
-  return { id: candidates[0].id, owner: "auto" };
+  const best = bestCandidate(state);
+  return best ? { id: best.id, owner: "auto" } : null;
 }
 
 /**

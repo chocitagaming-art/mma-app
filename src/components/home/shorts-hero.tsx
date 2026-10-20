@@ -43,6 +43,13 @@ import { cn } from "@/lib/utils";
 //     or «Siguiente ›», which plays that same one). The player is still in
 //     the turn manager (lib/playback-turn.ts), so there is ONE player at a
 //     time: UFC TV makes way when the visitor puts a short on.
+//   · And the short makes way when the visitor scrolls down to UFC TV (the
+//     owner, 21-oct-2026: «que se pare el vídeo de arriba y se ponga el
+//     directo sin pulsar»): once half or less of it is in view and the slot
+//     below may start on its own, the short's iframe goes and UFC TV (or the
+//     event's broadcast) mounts, muted. Back up, it does not start again on
+//     its own: its poster shows the SAME short, cut and not ended, for a tap
+//     (onYield; the end of a short still shows the next one).
 //   · Muted (mute=1), as UFC TV. Measured on 30-sep-2026 with the real
 //     YouTube: under a strict autoplay policy (Chromium's
 //     user-gesture-required) the tap on this page does not carry into the new
@@ -63,7 +70,8 @@ import { cn } from "@/lib/utils";
 //     theirs: the timer leaves it as they left it, «Siguiente ›» goes on. One
 //     they did not touch goes back to its poster, and the turn is free. Until
 //     then it stays out of view (PiP), with the tab hidden or under the menu
-//     (DECISIONS.md, 30-sep-2026).
+//     (DECISIONS.md, 30-sep-2026), unless UFC TV is seen (above): touched or
+//     in PiP, it makes way all the same.
 //   · A tap never waits for the page. The player used to wait for the
 //     headline's font and the entrance animation (up to 1.5 s, or the font's
 //     download), and the ▶ did nothing meanwhile. Now it mounts at once and
@@ -254,6 +262,13 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
     carousel.take();
   }, [carousel]);
 
+  // It made way for UFC TV, out of view (21-oct-2026): that short was cut,
+  // not ended, so its poster shows it again instead of the next one. Called
+  // in the same task as the swap: the poster comes back already showing it.
+  const onYield = useCallback(() => {
+    carousel.interrupt();
+  }, [carousel]);
+
   // The visitor's ▶ and «Siguiente ›»: the turn manager's answer.
   const start = useCallback(
     (index: number): StartResult => {
@@ -368,7 +383,10 @@ function ShortsCarouselHero({ shorts }: { shorts: HeroShort[] }) {
         src={shortEmbedUrl(playing.id, { mute: true })}
         title={`Short de la UFC: ${playing.title}`}
         poster={poster}
+        // Out of view it makes way for the home's slot (21-oct-2026).
+        yieldsToAuto
         onMount={onMount}
+        onYield={onYield}
         onIframeLoad={onIframeLoad}
         className="aspect-[9/16] w-full overflow-hidden bg-black"
       />

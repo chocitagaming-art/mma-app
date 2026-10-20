@@ -42,7 +42,9 @@ import { cn } from "@/lib/utils";
 // the event page), the only players that start on their own (autoStart); and
 // the home hero's short (components/home/shorts-hero.tsx), which only plays
 // when the visitor starts it and is in the turn so that there is still ONE
-// player at a time. Nothing else of the site starts a YouTube player on its
+// player at a time; scrolled out of view, it makes way for the home's slot
+// when that one may start (yieldsToAuto, the owner, 21-oct-2026). Nothing
+// else of the site starts a YouTube player on its
 // own. What the visitor opens with a tap is in the turn too, through
 // components/playback/click-to-play.tsx (our own poster, the player mounts as
 // the visitor's): the Hall of Fame's fights, and the videos modal of the home,
@@ -207,8 +209,10 @@ export function TurnSlot({
   poster,
   className,
   autoStart = false,
+  yieldsToAuto = false,
   ownBlocker,
   onMount,
+  onYield,
   onIframeLoad,
 }: {
   id: string;
@@ -221,20 +225,27 @@ export function TurnSlot({
   // Starts on its own when it is seen (UFC TV, the event's broadcast). False
   // by default: then it only plays when the visitor starts it (the hero short).
   autoStart?: boolean;
+  // Out of view (half or less), the visitor's player makes way for an
+  // automatic one that may start: the hero short only (the owner,
+  // 21-oct-2026). False by default: what the visitor chose stays.
+  yieldsToAuto?: boolean;
   // The blocker this player itself puts up (the videos modal): it does not
   // stop the visitor's start of THIS player (turn-controller.ts userStart).
   ownBlocker?: string;
   onMount?: (owner: TurnOwner) => void;
+  // It made way (yieldsToAuto), just before its iframe goes: the hero's
+  // poster goes back to the short it cut.
+  onYield?: () => void;
   // The hero starts its short's timer here (duration + 2.5 s, as in the mockup).
   onIframeLoad?: () => void;
 }) {
   const controller = useTurnController();
   const boxRef = useRef<HTMLDivElement>(null);
-  // The latest callback, without re-registering the player on every render.
-  const latest = useRef({ onMount });
+  // The latest callbacks, without re-registering the player on every render.
+  const latest = useRef({ onMount, onYield });
   useEffect(() => {
-    latest.current = { onMount };
-  }, [onMount]);
+    latest.current = { onMount, onYield };
+  }, [onMount, onYield]);
 
   useEffect(() => {
     const element = boxRef.current;
@@ -244,10 +255,12 @@ export function TurnSlot({
       priority,
       element,
       autoStart,
+      yieldsToAuto,
       ownBlocker,
       onMount: (owner) => latest.current.onMount?.(owner),
+      onYield: () => latest.current.onYield?.(),
     });
-  }, [controller, id, priority, autoStart, ownBlocker]);
+  }, [controller, id, priority, autoStart, yieldsToAuto, ownBlocker]);
 
   const view: PlayerView = useSyncExternalStore(
     controller.subscribe,

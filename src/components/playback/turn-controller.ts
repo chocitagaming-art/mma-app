@@ -38,6 +38,13 @@ import {
 //     started on its own may come back, as before (the owner's decision,
 //     18-oct-2026, about the modal). Any other start of the visitor (the
 //     hero short over their UFC TV) parks nothing: as before R10;
+//   · the hero short (registered with yieldsToAuto) scrolled out of view
+//     makes way for an automatic player that may start (the owner, 21-oct-
+//     2026; the rule is decideTurn's). Each player's start time and the last
+//     time it dropped to half or less go into the state, so the visitor's
+//     tap is never undone on the spot. apply() tells the hero first
+//     (onYield), in the same task: its poster goes back to the short it cut,
+//     in the same render as the swap;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
 //     the hero's timer leaves it alone. As a net, every decision and every
@@ -87,6 +94,14 @@ export type PlayerRegistration = {
   autoStart?: boolean;
   // Called synchronously on every mount: the hero picks its short here.
   onMount?: (owner: TurnOwner) => void;
+  // The visitor's player that makes way for an automatic one once half or
+  // less of it is in view: the hero short, and nothing else (the owner,
+  // 21-oct-2026). Defaults to false: what the visitor chose stays.
+  yieldsToAuto?: boolean;
+  // Called synchronously when it does, just before it is unmounted and the
+  // automatic one mounted (the same commit): the hero's poster goes back to
+  // the short it cut, not the next one.
+  onYield?: () => void;
   // The name of the blocker the player itself puts up (the videos modal is
   // one: it covers the page, so it blocks the automatic players while it is
   // open). Such a player sits ABOVE the page, and so above whatever else
@@ -124,6 +139,8 @@ type Entry = {
   autoStart: boolean;
   element: Element;
   onMount?: (owner: TurnOwner) => void;
+  yieldsToAuto: boolean;
+  onYield?: () => void;
   ownBlocker: string | null;
   // The visitor's player that the videos modal took away: no automatic start
   // any more, until the visitor starts it again.
@@ -132,6 +149,10 @@ type Entry = {
   ratio: number;
   area: number;
   aboveSince: number | null;
+  // When it last went from more than half visible to half or less, and when
+  // its current mount started (null while it is a poster).
+  leftAt: number | null;
+  startedAt: number | null;
   touched: boolean;
   mounted: boolean;
   owner: TurnOwner | null;
@@ -223,6 +244,9 @@ export function createTurnController(env: TurnEnvironment) {
         aboveSince: p.aboveSince,
         eligible: eligible(p),
         focused: holdsFocus(p),
+        yieldsToAuto: p.yieldsToAuto,
+        startedAt: p.startedAt,
+        leftAt: p.leftAt,
       })),
     };
   }
@@ -232,6 +256,7 @@ export function createTurnController(env: TurnEnvironment) {
     p.owner = owner;
     p.mountCount += 1;
     p.touched = false;
+    p.startedAt = env.now();
     p.onMount?.(owner);
   }
 
@@ -240,6 +265,7 @@ export function createTurnController(env: TurnEnvironment) {
     p.owner = null;
     p.touched = false;
     p.iframe = null;
+    p.startedAt = null;
   }
 
   // Unmount the old one and mount the new one in the same task.
@@ -251,7 +277,14 @@ export function createTurnController(env: TurnEnvironment) {
       return;
     }
     const holder = current ? players.get(current.id) : undefined;
-    if (holder) unmount(holder);
+    if (holder) {
+      // The visitor's player, still big enough, handed to an automatic one:
+      // decideTurn does that only when the hero short makes way out of view.
+      if (current?.owner === "user" && next?.owner === "auto" && holder.yieldsToAuto && eligible(holder)) {
+        holder.onYield?.();
+      }
+      unmount(holder);
+    }
     current = null;
     const p = next ? players.get(next.id) : undefined;
     if (next && p) {
@@ -298,6 +331,7 @@ export function createTurnController(env: TurnEnvironment) {
           later(evaluate, DWELL_MS + 20);
         }
       } else {
+        if (p.aboveSince != null) p.leftAt = env.now();
         p.aboveSince = null;
       }
     }
@@ -353,12 +387,16 @@ export function createTurnController(env: TurnEnvironment) {
         autoStart: reg.autoStart ?? false,
         element: reg.element,
         onMount: reg.onMount,
+        yieldsToAuto: reg.yieldsToAuto ?? false,
+        onYield: reg.onYield,
         ownBlocker: reg.ownBlocker ?? null,
         parked: false,
         iframe: null,
         ratio: 0,
         area: 0,
         aboveSince: null,
+        leftAt: null,
+        startedAt: null,
         touched: false,
         mounted: false,
         owner: null,

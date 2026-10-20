@@ -9,6 +9,8 @@
 // here moves on its own: the poster shows a short (the most recent one at
 // first), its ▶ plays it, «Siguiente ›» plays the one after the last one
 // played, and when a short ends the poster shows the next one, for a tap.
+// Since 21-oct-2026 a short can also be cut (it makes way for UFC TV when the
+// visitor scrolls down to it): then the poster shows that same one again.
 //
 // Why a tiny store and not React state: the turn manager calls onMount
 // synchronously and notifies its subscribers right after. A setState there
@@ -76,6 +78,20 @@ export function createShortsCarousel(length: number) {
       snapshot = { current: index, cursor: wrap(index + 1) };
       for (const fn of listeners) fn();
       return index;
+    },
+
+    /**
+     * The short on screen was cut before its end: the visitor scrolled down
+     * and it made way for UFC TV (the owner, 21-oct-2026). It did not end, so
+     * its poster shows THAT short again, for a tap (a new iframe: from the
+     * start, there is no API to resume it), and «Siguiente ›» still plays the
+     * one after it. Nothing to do before any short, or when it already shows.
+     */
+    interrupt() {
+      const { current, cursor } = snapshot;
+      if (current == null || cursor === current) return;
+      snapshot = { current, cursor: current };
+      for (const fn of listeners) fn();
     },
 
     /**

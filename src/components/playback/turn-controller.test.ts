@@ -20,7 +20,9 @@ import {
 //
 // The two players of the home, as in production: the hero short, which only
 // plays when the visitor starts it (no autoStart: the owner's decision of
-// 30-sep-2026, night), and UFC TV, which starts on its own when it is seen.
+// 30-sep-2026, night) and, scrolled out of view, makes way for UFC TV
+// (yieldsToAuto: the owner, 21-oct-2026); and UFC TV, which starts on its own
+// when it is seen.
 
 type FakeBox = Element & { size: { width: number; height: number }; inside: unknown[] };
 
@@ -143,7 +145,17 @@ function setup() {
   const hero = box(330, 587);
   const tv = box(1024, 576);
   const mounts: string[] = [];
-  controller.register({ id: "hero", element: hero, onMount: (owner) => mounts.push(`hero:${owner}`) });
+  // Every time the hero short made way (onYield), in one log with every
+  // commit: the hero's poster has to go back to its short BEFORE the commit
+  // that swaps the players, so React paints both in the same render.
+  const log: string[] = [];
+  controller.register({
+    id: "hero",
+    element: hero,
+    yieldsToAuto: true,
+    onMount: (owner) => mounts.push(`hero:${owner}`),
+    onYield: () => log.push("yield"),
+  });
   controller.register({
     id: "tv-bucle",
     element: tv,
@@ -152,7 +164,12 @@ function setup() {
   });
   controller.start();
   const worst = watchSinglePlayer(controller, ["hero", "tv-bucle"]);
-  return { ...browser, controller, hero, tv, mounts, worst };
+  controller.subscribe(() => {
+    const on = (id: string) => (controller.getView(id).mounted ? controller.getView(id).owner : "poster");
+    log.push(`commit hero=${on("hero")} tv=${on("tv-bucle")}`);
+  });
+  const yields = () => log.filter((entry) => entry === "yield").length;
+  return { ...browser, controller, hero, tv, mounts, log, yields, worst };
 }
 
 describe("turn controller · IntersectionObserver without the sticky header", () => {
@@ -340,19 +357,202 @@ describe("turn controller · only one at a time", () => {
     expect(worst.mounted).toBe(1);
   });
 
-  it("the visitor's short takes the turn from UFC TV, and UFC TV does not come back while it is theirs", () => {
-    const { controller, see, advance, hero, tv, mounts, worst } = setup();
+  // With no Up Next block the slot sits right under the hero, and on a phone
+  // «Siguiente ›» can show under a frame scrolled half away, with UFC TV
+  // playing below it. The tap moves the focus (focusChanged) and the
+  // turn is decided again one task later: the short must not make way there
+  // and then, or the tap would do nothing but restart UFC TV.
+  it("the visitor's short takes the turn from UFC TV, and UFC TV does not take it back while nothing moves", () => {
+    const { controller, see, advance, hero, tv, mounts, yields, worst } = setup();
     see(tv, 1);
     advance(500);
     see(hero, 0.3);
     expect(controller.userStart("hero")).toBe("started");
     expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
     expect(controller.getView("tv-bucle").mounted).toBe(false);
-    // UFC TV fully in view for far longer than the dwell: it waits.
+    // UFC TV fully in view for far longer than the dwell, the turn decided
+    // again: it waits.
+    controller.focusChanged();
     advance(10_000);
+    controller.evaluate();
+    expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
     expect(controller.getView("tv-bucle").mounted).toBe(false);
     expect(mounts).toEqual(["tv:auto", "hero:user"]);
+    expect(yields()).toBe(0);
     expect(worst.mounted).toBe(1);
+  });
+});
+
+// The owner, 21-oct-2026: «cuando haga scroll hacia abajo y llegue al UFC TV
+// en directo, que se pare el vídeo de arriba y se ponga el directo sin
+// pulsar». The visitor's hero short, once half or less of it is in view,
+// makes way for an automatic player that may start on its own.
+describe("turn controller · the visitor's short makes way for UFC TV out of view (21-oct-2026)", () => {
+  function playShortThenScrollDown() {
+    const t = setup();
+    t.see(t.hero, 1);
+    expect(t.controller.userStart("hero")).toBe("started");
+    t.advance(3_000);
+    // The visitor scrolls down: the short goes, UFC TV comes in.
+    t.see(t.hero, 0);
+    t.see(t.tv, 0.9);
+    return t;
+  }
+
+  it("UFC TV seen for the dwell takes the turn on its own, muted (auto), in one commit, and the hero is told", () => {
+    const t = playShortThenScrollDown();
+    t.advance(300);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    t.advance(200);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: false, owner: null });
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.mounts).toEqual(["hero:user", "tv:auto"]);
+    // The hero's poster first, then ONE commit with the swap: never two.
+    expect(t.log.slice(-2)).toEqual(["yield", "commit hero=poster tv=auto"]);
+    expect(t.yields()).toBe(1);
+    expect(t.worst.mounted).toBe(1);
+  });
+
+  it("back up: UFC TV goes back to its poster, and the short never starts again on its own", () => {
+    const t = playShortThenScrollDown();
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle").owner).toBe("auto");
+    t.see(t.tv, 0.2);
+    t.see(t.hero, 1);
+    t.advance(60_000);
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.mounts).toEqual(["hero:user", "tv:auto"]);
+    // A tap plays it again, the visitor's, as always.
+    expect(t.controller.userStart("hero")).toBe("started");
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.yields()).toBe(1);
+  });
+
+  it("a short the visitor touched inside (sound, PiP) makes way too", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const iframe = {};
+    t.controller.setIframe("hero", iframe);
+    t.page.active = iframe;
+    t.controller.windowBlurred();
+    t.advance(0);
+    expect(t.controller.getView("hero")).toMatchObject({ owner: "user", touched: true });
+    t.advance(1_000);
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.worst.mounted).toBe(1);
+  });
+
+  it("a tall screen: the short more than half in view keeps the turn; scrolled out under UFC TV, it makes way at once", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle").owner).toBe("auto");
+    t.advance(1_000);
+    expect(t.controller.userStart("hero")).toBe("started");
+    t.see(t.hero, 0.6);
+    t.advance(10_000);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    // UFC TV never left the view: the drop of the short is what moved.
+    t.see(t.hero, 0.4);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.worst.mounted).toBe(1);
+  });
+
+  it("the same tap under a frame half away: it stays until UFC TV comes into view again", () => {
+    const t = setup();
+    t.see(t.tv, 1);
+    t.advance(500);
+    t.see(t.hero, 0.3);
+    t.controller.userStart("hero");
+    t.advance(5_000);
+    t.controller.evaluate();
+    expect(t.controller.getView("hero").owner).toBe("user");
+    // A scroll takes UFC TV out and back: it comes into view after the tap.
+    t.see(t.tv, 0.4);
+    t.see(t.tv, 0.9);
+    t.advance(500);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  it("not with the tab hidden, the menu open, reduced motion or the focus on UFC TV's poster: then it does", () => {
+    const t = playShortThenScrollDown();
+    t.controller.setPageVisible(false);
+    t.advance(2_000);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    t.controller.addBlocker("menu");
+    t.controller.setPageVisible(true);
+    t.advance(2_000);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    t.page.reduced = true;
+    t.controller.removeBlocker("menu");
+    t.advance(2_000);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    const poster = { poster: true };
+    t.tv.inside.push(poster);
+    t.page.active = poster;
+    t.page.reduced = false;
+    t.controller.reducedMotionChanged();
+    t.advance(2_000);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    // The focus leaves the poster: now it makes way.
+    t.page.active = null;
+    t.controller.focusChanged();
+    t.advance(0);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.yields()).toBe(1);
+    expect(t.worst.mounted).toBe(1);
+  });
+
+  it("UFC TV seen for less than the dwell (a fast scroll past it): the short stays", () => {
+    const t = playShortThenScrollDown();
+    t.advance(200);
+    t.see(t.tv, 0);
+    t.advance(10_000);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.yields()).toBe(0);
+  });
+
+  it("only a player that says yieldsToAuto: a visitor's clip out of view stays, UFC TV waits", () => {
+    const browser = fakeBrowser();
+    const controller = createTurnController(browser.env);
+    const clip = box(1024, 576);
+    const tv = box(1024, 576);
+    controller.register({ id: "clip", element: clip });
+    controller.register({ id: "tv-bucle", element: tv, autoStart: true });
+    controller.start();
+    browser.see(clip, 1);
+    controller.userStart("clip");
+    browser.see(clip, 0);
+    browser.see(tv, 1);
+    browser.advance(10_000);
+    expect(controller.getView("clip")).toMatchObject({ mounted: true, owner: "user" });
+    expect(controller.getView("tv-bucle").mounted).toBe(false);
+  });
+
+  it("UFC TV the visitor touched, out of view, with the hero's poster in view: nothing changes", () => {
+    const t = setup();
+    t.see(t.tv, 1);
+    t.controller.userStart("tv-bucle");
+    t.see(t.tv, 0);
+    t.see(t.hero, 1);
+    t.advance(10_000);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.yields()).toBe(0);
   });
 });
 
@@ -511,15 +711,22 @@ describe("turn controller · touched by the visitor", () => {
 });
 
 describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-sep-2026)", () => {
-  it("out of view (0 %, as when scrolling in PiP) it stays, and no automatic player starts meanwhile", () => {
-    const { controller, see, advance, hero, tv, worst } = setup();
+  // Since 21-oct-2026 the hero short makes way when UFC TV is seen (above);
+  // with nothing automatic in view, as when reading further down, it stays.
+  it("out of view (0 %, as when scrolling in PiP) it stays while nothing automatic is seen", () => {
+    const { controller, see, advance, hero, tv, yields, worst } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
+    advance(1_000);
     see(hero, 0);
+    // UFC TV passed by in a fast scroll (under the dwell), the page read below.
     see(tv, 1);
-    advance(2_000);
+    advance(200);
+    see(tv, 0);
+    advance(10_000);
     expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
     expect(controller.getView("tv-bucle").mounted).toBe(false);
+    expect(yields()).toBe(0);
     expect(worst.mounted).toBe(1);
   });
 
@@ -777,25 +984,30 @@ describe("turn controller · the end of the hero short (its timer)", () => {
   });
 
   // Out of view while it plays, maybe in a PiP opened with the browser's own
-  // button (no tap inside): it stays while it plays, and its end closes it.
+  // button (no tap inside), with nothing automatic in view (the visitor reads
+  // further down, past UFC TV): it stays while it plays, and its end closes
+  // it. With UFC TV in view it makes way before (21-oct-2026, above).
   it("started with a tap and never touched, out of view: it stays while it plays, and its timer frees the turn for UFC TV", () => {
     const { controller, see, advance, hero, tv, mounts, worst } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
+    advance(1_000);
     see(hero, 0);
-    see(tv, 1);
-    advance(15_000);
+    advance(14_000);
     expect(controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: false });
     expect(controller.getView("tv-bucle").mounted).toBe(false);
     expect(controller.timerFired("hero")).toBe("release");
     expect(controller.getView("hero")).toMatchObject({ mounted: false, owner: null });
+    // The visitor scrolls back up to UFC TV: it starts on its own.
+    see(tv, 1);
+    advance(500);
     expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
     expect(mounts).toEqual(["hero:user", "tv:auto"]);
     expect(worst.mounted).toBe(1);
   });
 
-  it("the same short touched inside (a PiP from YouTube's own button) stays at its timer, and UFC TV keeps waiting", () => {
-    const { controller, see, advance, hero, tv, page, worst } = setup();
+  it("the same short touched inside (a PiP from YouTube's own button) stays at its timer", () => {
+    const { controller, see, advance, hero, page, worst } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
     const iframe = {};
@@ -804,7 +1016,6 @@ describe("turn controller · the end of the hero short (its timer)", () => {
     controller.windowBlurred();
     advance(0);
     see(hero, 0);
-    see(tv, 1);
     advance(15_000);
     expect(controller.timerFired("hero")).toBe("stay");
     advance(5_000);
@@ -975,6 +1186,22 @@ describe("source guards of the turn manager", () => {
     expect(provider).toMatch(/autoStart = false,/);
     expect(provider).toMatch(/controller\.register\(\{[\s\S]*?\bautoStart,[\s\S]*?\}\)/);
     expect(files[0][1]).toMatch(/autoStart: reg\.autoStart \?\? false/);
+  });
+
+  // The owner's 21-oct-2026 rule is for the hero short and nothing else: the
+  // videos modal, a Hall of Fame fight or UFC TV the visitor put on still
+  // stay out of view (DECISIONS.md, 30-sep-2026).
+  it("TurnSlot registers yieldsToAuto (false unless asked) and only the hero short asks for it", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/yieldsToAuto\?: boolean;/);
+    expect(provider).toMatch(/yieldsToAuto = false,/);
+    expect(provider).toMatch(/controller\.register\(\{[\s\S]*?\byieldsToAuto,[\s\S]*?\}\)/);
+    expect(files[0][1]).toMatch(/yieldsToAuto: reg\.yieldsToAuto \?\? false/);
+    const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
+    expect(read("../home/shorts-hero.tsx")).toMatch(/<TurnSlot[\s\S]*?\byieldsToAuto\b[\s\S]*?\/>/);
+    for (const path of ["./live-embed-player.tsx", "./click-to-play.tsx", "../video-modal.tsx"]) {
+      expect(read(path), path).not.toMatch(/yieldsToAuto/);
+    }
   });
 
   // The hero's ▶ during its entrance (until its headline's font and its intro
