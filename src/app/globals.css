@@ -584,6 +584,146 @@
       transition: none;
     }
   }
+
+  /* /clasificacion card (ranking-division-card.tsx and its skeleton in
+     clasificacion/loading.tsx). Redesign of 21-oct-2026 in the roster card's
+     language: every face is the cut-out standing on a border. Colour carries
+     the hierarchy: GOLD is the champion (the frame, its glow and the block's
+     wash), RED the contender nº 1 (the halo behind its face), the rest none.
+     The gold is amber-500 in light and amber-400 in dark, the border colours
+     of the card's markup (text stays amber-700 / amber-400 for contrast). */
+  .ranking-card {
+    container: ranking-card / inline-size;
+    --ranking-gold: oklch(76.9% 0.188 70.08);
+  }
+  .dark .ranking-card {
+    --ranking-gold: oklch(82.8% 0.189 84.429);
+  }
+
+  /* Rows: the face stands on the row's bottom border and grows 6 % on hover
+     and keyboard focus, like the roster card. :has(:focus-visible) and not
+     :focus-within, so a mouse click does not leave the face grown. */
+  .ranking-row-cutout {
+    transform-origin: bottom center;
+    transition: transform 0.25s ease;
+  }
+  .ranking-row-cutout img {
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.35));
+  }
+  .ranking-row--first .ranking-row-photo {
+    background: radial-gradient(
+      55% 80% at 50% 100%,
+      color-mix(in oklch, var(--primary) 22%, transparent),
+      transparent 72%
+    );
+  }
+  .ranking-row:has(:focus-visible) .ranking-row-cutout {
+    transform: scale(1.06);
+  }
+  @media (hover: hover) {
+    .ranking-row:hover .ranking-row-cutout {
+      transform: scale(1.06);
+    }
+  }
+
+  /* Champion: a gold wash from the photo's corner over the whole block. */
+  .ranking-champion {
+    background:
+      radial-gradient(
+        75% 130% at 0% 100%,
+        color-mix(in oklch, var(--ranking-gold) 20%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--ranking-gold) 7%, transparent),
+        transparent
+      );
+  }
+  /* The frame the head breaks out of: a gold halo rising from its bottom
+     edge and a gold glow around it. */
+  .ranking-champion-frame {
+    grid-area: photo;
+    background:
+      radial-gradient(
+        60% 90% at 50% 100%,
+        color-mix(in oklch, var(--ranking-gold) 40%, transparent),
+        transparent 72%
+      ),
+      color-mix(in oklch, var(--ranking-gold) 8%, var(--card));
+    box-shadow: 0 0 24px -4px color-mix(in oklch, var(--ranking-gold) 55%, transparent);
+    transition: box-shadow 0.25s ease;
+  }
+  .ranking-champion:has(:focus-visible) .ranking-champion-frame {
+    box-shadow: 0 0 30px 0 color-mix(in oklch, var(--ranking-gold) 75%, transparent);
+  }
+  @media (hover: hover) {
+    .ranking-champion:hover .ranking-champion-frame {
+      box-shadow: 0 0 30px 0 color-mix(in oklch, var(--ranking-gold) 75%, transparent);
+    }
+  }
+  /* The cut-out is 120 px tall in a 96 px frame: 24 px of head above the top
+     border. Its square bottom corners would poke out of the frame's rounded
+     ones (radius 0.5rem minus the 2 px border), so only those are clipped;
+     the negative top inset leaves the head free. */
+  .ranking-champion-cutout {
+    clip-path: inset(-40px 0 0 0 round 0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px));
+  }
+  .ranking-champion-cutout img {
+    filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.4));
+  }
+
+  /* Narrow card (phones, the 2-column tablet, the 3-column desktop): the
+     name is a headline under the photo, with the whole card's width for it
+     («ALEXANDER VOLKANOVSKI» is 252 px at 28 px, one line from 360 px). From
+     440 px of card it moves beside the photo (196 px of column left: the
+     longest word of the rankings, NURMAGOMEDOV, is 170 px at 28 px). The
+     photo box never changes, so `sizes` stays exact. */
+  .ranking-champion-grid {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "photo label"
+      "photo record"
+      "name name";
+    column-gap: 1rem;
+  }
+  .ranking-champion-label {
+    grid-area: label;
+  }
+  .ranking-champion-record {
+    grid-area: record;
+    align-self: end;
+  }
+  .ranking-champion-name {
+    grid-area: name;
+    margin-top: 0.875rem;
+  }
+  /* min-height: what a two-line name takes beside the photo (label, nickname,
+     2 × 26.6 px of name, record; measured 114 px on 21-oct). A one-line name
+     («TOM ASPINALL») would make the block 14 px shorter: with it fixed, every
+     block is 167 px tall and the skeleton, which uses these same classes,
+     matches it. */
+  @container ranking-card (min-width: 27.5rem) {
+    .ranking-champion-grid {
+      grid-template-areas:
+        "photo label"
+        "photo name"
+        "photo record";
+      min-height: 7.125rem;
+    }
+    .ranking-champion-name {
+      align-self: center;
+      margin-top: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ranking-row-cutout,
+    .ranking-champion-frame {
+      transition: none;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
