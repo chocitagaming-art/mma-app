@@ -62,9 +62,11 @@ import { computeRecentForm } from "@/lib/fighter-form";
 import {
   computeAge,
   countFirstRoundFinishes,
+  formatUfcDebut,
   lastCompletedFight,
   latestRegionalFight,
   resolveFinishHighlights,
+  resolveUfcDebut,
 } from "@/lib/fighter-highlights";
 import { promotionBadge } from "@/lib/promotion-badge";
 import { resolveFightVideoUrl } from "@/lib/video";
@@ -249,6 +251,15 @@ export default async function FighterDetailPage({
   const lastFightPromotion =
     isRegionalLastFight && lastFight ? promotionBadge(lastFight) : null;
 
+  // «Debut en UFC» (owner, 21-oct-2026): the first UFC fight fought, ufc.com's
+  // date only for UFC 1-4, a booking «(programado)», or no row. Built from the
+  // history and the bookings this page already loads: no query of its own.
+  const ufcDebut = resolveUfcDebut({
+    history,
+    upcomingBouts,
+    octagonDebut: fighter.octagonDebut,
+  });
+
   // Fila bio "sin huecos": los campos opcionales (alcance de pierna, edad,
   // gimnasio) se ocultan cuando faltan en vez de mostrar un guion.
   const bioItems: { label: string; content: ReactNode }[] = [
@@ -272,9 +283,8 @@ export default async function FighterDetailPage({
     ...(fighter.trainsAt
       ? [{ label: "Gimnasio", content: fighter.trainsAt }]
       : []),
-    ...(fighter.octagonDebut
-      ? [{ label: "Debut en UFC", content: formatDate(fighter.octagonDebut) }]
-      : []),
+    // From our own fights, not ufc.com's octagon_debut: see resolveUfcDebut.
+    ...(ufcDebut ? [{ label: "Debut en UFC", content: formatUfcDebut(ufcDebut) }] : []),
     ...(divisionStints.length > 1
       ? [
           {
