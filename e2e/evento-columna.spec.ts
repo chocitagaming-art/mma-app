@@ -17,8 +17,20 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 // «15-» / «6-1». Un «-118» partido se lee como «+118». Cada pieza de la línea
 // (récord, cuota, GANA) puede bajar entera a la siguiente línea, pero nunca
 // partirse por dentro ni salirse de la columna de su esquina.
+//
+// ── Y lo plegado no se mide ──────
+// 🪤 Chromium (149) da caja de verdad a lo que hay dentro de un <details>
+// cerrado (content-visibility: hidden), y la medida lo contaba. Hoy cae dentro
+// de su esquina (21-oct, 1097: 18 piezas medidas, 2 de ellas plegadas), pero
+// el 15-oct el «9-3-0» de Horth, plegado en la 1089, salió «fuera» en una
+// medida a mano. Es una guarda: lo que no se ve no puede dar un rojo (ni
+// invitar a relajar la tolerancia). La 1089 ya se celebró y las canceladas
+// solo se pintan en eventos futuros (BE7): /eventos/1097 (UFC 335, 12-dic-2026)
+// pliega una (base, 21-oct). Cuando se celebre, el test se pone ROJO: elige
+// otro evento futuro con una cancelada.
 
 const EVENTO = "/eventos/1098";
+const EVENTO_CANCELADA = "/eventos/1097";
 const ESCRITORIO = [1024, 1280, 1920];
 const SIN_CAMBIO = [390, 768];
 const MOVILES = [360, 375, 390];
@@ -146,54 +158,102 @@ test(`${EVENTO} en móvil y tablet: careo y pesaje a todo el ancho, como antes`,
   }
 });
 
-test(`${EVENTO} en el móvil: el récord, la cuota y GANA nunca se parten por dentro ni se salen de su esquina`, async ({ page }) => {
-  // Solo hace falta la cartelera (no el careo ni el pesaje de los otros tests).
-  await page.goto(EVENTO);
+type Lineas = { revisadas: number; ocultas: number; ganas: number; partidas: string[]; fuera: string[] };
+
+// Solo hace falta la cartelera (no el careo ni el pesaje de los otros tests).
+async function abrirCartelera(page: Page, evento: string): Promise<void> {
+  await page.goto(evento);
   await expect(page.locator('[data-testid="bout-row"]').first()).toBeVisible();
   await esperarHidratacion(page);
   await page.evaluate(() => document.fonts.ready);
-  for (const width of MOVILES) {
-    await asentar(page, width);
-    const { revisadas, partidas, fuera, ganas } = await page.evaluate(() => {
-      // Cada pieza de la segunda línea de una esquina (texto suelto o span)
-      // tiene que caber en UNA línea (se cuentan las alturas distintas de sus
-      // fragmentos: un texto que se parte da dos) y quedarse DENTRO de la
-      // columna de texto de su esquina. 🪤 Lo segundo es lo que cazó la
-      // revisión del 15-oct: con nowrap en todas las piezas y sin espacio entre
-      // ellas, la línea entera no saltaba nunca y pisaba el «VS» o la foto
-      // azul, sin desbordar el documento (la tarjeta lleva overflow-hidden).
-      const fragmentos = (nodo: Node) => {
-        const rango = document.createRange();
-        rango.selectNodeContents(nodo);
-        return [...rango.getClientRects()].filter((r) => r.width > 0);
-      };
-      const partidas: string[] = [];
-      const fuera: string[] = [];
-      let revisadas = 0;
-      let ganas = 0;
-      for (const esquina of document.querySelectorAll("[data-bout-corner]")) {
-        const lado = esquina.getAttribute("data-bout-corner");
-        const columna = esquina.lastElementChild?.getBoundingClientRect();
-        const linea = esquina.querySelectorAll("p")[1];
-        if (!columna || !linea) continue;
-        for (const nodo of linea.childNodes) {
-          const texto = nodo.textContent?.trim() ?? "";
-          const rects = fragmentos(nodo);
-          if (!texto || rects.length === 0) continue; // sin caja no cuenta como revisada
-          revisadas += 1;
-          if (texto === "GANA") ganas += 1;
-          if (new Set(rects.map((r) => Math.round(r.top))).size > 1) partidas.push(`«${texto}» (${lado})`);
-          const sale = rects.some((r) => r.left < columna.left - 1 || r.right > columna.right + 1);
-          if (sale) fuera.push(`«${texto}» (${lado})`);
-        }
+}
+
+async function medirLineas(page: Page, width: number): Promise<Lineas> {
+  await asentar(page, width);
+  return page.evaluate(() => {
+    // Cada pieza de la segunda línea de una esquina (texto suelto o span)
+    // tiene que caber en UNA línea (se cuentan las alturas distintas de sus
+    // fragmentos: un texto que se parte da dos) y quedarse DENTRO de la
+    // columna de texto de su esquina. 🪤 Lo segundo es lo que cazó la
+    // revisión del 15-oct: con nowrap en todas las piezas y sin espacio entre
+    // ellas, la línea entera no saltaba nunca y pisaba el «VS» o la foto
+    // azul, sin desbordar el documento (la tarjeta lleva overflow-hidden).
+    const fragmentos = (nodo: Node) => {
+      const rango = document.createRange();
+      rango.selectNodeContents(nodo);
+      return [...rango.getClientRects()].filter((r) => r.width > 0);
+    };
+    const partidas: string[] = [];
+    const fuera: string[] = [];
+    let revisadas = 0;
+    let ocultas = 0;
+    let ganas = 0;
+    for (const esquina of document.querySelectorAll("[data-bout-corner]")) {
+      // Plegada o sin pintar: no se ve, no cuenta (ver el encabezado). El
+      // selector va aparte de checkVisibility() para no depender de cómo
+      // pliegue cada navegador el <details>.
+      if (esquina.closest("details:not([open])") || !esquina.checkVisibility()) {
+        ocultas += 1;
+        continue;
       }
-      return { revisadas, partidas, fuera, ganas };
-    });
+      const lado = esquina.getAttribute("data-bout-corner");
+      const columna = esquina.lastElementChild?.getBoundingClientRect();
+      const linea = esquina.querySelectorAll("p")[1];
+      if (!columna || !linea) continue;
+      for (const nodo of linea.childNodes) {
+        const texto = nodo.textContent?.trim() ?? "";
+        const rects = fragmentos(nodo);
+        if (!texto || rects.length === 0) continue; // sin caja no cuenta como revisada
+        revisadas += 1;
+        if (texto === "GANA") ganas += 1;
+        if (new Set(rects.map((r) => Math.round(r.top))).size > 1) partidas.push(`«${texto}» (${lado})`);
+        const sale = rects.some((r) => r.left < columna.left - 1 || r.right > columna.right + 1);
+        if (sale) fuera.push(`«${texto}» (${lado})`);
+      }
+    }
+    return { revisadas, ocultas, ganas, partidas, fuera };
+  });
+}
+
+async function expectLineasEnteras(page: Page, m: Lineas, que: string): Promise<void> {
+  expect.soft(m.partidas, `${que}: piezas partidas en dos líneas`).toEqual([]);
+  expect.soft(m.fuera, `${que}: piezas que se salen de su esquina (pisan el VS o la foto)`).toEqual([]);
+  await expectNoHorizontalOverflow(page, que);
+}
+
+test(`${EVENTO} en el móvil: el récord, la cuota y GANA nunca se parten por dentro ni se salen de su esquina`, async ({ page }) => {
+  await abrirCartelera(page, EVENTO);
+  for (const width of MOVILES) {
+    const m = await medirLineas(page, width);
     // Sin piezas o sin ningún GANA, el test no estaría mirando lo que se rompía.
-    expect(revisadas, `a ${width}: no encuentro las líneas del récord`).toBeGreaterThan(20);
-    expect(ganas, `a ${width}: ${EVENTO} ya no tiene ganadores que pintar`).toBeGreaterThan(5);
-    expect.soft(partidas, `a ${width}: piezas partidas en dos líneas`).toEqual([]);
-    expect.soft(fuera, `a ${width}: piezas que se salen de su esquina (pisan el VS o la foto)`).toEqual([]);
-    await expectNoHorizontalOverflow(page, `${EVENTO} a ${width}`);
+    expect(m.revisadas, `a ${width}: no encuentro las líneas del récord`).toBeGreaterThan(20);
+    expect(m.ganas, `a ${width}: ${EVENTO} ya no tiene ganadores que pintar`).toBeGreaterThan(5);
+    await expectLineasEnteras(page, m, `${EVENTO} a ${width}`);
+  }
+});
+
+test(`${EVENTO_CANCELADA} en el móvil: la cancelada plegada no se mide; desplegada, cumple lo mismo`, async ({ page }) => {
+  await abrirCartelera(page, EVENTO_CANCELADA);
+  const plegado = page.locator("details", { has: page.locator("[data-bout-corner]") });
+  await expect(plegado, `${EVENTO_CANCELADA} ya no pliega canceladas: elige otro evento futuro con una`).toHaveCount(1);
+  const esquinas = await plegado.locator("[data-bout-corner]").count();
+  const cerrado = new Map<number, number>();
+  for (const width of MOVILES) {
+    const m = await medirLineas(page, width);
+    // Exactamente las de la cancelada: ni una visible de menos, ni una plegada de más.
+    expect(m.ocultas, `a ${width}: se está midiendo lo plegado`).toBe(esquinas);
+    expect(m.revisadas, `a ${width}: no encuentro las líneas del récord`).toBeGreaterThan(10);
+    cerrado.set(width, m.revisadas);
+    await expectLineasEnteras(page, m, `${EVENTO_CANCELADA} plegada a ${width}`);
+  }
+  // Abierta ya se ve: entra en la medida y tiene que cumplir lo mismo.
+  await plegado.locator("summary").click();
+  await expect(plegado).toHaveAttribute("open", "");
+  for (const width of MOVILES) {
+    const m = await medirLineas(page, width);
+    expect(m.ocultas, `a ${width}: con el <details> abierto aún salta esquinas`).toBe(0);
+    expect(m.revisadas - (cerrado.get(width) ?? 0), `a ${width}: la cancelada abierta no se mide`)
+      .toBeGreaterThanOrEqual(esquinas);
+    await expectLineasEnteras(page, m, `${EVENTO_CANCELADA} desplegada a ${width}`);
   }
 });
