@@ -53,7 +53,10 @@ function Movement({ change }: { change: number | null }) {
         aria-label="nuevo en el ranking"
         className="flex w-9 shrink-0 items-center justify-center"
       >
-        <span className="rounded bg-primary/15 px-1 py-0.5 font-mono text-[0.55rem] font-bold uppercase leading-none tracking-wide text-primary">
+        {/* red-800 in light: --primary on its own 15 % tint was 4.23:1 (axe,
+            21-oct-2026, already in production); red-800 is 6.3:1. Dark keeps
+            --primary, which passes there. */}
+        <span className="rounded bg-primary/15 px-1 py-0.5 font-mono text-[0.55rem] font-bold uppercase leading-none tracking-wide text-red-800 dark:text-primary">
           Nuevo
         </span>
       </span>

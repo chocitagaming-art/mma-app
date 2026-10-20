@@ -595,9 +595,17 @@
   .ranking-card {
     container: ranking-card / inline-size;
     --ranking-gold: oklch(76.9% 0.188 70.08);
+    /* How much gold the champion block's wash takes. 🪤 In light it is the
+       ceiling for the amber-700 «Campeón» label: e2e/accesibilidad.spec.ts
+       measures text on a gradient against its WORST stop, and at 20 % that
+       was 4.31:1 (11.2 px text asks 4.5). At 10 % it is 4.66. */
+    --ranking-gold-wash: 10%;
+    --ranking-gold-wash-top: 5%;
   }
   .dark .ranking-card {
     --ranking-gold: oklch(82.8% 0.189 84.429);
+    --ranking-gold-wash: 20%;
+    --ranking-gold-wash-top: 7%;
   }
 
   /* Rows: the face stands on the row's bottom border and grows 6 % on hover
@@ -631,12 +639,12 @@
     background:
       radial-gradient(
         75% 130% at 0% 100%,
-        color-mix(in oklch, var(--ranking-gold) 20%, transparent),
+        color-mix(in oklch, var(--ranking-gold) var(--ranking-gold-wash), transparent),
         transparent 70%
       ),
       linear-gradient(
         to bottom,
-        color-mix(in oklch, var(--ranking-gold) 7%, transparent),
+        color-mix(in oklch, var(--ranking-gold) var(--ranking-gold-wash-top), transparent),
         transparent
       );
   }
