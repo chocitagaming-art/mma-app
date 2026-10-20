@@ -409,7 +409,7 @@ async function medirUfcTv(page: Page, width: number, height: number): Promise<Uf
   // en un <div hidden> y solo después lo mueve a su sitio: medido nada más
   // aparecer, la columna medía 0 (visto el 29-sep-2026).
   await expect(bloque).toBeVisible();
-  // Un servidor ya vivo en el 3100 (reuseExistingServer) sin UFC_TV_FIXTURE
+  // Un servidor ya vivo en el puerto E2E_PORT (reuseExistingServer, a mano) sin UFC_TV_FIXTURE
   // mediría lo de YouTube de verdad: que falle con su motivo, no con una medida rara.
   await expect(bloque, "¿reuseExistingServer reutilizó un server sin UFC_TV_FIXTURE?").toHaveAttribute(
     "data-ufc-tv",

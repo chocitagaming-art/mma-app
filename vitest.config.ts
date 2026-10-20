@@ -13,7 +13,9 @@ export default defineConfig({
     // "Test Files 1 passed". Con `.tsx` incluido, ese fichero falla RUIDOSAMENTE
     // al no encontrar `document` en environment: "node", que es lo que se quiere:
     // el aviso de que la lógica de UI se prueba con Playwright, no aquí.
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // scripts/: the megatest's own gate (scripts/megatest-lib.test.mjs), so that
+    // the piece that says "green" cannot break without a red here.
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "scripts/**/*.test.mjs"],
   },
   resolve: {
     alias: {
