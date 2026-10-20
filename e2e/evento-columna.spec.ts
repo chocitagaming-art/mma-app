@@ -20,17 +20,16 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //
 // ── Y lo plegado no se mide ──────
 // 🪤 Chromium (149) da caja de verdad a lo que hay dentro de un <details>
-// cerrado (content-visibility: hidden), y la medida lo contaba. Hoy cae dentro
-// de su esquina (21-oct, 1097: 18 piezas medidas, 2 de ellas plegadas), pero
-// el 15-oct el «9-3-0» de Horth, plegado en la 1089, salió «fuera» en una
-// medida a mano. Es una guarda: lo que no se ve no puede dar un rojo (ni
-// invitar a relajar la tolerancia). La 1089 ya se celebró y las canceladas
-// solo se pintan en eventos futuros (BE7): /eventos/1097 (UFC 335, 12-dic-2026)
-// pliega una (base, 21-oct). Cuando se celebre, el test se pone ROJO: elige
-// otro evento futuro con una cancelada.
+// cerrado (content-visibility: hidden), y la medida lo contaba: el 15-oct el
+// «9-3-0» de Horth, plegado en la 1089, salió «fuera» en una medida a mano.
+// Lo que no se ve no puede dar un rojo (ni invitar a relajar la tolerancia).
+// 🪤 NO SE MIDE SOBRE UNA CANCELADA REAL: solo se pintan en eventos futuros
+// (BE7), así que cualquier evento elegido dejaría de plegarla el día después
+// de celebrarse. Se pliega una COPIA de una fila de la 1098 en un <details>
+// sintético, con su récord sacado de la esquina: cerrado no cuenta; abierto,
+// la medida tiene que cazarlo.
 
 const EVENTO = "/eventos/1098";
-const EVENTO_CANCELADA = "/eventos/1097";
 const ESCRITORIO = [1024, 1280, 1920];
 const SIN_CAMBIO = [390, 768];
 const MOVILES = [360, 375, 390];
@@ -232,28 +231,53 @@ test(`${EVENTO} en el móvil: el récord, la cuota y GANA nunca se parten por de
   }
 });
 
-test(`${EVENTO_CANCELADA} en el móvil: la cancelada plegada no se mide; desplegada, cumple lo mismo`, async ({ page }) => {
-  await abrirCartelera(page, EVENTO_CANCELADA);
-  const plegado = page.locator("details", { has: page.locator("[data-bout-corner]") });
-  await expect(plegado, `${EVENTO_CANCELADA} ya no pliega canceladas: elige otro evento futuro con una`).toHaveCount(1);
+test(`${EVENTO} en el móvil: lo plegado en un <details> no se mide; desplegado, cumple lo mismo`, async ({ page }) => {
+  await abrirCartelera(page, EVENTO);
+  // Una COPIA (no la fila de React) de la primera fila, en un <details> cerrado
+  // justo debajo de ella: mismo ancho, como las canceladas de la página.
+  const record = await page.evaluate(() => {
+    const fila = document.querySelector('[data-testid="bout-row"]');
+    if (!fila) throw new Error("no encuentro la primera fila");
+    const plegado = document.createElement("details");
+    plegado.dataset.e2e = "plegado";
+    plegado.innerHTML = "<summary>Peleas canceladas (1)</summary>";
+    plegado.append(fila.cloneNode(true));
+    fila.after(plegado);
+    const pieza = plegado.querySelector<HTMLElement>('[data-bout-corner="red"] p:nth-of-type(2) > span');
+    if (!pieza?.textContent) throw new Error("la copia no tiene récord");
+    // Fuera de su columna (pisa el VS): si se midiera, sería un rojo.
+    pieza.dataset.e2e = "fuera";
+    pieza.style.position = "relative";
+    pieza.style.left = "120px";
+    return pieza.textContent.trim();
+  });
+  const plegado = page.locator('details[data-e2e="plegado"]');
   const esquinas = await plegado.locator("[data-bout-corner]").count();
+  expect(esquinas, "la copia plegada no trae sus dos esquinas").toBe(2);
   const cerrado = new Map<number, number>();
   for (const width of MOVILES) {
     const m = await medirLineas(page, width);
-    // Exactamente las de la cancelada: ni una visible de menos, ni una plegada de más.
-    expect(m.ocultas, `a ${width}: se está midiendo lo plegado`).toBe(esquinas);
-    expect(m.revisadas, `a ${width}: no encuentro las líneas del récord`).toBeGreaterThan(10);
+    // Cerrado no se ve: ni el récord sacado de la esquina da un rojo...
+    await expectLineasEnteras(page, m, `${EVENTO} plegado a ${width}`);
+    // ...ni se cuenta: exactamente sus dos esquinas, ni una visible de más.
+    expect.soft(m.ocultas, `a ${width}: se está midiendo lo plegado`).toBe(esquinas);
+    expect(m.revisadas, `a ${width}: no encuentro las líneas del récord`).toBeGreaterThan(20);
     cerrado.set(width, m.revisadas);
-    await expectLineasEnteras(page, m, `${EVENTO_CANCELADA} plegada a ${width}`);
   }
-  // Abierta ya se ve: entra en la medida y tiene que cumplir lo mismo.
+  // Abierto ya se ve: entra en la medida y la medida caza el récord desplazado...
   await plegado.locator("summary").click();
   await expect(plegado).toHaveAttribute("open", "");
   for (const width of MOVILES) {
     const m = await medirLineas(page, width);
     expect(m.ocultas, `a ${width}: con el <details> abierto aún salta esquinas`).toBe(0);
-    expect(m.revisadas - (cerrado.get(width) ?? 0), `a ${width}: la cancelada abierta no se mide`)
+    expect(m.fuera, `a ${width}: abierto, el récord fuera de su esquina no se caza`).toEqual([`«${record}» (red)`]);
+  }
+  // ...y, vuelto a su sitio, cumple lo mismo que el resto de la cartelera.
+  await plegado.locator('[data-e2e="fuera"]').evaluate((el) => el.removeAttribute("style"));
+  for (const width of MOVILES) {
+    const m = await medirLineas(page, width);
+    expect(m.revisadas - (cerrado.get(width) ?? 0), `a ${width}: lo desplegado no se mide`)
       .toBeGreaterThanOrEqual(esquinas);
-    await expectLineasEnteras(page, m, `${EVENTO_CANCELADA} desplegada a ${width}`);
+    await expectLineasEnteras(page, m, `${EVENTO} desplegado a ${width}`);
   }
 });
