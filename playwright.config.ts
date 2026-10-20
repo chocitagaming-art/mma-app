@@ -15,15 +15,19 @@ import { defineConfig, type ReporterDescription } from "@playwright/test";
 // The port is a variable since 21-oct-2026: on 16-oct a DEVAS session of the
 // owner held :3100, and with reuseExistingServer the suite would have measured
 // THAT site. By hand, `npx playwright test` still reuses whatever answers on
-// the port; scripts/megatest.mjs sets E2E_FRESH_SERVER=1 and never does (it
-// also aborts up front when the port is taken).
+// the port. scripts/megatest.mjs never does: it picks a free port, sets
+// E2E_FRESH_SERVER=1, and through E2E_EXPECT_VERSION turns on
+// e2e/global-setup.ts, which checks before the first test that whoever answers
+// serves this worktree's build at HEAD.
 
+const useOwnServer = !process.env.PLAYWRIGHT_BASE_URL;
 const port = Number(process.env.E2E_PORT || 3100);
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
+// Only the server Playwright starts uses the port: with PLAYWRIGHT_BASE_URL a
+// stale E2E_PORT left in the environment must not break the run.
+if (useOwnServer && (!Number.isInteger(port) || port < 1 || port > 65535)) {
   throw new Error(`E2E_PORT no es un puerto válido: «${process.env.E2E_PORT}»`);
 }
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://localhost:${port}`;
-const useOwnServer = !process.env.PLAYWRIGHT_BASE_URL;
 
 const reporter: ReporterDescription[] = [["list"], ["html", { open: "never" }]];
 // The megatest asks for a JSON report too and reads its counts from it: exit
@@ -50,6 +54,7 @@ export default defineConfig({
   // Neon es compartida: pocos workers para no saturar la BD ni ufc.com/espncdn.
   workers: 3,
   reporter,
+  ...(process.env.E2E_EXPECT_VERSION ? { globalSetup: "./e2e/global-setup.ts" } : {}),
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -70,7 +75,9 @@ export default defineConfig({
           command: `npx next build && npx next start -p ${port}`,
           url: `http://localhost:${port}/api/health`,
           // With E2E_FRESH_SERVER=1 Playwright refuses to start when the url
-          // already answers ("is already used") instead of testing that server.
+          // already answers ("is already used"). It asks once, BEFORE the build:
+          // a server that starts answering during the build still passes for
+          // ours, and that is what e2e/global-setup.ts catches.
           reuseExistingServer: process.env.E2E_FRESH_SERVER !== "1",
           timeout: 300_000,
           // UFC TV (portada) con datos ENLATADOS y sin red: el bucle de peleas
