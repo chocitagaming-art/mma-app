@@ -17,14 +17,10 @@ function DivisionGroup({
   label,
   divisions,
   threeCols = false,
-  priorityFirst = false,
 }: {
   label: string;
   divisions: DivisionRanking[];
   threeCols?: boolean;
-  // The page's first card (men's pound for pound): its first faces are above
-  // the fold at every width.
-  priorityFirst?: boolean;
 }) {
   if (divisions.length === 0) return null;
   return (
@@ -47,7 +43,7 @@ function DivisionGroup({
             className="animate-rise ranking-rise"
             style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
           >
-            <RankingDivisionCard division={division} priority={priorityFirst && i === 0} />
+            <RankingDivisionCard division={division} />
           </div>
         ))}
       </div>
@@ -98,7 +94,7 @@ export default async function ClasificacionPage() {
         </Card>
       ) : (
         <div className="mt-10 space-y-12">
-          <DivisionGroup label="Libra por libra" divisions={p4p} priorityFirst />
+          <DivisionGroup label="Libra por libra" divisions={p4p} />
           <DivisionGroup label="Categorías masculinas" divisions={men} threeCols />
           <DivisionGroup label="Categorías femeninas" divisions={women} threeCols />
         </div>

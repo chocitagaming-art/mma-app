@@ -14,23 +14,25 @@ import type { DivisionRanking, RankingEntry } from "@/lib/types";
 // (row hover → photo scale, card width → champion layout).
 //
 // Sharpness = file px / painted px × DPR. Measured on 21-oct-2026 in Chromium
-// AND WebKit: both pick the FIRST srcset candidate whose density reaches the
-// DPR (no geometric-mean rounding), so the ufc.com 256 copy is kept while
-// painted width × DPR ≤ 256 and the 500 original is taken above that.
+// AND WebKit (DPR 1 to 3.5): both pick the FIRST srcset candidate whose
+// density reaches the DPR (no geometric-mean rounding), so the ufc.com 256
+// copy is kept while painted width × DPR ≤ 256 and the original is taken
+// above that. The originals declare 500w but today's files are 520×325.
 //
 // Rows: a 120×75 box (the ufc.com face's own 1.6:1, so it fills it; ESPN's
 // 600×436 is contained at 103×75). sizes = 120px, exact at every width:
-//   ufc.com  1x 256 copy 2.13 · 2x 256 copy 1.07 · 3x original 1.39
-//   ESPN     1x 5.83 · 2x 2.91 · 3x 1.94 (one 600 file, no srcset to pick)
-// So only a 3x screen pays the original in the rows (the 256 copy there would
-// be 0.71). 168 of the page's 206 faces are ESPN and do not change at all.
+//   ufc.com  1x 256 copy 2.13 · 2x 256 copy 1.07 · 3x original 1.44
+//   ESPN     1x 5.81 · 2x 2.91 · 3x 1.94 (one 600 file, no srcset to pick)
+// The rows take the original only above DPR 2.13 (256 / 120): the 3x
+// iPhones and the 2.25-2.75 Androids; there the 256 copy would be 0.71-0.95.
+// 168 of the page's 206 faces are ESPN and do not change at all.
 const ROW_PHOTO_SIZES = "120px";
 
 // Champion: a 192×120 box, the head breaking out of the 96 px gold frame by
 // 24 px. sizes = 192px, exact at every width (the box does not resize; only
-// the text moves, see .ranking-champion-grid):
-//   ufc.com  1x 256 copy 1.33 · 2x original 1.30 · 3x original 0.87
-//   ESPN     painted 165×120: 1x 3.64 · 2x 1.82 · 3x 1.21
+// the text moves, see .ranking-champion-grid). Original above DPR 1.33:
+//   ufc.com  1x 256 copy 1.33 · 2x original 1.35 · 3x original 0.90
+//   ESPN     painted 165×120: 1x 3.63 · 2x 1.82 · 3x 1.21
 const CHAMPION_PHOTO_SIZES = "192px";
 
 function Movement({ change }: { change: number | null }) {
@@ -174,15 +176,12 @@ function ChampionBlock({ champion, division }: { champion: RankingEntry; divisio
   );
 }
 
-export function RankingDivisionCard({
-  division,
-  priority = false,
-}: {
-  division: DivisionRanking;
-  // The first card of the page: its first rows are above the fold at every
-  // width, so their faces load eagerly. Everything else is lazy.
-  priority?: boolean;
-}) {
+// Every face is lazy, the first rows too: the page's LCP is its heading at
+// every width (measured on 21-oct, Slow 4G and 10 Mbps), and with `priority`
+// React preloaded those faces with their srcset, which WebKit then fetched a
+// second time when the same original came up in a champion block (+0.35 MB
+// of WebP at 3x). A lazy image inside the viewport still loads on layout.
+export function RankingDivisionCard({ division }: { division: DivisionRanking }) {
   const { label, champion, ranked } = division;
 
   return (
@@ -234,7 +233,6 @@ export function RankingDivisionCard({
                   variant="cutout"
                   quality="hd"
                   sizes={ROW_PHOTO_SIZES}
-                  priority={priority && rank <= 4}
                   className="ranking-row-cutout absolute inset-0"
                 />
               </div>
