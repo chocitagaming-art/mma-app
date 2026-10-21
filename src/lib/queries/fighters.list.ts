@@ -373,7 +373,9 @@ export async function getFighterUpcomingBouts(
       case when fi.fighter_red_id = $1 then blue.wins else red.wins end as opponent_wins,
       case when fi.fighter_red_id = $1 then blue.losses else red.losses end as opponent_losses,
       case when fi.fighter_red_id = $1 then blue.draws else red.draws end as opponent_draws,
-      case when fi.fighter_red_id = $1 then 'red' else 'blue' end as corner
+      case when fi.fighter_red_id = $1 then 'red' else 'blue' end as corner,
+      -- A scheduled Road to UFC bout is not a UFC debut (resolveUfcDebut).
+      e.tier as event_tier
     from fights fi
     left join events e on e.id = fi.event_id
     left join fighters red on red.id = fi.fighter_red_id
@@ -398,6 +400,7 @@ export async function getFighterUpcomingBouts(
     opponentLosses: row.opponent_losses,
     opponentDraws: row.opponent_draws,
     corner: row.corner,
+    eventTier: row.event_tier,
   }));
 }
 

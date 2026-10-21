@@ -1,3 +1,4 @@
+import type { EventTier } from "@/lib/event-tier";
 import type { FighterListResult } from "@/lib/types";
 
 export type CountRow = {
@@ -78,6 +79,8 @@ export type HistoryRow = {
   weight_class: string | null;
   video_url: string | null;
   is_title_fight: boolean;
+  event_tier: EventTier | null;
+  fight_status: string | null;
 };
 
 // S3-G (migración 016): fila de fight_history_espn — historial no-UFC
@@ -195,6 +198,7 @@ export type UpcomingBoutRow = {
   opponent_losses: number | null;
   opponent_draws: number | null;
   corner: "red" | "blue";
+  event_tier: EventTier | null;
 };
 
 export type FavoriteUpcomingRow = {

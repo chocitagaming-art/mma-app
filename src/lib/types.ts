@@ -112,6 +112,11 @@ export type FighterHistoryItem = {
   origin?: "ufc" | "espn";
   promotion?: string | null;
   isTitleFight?: boolean;
+  // «Debut en UFC» (resolveUfcDebut): the event's tier (migration 028) and the
+  // raw fights.status, so neither a Road to UFC bout nor a cancelled one can be
+  // taken for the UFC debut. Only the `fights` rows carry them.
+  eventTier?: EventTier | null;
+  fightStatus?: string | null;
 };
 
 export type FighterAggregateStats = {
@@ -738,4 +743,7 @@ export type FighterUpcomingBout = {
   opponentLosses: number | null;
   opponentDraws: number | null;
   corner: "red" | "blue"; // esquina de ESTE luchador en ese combate
+  // A scheduled Road to UFC bout is not a UFC debut (resolveUfcDebut). null
+  // only if the event row is missing (left join).
+  eventTier: EventTier | null;
 };

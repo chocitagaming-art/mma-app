@@ -138,7 +138,12 @@ async function getFighterDetailUncached(
         fi.end_time,
         fi.weight_class,
         fi.video_url,
-        fi.is_title_fight
+        fi.is_title_fight,
+        -- «Debut en UFC» (resolveUfcDebut): a Road to UFC bout or a cancelled
+        -- one is not the UFC debut. Two columns of rows already loaded here
+        -- instead of a query of its own.
+        e.tier as event_tier,
+        fi.status as fight_status
       from fights fi
       left join events e on e.id = fi.event_id
       left join fighters red on red.id = fi.fighter_red_id
@@ -399,6 +404,8 @@ async function getFighterDetailUncached(
     weightClass: row.weight_class,
     videoUrl: row.video_url,
     isTitleFight: row.is_title_fight,
+    eventTier: row.event_tier,
+    fightStatus: row.fight_status,
   }));
 
   // S3-G: filas espn -> misma forma que el historial UFC. Sin eventId (los
