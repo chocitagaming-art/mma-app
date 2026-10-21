@@ -52,7 +52,9 @@ function fakeBrowser() {
   const timers = new Map<number, { at: number; fn: () => void }>();
   const ios: FakeIO[] = [];
   const resizeCallbacks: (() => void)[] = [];
-  const page = { visible: true, reduced: false, header: 64, active: null as unknown };
+  const page = { visible: true, reduced: false, header: 64, active: null as unknown, fullscreen: null as unknown };
+  // Every box the controller sent the focus to (moveFocusTo), in order.
+  const focusMoves: unknown[] = [];
 
   const env: TurnEnvironment = {
     now: () => clock,
@@ -92,6 +94,11 @@ function fakeBrowser() {
     prefersReducedMotion: () => page.reduced,
     headerHeight: () => page.header,
     activeElement: () => page.active,
+    fullscreenElement: () => page.fullscreen,
+    moveFocusTo: (el) => {
+      focusMoves.push(el);
+      page.active = el;
+    },
   };
 
   function advance(ms: number) {
@@ -126,7 +133,7 @@ function fakeBrowser() {
     for (const cb of resizeCallbacks) cb();
   }
 
-  return { env, page, advance, see, resize, liveIO, ios };
+  return { env, page, focusMoves, advance, see, resize, liveIO, ios };
 }
 
 // Every notification is checked: never two players mounted at once.
@@ -259,6 +266,17 @@ describe("turn controller · the keyboard focus inside a box holds its automatic
     t.advance(500);
     expect(t.controller.userStart("tv-bucle")).toBe("started");
     expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+  });
+
+  // The box itself is not its poster: it stays when the iframe replaces the
+  // poster, so a mount drops nothing. The focus lands there when the hero
+  // short makes way with the focus inside it (21-oct-2026, further down).
+  it("the focus on the player's own box (not inside its poster) does not hold it: it starts on its own", () => {
+    const t = setup();
+    t.page.active = t.tv;
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
   });
 
   it("a focus change reaches the turn manager only through focusChanged, one task later", () => {
@@ -468,18 +486,158 @@ describe("turn controller · the visitor's short makes way for UFC TV out of vie
     expect(t.worst.mounted).toBe(1);
   });
 
-  it("the same tap under a frame half away: it stays until UFC TV comes into view again", () => {
+  // The same tap, under a frame half away with UFC TV playing below (no Up
+  // Next block). Measured in the review of 21-oct-2026 at 390x844 and
+  // 1280x800, Chromium and WebKit: scrolled on until the short was out of
+  // view (0 %) with UFC TV in full view, the short kept the turn and UFC TV
+  // its «Toca para ver», because the 0 % was not counted as the short moving
+  // on. And UFC TV crossing its half line again (0.9 → 0.5 → 0.9: a resting
+  // finger) undid the tap, because that counted as «UFC TV came into view».
+  it("the same tap under a frame half away: UFC TV out and back changes nothing; the short out of view altogether makes way", () => {
     const t = setup();
-    t.see(t.tv, 1);
+    t.see(t.tv, 0.7);
     t.advance(500);
+    expect(t.controller.getView("tv-bucle").owner).toBe("auto");
     t.see(t.hero, 0.3);
     t.controller.userStart("hero");
     t.advance(5_000);
     t.controller.evaluate();
     expect(t.controller.getView("hero").owner).toBe("user");
-    // A scroll takes UFC TV out and back: it comes into view after the tap.
-    t.see(t.tv, 0.4);
+    // UFC TV back and forth across its half line, then in full view; the
+    // short still partly in view.
+    t.see(t.tv, 0.5);
     t.see(t.tv, 0.9);
+    t.advance(2_000);
+    t.see(t.tv, 1);
+    t.advance(2_000);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.yields()).toBe(0);
+    // On down: the short leaves the view, and UFC TV takes the turn at once
+    // (it has been seen for far longer than the dwell).
+    t.see(t.hero, 0);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.yields()).toBe(1);
+    expect(t.worst.mounted).toBe(1);
+  });
+
+  it("tapped under a frame half away, then scrolled on until the short is out of view: UFC TV takes the turn", () => {
+    const t = setup();
+    t.see(t.tv, 0.7);
+    t.advance(500);
+    t.see(t.hero, 0.3);
+    t.controller.userStart("hero");
+    t.advance(3_000);
+    t.see(t.tv, 1);
+    t.advance(1_000);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    t.see(t.hero, 0);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.yields()).toBe(1);
+  });
+
+  it("tapped with UFC TV half or less in view, scrolled down until it is more than half: it takes the turn after the dwell", () => {
+    const t = setup();
+    t.see(t.hero, 0.4);
+    t.see(t.tv, 0.3);
+    t.controller.userStart("hero");
+    t.advance(2_000);
+    t.see(t.tv, 0.9);
+    t.advance(300);
+    expect(t.controller.getView("hero").owner).toBe("user");
+    t.advance(200);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  // 200x200 is the exit every player had before 21-oct-2026: the short goes
+  // because it is too small, not because it made way, so its poster shows the
+  // next short as it always did (the hero is not told).
+  it("the short shrinking under 200x200 with UFC TV in view: UFC TV takes the turn, and it is not a making way", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.see(t.tv, 1);
+    t.advance(500);
+    t.controller.userStart("hero");
+    t.advance(1_000);
+    t.hero.size.width = 150;
+    t.hero.size.height = 266;
+    t.resize();
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.yields()).toBe(0);
+  });
+
+  // The visitor watching the short in full screen cannot scroll the page
+  // behind it: only a relayout there can move it out of view (the viewport
+  // grows on entering full screen, a phone turned). That is not the owner's
+  // «scroll down to UFC TV», so it does not make way while it lasts.
+  it("a short in full screen does not make way while it lasts; out of full screen, the rule as always", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const iframe = { iframe: "hero" };
+    t.hero.inside.push(iframe);
+    t.controller.setIframe("hero", iframe);
+    t.page.active = iframe;
+    t.controller.windowBlurred();
+    t.advance(0);
+    t.page.fullscreen = iframe;
+    t.advance(1_000);
+    // The page behind moves: the short out of view, UFC TV in.
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    t.advance(10_000);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user", touched: true });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.yields()).toBe(0);
+    // Out of full screen: nothing is decided on the last ratios. A new
+    // observer reports the page as it is, and that decides: here, as the
+    // full screen left it.
+    const before = t.ios.length;
+    t.page.fullscreen = null;
+    t.controller.fullscreenChanged();
+    expect(t.ios.length).toBe(before + 1);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    expect(t.controller.getView("hero").mounted).toBe(false);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.yields()).toBe(1);
+  });
+
+  // Measured in WebKit on 21-oct-2026: on leaving the full screen it puts
+  // back the scroll it had on entering, AFTER fullscreenchange. Deciding on
+  // the last ratios took the short away, and back at the top the page had
+  // neither the short nor UFC TV playing.
+  it("out of full screen with the page back where it was (WebKit): the short in view keeps the turn", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const iframe = { iframe: "hero" };
+    t.hero.inside.push(iframe);
+    t.controller.setIframe("hero", iframe);
+    t.page.fullscreen = iframe;
+    t.advance(1_000);
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    t.advance(2_000);
+    t.page.fullscreen = null;
+    t.controller.fullscreenChanged();
+    // The new observer's first report: the scroll of before the full screen.
+    t.see(t.hero, 1);
+    t.see(t.tv, 0);
+    t.advance(10_000);
+    expect(t.controller.getView("hero")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    expect(t.yields()).toBe(0);
+  });
+
+  it("a full screen element outside the short's box does not hold it", () => {
+    const t = playShortThenScrollDown();
+    t.page.fullscreen = { elsewhere: true };
     t.advance(500);
     expect(t.controller.getView("hero").mounted).toBe(false);
     expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
@@ -553,6 +711,87 @@ describe("turn controller · the visitor's short makes way for UFC TV out of vie
     expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
     expect(t.controller.getView("hero").mounted).toBe(false);
     expect(t.yields()).toBe(0);
+  });
+});
+
+// The short's iframe goes with the keyboard focus inside it: a tap inside
+// (to turn the sound on) leaves it there, and a start with Enter sends it
+// there on purpose (useKeyboardStartFocus). The focus used to fall on <body>
+// and the next Tab went back up to the hero (Chromium) or to the header
+// (WebKit), scrolling UFC TV away again (review of 21-oct-2026, measured in
+// both). It goes to the box of the player that took the turn, with no scroll.
+describe("turn controller · the keyboard focus when the short makes way (21-oct-2026)", () => {
+  function playFocusedShortThenScrollDown() {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const iframe = { iframe: "hero" };
+    t.hero.inside.push(iframe);
+    t.controller.setIframe("hero", iframe);
+    t.page.active = iframe;
+    t.controller.windowBlurred();
+    t.advance(1_000);
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    return t;
+  }
+
+  it("the focus inside the short's iframe goes to UFC TV's box, once, and that does not make UFC TV the visitor's", () => {
+    const t = playFocusedShortThenScrollDown();
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.focusMoves).toEqual([t.tv]);
+    expect(t.page.active).toBe(t.tv);
+    // UFC TV's iframe arrives with the commit; the focus is on its box, not in it.
+    t.controller.setIframe("tv-bucle", { iframe: "tv" });
+    t.controller.windowBlurred();
+    t.controller.focusChanged();
+    t.advance(100);
+    t.controller.pagePointerDown();
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto", touched: false });
+    expect(t.focusMoves).toHaveLength(1);
+  });
+
+  it("with the focus left on UFC TV's box, back up and down again: UFC TV starts on its own as before", () => {
+    const t = playFocusedShortThenScrollDown();
+    t.advance(500);
+    expect(t.page.active).toBe(t.tv);
+    t.see(t.tv, 0.2);
+    t.see(t.hero, 1);
+    t.advance(1_000);
+    expect(t.controller.getView("tv-bucle").mounted).toBe(false);
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+  });
+
+  it("the focus anywhere else (the page, «Siguiente ›»): it is left where it is", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const next = { button: "Siguiente short" };
+    t.page.active = next;
+    t.advance(1_000);
+    t.see(t.hero, 0);
+    t.see(t.tv, 1);
+    t.advance(500);
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "auto" });
+    expect(t.focusMoves).toEqual([]);
+    expect(t.page.active).toBe(next);
+  });
+
+  it("the short that goes because the visitor picks UFC TV moves no focus (their own tap moves it)", () => {
+    const t = setup();
+    t.see(t.hero, 1);
+    t.controller.userStart("hero");
+    const iframe = { iframe: "hero" };
+    t.controller.setIframe("hero", iframe);
+    t.page.active = iframe;
+    t.see(t.tv, 1);
+    t.controller.userStart("tv-bucle");
+    expect(t.controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
+    expect(t.focusMoves).toEqual([]);
   });
 });
 
@@ -744,7 +983,7 @@ describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-
   });
 
   it("it goes when the visitor picks another player: still one at a time", () => {
-    const { controller, see, hero, tv, worst } = setup();
+    const { controller, see, hero, tv, yields, worst } = setup();
     see(hero, 0.9);
     controller.userStart("hero");
     see(hero, 0);
@@ -752,6 +991,9 @@ describe("turn controller · what the visitor chose is theirs (DECISIONS.md, 30-
     expect(controller.userStart("tv-bucle")).toBe("started");
     expect(controller.getView("tv-bucle")).toMatchObject({ mounted: true, owner: "user" });
     expect(controller.getView("hero").mounted).toBe(false);
+    // Not a making way (21-oct-2026 is about scrolling down to UFC TV): the
+    // hero is not told, and its poster shows the next short, as before.
+    expect(yields()).toBe(0);
     expect(worst.mounted).toBe(1);
   });
 
@@ -1224,6 +1466,28 @@ describe("source guards of the turn manager", () => {
       expect(provider).toContain(`document.addEventListener("${type}", onFocusChange);`);
       expect(provider).toContain(`document.removeEventListener("${type}", onFocusChange);`);
     }
+  });
+
+  // A short in full screen does not make way (21-oct-2026): the end of the
+  // full screen has to reach the controller, prefixed too (WebKit before
+  // 16.4), or the turn waits for the next scroll to be decided again.
+  it("the provider hands every full screen change to the controller, and reads the element prefixed too", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/const onFullscreen = \(\) => controller\.fullscreenChanged\(\);/);
+    for (const type of ["fullscreenchange", "webkitfullscreenchange"]) {
+      expect(provider).toContain(`document.addEventListener("${type}", onFullscreen);`);
+      expect(provider).toContain(`document.removeEventListener("${type}", onFullscreen);`);
+    }
+    expect(provider).toMatch(/fullscreenElement: \(\) =>[\s\S]*?document\.fullscreenElement[\s\S]*?webkitFullscreenElement/);
+  });
+
+  // The focus that the short's iframe had goes to the new holder's box with
+  // no scroll, and the tabindex that makes the box focusable is only there
+  // until it loses the focus: the box is no Tab stop of its own.
+  it("moveFocusTo focuses the box with preventScroll, through a tabindex=-1 that goes on blur", () => {
+    const provider = files[1][1];
+    expect(provider).toMatch(/moveFocusTo: \(el\) => \{[\s\S]*?setAttribute\("tabindex", "-1"\)[\s\S]*?\.focus\(\{ preventScroll: true \}\)/);
+    expect(provider).toMatch(/addEventListener\("blur", \(\) => [\w.]+\.removeAttribute\("tabindex"\), \{ once: true \}\)/);
   });
 
   it("the provider hands every tap on the page to the controller, in the capture phase (before the focus moves)", () => {

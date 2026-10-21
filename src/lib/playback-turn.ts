@@ -59,15 +59,33 @@
 // motion) takes the turn from it: the short's iframe goes (its PiP closes,
 // accepted when the owner asked for it) and the automatic one mounts muted,
 // as always. A short still more than half in view (a tall screen) keeps it.
-// One guard of ours: the visitor's tap is never undone on the spot. With no
-// next event (no Up Next block) the slot sits right under the hero, and on a
-// phone «Siguiente ›» can show under a frame scrolled half away with UFC TV
-// playing below it; started there, the short makes way only once something
-// moves after the tap (it leaves the view, or the automatic one comes into
-// it: startedAt, leftAt), or the tap would only restart UFC TV. Back up, the
-// short does not start again on its own: its poster shows that same short
-// (shorts-hero.tsx, onYield), for a tap. Nothing else changes: the videos
-// modal, a Hall of Fame fight and UFC TV the visitor put on stay as above.
+// Two guards of ours, both because the owner asked for what happens when the
+// visitor SCROLLS DOWN to the slot:
+//   · The visitor's tap is never undone where it was made. With no next
+//     event (no Up Next block) the slot sits right under the hero, and on a
+//     phone «Siguiente ›» can show under a frame scrolled half away with UFC
+//     TV playing below it; started there, the short makes way only once the
+//     visitor scrolls on: the short moves further out of view (to half or
+//     less, or out of it altogether: leftAt), or the slot comes into view
+//     from half or less at the tap (inViewAtStart). Without it the tap only
+//     restarted UFC TV. Its first version counted only crossings of the half
+//     line after the tap: a resting finger that moved UFC TV across it undid
+//     the tap, and a short started half away stayed down to 0 % with UFC TV
+//     in full view (review of 21-oct-2026). Hence the slot's state AT the
+//     tap, and the 0 %.
+//   · Not in full screen (document.fullscreenElement inside the short's
+//     box): the visitor cannot scroll the page behind it, and only a relayout
+//     there (the viewport grows on entering full screen, a phone turned)
+//     could move it out of view. On leaving it, the rule as always. An
+//     iPhone's own video player is not seen by the page: it is not covered.
+// Back up, the short does not start again on its own: its poster shows that
+// same short (shorts-hero.tsx, onYield), for a tap. With the keyboard focus
+// inside its iframe (a tap inside, a start with Enter) the focus goes to the
+// box of the player that took the turn, with no scroll: it used to fall on
+// <body>, and the next Tab went back up to the hero (turn-controller.ts).
+// Nothing else changes: the videos modal, a Hall of Fame fight and UFC TV the
+// visitor put on stay as above, and a short cut by them (or under 200x200)
+// still shows the next one, as before.
 //
 // One more exit, the hero short's end (timerAction): without the JS API its
 // timer cannot tell the end from a pause. Untouched inside, it goes back to
@@ -121,11 +139,16 @@ export type TurnPlayer = {
   // The visitor's player that makes way for an automatic one once half or
   // less of it is in view: the hero short, and only it (21-oct-2026).
   yieldsToAuto?: boolean;
-  // When its current mount started, and when it last went from more than
-  // half visible to half or less (same clock as `now`), or null. Only the
-  // exception above reads them: what moved since the visitor's tap.
+  // Only the exception above reads these four: what moved since the
+  // visitor's tap. When its current mount started (the tap), and when it
+  // last moved further out of view, from more than half visible to half or
+  // less or out of the view altogether (same clock as `now`), or null.
   startedAt?: number | null;
   leftAt?: number | null;
+  // The other players that were MORE than half in view at that tap.
+  inViewAtStart?: readonly string[];
+  // The page's full screen element is inside its box.
+  fullscreen?: boolean;
 };
 
 export type TurnState = {
@@ -164,14 +187,17 @@ function bestCandidate(state: TurnState, also: (p: TurnPlayer) => boolean = () =
 }
 
 // The hero short out of view makes way (21-oct-2026) for `taker`, a
-// candidate, only if something moved after the visitor's tap: the short left
-// the view, or the automatic one came into it. Never in the very scroll
-// position of the tap. With no start time known, the tap is long gone.
+// candidate, only once the visitor scrolled on after the tap: the short moved
+// further out of view (to half or less, or out of it altogether), or the
+// automatic one came into view, from half or less AT the tap. Never in the
+// scroll position of the tap, nor back in it. Not in full screen. With no
+// start time known, the tap is long gone.
 function makesWayFor(holder: TurnPlayer, taker: TurnPlayer): boolean {
-  if (!holder.yieldsToAuto || holder.ratio > HALF || taker.id === holder.id) return false;
+  if (!holder.yieldsToAuto || holder.fullscreen || holder.ratio > HALF || taker.id === holder.id) return false;
   const tap = holder.startedAt;
   if (tap == null) return true;
-  return (holder.leftAt != null && holder.leftAt >= tap) || (taker.aboveSince != null && taker.aboveSince >= tap);
+  if (holder.leftAt != null && holder.leftAt >= tap) return true;
+  return !(holder.inViewAtStart ?? []).includes(taker.id);
 }
 
 /** Who may have a mounted player right now. Returns { id, owner } or null. */

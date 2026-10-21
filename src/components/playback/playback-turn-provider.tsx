@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
 // This file is only wiring: it hands the real browser to the controller
 // (turn-controller.ts) and forwards DOM events to it —visibilitychange,
 // pagehide/pageshow, window blur, every pointerdown on the page, every focus
-// change, the reduced-motion media query and the header's ResizeObserver—.
+// change, every full screen change, the reduced-motion media query and the
+// header's ResizeObserver—.
 // Who may play is decided in lib/playback-turn.ts.
 // Both are tested in node (turn-controller.test.ts, playback-turn.test.ts);
 // this file is covered by the e2e once it is wired into a page.
@@ -83,6 +84,24 @@ function browserEnvironment(headerSelector: string): TurnEnvironment {
     prefersReducedMotion: () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
     headerHeight: () => document.querySelector(headerSelector)?.getBoundingClientRect().height ?? 0,
     activeElement: () => document.activeElement,
+    // Unprefixed since Safari 16.4; the prefixed one for the iPads before it.
+    fullscreenElement: () =>
+      document.fullscreenElement ??
+      (document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement ??
+      null,
+    // The box is no Tab stop of its own: the tabindex that lets it take the
+    // focus goes as soon as it loses it (to its own iframe, the next Tab).
+    // Its ring is the global :focus-visible one, OUTSIDE the box (keyboard
+    // only: after a tap there is none). Drawn inside, the positioned iframe
+    // covered it (measured in Chromium, 21-oct-2026).
+    moveFocusTo: (el) => {
+      const box = el as HTMLElement;
+      if (!box.hasAttribute("tabindex")) {
+        box.setAttribute("tabindex", "-1");
+        box.addEventListener("blur", () => box.removeAttribute("tabindex"), { once: true });
+      }
+      box.focus({ preventScroll: true });
+    },
   };
 }
 
@@ -116,6 +135,8 @@ export function PlaybackTurnProvider({
     const onFocusChange = () => controller.focusChanged();
     const motion = window.matchMedia(REDUCED_MOTION_QUERY);
     const onMotion = () => controller.reducedMotionChanged();
+    // The hero short does not make way in full screen: its end decides again.
+    const onFullscreen = () => controller.fullscreenChanged();
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
@@ -124,6 +145,8 @@ export function PlaybackTurnProvider({
     window.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("focusin", onFocusChange);
     document.addEventListener("focusout", onFocusChange);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    document.addEventListener("webkitfullscreenchange", onFullscreen);
     motion.addEventListener("change", onMotion);
 
     const header = document.querySelector(headerSelector);
@@ -138,6 +161,8 @@ export function PlaybackTurnProvider({
       window.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("focusin", onFocusChange);
       document.removeEventListener("focusout", onFocusChange);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+      document.removeEventListener("webkitfullscreenchange", onFullscreen);
       motion.removeEventListener("change", onMotion);
       headerObserver?.disconnect();
       controller.stop();

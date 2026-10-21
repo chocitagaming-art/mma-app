@@ -47,9 +47,10 @@ import { cn } from "@/lib/utils";
 //     owner, 21-oct-2026: «que se pare el vídeo de arriba y se ponga el
 //     directo sin pulsar»): once half or less of it is in view and the slot
 //     below may start on its own, the short's iframe goes and UFC TV (or the
-//     event's broadcast) mounts, muted. Back up, it does not start again on
-//     its own: its poster shows the SAME short, cut and not ended, for a tap
-//     (onYield; the end of a short still shows the next one).
+//     event's broadcast) mounts, muted. Not where the visitor tapped it (it
+//     waits until they scroll on) nor in full screen. Back up, it does not
+//     start again on its own: its poster shows the SAME short, cut and not
+//     ended, for a tap (onYield; the end of a short still shows the next one).
 //   · Muted (mute=1), as UFC TV. Measured on 30-sep-2026 with the real
 //     YouTube: under a strict autoplay policy (Chromium's
 //     user-gesture-required) the tap on this page does not carry into the new
@@ -71,7 +72,7 @@ import { cn } from "@/lib/utils";
 //     they did not touch goes back to its poster, and the turn is free. Until
 //     then it stays out of view (PiP), with the tab hidden or under the menu
 //     (DECISIONS.md, 30-sep-2026), unless UFC TV is seen (above): touched or
-//     in PiP, it makes way all the same.
+//     in PiP, it makes way all the same (in full screen, not).
 //   · A tap never waits for the page. The player used to wait for the
 //     headline's font and the entrance animation (up to 1.5 s, or the font's
 //     download), and the ▶ did nothing meanwhile. Now it mounts at once and

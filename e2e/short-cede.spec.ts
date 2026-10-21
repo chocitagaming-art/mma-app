@@ -21,6 +21,16 @@ import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
 //     and its ▶ plays that one again;
 //   · a tall screen, the short still more than half in view: UFC TV waits
 //     with its ▶, as before 21-oct-2026.
+// And what the review of that day found (red against a5a7840, green after):
+//   · the keyboard focus inside the short's iframe (a tap inside, a start
+//     with Enter) goes to the slot's box, not to <body>: the next Tab used to
+//     go back up to the hero and scroll UFC TV away again;
+//   · with no Up Next block (no next event: hidden here), «Siguiente ›» with
+//     the short half away and the slot playing below plays the short, and
+//     scrolling on until the short is out of view gives the turn to the slot
+//     (it used to stay with the short at 0 % and the slot in full view);
+//   · a short in full screen does not make way while the page behind moves,
+//     and does on leaving it (Chromium: see the test for WebKit).
 //
 // The slot is UFC TV in a loop (UFC_TV_FIXTURE=loop, how playwright.config.ts
 // starts its server) or UFC TV live (UFC_TV_FIXTURE=live, the owner's own
@@ -90,13 +100,34 @@ test.beforeEach(({}, testInfo) => {
 });
 
 const FIRST_SHORT = "fixShort-01";
+const SECOND_SHORT = "fixShort-02";
 
 const hero = (page: Page) => page.locator('[data-turn="hero"]');
 // The home's slot: ONE of the three automatic players (home-live-slot.tsx).
 const slot = (page: Page) => page.locator('[data-turn="evento"], [data-turn="tv-directo"], [data-turn="tv-bucle"]');
 const heroPoster = (page: Page) =>
   hero(page).getByRole("button", { name: /^Toca para (ver|reproducir)\. Short de la UFC: / });
+const nextButton = (page: Page) => page.getByRole("button", { name: "Siguiente short" });
 const youtubeIframes = (page: Page) => page.locator('iframe[src^="https://www.youtube-nocookie.com/embed/"]');
+
+/** Where the keyboard focus is: a player's box (its data-turn), what is inside one, or the tag. */
+const focusIsOn = (page: Page) =>
+  page.evaluate(() => {
+    const active = document.activeElement;
+    if (!active) return null;
+    const own = active.getAttribute("data-turn");
+    if (own) return own;
+    const box = active.closest("[data-turn]");
+    return box ? `${active.tagName} in ${box.getAttribute("data-turn")}` : active.tagName;
+  });
+
+// The fake YouTube with a button that asks for full screen, as YouTube's own
+// does (the iframe has allow="fullscreen").
+const FULLSCREEN_STUB = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>YouTube (e2e stub, full screen)</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#999;font:12px/1.2 sans-serif}
+button{display:block;width:100%;height:100%;border:0;background:transparent;color:inherit;cursor:pointer}</style>
+</head><body><button type="button" onclick="document.documentElement.requestFullscreen()">pantalla completa</button></body></html>`;
 
 /** Load the home at this size, hydrated, with the slot's player there (or skip). */
 async function openHome(page: Page, width: number, height: number): Promise<string> {
@@ -272,6 +303,187 @@ for (const motor of ["chromium", "webkit"] as const) {
       await page.waitForTimeout(2_000);
       await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
       await expect(slot(page)).toHaveAttribute("data-turn-state", "poster");
+      await expect(youtubeIframes(page)).toHaveCount(1);
+    });
+
+    // The review of 21-oct-2026, measured in both engines against a5a7840:
+    // the focus fell on <body>, and the next Tab went back up to the hero
+    // (Chromium; WebKit after a start with Enter) or to the header (WebKit
+    // after a tap inside), and UFC TV went back to its poster.
+    for (const via of ["un toque dentro", "Enter"] as const) {
+      test(`foco dentro del short (${via}): al ceder pasa a la caja del hueco sin mover la página, y el Tab sigue desde ahí`, async ({
+        pagina: page,
+      }) => {
+        test.setTimeout(90_000);
+        const slotId = await openHome(page, 1280, 800);
+        if (via === "Enter") {
+          await heroPoster(page).focus();
+          await page.keyboard.press("Enter");
+        } else {
+          await heroPoster(page).click();
+          await page.frameLocator('[data-turn="hero"] iframe').getByRole("button").click();
+        }
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+        await expect.poll(() => focusIsOn(page)).toBe("IFRAME in hero");
+
+        await wheelUntil(page, 120, async () => (await visibleShare(page, slot(page))) > 0.98, "UFC TV entero a la vista");
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "playing-auto", { timeout: 5_000 });
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+        // On the slot's box: not on <body>, and not inside its iframe either
+        // (a focused iframe reads as «touched» and makes it the visitor's).
+        await expect.poll(() => focusIsOn(page)).toBe(slotId);
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "playing-auto");
+        // The ring says where the focus went, for the keyboard only.
+        const ring = await slot(page).evaluate(
+          (el) => el.matches(":focus-visible") && getComputedStyle(el).outlineStyle !== "none",
+        );
+        expect(ring, "focus ring on the slot's box").toBe(via === "Enter");
+
+        const y = await page.evaluate(() => Math.round(window.scrollY));
+        await page.keyboard.press("Tab");
+        await page.waitForTimeout(800);
+        const after = { y: await page.evaluate(() => Math.round(window.scrollY)), focus: await focusIsOn(page) };
+        test.info().annotations.push({ type: "tab", description: `scroll ${y} → ${after.y}, foco en ${after.focus}` });
+        expect(after.y, `the Tab took the page back up (focus on ${after.focus})`).toBeGreaterThanOrEqual(y - 40);
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+        await expect(slot(page)).toHaveAttribute("data-turn-state", /^playing-/);
+        // The box is no Tab stop of its own: its tabindex went with the focus.
+        expect(await slot(page).getAttribute("tabindex")).toBeNull();
+      });
+    }
+
+    // No next event in the base: no Up Next block, and the slot sits right
+    // under the hero (hidden here with display: none, as the page renders
+    // without one). The review of 21-oct-2026 measured on a5a7840: the tap
+    // played the short, but scrolled on down to the short at 0 % and the slot
+    // in full view, the short kept the turn and the slot its «Toca para ver».
+    for (const [name, width, height] of [
+      ["móvil", 390, 844],
+      ["escritorio", 1280, 800],
+    ] as const) {
+      test(`sin Up Next, ${name} ${width}x${height}: «Siguiente ›» con el short medio tapado y el hueco sonando suena; bajando hasta perder el short, el hueco arranca solo`, async ({
+        pagina: page,
+      }) => {
+        test.setTimeout(90_000);
+        await openHome(page, width, height);
+        const hidden = await page.evaluate(() => {
+          const next = document.querySelector('[data-turn="hero"]')!.closest("section")!.nextElementSibling;
+          if (!(next instanceof HTMLElement) || next.querySelector("[data-turn]")) return false;
+          next.style.display = "none";
+          return true;
+        });
+        test.info().annotations.push({ type: "up-next", description: hidden ? "oculto" : "no había" });
+        // A scroll with the short half or less in view, the slot more than
+        // half and «Siguiente ›» in view under the header.
+        const found = await page.evaluate(() => {
+          const header = document.querySelector("header")!.getBoundingClientRect().bottom;
+          const at = (el: Element) => {
+            const b = el.getBoundingClientRect();
+            return { top: b.top + window.scrollY, bottom: b.bottom + window.scrollY, height: b.height };
+          };
+          const h = at(document.querySelector('[data-turn="hero"]')!);
+          const s = at(document.querySelector('[data-turn="evento"], [data-turn="tv-directo"], [data-turn="tv-bucle"]')!);
+          const n = at(document.querySelector('button[aria-label="Siguiente short"]')!);
+          const share = (b: typeof h, y: number) =>
+            Math.max(0, Math.min(b.bottom, y + window.innerHeight) - Math.max(b.top, y + header)) / b.height;
+          for (let y = 0; y < s.top; y += 4) {
+            if (share(h, y) <= 0.45 && share(s, y) > 0.6 && n.top >= y + header && n.bottom <= y + window.innerHeight) {
+              return { y, hero: share(h, y), slot: share(s, y) };
+            }
+          }
+          return null;
+        });
+        expect(found, "no scroll with the short <= 45 %, the slot > 60 % and «Siguiente ›» in view").not.toBeNull();
+        await page.evaluate((y) => window.scrollTo(0, y), found!.y);
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "playing-auto");
+        await watchIframes(page);
+
+        await nextButton(page).click();
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+        await expect(hero(page).locator("iframe")).toHaveAttribute("src", new RegExp(`/embed/${SECOND_SHORT}\\?`));
+        // Not undone where it was made.
+        await page.waitForTimeout(1_500);
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "poster");
+
+        // On down with the wheel until the short is out of view.
+        await wheelUntil(page, 60, async () => (await visibleShare(page, hero(page))) === 0, "el short fuera de la vista");
+        const slotShare = await visibleShare(page, slot(page));
+        test.info().annotations.push({
+          type: "scroll",
+          description: `tap en y=${found!.y} (short ${Math.round(found!.hero * 100)} %, hueco ${Math.round(found!.slot * 100)} %); short al 0 % con el hueco al ${Math.round(slotShare * 100)} %`,
+        });
+        expect(slotShare, "the slot is half or less in view: this is not the case under test").toBeGreaterThan(0.5);
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "playing-auto", { timeout: 5_000 });
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+        await expect(youtubeIframes(page)).toHaveCount(1);
+        // Cut, not ended: the poster shows the short it was playing.
+        await expect(hero(page).locator(":scope > a")).toHaveAttribute(
+          "href",
+          `https://www.youtube.com/shorts/${SECOND_SHORT}`,
+        );
+        const watch = await watched(page);
+        expect(watch.max, "two YouTube iframes at once at some moment").toBe(1);
+        expect(watch.both, "the short and the slot mounted together at some moment").toBe(0);
+      });
+    }
+
+    // The visitor in full screen cannot scroll the page behind; only a
+    // relayout there can move the short out of view (the viewport grows on
+    // entering full screen, a phone turned). Headless browsers do not resize
+    // on a full screen, so a script moves the page behind here: what is
+    // under test is that the short does not make way while it lasts.
+    test("pantalla completa: el short no cede mientras dura aunque la página de detrás se mueva; al salir, cede", async ({
+      pagina: page,
+    }) => {
+      test.setTimeout(90_000);
+      // After the fixture's: the last route registered wins.
+      await page.route("https://www.youtube-nocookie.com/**", (route) =>
+        route.request().url().startsWith("https://www.youtube-nocookie.com/embed/")
+          ? route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: FULLSCREEN_STUB })
+          : route.abort(),
+      );
+      await openHome(page, 1280, 800);
+      await heroPoster(page).click();
+      await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+      const fullscreenOf = () =>
+        page.evaluate(() => document.fullscreenElement?.closest("[data-turn]")?.getAttribute("data-turn") ?? null);
+      await page.frameLocator('[data-turn="hero"] iframe').getByRole("button").click();
+      await expect.poll(fullscreenOf, { message: "the stub's full screen did not start" }).toBe("hero");
+
+      await page.evaluate(() =>
+        document
+          .querySelector('[data-turn="evento"], [data-turn="tv-directo"], [data-turn="tv-bucle"]')!
+          .scrollIntoView({ block: "center" }),
+      );
+      await page.waitForTimeout(1_500);
+      // The short first: had it made way, its iframe would be gone and the
+      // full screen with it (and WebKit puts back the scroll it had on
+      // entering it, so the page would be at the top again).
+      await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+      expect(await fullscreenOf()).toBe("hero");
+      await expect(slot(page)).toHaveAttribute("data-turn-state", "poster");
+      expect(await visibleShare(page, hero(page)), "the page behind did not move").toBeLessThanOrEqual(0.5);
+      expect(await visibleShare(page, slot(page))).toBeGreaterThan(0.5);
+
+      // Out of full screen: the rule as always, on the page as the browser
+      // leaves it (WebKit puts back the scroll it had on entering).
+      await page.evaluate(() => document.exitFullscreen());
+      await expect.poll(fullscreenOf).toBeNull();
+      await page.waitForTimeout(1_000);
+      const heroShare = await visibleShare(page, hero(page));
+      const slotShare = await visibleShare(page, slot(page));
+      test.info().annotations.push({
+        type: "salida",
+        description: `al salir: short al ${Math.round(heroShare * 100)} %, hueco al ${Math.round(slotShare * 100)} % (y=${await page.evaluate(() => Math.round(window.scrollY))})`,
+      });
+      if (heroShare <= 0.5 && slotShare > 0.5) {
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "playing-auto", { timeout: 5_000 });
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+      } else {
+        await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+        await expect(slot(page)).toHaveAttribute("data-turn-state", "poster");
+      }
       await expect(youtubeIframes(page)).toHaveCount(1);
     });
   });
