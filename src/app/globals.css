@@ -768,6 +768,132 @@
       transition: none;
     }
   }
+
+  /* /clasificacion jump bar (ranking-jump-bar.tsx; the skeleton in
+     clasificacion/loading.tsx wears these same classes, so it is exactly as
+     tall). Sticky under the site header, so its `top` is the header's height:
+     2 px red top border + the 36 px logo (40 from sm) with 10 px above and
+     below + the 1 px bottom border = 59 / 63 px, measured on 21-oct from 360
+     to 1920 in Chromium and WebKit. That is the fallback, in rem like the
+     logo, so a larger default font size moves both together; once the bar
+     hydrates it writes the MEASURED height here (inline on <html>), so a
+     header that changes still meets it. Measured to the bottom of its first
+     row, not of the whole <header>: the mobile menu opens inside the header,
+     over the bar, and the bar stays put under it. */
+  :root {
+    --site-header-height: calc(3px + 3.5rem);
+    /* 44 px, its 1 px bottom border included: 43 px tall links, over the
+       40 px touch target. */
+    --ranking-jumpbar-height: 2.75rem;
+  }
+  @media (width >= 40rem) {
+    :root {
+      --site-header-height: calc(3px + 3.75rem);
+    }
+  }
+  .ranking-jumpbar {
+    position: sticky;
+    top: var(--site-header-height);
+    /* Under the header (z-40), whose mobile menu opens over it. */
+    z-index: 30;
+    height: var(--ranking-jumpbar-height);
+  }
+  /* One row. On a phone it scrolls sideways within itself (14 links are some
+     950 px of text and padding: they fit from 1024, not at 390) and never
+     widens the page. Its padding is the page gutter (px-4, sm:px-6, lg:px-8)
+     minus the links' own, so the first label lines up with the heading above;
+     scroll-padding keeps a link focused by Tab or followed by the row clear
+     of the fades. */
+  .ranking-jumpbar-list {
+    --jumpbar-link-x: 0.75rem;
+    --jumpbar-fade: 2.5rem;
+    position: relative;
+    display: flex;
+    height: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding-inline: calc(1rem - var(--jumpbar-link-x));
+    scroll-padding-inline: var(--jumpbar-fade);
+  }
+  .ranking-jumpbar-list::-webkit-scrollbar {
+    display: none;
+  }
+  @media (width >= 40rem) {
+    .ranking-jumpbar-list {
+      padding-inline: calc(1.5rem - var(--jumpbar-link-x));
+    }
+  }
+  @media (width >= 64rem) {
+    .ranking-jumpbar-list {
+      padding-inline: calc(2rem - var(--jumpbar-link-x));
+    }
+  }
+  /* «There is more»: the row fades out at an end that has links beyond it.
+     The bar sets the attributes (an IntersectionObserver on the first and
+     last link), so a row that fits has no fade at all. */
+  .ranking-jumpbar-list[data-more-before] {
+    --jumpbar-fade-before: var(--jumpbar-fade);
+  }
+  .ranking-jumpbar-list[data-more-after] {
+    --jumpbar-fade-after: var(--jumpbar-fade);
+  }
+  .ranking-jumpbar-list[data-more-before],
+  .ranking-jumpbar-list[data-more-after] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--jumpbar-fade-before, 0px),
+      #000 calc(100% - var(--jumpbar-fade-after, 0px)),
+      transparent
+    );
+  }
+  .ranking-jumpbar-list > li {
+    display: flex;
+    flex-shrink: 0;
+  }
+  /* The three groups (pound for pound, men, women), told apart by a short
+     rule and not by captions, which would cost the phone row a screen of
+     width; the women's «(F)» says the rest. */
+  .ranking-jumpbar-list > li[data-group-start]::before {
+    content: "";
+    align-self: center;
+    width: 1px;
+    height: 1.25rem;
+    margin-inline: 0.375rem;
+    background: var(--border);
+  }
+  /* The header's own tab language (site-header.tsx): muted label, foreground
+     when active, and the brand red line under it. The keyboard ring is the
+     site's 2 px one drawn INSIDE the link (-outline-offset-2 in the markup):
+     outside, the row's overflow would clip it top and bottom. */
+  .ranking-jumpbar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--jumpbar-link-x);
+    white-space: nowrap;
+  }
+  .ranking-jumpbar-link::after {
+    content: "";
+    position: absolute;
+    inset-inline: var(--jumpbar-link-x);
+    bottom: 0;
+    height: 2px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+  .ranking-jumpbar-link[aria-current="location"]::after {
+    transform: scaleX(1);
+  }
+  /* A jump lands with the card's header just under the bar, 12 px clear. On
+     the grid cell, not on the card: the card rises in with a transform
+     (.animate-rise), and a shared link opened mid-entrance would aim at a
+     box still 18 px low, then end 18 px under the bar. */
+  .ranking-jump-target {
+    scroll-margin-top: calc(var(--site-header-height) + var(--ranking-jumpbar-height) + 0.75rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

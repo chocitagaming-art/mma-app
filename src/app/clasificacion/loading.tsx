@@ -67,21 +67,52 @@ function RankingCardSkeleton({ withChampion = false }: { withChampion?: boolean 
   );
 }
 
+// The jump bar's labels, as wide as today's real ones (Saira Condensed 14 px
+// semibold, uppercase; measured 21-oct): P4P and P4P (F), the eight men's
+// divisions, the three women's. `true` opens a group (the bar's divider).
+const JUMP_LABELS: [width: number, groupStart: boolean][] = [
+  [21, false], [38, false],
+  [37, true], [33, false], [37, false], [37, false], [42, false], [35, false], [68, false], [42, false],
+  [43, true], [54, false], [50, false],
+];
+
 export default function ClasificacionLoading() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-      {/* SectionHeading's boxes: eyebrow 16, title 30 / 36 (sm), description
-          two 24 px lines below sm (it wraps at 390) and one from sm. */}
-      <div className="space-y-1.5">
-        <Skeleton className="h-4 w-44" />
-        <Skeleton className="h-[1.875rem] w-96 max-w-full sm:h-9" />
-        <div className="flex h-12 max-w-2xl flex-col justify-center gap-2 sm:h-6">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3 sm:hidden" />
+    <>
+      <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8 lg:pt-16">
+        {/* SectionHeading's boxes: eyebrow 16, title 30 / 36 (sm), description
+            two 24 px lines below sm (it wraps at 390) and one from sm. */}
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-[1.875rem] w-96 max-w-full sm:h-9" />
+          <div className="flex h-12 max-w-2xl flex-col justify-center gap-2 sm:h-6">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3 sm:hidden" />
+          </div>
         </div>
       </div>
 
-      <div className="mt-10 space-y-12">
+      {/* The jump bar (ranking-jump-bar.tsx): the same classes, so the same
+          44 px and the same 32 px above it; the cards below do not move when
+          the page swaps in. */}
+      <div
+        aria-hidden="true"
+        className="ranking-jumpbar mt-8 border-b border-border bg-background/85 backdrop-blur-md"
+      >
+        <div className="mx-auto h-full max-w-7xl">
+          <ul className="ranking-jumpbar-list">
+            {JUMP_LABELS.map(([width, groupStart], i) => (
+              <li key={i} data-group-start={groupStart ? "" : undefined}>
+                <div className="ranking-jumpbar-link">
+                  <Skeleton className="h-3.5" style={{ width }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl space-y-12 px-4 pb-12 pt-10 sm:px-6 lg:px-8 lg:pb-16">
         {/* Pound for pound: two lists, no champion. Group titles: text-2xl
             (32 px) / sm:text-3xl (36 px) in the page. */}
         <section className="space-y-5">
@@ -109,6 +140,6 @@ export default function ClasificacionLoading() {
           </div>
         </section>
       </div>
-    </div>
+    </>
   );
 }

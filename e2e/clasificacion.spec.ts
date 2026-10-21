@@ -36,11 +36,53 @@ import { expectNoHorizontalOverflow } from "./helpers";
 // guardada de ufc.com, 500×325 su original (un /images/ de ufc.com SIN
 // /styles/) y 350×254 la de ESPN (la de verdad es 600×436, la misma forma).
 //
+// ── Y la barra de saltos (21-oct-2026, «haz la barra de saltos de la
+// clasificación») ──
+//
+// Con las caras grandes la página mide 19.720 px en un móvil de 390 y no tenía
+// índice. Lo que se vigila, con cifras FIJAS:
+//   · Un enlace por tarjeta de división, en el orden de la página, y cada href
+//     apunta al id de SU tarjeta. Cada enlace mide 40 px de alto o más.
+//   · La barra va FIJA justo debajo de la cabecera del sitio (ni la tapa ni
+//     deja hueco: su borde de arriba ES el de abajo de la cabecera) de 360 a
+//     1920, también con el valor de reserva del CSS, el de antes de hidratar.
+//   · En el móvil, una fila que se desplaza dentro de sí misma, con el borde
+//     difuminado que dice que hay más; desde 1024 cabe entera. Sin
+//     desbordamiento horizontal de la página en ningún ancho.
+//   · Al pulsar «Pluma» (390 y 1280), la cabecera de su tarjeta queda visible
+//     justo debajo de la barra, sin nada encima, y su enlace es el activo
+//     (aria-current="location"). Lo mismo con el enlace directo al cargar,
+//     y la fila del móvil se desplaza sola para enseñar el activo.
+//   · Tras bajar miles de px, la barra sigue pegada a la cabecera y el activo
+//     es la división que se ve: Pluma en 390, Semipesado en 1280.
+//   · Con el teclado se llega a la barra (en su orden) y Enter salta.
+//   · Con «reducir movimiento» el salto es instantáneo; sin él, suave.
+// Y lo que cazó la revisión de la primera versión (21-oct), cada test visto en
+// rojo contra ella:
+//   · Atrás desde la ficha de un luchador vuelve al sitio EXACTO (±20 px), tras
+//     un salto o un enlace directo: Chromium iba al #hash que seguía en la
+//     dirección y perdía hasta una tarjeta entera.
+//   · Un hash mal formado (#%) no tumba la página.
+//   · La activa no se queda atrás: ni rozando la línea de 1 en 1 px (390), ni
+//     en un salto de golpe al final; arriba del todo no hay ninguna.
+//   · En escritorio la activa siempre se ve bajo la barra, sin parpadeos, y se
+//     enciende la fila entera que se lee (las 13 divisiones, no 6).
+//   · Con el menú del móvil abierto, la barra no baja con él: el menú la tapa.
+//   · Cada enlace dice su división entera al lector de pantalla.
+//   · Un enlace directo que hidrata tarde no devuelve a la tarjeta a quien ya
+//     bajó leyendo.
+//
 // Corre en Chromium Y en WebKit (el dueño mira en un iPhone). Un solo proyecto
 // (escritorio-light): cada test fija su pantalla y su densidad de píxeles.
 
 type Motor = "chromium" | "webkit";
-type Pantalla = { width: number; height: number; dpr: number; tema?: "light" | "dark" };
+type Pantalla = {
+  width: number;
+  height: number;
+  dpr: number;
+  tema?: "light" | "dark";
+  movimiento?: "reduce" | "no-preference";
+};
 type Abierta = { pagina: Page; originales: string[] };
 type Abrir = (pantalla: Pantalla) => Promise<Abierta>;
 
@@ -96,6 +138,7 @@ const test = base.extend<{ motor: Motor; abrir: Abrir }, { abrirWebkit: () => Pr
       const contexto = await navegador.newContext({
         baseURL,
         colorScheme: pantalla.tema ?? "light",
+        reducedMotion: pantalla.movimiento ?? "no-preference",
         viewport: { width: pantalla.width, height: pantalla.height },
         deviceScaleFactor: pantalla.dpr,
         serviceWorkers: "block",
@@ -369,9 +412,768 @@ async function cargarCaras(pagina: Page): Promise<CaraCargada[]> {
   }, CARAS);
 }
 
+// ── La barra de saltos ──
+
+const BARRA = 'nav[aria-label="Divisiones"]';
+// La cabecera de cada tarjeta: la franja con el nombre de la división (el
+// primer hijo de la tarjeta, en la versión de antes y en la de ahora).
+const CABECERA_TARJETA = '[data-testid="ranking-card"] > div:first-child';
+// Un salto deja la cabecera de la tarjeta 12 px bajo la barra (+1 del borde
+// de la tarjeta). Hasta 24: margen para el redondeo, nunca otra tarjeta.
+const HUECO_MAX_BAJO_LA_BARRA = 24;
+const ALTO_MIN_ENLACE = 40;
+
+async function esperarListas(pagina: Page, donde: string): Promise<void> {
+  // Con la página en streaming, el esqueleto de loading.tsx va primero.
+  await expect
+    .poll(() => pagina.locator("main ol > li").count(), { message: `${donde} las listas` })
+    .toBeGreaterThanOrEqual(150);
+}
+
+// 🪤 Las listas llegan en el HTML y se pintan ANTES de que la barra hidrate
+// (en WebKit se vio: la altura medida aún no estaba). Un clic antes de
+// hidratar es el salto nativo, sin suavidad ni foco en la tarjeta: los tests
+// que pulsan esperan a la señal de la barra, la altura de la cabecera que
+// escribe al montar.
+async function esperarBarraHidratada(pagina: Page, donde: string): Promise<void> {
+  await expect
+    .poll(() => pagina.evaluate(() => document.documentElement.style.getPropertyValue("--site-header-height")), {
+      message: `${donde} la barra hidratada (mide la cabecera)`,
+    })
+    .toMatch(/^\d+(\.\d+)?px$/);
+}
+
+type Situacion = {
+  cabeceraSitio: number; // borde de abajo de la cabecera del sitio
+  barraArriba: number;
+  barraAbajo: number;
+  alto: number; // innerHeight
+  tarjeta: { arriba: number; abajo: number; tapada: string | null } | null;
+  activos: string[]; // href de los enlaces con aria-current="location"
+  hash: string;
+  scrollY: number;
+};
+
+// Dónde está todo AHORA. «tapada»: lo que hay en el punto medio de la cabecera
+// de la tarjeta si no es la propia tarjeta (la barra, la cabecera del sitio).
+function situacion(pagina: Page, id: string | null): Promise<Situacion> {
+  return pagina.evaluate(
+    ({ id, barra, cabecera }) => {
+      const sitio = document.querySelector("header")!.getBoundingClientRect();
+      const nav = document.querySelector(barra)?.getBoundingClientRect();
+      const objetivo = id ? document.getElementById(id) : null;
+      const franja = objetivo?.querySelector(cabecera) ?? null;
+      let tarjeta: Situacion["tarjeta"] = null;
+      if (franja) {
+        const caja = franja.getBoundingClientRect();
+        const encima = document.elementFromPoint(caja.left + caja.width / 2, caja.top + caja.height / 2);
+        tarjeta = {
+          arriba: caja.top,
+          abajo: caja.bottom,
+          tapada: encima && franja.contains(encima) ? null : (encima?.outerHTML.slice(0, 80) ?? "nada"),
+        };
+      }
+      return {
+        cabeceraSitio: sitio.bottom,
+        barraArriba: nav?.top ?? NaN,
+        barraAbajo: nav?.bottom ?? NaN,
+        alto: innerHeight,
+        tarjeta,
+        activos: [...document.querySelectorAll(`${barra} [aria-current="location"]`)].map(
+          (a) => a.getAttribute("href") ?? "",
+        ),
+        hash: location.hash,
+        scrollY: Math.round(scrollY),
+      };
+    },
+    { id, barra: BARRA, cabecera: CABECERA_TARJETA },
+  );
+}
+
+// Lo que no cuadra de un salto a `id` (vacío = la cabecera de su tarjeta está
+// entera a la vista, justo bajo la barra, sin nada encima, y la barra pegada
+// a la cabecera del sitio).
+function problemasDelSalto(s: Situacion, id: string): string[] {
+  const p: string[] = [];
+  if (Math.abs(s.barraArriba - s.cabeceraSitio) > 0.5) {
+    p.push(`la barra empieza en ${s.barraArriba} y la cabecera acaba en ${s.cabeceraSitio}`);
+  }
+  if (!s.tarjeta) return [...p, `no existe la tarjeta #${id}`];
+  if (s.tarjeta.arriba < s.barraAbajo - 0.5) p.push(`la cabecera de #${id} (${s.tarjeta.arriba}) queda debajo de la barra (${s.barraAbajo})`);
+  if (s.tarjeta.arriba > s.barraAbajo + HUECO_MAX_BAJO_LA_BARRA) p.push(`la cabecera de #${id} queda a ${(s.tarjeta.arriba - s.barraAbajo).toFixed(1)} px de la barra`);
+  if (s.tarjeta.abajo > s.alto) p.push(`la cabecera de #${id} se sale por abajo (${s.tarjeta.abajo} > ${s.alto})`);
+  if (s.tarjeta.tapada) p.push(`la cabecera de #${id} está tapada por ${s.tarjeta.tapada}`);
+  return p;
+}
+
+async function esperarAterrizaje(pagina: Page, id: string, donde: string): Promise<void> {
+  await expect
+    .poll(async () => problemasDelSalto(await situacion(pagina, id), id), { message: `${donde} el salto a #${id}` })
+    .toEqual([]);
+}
+
+// Bajar leyendo como un visitante, con la rueda (no con un scroll de script):
+// `px` en golpes de 100.
+async function bajarLeyendo(pagina: Page, px: number): Promise<void> {
+  const { width, height } = pagina.viewportSize()!;
+  await pagina.mouse.move(width / 2, Math.round(height * 0.6));
+  for (let hecho = 0; hecho < px; hecho += 100) {
+    await pagina.mouse.wheel(0, 100);
+    await pagina.waitForTimeout(40);
+  }
+}
+
+// scrollY cuando la página ya no se mueve: dos lecturas iguales seguidas.
+async function scrollQuieto(pagina: Page): Promise<number> {
+  let antes = NaN;
+  for (let i = 0; i < 30; i++) {
+    await pagina.waitForTimeout(300);
+    const y = await pagina.evaluate(() => Math.round(scrollY));
+    if (y === antes) return y;
+    antes = y;
+  }
+  return antes;
+}
+
+// Abre la ficha de un luchador de la tarjeta `id` que esté a la vista bajo la barra.
+async function abrirLuchador(pagina: Page, id: string, donde: string): Promise<void> {
+  const href = await pagina.evaluate(
+    ({ id, barra }) => {
+      const bajo = document.querySelector(barra)!.getBoundingClientRect().bottom;
+      const enlace = [...document.querySelectorAll(`[id="${id}"] a[href^="/fighters/"]`)].find((a) => {
+        const caja = a.getBoundingClientRect();
+        return caja.top > bajo + 10 && caja.bottom < innerHeight - 10;
+      });
+      return enlace?.getAttribute("href") ?? null;
+    },
+    { id, barra: BARRA },
+  );
+  expect(href, `${donde} un luchador de #${id} a la vista`).not.toBeNull();
+  await pagina.locator(`[id="${id}"] a[href="${href}"]`).first().click();
+  await pagina.waitForURL(/\/fighters\//);
+  // Que la ficha se pinte: Atrás necesita la entrada del historial ya hecha.
+  await expect(pagina.locator("main h1").first()).toBeVisible();
+}
+
+// Lo que oye un lector de pantalla en cada enlace, por href: la división
+// entera, con lo que se ve dentro (WCAG 2.5.3).
+const NOMBRES: Record<string, string> = {
+  "#libra-por-libra": "P4P, libra por libra",
+  "#libra-por-libra-femenino": "P4P (F), libra por libra femenino",
+  "#peso-mosca": "Peso Mosca",
+  "#peso-gallo": "Peso Gallo",
+  "#peso-pluma": "Peso Pluma",
+  "#peso-ligero": "Peso Ligero",
+  "#peso-welter": "Peso Wélter",
+  "#peso-medio": "Peso Medio",
+  "#peso-semipesado": "Peso Semipesado",
+  "#peso-pesado": "Peso Pesado",
+  "#peso-paja-femenino": "Peso Paja (F), femenino",
+  "#peso-mosca-femenino": "Peso Mosca (F), femenino",
+  "#peso-gallo-femenino": "Peso Gallo (F), femenino",
+  "#peso-pluma-femenino": "Peso Pluma (F), femenino",
+};
+
 for (const motor of ["chromium", "webkit"] as const) {
   test.describe(motor, () => {
     test.use({ motor });
+
+    test("la barra de saltos: un enlace por tarjeta, fija bajo la cabecera y sin desbordar, de 360 a 1920", async ({
+      abrir,
+    }) => {
+      test.setTimeout(150_000);
+      for (const ancho of ANCHOS) {
+        const { pagina } = await abrir({ width: ancho, height: 900, dpr: 1 });
+        const donde = `[${motor} ${ancho}]`;
+        await pagina.goto("/clasificacion");
+        await esperarListas(pagina, donde);
+        await expect(pagina.locator(BARRA), `${donde} la barra de saltos`).toBeVisible();
+
+        const datos = await pagina.evaluate((barra) => {
+          const nav = document.querySelector(barra)!;
+          const lista = nav.querySelector("ul")!;
+          const enlaces = [...nav.querySelectorAll("a")];
+          // El id de cada tarjeta: el del primer antepasado con id dentro de <main>.
+          const tarjetas = [...document.querySelectorAll('[data-testid="ranking-card"]')].map((tarjeta) => {
+            for (let el = tarjeta.parentElement; el && el.tagName !== "MAIN"; el = el.parentElement) {
+              if (el.id) return el.id;
+            }
+            return tarjeta.id || null;
+          });
+          return {
+            hrefs: enlaces.map((a) => a.getAttribute("href") ?? ""),
+            existen: enlaces.map((a) => document.getElementById((a.getAttribute("href") ?? "#").slice(1)) != null),
+            tarjetas,
+            altos: enlaces.map((a) => a.getBoundingClientRect().height),
+            nav: { right: nav.getBoundingClientRect().right },
+            fila: { scroll: lista.scrollWidth, visible: lista.clientWidth },
+          };
+        }, BARRA);
+
+        expect(datos.tarjetas.length, `${donde} tarjetas de división`).toBeGreaterThanOrEqual(12);
+        expect(datos.hrefs.length, `${donde} un enlace por tarjeta`).toBe(datos.tarjetas.length);
+        expect(datos.existen.every(Boolean), `${donde} cada href apunta a un id que existe: ${datos.hrefs.join(" ")}`).toBe(true);
+        expect(datos.hrefs, `${donde} cada enlace, a SU tarjeta y en el orden de la página`).toEqual(
+          datos.tarjetas.map((id) => `#${id}`),
+        );
+        const bajos = datos.altos.filter((alto) => alto < ALTO_MIN_ENLACE);
+        expect(bajos, `${donde} enlaces de menos de ${ALTO_MIN_ENLACE} px de alto`).toEqual([]);
+
+        // Sin desbordar: ni la página ni la barra pasan del ancho de la pantalla.
+        await expectNoHorizontalOverflow(pagina, `/clasificacion ${donde}`);
+        expect(datos.nav.right, `${donde} borde derecho de la barra`).toBeLessThanOrEqual(ancho + 0.5);
+        if (ancho >= 1024) {
+          expect(datos.fila.scroll, `${donde} la fila cabe entera (${datos.fila.scroll} de ${datos.fila.visible} px)`).toBeLessThanOrEqual(datos.fila.visible + 1);
+        }
+        if (ancho <= 600) {
+          expect(datos.fila.scroll, `${donde} la fila se desplaza dentro de sí misma`).toBeGreaterThan(datos.fila.visible);
+          // Que hay más: el borde de la fila se difumina (una máscara en degradado).
+          await expect
+            .poll(
+              () =>
+                pagina.evaluate((barra) => {
+                  const estilo = getComputedStyle(document.querySelector(`${barra} ul`)!);
+                  return estilo.maskImage || estilo.getPropertyValue("-webkit-mask-image");
+                }, BARRA),
+              { message: `${donde} el borde difuminado de la fila` },
+            )
+            .toContain("gradient");
+        }
+
+        // Bajando miles de px: pegada a la cabecera, sin taparla ni dejar hueco.
+        await pagina.evaluate(() => window.scrollTo(0, 4000));
+        await expect
+          .poll(async () => {
+            const s = await situacion(pagina, null);
+            return s.barraArriba - s.cabeceraSitio;
+          }, { message: `${donde} la barra, pegada a la cabecera a 4000 px` })
+          .toBeCloseTo(0, 0);
+        // Al hidratar, la barra escribe la altura MEDIDA de la cabecera.
+        await esperarBarraHidratada(pagina, donde);
+        // Y con el valor de reserva del CSS (el de antes de hidratar): la
+        // altura medida se quita un momento y se vuelve a poner.
+        const reserva = await pagina.evaluate((barra) => {
+          const raiz = document.documentElement;
+          const medida = raiz.style.getPropertyValue("--site-header-height");
+          raiz.style.removeProperty("--site-header-height");
+          const hueco = document.querySelector(barra)!.getBoundingClientRect().top - document.querySelector("header")!.getBoundingClientRect().bottom;
+          if (medida) raiz.style.setProperty("--site-header-height", medida);
+          return { medida, hueco };
+        }, BARRA);
+        expect(Math.abs(reserva.hueco), `${donde} hueco entre cabecera y barra con el valor de reserva`).toBeLessThanOrEqual(0.5);
+        await pagina.context().close();
+      }
+    });
+
+    for (const ancho of [390, 1280]) {
+      test(`al pulsar «Pluma» en ${ancho}, la cabecera de su tarjeta queda a la vista justo bajo la barra`, async ({
+        abrir,
+      }) => {
+        const { pagina } = await abrir({ width: ancho, height: 844, dpr: 1 });
+        const donde = `[${motor} ${ancho}]`;
+        await pagina.goto("/clasificacion");
+        await esperarListas(pagina, donde);
+        await esperarBarraHidratada(pagina, donde);
+        await pagina.locator(`${BARRA} a[href="#peso-pluma"]`).click();
+        await expect
+          .poll(async () => problemasDelSalto(await situacion(pagina, "peso-pluma"), "peso-pluma"), {
+            message: `${donde} tras pulsar «Pluma»`,
+          })
+          .toEqual([]);
+        const s = await situacion(pagina, "peso-pluma");
+        expect(s.activos, `${donde} el activo`).toEqual(["#peso-pluma"]);
+        expect(s.hash, `${donde} la dirección`).toBe("#peso-pluma");
+        // El foco sigue en la tarjeta, como tras un salto nativo.
+        expect(
+          await pagina.evaluate(() => document.getElementById("peso-pluma")?.contains(document.activeElement) ?? false),
+          `${donde} el foco, dentro de la tarjeta de Pluma`,
+        ).toBe(true);
+        await pagina.context().close();
+      });
+
+      test(`el enlace directo /clasificacion#peso-pluma en ${ancho} carga con su tarjeta a la vista`, async ({
+        abrir,
+      }) => {
+        const { pagina } = await abrir({ width: ancho, height: 844, dpr: 1 });
+        const donde = `[${motor} ${ancho} #peso-pluma]`;
+        await pagina.goto("/clasificacion#peso-pluma");
+        await esperarListas(pagina, donde);
+        await expect
+          .poll(async () => problemasDelSalto(await situacion(pagina, "peso-pluma"), "peso-pluma"), {
+            message: `${donde} al cargar`,
+          })
+          .toEqual([]);
+        await expect(pagina.locator(`${BARRA} a[href="#peso-pluma"]`), `${donde} el activo`).toHaveAttribute(
+          "aria-current",
+          "location",
+        );
+        await pagina.context().close();
+      });
+    }
+
+    test("en el móvil, la fila se desplaza sola para enseñar el activo (y la página no se mueve por ella)", async ({
+      abrir,
+    }) => {
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      const donde = `[${motor} 390 #peso-gallo-femenino]`;
+      // La última división: su enlace queda a más de 800 px a la derecha.
+      await pagina.goto("/clasificacion#peso-gallo-femenino");
+      await esperarListas(pagina, donde);
+      await expect
+        .poll(async () => problemasDelSalto(await situacion(pagina, "peso-gallo-femenino"), "peso-gallo-femenino"), {
+          message: `${donde} al cargar`,
+        })
+        .toEqual([]);
+      const enlace = pagina.locator(`${BARRA} a[href="#peso-gallo-femenino"]`);
+      await expect(enlace, `${donde} el activo`).toHaveAttribute("aria-current", "location");
+      await expect
+        .poll(
+          () =>
+            enlace.evaluate((a) => {
+              const fila = a.closest("ul")!.getBoundingClientRect();
+              const caja = a.getBoundingClientRect();
+              return caja.left >= fila.left - 0.5 && caja.right <= fila.right + 0.5;
+            }),
+          { message: `${donde} el enlace activo, entero dentro de la fila` },
+        )
+        .toBe(true);
+      // La fila se movió; la página sigue en la tarjeta.
+      expect(problemasDelSalto(await situacion(pagina, "peso-gallo-femenino"), "peso-gallo-femenino")).toEqual([]);
+      await pagina.context().close();
+    });
+
+    // La división que se ve: la primera de la columna de la izquierda que
+    // cruza la línea de bajo la barra. Se baja hasta dejar su tarjeta 300 px
+    // por encima de esa línea, bien dentro de ella.
+    for (const [ancho, id] of [
+      [390, "peso-pluma"],
+      [1280, "peso-semipesado"],
+    ] as const) {
+      test(`tras bajar miles de px en ${ancho}, la barra sigue pegada y el activo es ${id}`, async ({ abrir }) => {
+        const { pagina } = await abrir({ width: ancho, height: 844, dpr: 1 });
+        const donde = `[${motor} ${ancho}]`;
+        await pagina.goto("/clasificacion");
+        await esperarListas(pagina, donde);
+        await expect(pagina.locator(BARRA), `${donde} la barra de saltos`).toBeVisible();
+        const destino = await pagina.evaluate(
+          ({ id, barra }) => {
+            const tarjeta = document.getElementById(id)!.getBoundingClientRect();
+            const sitio = document.querySelector("header")!.getBoundingClientRect().height;
+            const alto = document.querySelector(barra)!.getBoundingClientRect().height;
+            return Math.round(tarjeta.top + scrollY - sitio - alto + 300);
+          },
+          { id, barra: BARRA },
+        );
+        expect(destino, `${donde} la tarjeta de ${id} está a miles de px`).toBeGreaterThan(3000);
+        await pagina.evaluate((y) => window.scrollTo(0, y), destino);
+        await expect
+          .poll(async () => {
+            const s = await situacion(pagina, id);
+            return { pegada: Math.abs(s.barraArriba - s.cabeceraSitio) <= 0.5, activos: s.activos };
+          }, { message: `${donde} a ${destino} px` })
+          .toEqual({ pegada: true, activos: [`#${id}`] });
+        await pagina.context().close();
+      });
+    }
+
+    test("con el teclado se llega a la barra en su orden, y Enter salta", async ({ abrir }) => {
+      const { pagina } = await abrir({ width: 1280, height: 844, dpr: 1 });
+      const donde = `[${motor} 1280 teclado]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      const enBarra = () =>
+        pagina.evaluate((barra) => {
+          const a = document.activeElement;
+          return a?.closest(barra) ? a.getAttribute("href") : null;
+        }, BARRA);
+      if (motor === "chromium") {
+        // Desde lo alto: Tab hasta entrar en la barra (cabecera del sitio antes).
+        let primero: string | null = null;
+        for (let i = 0; i < 25 && !primero; i++) {
+          await pagina.keyboard.press("Tab");
+          primero = await enBarra();
+        }
+        expect(primero, `${donde} el primer enlace al que llega el Tab`).toBe("#libra-por-libra");
+        // P4P (F), Mosca, Gallo, Pluma.
+        for (let i = 0; i < 4; i++) await pagina.keyboard.press("Tab");
+      } else {
+        // WebKit, como Safari, no lleva el Tab a los enlaces: foco por script.
+        await pagina.locator(`${BARRA} a[href="#peso-pluma"]`).focus();
+      }
+      expect(await enBarra(), `${donde} el foco, en «Pluma»`).toBe("#peso-pluma");
+      // El anillo de la casa (2 px), dibujado DENTRO del enlace: fuera, la fila lo cortaría.
+      const anillo = await pagina.evaluate(() => {
+        const a = document.activeElement!;
+        const estilo = getComputedStyle(a);
+        return { visible: a.matches(":focus-visible"), grosor: estilo.outlineWidth, desplazamiento: estilo.outlineOffset };
+      });
+      expect(anillo, `${donde} el anillo de foco`).toEqual({ visible: true, grosor: "2px", desplazamiento: "-2px" });
+      await pagina.keyboard.press("Enter");
+      await expect
+        .poll(async () => problemasDelSalto(await situacion(pagina, "peso-pluma"), "peso-pluma"), {
+          message: `${donde} tras Enter`,
+        })
+        .toEqual([]);
+      expect(
+        await pagina.evaluate(() => document.getElementById("peso-pluma")?.contains(document.activeElement) ?? false),
+        `${donde} el foco, dentro de la tarjeta de Pluma`,
+      ).toBe(true);
+      await pagina.context().close();
+    });
+
+    test("en el móvil, el enlace con el foco siempre está a la vista en la fila, fuera del difuminado", async ({
+      abrir,
+    }) => {
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      const donde = `[${motor} 390 foco]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      const enlaces = pagina.locator(`${BARRA} a`);
+      const total = await enlaces.count();
+      expect(total, `${donde} enlaces`).toBeGreaterThanOrEqual(12);
+      const ocultos: string[] = [];
+      for (let i = 0; i < total; i++) {
+        if (motor === "chromium") {
+          if (i === 0) await enlaces.first().focus();
+          else await pagina.keyboard.press("Tab");
+        } else {
+          // WebKit, como Safari, no lleva el Tab a los enlaces: foco por script.
+          await enlaces.nth(i).focus();
+        }
+        const caja = await pagina.evaluate((barra) => {
+          const a = document.activeElement as HTMLElement;
+          const fila = a.closest("ul");
+          if (!fila || !a.closest(barra)) return null;
+          const f = fila.getBoundingClientRect();
+          const c = a.getBoundingClientRect();
+          // El difuminado (2,5 rem) solo existe donde la fila aún se desplaza.
+          const difuminado = parseFloat(getComputedStyle(fila).scrollPaddingInlineStart) || 0;
+          const izquierda = fila.scrollLeft <= 0.5 ? f.left : f.left + difuminado;
+          const derecha = fila.scrollLeft >= fila.scrollWidth - fila.clientWidth - 0.5 ? f.right : f.right - difuminado;
+          return { texto: a.textContent, dentro: c.left >= izquierda - 0.5 && c.right <= derecha + 0.5 };
+        }, BARRA);
+        if (!caja?.dentro) ocultos.push(caja?.texto ?? `enlace ${i} sin foco`);
+      }
+      expect(ocultos, `${donde} enlaces con el foco fuera de la vista o bajo el difuminado`).toEqual([]);
+      await pagina.context().close();
+    });
+
+    test("con «reducir movimiento» el salto es instantáneo; sin él, suave", async ({ abrir }) => {
+      for (const movimiento of ["reduce", "no-preference"] as const) {
+        const { pagina } = await abrir({ width: 390, height: 844, dpr: 1, movimiento });
+        const donde = `[${motor} 390 ${movimiento}]`;
+        await pagina.goto("/clasificacion");
+        await esperarListas(pagina, donde);
+        await expect(pagina.locator(BARRA), `${donde} la barra de saltos`).toBeVisible();
+        await esperarBarraHidratada(pagina, donde);
+        // Pulsado y medido en el mismo script: dos fotogramas después del clic.
+        const tras2 = await pagina.evaluate(async (barra) => {
+          document.querySelector<HTMLElement>(`${barra} a[href="#peso-pluma"]`)!.click();
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          return scrollY;
+        }, BARRA);
+        await expect
+          .poll(async () => problemasDelSalto(await situacion(pagina, "peso-pluma"), "peso-pluma"), {
+            message: `${donde} al final del salto`,
+          })
+          .toEqual([]);
+        const final = (await situacion(pagina, "peso-pluma")).scrollY;
+        if (movimiento === "reduce") {
+          expect(Math.abs(tras2 - final), `${donde} a los 2 fotogramas ya está (${tras2} de ${final})`).toBeLessThanOrEqual(2);
+        } else {
+          expect(tras2, `${donde} a los 2 fotogramas sigue de camino (${tras2} de ${final})`).toBeLessThan(final - 100);
+        }
+        await pagina.context().close();
+      }
+    });
+
+    // 🪤 Atrás desde la ficha de un luchador, el recorrido de siempre: saltar a
+    // una división, bajar leyendo, abrir un luchador y volver. Chromium vuelve
+    // al #hash si sigue en la dirección, no a donde estaba el visitante (a 390,
+    // 6.253 → 5.653: la tarjeta entera desde arriba; medido el 21-oct). Por eso
+    // los tres recorridos: dentro de la tarjeta del salto, más allá de ella con
+    // un desplazamiento de script (ni rueda ni dedo), y desde un enlace directo.
+    for (const [ancho, recorridos] of [
+      [390, ["salto", "salto y más allá", "enlace directo"]],
+      [1280, ["salto"]],
+    ] as const) {
+      test(`Atrás desde un luchador vuelve al sitio exacto en ${ancho} (${recorridos.join(", ")})`, async ({ abrir }) => {
+        test.setTimeout(150_000);
+        for (const recorrido of recorridos) {
+          const { pagina } = await abrir({ width: ancho, height: 844, dpr: 1 });
+          const donde = `[${motor} ${ancho} ${recorrido}]`;
+          await pagina.goto(recorrido === "enlace directo" ? "/clasificacion#peso-pluma" : "/clasificacion");
+          await esperarListas(pagina, donde);
+          await esperarBarraHidratada(pagina, donde);
+          if (recorrido !== "enlace directo") await pagina.locator(`${BARRA} a[href="#peso-pluma"]`).click();
+          await esperarAterrizaje(pagina, "peso-pluma", donde);
+          let tarjeta = "peso-pluma";
+          if (recorrido === "salto y más allá") {
+            tarjeta = "peso-medio";
+            await pagina.evaluate((barra) => {
+              const medio = document.getElementById("peso-medio")!.getBoundingClientRect().top + scrollY;
+              const bajo = document.querySelector(barra)!.getBoundingClientRect().bottom;
+              window.scrollTo(0, Math.round(medio - bajo + 200));
+            }, BARRA);
+          } else {
+            await bajarLeyendo(pagina, 600);
+          }
+          const antes = await scrollQuieto(pagina);
+          await abrirLuchador(pagina, tarjeta, donde);
+          await pagina.goBack();
+          await esperarListas(pagina, `${donde} al volver`);
+          const despues = await scrollQuieto(pagina);
+          expect(Math.abs(despues - antes), `${donde} scrollY al volver: ${despues} (antes, ${antes})`).toBeLessThanOrEqual(20);
+          await pagina.context().close();
+        }
+      });
+    }
+
+    // 🪤 Un enlace con el %-escape roto (#%, o uno cortado al copiarlo):
+    // decodeURIComponent lanzaba un URIError al montar la barra, y React
+    // desmontaba la página entera hasta error.tsx («La transmisión se cortó»).
+    test("con un hash mal formado (#% o un %-escape cortado), la página carga entera, con su barra y sin errores", async ({
+      abrir,
+    }) => {
+      for (const hash of ["%", "peso-pluma%E0%A4%A"]) {
+        const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+        const donde = `[${motor} 390 #${hash}]`;
+        const errores: string[] = [];
+        pagina.on("pageerror", (error) => errores.push(String(error)));
+        pagina.on("console", (mensaje) => {
+          if (mensaje.type() === "error" && /URI/i.test(mensaje.text())) errores.push(mensaje.text().slice(0, 120));
+        });
+        await pagina.goto(`/clasificacion#${hash}`);
+        await esperarListas(pagina, donde);
+        await esperarBarraHidratada(pagina, donde);
+        // El error llegaba al montar, con la página ya pintada: se mira después.
+        await pagina.waitForTimeout(1000);
+        expect(errores, `${donde} errores`).toEqual([]);
+        await expect(pagina.locator(BARRA), `${donde} la barra`).toBeVisible();
+        expect(await pagina.locator('[data-testid="ranking-card"]').count(), `${donde} tarjetas`).toBeGreaterThanOrEqual(12);
+        await pagina.context().close();
+      }
+    });
+
+    // 🪤 La activa se quedaba atrás. El observador vigila una franja de 1 px en
+    // la línea de lectura y avisa cuando una tarjeta la toca; la regla exigía
+    // que su cabecera hubiera PASADO la línea. Avisada con la cabecera dentro
+    // de ese píxel, encendía la anterior y, sin más avisos, la dejaba toda la
+    // tarjeta (1.415 px de «Pluma» leídos como «Gallo»; medido el 21-oct). De
+    // 1 en 1 px por el borde de cada tarjeta, el aviso cae siempre en él.
+    test("bajando de 1 en 1 px por el borde de cada tarjeta (390), la activa es la que se lee; arriba del todo, ninguna", async ({
+      abrir,
+    }) => {
+      test.setTimeout(90_000);
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      const donde = "[" + motor + " 390, de 1 en 1 px]";
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      // Suave: si falla, el barrido de abajo se mide igual.
+      await expect
+        .configure({ soft: true })
+        .poll(async () => (await situacion(pagina, null)).activos, { message: `${donde} arriba del todo` })
+        .toEqual([]);
+      const fallos = await pagina.evaluate(async (barra) => {
+        const fotograma = () => new Promise((r) => requestAnimationFrame(r));
+        const nav = document.querySelector(barra)!;
+        const activa = () => nav.querySelector('[aria-current="location"]')?.getAttribute("href")?.slice(1) ?? null;
+        const tarjetas = [...nav.querySelectorAll("a")].map((a) => document.getElementById(a.getAttribute("href")!.slice(1))!);
+        const fallos: string[] = [];
+        for (const tarjeta of tarjetas) {
+          const arriba = tarjeta.getBoundingClientRect().top + scrollY;
+          const bajo = nav.getBoundingClientRect().bottom;
+          // Su cabecera, de 30 px bajo la barra hasta el borde de la barra: la
+          // línea de lectura está en medio. Y después 300 px más, de golpe.
+          for (let d = 30; d >= 0; d--) {
+            window.scrollTo(0, arriba - bajo - d);
+            await fotograma();
+          }
+          window.scrollTo(0, arriba - bajo + 300);
+          await fotograma();
+          await fotograma();
+          await new Promise((r) => setTimeout(r, 50));
+          if (activa() !== tarjeta.id) fallos.push(`leyendo #${tarjeta.id}, la barra dice #${activa()}`);
+        }
+        return fallos;
+      }, BARRA);
+      expect(fallos, `${donde} divisiones leídas con otra encendida`).toEqual([]);
+      await pagina.context().close();
+    });
+
+    // 🪤 Un salto de un hueco a otro (la tecla Fin desde arriba, instantánea en
+    // WebKit) no hace cruzar la línea a ninguna tarjeta: sin otro aviso, la
+    // barra se quedaba en «P4P» al final de la página.
+    test("un salto de golpe al final y de vuelta arriba (Fin e Inicio): al final, la última; arriba, ninguna", async ({
+      abrir,
+    }) => {
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      const donde = `[${motor} 390 Fin e Inicio]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      const ultima = await pagina.locator(`${BARRA} a`).last().getAttribute("href");
+      const activos = async () => (await situacion(pagina, null)).activos;
+      await pagina.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect.poll(activos, { message: `${donde} al final` }).toEqual([ultima]);
+      await pagina.evaluate(() => window.scrollTo(0, 0));
+      await expect.poll(activos, { message: `${donde} arriba` }).toEqual([]);
+      await pagina.context().close();
+    });
+
+    // En escritorio se leen dos o tres divisiones a la vez, una fila. 🪤 Antes
+    // solo se encendía la de la izquierda (6 de 13 divisiones en toda la
+    // página a 1280); en los huecos se encendía la de la DERECHA de la fila de
+    // arriba durante 20 px (Mosca → Pluma → Ligero), y con la fila femenina
+    // llenando la pantalla la barra decía «Pesado».
+    test("en escritorio (1280), bajando a pasos cortos: la activa siempre se ve, sin parpadeos, y se enciende la fila que se lee", async ({
+      abrir,
+    }) => {
+      test.setTimeout(150_000);
+      const { pagina } = await abrir({ width: 1280, height: 900, dpr: 1 });
+      const donde = `[${motor} 1280 a pasos de 8 px]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      const PASO = 8;
+      const r = await pagina.evaluate(
+        async ({ barra, PASO }) => {
+          const dosFotogramas = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+          const nav = document.querySelector(barra)!;
+          const enlaces = [...nav.querySelectorAll("a")];
+          const tarjetas = enlaces.map((a) => document.getElementById(a.getAttribute("href")!.slice(1))!);
+          const max = document.documentElement.scrollHeight - innerHeight;
+          const tramos: { activa: string | null; desde: number; hasta: number }[] = [];
+          const encendidas = new Set<string>();
+          const fuera: string[] = [];
+          for (let y = 0; y <= max; y += PASO) {
+            window.scrollTo(0, y);
+            await dosFotogramas();
+            const activa = nav.querySelector('[aria-current="location"]')?.getAttribute("href")?.slice(1) ?? null;
+            for (const a of enlaces) {
+              if (a.hasAttribute("aria-current") || a.hasAttribute("data-in-view")) encendidas.add(a.getAttribute("href")!.slice(1));
+            }
+            const ultimo = tramos[tramos.length - 1];
+            if (ultimo && ultimo.activa === activa) ultimo.hasta = y;
+            else tramos.push({ activa, desde: y, hasta: y });
+            // La activa (o otra de su fila) se ve bajo la barra, si se ve alguna tarjeta.
+            const bajo = nav.getBoundingClientRect().bottom;
+            const seVe = (el: Element) => {
+              const caja = el.getBoundingClientRect();
+              return caja.bottom > bajo + 1 && caja.top < innerHeight - 1;
+            };
+            if (activa && tarjetas.some(seVe)) {
+              const suya = document.getElementById(activa)!.getBoundingClientRect().top;
+              const fila = tarjetas.filter((t) => Math.abs(t.getBoundingClientRect().top - suya) < 1);
+              if (!fila.some(seVe)) fuera.push(`a ${y} px, #${activa} sin verse`);
+            }
+          }
+          return { tramos, encendidas: [...encendidas], fuera, total: enlaces.length };
+        },
+        { barra: BARRA, PASO },
+      );
+      expect.soft(r.tramos[0].activa, `${donde} arriba del todo`).toBeNull();
+      const cortos = r.tramos
+        .slice(1, -1)
+        .filter((t) => t.hasta - t.desde + PASO < 40)
+        .map((t) => `#${t.activa} solo ${t.hasta - t.desde + PASO} px (a ${t.desde})`);
+      expect.soft(resumen(cortos), `${donde} parpadeos: estados de menos de 40 px`).toEqual([]);
+      expect.soft(resumen(r.fuera), `${donde} la activa, fuera de la vista`).toEqual([]);
+      expect(r.encendidas.length, `${donde} divisiones encendidas alguna vez: ${r.encendidas.join(" ")}`).toBe(r.total);
+      await pagina.context().close();
+    });
+
+    // 🪤 La barra seguía la altura de la cabecera ENTERA: con el menú del
+    // móvil abierto (424 px a 390) bajaba con él y se quedaba flotando debajo,
+    // pulsable, como una segunda franja de navegación.
+    test("con el menú del móvil abierto, la barra se queda en su sitio y el menú la tapa", async ({ abrir }) => {
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      const donde = `[${motor} 390 menú]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await esperarBarraHidratada(pagina, donde);
+      await pagina.evaluate(() => window.scrollTo(0, 3000));
+      const antes = await situacion(pagina, null);
+      expect(Math.abs(antes.barraArriba - antes.cabeceraSitio), `${donde} pegada, con el menú cerrado`).toBeLessThanOrEqual(0.5);
+      await pagina.getByRole("button", { name: "Abrir menú" }).click();
+      await expect(pagina.locator("#mobile-nav"), `${donde} el menú`).toBeVisible();
+      // La cabecera ya ha crecido: se deja a la barra su fotograma para seguirla.
+      await pagina.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 300)))));
+      const abierto = await pagina.evaluate((barra) => {
+        const nav = document.querySelector(barra)!.getBoundingClientRect();
+        const encima = document.elementFromPoint(nav.left + nav.width / 2, nav.top + nav.height / 2);
+        return { arriba: nav.top, tapada: Boolean(encima?.closest("header")) };
+      }, BARRA);
+      expect(abierto.arriba, `${donde} la barra, con el menú abierto`).toBeCloseTo(antes.barraArriba, 0);
+      expect(abierto.tapada, `${donde} el menú, por encima de la barra`).toBe(true);
+      await pagina.keyboard.press("Escape");
+      await expect(pagina.locator("#mobile-nav"), `${donde} el menú, cerrado`).toBeHidden();
+      const despues = await situacion(pagina, null);
+      expect(Math.abs(despues.barraArriba - despues.cabeceraSitio), `${donde} pegada, al cerrar el menú`).toBeLessThanOrEqual(0.5);
+      await pagina.context().close();
+    });
+
+    test("cada enlace dice al lector de pantalla su división entera, con lo que se ve dentro", async ({ abrir }) => {
+      const { pagina } = await abrir({ width: 1280, height: 844, dpr: 1 });
+      const donde = `[${motor} 1280 nombres]`;
+      await pagina.goto("/clasificacion");
+      await esperarListas(pagina, donde);
+      await expect(pagina.locator(BARRA), `${donde} la barra de saltos`).toBeVisible();
+      const enlaces = pagina.locator(`${BARRA} a`);
+      const total = await enlaces.count();
+      expect(total, `${donde} enlaces`).toBeGreaterThanOrEqual(12);
+      for (let i = 0; i < total; i++) {
+        const enlace = enlaces.nth(i);
+        const href = (await enlace.getAttribute("href")) ?? "";
+        const visible = ((await enlace.textContent()) ?? "").trim();
+        expect(NOMBRES[href], `${donde} ${href}, una división conocida`).toBeDefined();
+        await expect(enlace, `${donde} ${href}`).toHaveAccessibleName(NOMBRES[href]);
+        expect(NOMBRES[href], `${donde} ${href}: el nombre contiene lo que se ve («${visible}»)`).toContain(visible);
+      }
+      await pagina.context().close();
+    });
+
+    // 🪤 Un enlace directo en un móvil que hidrata tarde. Al hidratar, la barra
+    // corrige el enlace que WebKit no siempre aterriza, pero devolvía a la
+    // tarjeta a quien ya había bajado leyendo (8.153 → 5.653; medido el
+    // 21-oct). Los scripts de la app se retienen: la página se pinta (la revela
+    // un script en línea del streaming) y no hidrata hasta soltarlos.
+    test("un enlace directo que hidrata tarde: no devuelve a la tarjeta a quien ya bajó, y lleva a ella si la página sigue arriba", async ({
+      abrir,
+    }) => {
+      for (const caso of ["ya bajó", "sigue arriba"] as const) {
+        const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+        const donde = `[${motor} 390 #peso-pluma, ${caso}]`;
+        let soltar = () => {};
+        const retenidos = new Promise<void>((resolver) => (soltar = resolver));
+        // Solo el JavaScript: con el CSS retenido, React no revela el contenido.
+        await pagina.route(/\/_next\/static\/chunks\/.*\.js(\?|$)/, async (ruta) => {
+          await retenidos;
+          await ruta.continue();
+        });
+        await pagina.goto("/clasificacion#peso-pluma", { waitUntil: "commit" });
+        await esperarListas(pagina, donde);
+        // El aterrizaje del propio navegador, si lo hace.
+        await pagina.waitForTimeout(800);
+        if (caso === "ya bajó") await bajarLeyendo(pagina, 2500);
+        else await pagina.evaluate(() => window.scrollTo(0, 0));
+        const antes = await scrollQuieto(pagina);
+        soltar();
+        await esperarBarraHidratada(pagina, donde);
+        if (caso === "ya bajó") {
+          // Una corrección al hidratar llega en el mismo fotograma: se le da margen.
+          await pagina.waitForTimeout(800);
+          const despues = await pagina.evaluate(() => Math.round(scrollY));
+          expect(Math.abs(despues - antes), `${donde} scrollY tras hidratar: ${despues} (antes, ${antes})`).toBeLessThanOrEqual(2);
+        } else {
+          await esperarAterrizaje(pagina, "peso-pluma", donde);
+        }
+        await pagina.context().close();
+      }
+    });
 
     test("de 360 a 1920: caras grandes, campeón con marco dorado, nombres enteros y sin desbordamiento", async ({
       abrir,

@@ -195,7 +195,13 @@ export function RankingDivisionCard({ division }: { division: DivisionRanking })
     >
       <div className="relative border-b border-border px-5 py-3">
         <span className="absolute inset-y-0 left-0 w-1 bg-corner-red" />
-        <h3 className="font-display text-lg font-bold uppercase tracking-tight text-foreground">
+        {/* tabIndex -1: the jump bar (ranking-jump-bar.tsx) moves the focus
+            here after a jump, so Tab carries on inside this card. */}
+        <h3
+          tabIndex={-1}
+          data-jump-heading
+          className="font-display text-lg font-bold uppercase tracking-tight text-foreground"
+        >
           {label}
         </h3>
       </div>
