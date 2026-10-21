@@ -37,9 +37,14 @@ function DivisionGroup({
       </div>
       <div className={cn("grid items-start gap-5 md:grid-cols-2", threeCols && "xl:grid-cols-3")}>
         {divisions.map((division, i) => (
+          // 🪤 ranking-rise: the entrance fills `backwards`, not the global
+          // `both`. The end state is the element's own (opacity 1, no
+          // transform), so it looks the same, but an animation still filling
+          // forwards kept WebKit from painting a 32×32 px tile at each card's
+          // corner around the faces' drop-shadow (globals.css).
           <div
             key={division.division}
-            className="animate-rise"
+            className="animate-rise ranking-rise"
             style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
           >
             <RankingDivisionCard division={division} priority={priorityFirst && i === 0} />

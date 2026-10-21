@@ -610,7 +610,23 @@
 
   /* Rows: the face stands on the row's bottom border and grows 6 % on hover
      and keyboard focus, like the roster card. :has(:focus-visible) and not
-     :focus-within, so a mouse click does not leave the face grown. */
+     :focus-within, so a mouse click does not leave the face grown.
+     The photo slot clips at its bottom edge: the bust is cut flat there,
+     and its shadow fell 10 px into the row below, a grey smudge over the
+     next face. Top and sides stay open for the head and the 6 % growth.
+     🪤 WebKit, two traps around this drop-shadow (measured 21-oct, Playwright
+     WebKit, /clasificacion in full):
+     · On the <img> inside an animation that FILLS FORWARDS (the global
+       .animate-rise is `both`), it left a 32×32 px tile UNPAINTED at every
+       card's top-left corner, white on the dark theme (13,312 px at 1280,
+       23,040 at 390@2x). The page's cards rise with `backwards` instead
+       (.ranking-rise, below .animate-rise): 0 px.
+     · On the WRAPPER, 80-120 lazy faces started loading during a fast scroll
+       at 2x/3x and never finished until scrolled back to (0 with it on the
+       img). So it stays on the img, as in the roster card. */
+  .ranking-row-photo {
+    clip-path: inset(-24px -24px 0 -24px);
+  }
   .ranking-row-cutout {
     transform-origin: bottom center;
     transition: transform 0.25s ease;
@@ -673,7 +689,8 @@
   /* The cut-out is 120 px tall in a 96 px frame: 24 px of head above the top
      border. Its square bottom corners would poke out of the frame's rounded
      ones (radius 0.5rem minus the 2 px border), so only those are clipped;
-     the negative top inset leaves the head free. */
+     the negative top inset leaves the head free. The drop-shadow sits on the
+     img (the WebKit traps, see .ranking-row-cutout). */
   .ranking-champion-cutout {
     clip-path: inset(-40px 0 0 0 round 0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px));
   }
@@ -779,6 +796,14 @@
 /* Entrada escalonada del contenido (usar con style animation-delay). */
 .animate-rise {
   animation: rise-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+/* The /clasificacion cards: the same entrance, filling only backwards (the
+   end state is the element's own, so it looks the same). Filling forwards,
+   WebKit left a 32×32 px tile unpainted at each card's corner around the
+   faces' drop-shadow (see .ranking-row-cutout). Out of any layer, like
+   .animate-rise: a Tailwind utility (in @layer utilities) would lose to it. */
+.animate-rise.ranking-rise {
+  animation-fill-mode: backwards;
 }
 /* Flotación lenta del arte del luchador en el hero. */
 .animate-float {
