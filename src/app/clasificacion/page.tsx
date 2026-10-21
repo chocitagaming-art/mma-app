@@ -16,12 +16,10 @@ export const revalidate = 3600;
 function DivisionGroup({
   label,
   divisions,
-  showPhotos = false,
   threeCols = false,
 }: {
   label: string;
   divisions: DivisionRanking[];
-  showPhotos?: boolean;
   threeCols?: boolean;
 }) {
   if (divisions.length === 0) return null;
@@ -35,12 +33,17 @@ function DivisionGroup({
       </div>
       <div className={cn("grid items-start gap-5 md:grid-cols-2", threeCols && "xl:grid-cols-3")}>
         {divisions.map((division, i) => (
+          // 🪤 ranking-rise: the entrance fills `backwards`, not the global
+          // `both`. The end state is the element's own (opacity 1, no
+          // transform), so it looks the same, but an animation still filling
+          // forwards kept WebKit from painting a 32×32 px tile at each card's
+          // corner around the faces' drop-shadow (globals.css).
           <div
             key={division.division}
-            className="animate-rise"
+            className="animate-rise ranking-rise"
             style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
           >
-            <RankingDivisionCard division={division} showPhotos={showPhotos} />
+            <RankingDivisionCard division={division} />
           </div>
         ))}
       </div>
@@ -91,9 +94,9 @@ export default async function ClasificacionPage() {
         </Card>
       ) : (
         <div className="mt-10 space-y-12">
-          <DivisionGroup label="Libra por libra" divisions={p4p} showPhotos />
-          <DivisionGroup label="Categorías masculinas" divisions={men} threeCols showPhotos />
-          <DivisionGroup label="Categorías femeninas" divisions={women} threeCols showPhotos />
+          <DivisionGroup label="Libra por libra" divisions={p4p} />
+          <DivisionGroup label="Categorías masculinas" divisions={men} threeCols />
+          <DivisionGroup label="Categorías femeninas" divisions={women} threeCols />
         </div>
       )}
     </div>

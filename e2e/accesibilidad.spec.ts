@@ -245,6 +245,41 @@ for (const ficha of FICHAS) {
   });
 }
 
+// /clasificacion, rediseñada el 21-oct-2026 (caras grandes y el campeón en
+// dorado). Lo que aquí importa es justo lo que axe NO decide solo: el bloque
+// del campeón va sobre un lavado dorado en DEGRADADO, así que su «Campeón» en
+// ámbar, el apodo y el récord caen en `incomplete` y los mide
+// contraste-degradado.ts contra el peor color del degradado. Y la etiqueta
+// «Nuevo» de las filas estaba a 4,23:1 en claro desde antes del rediseño.
+test("/clasificacion no tiene violaciones de accesibilidad", async ({ page }) => {
+  await page.goto("/clasificacion");
+  await expect(page.locator("#main-content")).toBeVisible();
+  await expect(page.locator("main ol > li").first()).toBeVisible();
+  await esperarTema(page);
+  // 🪤 Las tarjetas entran con animate-rise, que arranca en opacidad 0: medido
+  // a media animación, el rojo de «Nuevo» en oscuro sale #e6484e en vez de
+  // #ff4f56 y da 4,02 donde en reposo pasa. Se audita el color EN REPOSO: se
+  // espera a que acaben las animaciones finitas (las infinitas, como el pulso
+  // del directo, no acaban nunca).
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
+
+  const { vivas, degradados } = await auditar(page);
+  expect(vivas, `Violaciones en /clasificacion:\n\n${informe(vivas)}`).toEqual([]);
+  // Que el texto sobre el dorado se haya medido de verdad: sin esto, «cero
+  // fallos» y «no medí nada» son indistinguibles.
+  expect(
+    degradados.resueltos,
+    "el resolvedor no midió el texto de los bloques de campeón",
+  ).toBeGreaterThanOrEqual(8);
+});
+
 // La lista de deuda no puede convertirse en un cajón donde las cosas entran y
 // nunca salen. Este test la mantiene honesta: si alguien arregla una de las
 // tres, aquí sale en rojo pidiendo que se borre de la lista.
