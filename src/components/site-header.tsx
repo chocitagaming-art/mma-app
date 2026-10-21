@@ -235,7 +235,12 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md">
+    // data-site-header: what /clasificacion's jump bar measures to stick
+    // right under it (ranking-jump-bar.tsx).
+    <header
+      data-site-header
+      className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md"
+    >
       {/* Rejilla de 3 zonas con laterales de anchura idéntica (minmax(0,1fr)):
           el logo queda perfectamente centrado sin importar qué item esté activo. */}
       <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 lg:px-8">
