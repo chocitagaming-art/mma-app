@@ -85,7 +85,12 @@ function Movement({ change }: { change: number | null }) {
 // ::after is stretched over the whole row, so the photo and the empty space
 // are clickable too (a 75 px tall target on a phone) while the accessible
 // name stays just the fighter's name. The keyboard ring is drawn on that
-// ::after, i.e. around the whole row, not around the text alone.
+// ::after, i.e. around the whole row, not around the text alone: 2 px solid,
+// the site's own :focus-visible ring (globals.css).
+// 🪤 No bare `after:outline` next to `after:outline-2`: tailwind-merge files
+// both under outline-width and keeps the LAST one, so the pair rendered a
+// 1 px ring (measured 21-oct). In Tailwind v4 `outline-2` already sets the
+// style (var(--tw-outline-style), solid by default).
 function FighterName({ entry, className }: { entry: RankingEntry; className?: string }) {
   if (!entry.fighterId) {
     return <span className={className}>{entry.fighterName}</span>;
@@ -94,7 +99,7 @@ function FighterName({ entry, className }: { entry: RankingEntry; className?: st
     <Link
       href={`/fighters/${entry.fighterId}`}
       className={cn(
-        "transition-colors after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring focus-visible:after:outline",
+        "transition-colors after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring",
         className,
       )}
     >
