@@ -18,8 +18,14 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //   · Cada cara de ufc.com ofrece la guardada (256) y el original (500), y el
 //     navegador baja el original SOLO donde hace falta: en las filas a 3x y en
 //     el campeón a 2x y 3x. A 1x, ningún original en toda la página.
-//   · Sin desbordamiento de 360 a 1920 y ningún nombre cortado.
+//   · Sin desbordamiento de 360 a 1920 y ningún nombre cortado; tampoco el
+//     texto del bloque del campeón («Campeón», el apodo, el récord).
 //   · La foto no repite el nombre al lector de pantalla: lo dice el enlace.
+//   · En oscuro el marco sigue dorado (amber-400), no solo en claro.
+//   · El foco de teclado dibuja un anillo de 2 px alrededor de TODA la fila.
+//   · WebKit pinta la página entera: un drop-shadow en la <img> dentro de la
+//     animación de entrada dejaba un cuadro de 32×32 sin pintar en la esquina
+//     de cada tarjeta (blanco en oscuro). Las cuentas de geometría no lo ven.
 //
 // 🪤 Los selectores valen para la versión de antes Y para la de ahora (filas =
 // `main ol > li`, caras = img con alt «Foto de…» o «Silueta de…», campeón = el
@@ -34,7 +40,7 @@ import { expectNoHorizontalOverflow } from "./helpers";
 // (escritorio-light): cada test fija su pantalla y su densidad de píxeles.
 
 type Motor = "chromium" | "webkit";
-type Pantalla = { width: number; height: number; dpr: number };
+type Pantalla = { width: number; height: number; dpr: number; tema?: "light" | "dark" };
 type Abierta = { pagina: Page; originales: string[] };
 type Abrir = (pantalla: Pantalla) => Promise<Abierta>;
 
@@ -49,7 +55,9 @@ const SRCSET_HD = / 256w, https:\/\/www\.ufc\.com\/images\/(?!styles\/).+ 500w$/
 
 // Del 360 del móvil más estrecho al 1920 de un monitor grande, pasando por
 // cada corte de la rejilla: 1 columna, 2 (md), 2 con más margen (lg), 3 (xl).
-const ANCHOS = [360, 390, 768, 1024, 1280, 1920];
+// 600 y 1240: los dos tramos en que TODAS las tarjetas son anchas (nombre de
+// fila a 22 px y el campeón al lado de la foto), una columna y dos.
+const ANCHOS = [360, 390, 600, 768, 1024, 1240, 1280, 1920];
 
 // El diseño pinta 75 y 120 px; el margen absorbe el redondeo de subpíxel.
 const ALTO_MIN_CARA_FILA = 72;
@@ -87,7 +95,7 @@ const test = base.extend<{ motor: Motor; abrir: Abrir }, { abrirWebkit: () => Pr
     await ofrecer(async (pantalla) => {
       const contexto = await navegador.newContext({
         baseURL,
-        colorScheme: "light",
+        colorScheme: pantalla.tema ?? "light",
         viewport: { width: pantalla.width, height: pantalla.height },
         deviceScaleFactor: pantalla.dpr,
         serviceWorkers: "block",
@@ -143,6 +151,9 @@ type CaraMedida = {
   lineasVisibles: number;
   cortado: boolean;
   pisaMovimiento: boolean;
+  // Solo el campeón: los textos de su bloque (fuera del nombre) que no caben
+  // en su caja, a lo ancho (una elipsis) o a lo alto (un line-clamp).
+  recortes: string[];
 };
 
 // Mide las caras de las filas y de los campeones, y sus nombres, en UN solo
@@ -219,6 +230,24 @@ function medir(pagina: Page): Promise<CaraMedida[]> {
       };
     }
 
+    // Elementos con texto propio del bloque (no el nombre, que se mide
+    // aparte) cuyo contenido se sale de su caja: a lo ancho siempre; a lo alto
+    // solo con line-clamp (un texto con leading-none asoma por arriba y por
+    // abajo sin estar cortado). Los `inline` no tienen caja que medir.
+    function recortesDe(bloque: Element): string[] {
+      const enlace = bloque.querySelector('a[href^="/fighters/"]');
+      return [...bloque.querySelectorAll<HTMLElement>("*")]
+        .filter((el) => !enlace?.contains(el) && !el.contains(enlace))
+        .filter((el) => [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()))
+        .filter((el) => getComputedStyle(el).display !== "inline")
+        .filter((el) => {
+          const clamp = getComputedStyle(el).getPropertyValue("-webkit-line-clamp");
+          const conClamp = clamp !== "" && clamp !== "none";
+          return el.scrollWidth > el.clientWidth + 1 || (conClamp && el.scrollHeight > el.clientHeight + 1);
+        })
+        .map((el) => el.textContent?.trim() ?? "");
+    }
+
     const medidas: CaraMedida[] = [];
     for (const fila of document.querySelectorAll("main ol > li")) {
       const img = fila.querySelector<HTMLImageElement>(CARA);
@@ -228,6 +257,7 @@ function medir(pagina: Page): Promise<CaraMedida[]> {
         alto: img.getBoundingClientRect().height,
         oculta: img.closest('[aria-hidden="true"]') != null,
         borde: null,
+        recortes: [],
         ...nombre(fila, img, "fila"),
       });
     }
@@ -244,11 +274,42 @@ function medir(pagina: Page): Promise<CaraMedida[]> {
         alto: img.getBoundingClientRect().height,
         oculta: img.closest('[aria-hidden="true"]') != null,
         borde: bordeHasta(img, bloque),
+        recortes: recortesDe(bloque),
         ...nombre(bloque, img, "campeon"),
       });
     }
     return medidas;
   });
+}
+
+// Dorado: tono ámbar (amber-400 es 43°, amber-500 38°, amber-700 26°; el rojo
+// de la marca es 0° y el gris no tiene saturación), saturado y casi opaco.
+function sinMarcoDorado(campeones: CaraMedida[]): string[] {
+  return campeones
+    .filter(
+      (m) => m.borde == null || m.borde[0] < 25 || m.borde[0] > 55 || m.borde[1] < 0.6 || m.borde[2] < 0.6,
+    )
+    .map((m) => `${m.nombre} (${m.borde ? `${m.borde[0]}° s${m.borde[1].toFixed(2)} a${m.borde[2].toFixed(2)}` : "sin borde"})`);
+}
+
+// Píxeles SIN PINTAR (alfa < 10) de una captura. Se decodifica en una página
+// en blanco aparte (about:blank, sin la CSP del sitio): un PNG con un canvas.
+async function sinPintar(decodificador: Page, captura: Buffer): Promise<number> {
+  return decodificador.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const lienzo = document.createElement("canvas");
+    lienzo.width = img.width;
+    lienzo.height = img.height;
+    const ctx = lienzo.getContext("2d");
+    if (!ctx) return -1;
+    ctx.drawImage(img, 0, 0);
+    const datos = ctx.getImageData(0, 0, lienzo.width, lienzo.height).data;
+    let n = 0;
+    for (let i = 3; i < datos.length; i += 4) if (datos[i] < 10) n++;
+    return n;
+  }, captura.toString("base64"));
 }
 
 type CaraCargada = {
@@ -347,25 +408,15 @@ for (const motor of ["chromium", "webkit"] as const) {
           .soft(resumen(campeonesBajos), `${donde} caras de campeón de menos de ${ALTO_MIN_CARA_CAMPEON} px`)
           .toEqual([]);
 
-        // Dorado: tono ámbar (amber-400 es 43°, amber-500 38°, amber-700 26°;
-        // el rojo de la marca es 0° y el gris no tiene saturación), saturado y
-        // casi opaco.
-        const sinDorado = campeones
-          .filter(
-            (m) =>
-              m.borde == null ||
-              m.borde[0] < 25 ||
-              m.borde[0] > 55 ||
-              m.borde[1] < 0.6 ||
-              m.borde[2] < 0.6,
-          )
-          .map((m) => `${m.nombre} (${m.borde ? `${m.borde[0]}° s${m.borde[1].toFixed(2)} a${m.borde[2].toFixed(2)}` : "sin borde"})`);
-        expect.soft(resumen(sinDorado), `${donde} campeones sin el marco dorado`).toEqual([]);
+        expect.soft(resumen(sinMarcoDorado(campeones)), `${donde} campeones sin el marco dorado`).toEqual([]);
 
         const cortados = medidas
           .filter((m) => m.cortado || m.lineas > m.lineasVisibles || m.pisaMovimiento)
           .map((m) => `${m.nombre} (${m.lineas}/${m.lineasVisibles} líneas${m.cortado ? ", se sale" : ""}${m.pisaMovimiento ? ", pisa el movimiento" : ""})`);
         expect.soft(resumen(cortados), `${donde} nombres cortados o encima del movimiento`).toEqual([]);
+
+        const recortes = campeones.flatMap((m) => m.recortes.map((texto) => `${m.nombre}: «${texto}»`));
+        expect.soft(resumen(recortes), `${donde} textos cortados en el bloque del campeón`).toEqual([]);
 
         // El lector de pantalla oye el nombre UNA vez (el enlace), no también
         // el alt de la foto: la cara va dentro de un aria-hidden. No depende
@@ -418,5 +469,109 @@ for (const motor of ["chromium", "webkit"] as const) {
         await pagina.context().close();
       }
     });
+
+    test("en oscuro: el marco del campeón sigue dorado y el texto de su bloque cabe", async ({ abrir }) => {
+      test.setTimeout(60_000);
+      // 390: la tarjeta estrecha (el nombre bajo la foto); 1280: las tres
+      // columnas (estrecha también) y la pareja libra por libra (ancha).
+      for (const ancho of [390, 1280]) {
+        const { pagina } = await abrir({ width: ancho, height: 900, dpr: 1, tema: "dark" });
+        await pagina.goto("/clasificacion");
+        const donde = `[${motor} ${ancho} oscuro]`;
+        await expect(pagina.locator("html"), `${donde} el tema`).toHaveClass(/(^|\s)dark(\s|$)/);
+        await expect
+          .poll(() => pagina.locator("main ol > li").count(), { message: `${donde} las listas` })
+          .toBeGreaterThanOrEqual(150);
+        const campeones = (await medir(pagina)).filter((m) => m.zona === "campeon");
+        expect(campeones.length, `${donde} campeones con cara`).toBeGreaterThanOrEqual(8);
+        expect.soft(resumen(sinMarcoDorado(campeones)), `${donde} campeones sin el marco dorado`).toEqual([]);
+        const recortes = campeones.flatMap((m) => m.recortes.map((texto) => `${m.nombre}: «${texto}»`));
+        expect.soft(resumen(recortes), `${donde} textos cortados en el bloque del campeón`).toEqual([]);
+        await pagina.context().close();
+      }
+    });
+
+    test("el foco de teclado rodea la fila entera con un anillo de 2 px", async ({ abrir }) => {
+      const { pagina } = await abrir({ width: 390, height: 844, dpr: 1 });
+      await pagina.goto("/clasificacion");
+      const enlace = pagina.locator('main ol > li a[href^="/fighters/"]').first();
+      await expect(enlace).toBeVisible();
+      // Foco por script: WebKit, como Safari, no lleva el Tab a los enlaces.
+      // Sin un clic antes, los dos motores lo tratan como de teclado
+      // (:focus-visible), y se comprueba abajo.
+      await enlace.focus();
+      const anillo = await enlace.evaluate((a) => {
+        const estilo = getComputedStyle(a, "::after");
+        const fila = a.closest("li")?.getBoundingClientRect();
+        return {
+          deTeclado: a.matches(":focus-visible"),
+          contenido: estilo.content,
+          grosor: estilo.outlineWidth,
+          trazo: estilo.outlineStyle,
+          ancho: parseFloat(estilo.width) || 0,
+          alto: parseFloat(estilo.height) || 0,
+          anchoFila: fila?.width ?? 0,
+        };
+      });
+      const donde = `[${motor} 390]`;
+      expect(anillo.deTeclado, `${donde} el enlace de la fila 1 tiene :focus-visible`).toBe(true);
+      // El anillo de toda la web (globals.css, :focus-visible) es de 2 px.
+      expect.soft(anillo.grosor, `${donde} grosor del anillo`).toBe("2px");
+      expect.soft(anillo.trazo, `${donde} trazo del anillo`).toBe("solid");
+      // Dibujado en el ::after estirado del enlace: la fila entera, no el texto.
+      expect.soft(anillo.contenido, `${donde} el ::after del enlace existe`).not.toBe("none");
+      expect.soft(anillo.ancho, `${donde} ancho del anillo (fila: ${anillo.anchoFila} px)`).toBeGreaterThanOrEqual(anillo.anchoFila - 2);
+      expect.soft(anillo.alto, `${donde} alto del anillo`).toBeGreaterThanOrEqual(ALTO_MIN_CARA_FILA);
+      await pagina.context().close();
+    });
+
+    if (motor === "webkit") {
+      test("WebKit pinta la página entera: ningún cuadro sin pintar al bajar", async ({ abrir }) => {
+        test.setTimeout(90_000);
+        for (const pantalla of [
+          { width: 1280, height: 900, dpr: 1 },
+          { width: 390, height: 844, dpr: 2 },
+        ]) {
+          const { pagina } = await abrir({ ...pantalla, tema: "dark" });
+          const decodificador = await pagina.context().newPage();
+          await pagina.goto("/clasificacion");
+          await expect.poll(() => pagina.locator("main ol > li").count()).toBeGreaterThanOrEqual(150);
+          const huecos: string[] = [];
+          // Las 4 primeras pantallas: la libra por libra y las primeras
+          // divisiones con campeón (el cuadro salía en TODAS las tarjetas).
+          for (let n = 0; n < 4; n++) {
+            await pagina.evaluate((y) => window.scrollTo(0, y), n * pantalla.height);
+            // Con las caras de la pantalla ya pintadas y la entrada acabada:
+            // el cuadro aparecía al pintar la cara, no antes.
+            await expect
+              .poll(() =>
+                pagina.evaluate(() =>
+                  [...document.querySelectorAll<HTMLImageElement>("main img")]
+                    .filter((img) => {
+                      const caja = img.getBoundingClientRect();
+                      return caja.bottom > 0 && caja.top < innerHeight;
+                    })
+                    .every((img) => img.complete),
+                ),
+              )
+              .toBe(true);
+            await pagina.evaluate(() =>
+              Promise.all(
+                document
+                  .getAnimations()
+                  .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+                  .map((a) => a.finished.catch(() => undefined)),
+              ),
+            );
+            const sinPintarAqui = await sinPintar(decodificador, await pagina.screenshot());
+            if (sinPintarAqui !== 0) huecos.push(`pantalla ${n + 1}: ${sinPintarAqui} px`);
+          }
+          expect
+            .soft(huecos, `[webkit ${pantalla.width}@${pantalla.dpr}x oscuro] píxeles sin pintar`)
+            .toEqual([]);
+          await pagina.context().close();
+        }
+      });
+    }
   });
 }
