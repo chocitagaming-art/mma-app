@@ -146,9 +146,11 @@ function ChampionBlock({ champion, division }: { champion: RankingEntry; divisio
             <Trophy className="size-3.5 shrink-0" aria-hidden />
             Campeón
           </p>
-          {/* The nickname, as the roster card shows it (mono, in quotes). */}
+          {/* The nickname, as the roster card shows it (mono, in quotes).
+              Two lines, not an ellipsis: at 360 px this column is 82 px and
+              «The Highlight» / «The Fearless» were cut to «The Highli…». */}
           {champion.nickname ? (
-            <p className="mt-1.5 truncate font-mono text-[11px] font-medium leading-[1.25] text-muted-foreground">
+            <p className="mt-1.5 line-clamp-2 font-mono text-[11px] font-medium leading-[1.25] text-muted-foreground">
               {`"${champion.nickname}"`}
             </p>
           ) : null}
@@ -160,9 +162,10 @@ function ChampionBlock({ champion, division }: { champion: RankingEntry; divisio
           />
         </p>
         {championRecord || champion.nationality ? (
-          // At 360 px the column beside the photo is 84 px: a long record
-          // ("26-10-1") goes whole to its own line under the flag, never split.
-          <p className="ranking-champion-record flex flex-wrap items-center gap-x-2 gap-y-1">
+          // Under the name in a narrow card, beside the photo in a wide one:
+          // 194 px of column or more either way, so flag and record share one
+          // line in every card.
+          <p className="ranking-champion-record flex items-center gap-2">
             <CountryFlag nationality={champion.nationality} className="h-4 w-[22px]" />
             {championRecord ? (
               <span className="whitespace-nowrap font-display text-2xl font-bold leading-none tabular text-foreground">

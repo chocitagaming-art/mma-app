@@ -5,8 +5,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 // reuses the real card's structural classes (.ranking-card, .ranking-champion,
 // .ranking-champion-grid in globals.css) and its fixed sizes, so every block
 // is as tall as the real one when the page swaps in (measured on 21-oct from
-// 360 to 1920 px, Chromium and WebKit: header 53, champion 193.6 narrow / 167
-// wide, each row 75 + its 1 px border).
+// 360 to 1920 px, Chromium and WebKit, with a client navigation held on its
+// RSC response: header 53, champion 225.6 narrow / 167 wide, each row 75 + its
+// 1 px border; cards land within 0.1 px).
+// 🪤 Two things it cannot know: a narrow-card champion whose name takes two
+// lines at 28 px (none today; it needs some 25 characters at 360) makes that
+// block 26.6 px taller, and a vacant title among the first three men's
+// divisions makes that card 225.6 / 167 px shorter. Both sit below the fold
+// at every width (the pound-for-pound pair comes first), so they shift
+// nothing on screen.
 function RankingCardSkeleton({ withChampion = false }: { withChampion?: boolean }) {
   return (
     <div className="ranking-card flex flex-col overflow-hidden rounded-lg border border-border bg-card">
@@ -22,7 +29,8 @@ function RankingCardSkeleton({ withChampion = false }: { withChampion?: boolean 
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-3 w-16" />
             </div>
-            {/* One line of the 28 px / 0.95 name. */}
+            {/* One line of the 28 px / 0.95 name; the record bar below it is
+                the 24 px record line (beside the photo in a wide card). */}
             <div className="ranking-champion-name h-[1.6625rem]">
               <Skeleton className="h-full w-48 max-w-full" />
             </div>
