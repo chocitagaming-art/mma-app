@@ -240,19 +240,26 @@ export function RankingDivisionCard({ division }: { division: DivisionRanking })
                 />
               </div>
               <div className="min-w-0 flex-1 py-2">
-                {/* Two lines at most: the row keeps its 75 px, the skeleton
-                    (loading.tsx) matches it, and the longest single word of
-                    the rankings (NURMAGOMEDOV, 97 px at 16 px) fits the
-                    100 px this column has at 360. */}
+                {/* Two lines at most, so the row keeps its 75 px and the
+                    skeleton (loading.tsx) matches it. The size follows the
+                    CARD's width (container queries on .ranking-card):
+                    · under 380 px of card (phones under 412, the 768-827
+                      tablet) 15 px: the column is 98 px at 360 and the
+                      longest single word of the rankings, NURMAGOMEDOV, is
+                      97.2 px at 16 px; at 15 it is 91.
+                    · from 560 px (the pound-for-pound pair from 1280, every
+                      card on a 608-767 screen) 22 px and a 14 px record: at
+                      16 px the 352 px column there was two-thirds empty.
+                    The photo never changes, so `sizes` stays exact. */}
                 <FighterName
                   entry={entry}
-                  className="line-clamp-2 font-display text-base font-extrabold uppercase leading-[1.05] tracking-tight text-foreground [overflow-wrap:anywhere] group-hover/row:text-primary"
+                  className="line-clamp-2 font-display text-base font-extrabold uppercase leading-[1.05] tracking-tight text-foreground [overflow-wrap:anywhere] group-hover/row:text-primary @max-[23.75rem]:text-[0.9375rem] @min-[35rem]:text-[1.375rem]"
                 />
                 {entryRecord || entry.nationality ? (
-                  <p className="mt-1 flex items-center gap-1.5">
+                  <p className="mt-1 flex items-center gap-1.5 @min-[35rem]:mt-1.5 @min-[35rem]:gap-2">
                     <CountryFlag nationality={entry.nationality} />
                     {entryRecord ? (
-                      <span className="font-mono text-xs tabular text-muted-foreground">
+                      <span className="font-mono text-xs tabular text-muted-foreground @min-[35rem]:text-sm">
                         {entryRecord}
                       </span>
                     ) : null}
