@@ -777,7 +777,9 @@
      to 1920 in Chromium and WebKit. That is the fallback, in rem like the
      logo, so a larger default font size moves both together; once the bar
      hydrates it writes the MEASURED height here (inline on <html>), so a
-     header that changes, or grows with its mobile menu, still meets it. */
+     header that changes still meets it. Measured to the bottom of its first
+     row, not of the whole <header>: the mobile menu opens inside the header,
+     over the bar, and the bar stays put under it. */
   :root {
     --site-header-height: calc(3px + 3.5rem);
     /* 44 px, its 1 px bottom border included: 43 px tall links, over the

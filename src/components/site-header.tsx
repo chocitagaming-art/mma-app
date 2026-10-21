@@ -236,7 +236,9 @@ export function SiteHeader() {
 
   return (
     // data-site-header: what /clasificacion's jump bar measures to stick
-    // right under it (ranking-jump-bar.tsx).
+    // right under it (ranking-jump-bar.tsx): from this header's top to the
+    // bottom of its FIRST child, the strip that is always there, plus the
+    // bottom border. The mobile menu below that strip opens over the bar.
     <header
       data-site-header
       className="sticky top-0 z-40 border-t-2 border-b border-t-primary border-b-border bg-background/85 backdrop-blur-md"
