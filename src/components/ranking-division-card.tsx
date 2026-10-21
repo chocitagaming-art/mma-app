@@ -242,14 +242,16 @@ export function RankingDivisionCard({ division }: { division: DivisionRanking })
               <div className="min-w-0 flex-1 py-2">
                 {/* Two lines at most, so the row keeps its 75 px and the
                     skeleton (loading.tsx) matches it. The size follows the
-                    CARD's width (container queries on .ranking-card):
-                    · under 380 px of card (phones under 412, the 768-827
-                      tablet) 15 px: the column is 98 px at 360 and the
-                      longest single word of the rankings, NURMAGOMEDOV, is
-                      97.2 px at 16 px; at 15 it is 91.
-                    · from 560 px (the pound-for-pound pair from 1280, every
-                      card on a 608-767 screen) 22 px and a 14 px record: at
-                      16 px the 352 px column there was two-thirds empty.
+                    CARD's content width (container queries on .ranking-card;
+                    the screen widths below were measured on 21-oct):
+                    · under 380 px (screens up to 413 px, and 768-829) 15 px:
+                      the column is 98 px at 360 and the longest single word
+                      of the rankings, NURMAGOMEDOV, is 97.2 px at 16 px; at
+                      15 it is 91.
+                    · from 560 px (every card at 594-767 and 1208-1279, the
+                      pound-for-pound pair from 1280) 22 px and a 14 px
+                      record: at 16 px the 352 px column there was
+                      two-thirds empty.
                     The photo never changes, so `sizes` stays exact. */}
                 <FighterName
                   entry={entry}
