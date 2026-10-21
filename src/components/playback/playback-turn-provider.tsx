@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
 // This file is only wiring: it hands the real browser to the controller
 // (turn-controller.ts) and forwards DOM events to it —visibilitychange,
 // pagehide/pageshow, window blur, every pointerdown on the page, every focus
-// change, the reduced-motion media query and the header's ResizeObserver—.
+// change, every full screen change, the reduced-motion media query and the
+// header's ResizeObserver—.
 // Who may play is decided in lib/playback-turn.ts.
 // Both are tested in node (turn-controller.test.ts, playback-turn.test.ts);
 // this file is covered by the e2e once it is wired into a page.
@@ -42,7 +43,9 @@ import { cn } from "@/lib/utils";
 // the event page), the only players that start on their own (autoStart); and
 // the home hero's short (components/home/shorts-hero.tsx), which only plays
 // when the visitor starts it and is in the turn so that there is still ONE
-// player at a time. Nothing else of the site starts a YouTube player on its
+// player at a time; scrolled out of view, it makes way for the home's slot
+// when that one may start (yieldsToAuto, the owner, 21-oct-2026). Nothing
+// else of the site starts a YouTube player on its
 // own. What the visitor opens with a tap is in the turn too, through
 // components/playback/click-to-play.tsx (our own poster, the player mounts as
 // the visitor's): the Hall of Fame's fights, and the videos modal of the home,
@@ -81,6 +84,24 @@ function browserEnvironment(headerSelector: string): TurnEnvironment {
     prefersReducedMotion: () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
     headerHeight: () => document.querySelector(headerSelector)?.getBoundingClientRect().height ?? 0,
     activeElement: () => document.activeElement,
+    // Unprefixed since Safari 16.4; the prefixed one for the iPads before it.
+    fullscreenElement: () =>
+      document.fullscreenElement ??
+      (document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement ??
+      null,
+    // The box is no Tab stop of its own: the tabindex that lets it take the
+    // focus goes as soon as it loses it (to its own iframe, the next Tab).
+    // Its ring is the global :focus-visible one, OUTSIDE the box (keyboard
+    // only: after a tap there is none). Drawn inside, the positioned iframe
+    // covered it (measured in Chromium, 21-oct-2026).
+    moveFocusTo: (el) => {
+      const box = el as HTMLElement;
+      if (!box.hasAttribute("tabindex")) {
+        box.setAttribute("tabindex", "-1");
+        box.addEventListener("blur", () => box.removeAttribute("tabindex"), { once: true });
+      }
+      box.focus({ preventScroll: true });
+    },
   };
 }
 
@@ -114,6 +135,8 @@ export function PlaybackTurnProvider({
     const onFocusChange = () => controller.focusChanged();
     const motion = window.matchMedia(REDUCED_MOTION_QUERY);
     const onMotion = () => controller.reducedMotionChanged();
+    // The hero short does not make way in full screen: its end decides again.
+    const onFullscreen = () => controller.fullscreenChanged();
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
@@ -122,6 +145,8 @@ export function PlaybackTurnProvider({
     window.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("focusin", onFocusChange);
     document.addEventListener("focusout", onFocusChange);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    document.addEventListener("webkitfullscreenchange", onFullscreen);
     motion.addEventListener("change", onMotion);
 
     const header = document.querySelector(headerSelector);
@@ -136,6 +161,8 @@ export function PlaybackTurnProvider({
       window.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("focusin", onFocusChange);
       document.removeEventListener("focusout", onFocusChange);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+      document.removeEventListener("webkitfullscreenchange", onFullscreen);
       motion.removeEventListener("change", onMotion);
       headerObserver?.disconnect();
       controller.stop();
@@ -207,8 +234,10 @@ export function TurnSlot({
   poster,
   className,
   autoStart = false,
+  yieldsToAuto = false,
   ownBlocker,
   onMount,
+  onYield,
   onIframeLoad,
 }: {
   id: string;
@@ -221,20 +250,27 @@ export function TurnSlot({
   // Starts on its own when it is seen (UFC TV, the event's broadcast). False
   // by default: then it only plays when the visitor starts it (the hero short).
   autoStart?: boolean;
+  // Out of view (half or less), the visitor's player makes way for an
+  // automatic one that may start: the hero short only (the owner,
+  // 21-oct-2026). False by default: what the visitor chose stays.
+  yieldsToAuto?: boolean;
   // The blocker this player itself puts up (the videos modal): it does not
   // stop the visitor's start of THIS player (turn-controller.ts userStart).
   ownBlocker?: string;
   onMount?: (owner: TurnOwner) => void;
+  // It made way (yieldsToAuto), just before its iframe goes: the hero's
+  // poster goes back to the short it cut.
+  onYield?: () => void;
   // The hero starts its short's timer here (duration + 2.5 s, as in the mockup).
   onIframeLoad?: () => void;
 }) {
   const controller = useTurnController();
   const boxRef = useRef<HTMLDivElement>(null);
-  // The latest callback, without re-registering the player on every render.
-  const latest = useRef({ onMount });
+  // The latest callbacks, without re-registering the player on every render.
+  const latest = useRef({ onMount, onYield });
   useEffect(() => {
-    latest.current = { onMount };
-  }, [onMount]);
+    latest.current = { onMount, onYield };
+  }, [onMount, onYield]);
 
   useEffect(() => {
     const element = boxRef.current;
@@ -244,10 +280,12 @@ export function TurnSlot({
       priority,
       element,
       autoStart,
+      yieldsToAuto,
       ownBlocker,
       onMount: (owner) => latest.current.onMount?.(owner),
+      onYield: () => latest.current.onYield?.(),
     });
-  }, [controller, id, priority, autoStart, ownBlocker]);
+  }, [controller, id, priority, autoStart, yieldsToAuto, ownBlocker]);
 
   const view: PlayerView = useSyncExternalStore(
     controller.subscribe,

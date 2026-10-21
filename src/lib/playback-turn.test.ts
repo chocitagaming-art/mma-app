@@ -27,13 +27,25 @@ import {
 //     when the visitor starts it, and when it ends no other one starts. UFC
 //     TV and the event's broadcast still start on their own. «Pausar» went
 //     with it (nothing moves on its own any more), and so did `paused`.
+// And once more on 21-oct-2026 (the owner): the visitor's hero short, once
+// they scroll it out of view, makes way for the home's slot when that one may
+// start on its own («se pare el vídeo de arriba y se ponga el directo»).
 
 const NOW = 100_000;
 
 // A player at `ratio` visible. `since`: how many ms it has been MORE than half
 // visible (null = it is not). By default it follows the ratio, as the
 // IntersectionObserver does; passing it tests the ratio check on its own.
-// `autoStart`, as in production: every player but the hero short.
+// `autoStart`, as in production: every player but the hero short (and the
+// visitor's clips, which say so). `yieldsToAuto`, as in production: the hero
+// short only. `started` / `left`: how many ms ago its mount started (the
+// visitor's tap) and it last moved further out of view, to half or less or
+// out of it altogether (null = never). Left out, they are what production
+// gives the owner's walk, so the cases below go through the same path: the
+// short started a minute ago at the top, with nothing else in view
+// (`inViewAtStart`: the players more than half in view at that tap), and
+// scrolled away 2 s ago when it is half or less in view now. `fullscreen`:
+// the page's full screen element is inside its box.
 function player(
   id: string,
   ratio: number,
@@ -43,12 +55,22 @@ function player(
     eligible = true,
     autoStart = id !== "hero",
     focused = false,
+    yieldsToAuto = id === "hero",
+    started = 60_000,
+    left = ratio > 0.5 ? null : 2_000,
+    inViewAtStart = [],
+    fullscreen = false,
   }: {
     since?: number | null;
     area?: number | null;
     eligible?: boolean;
     autoStart?: boolean;
     focused?: boolean;
+    yieldsToAuto?: boolean;
+    started?: number | null;
+    left?: number | null;
+    inViewAtStart?: string[];
+    fullscreen?: boolean;
   } = {},
 ): TurnPlayer {
   return {
@@ -60,6 +82,11 @@ function player(
     aboveSince: since == null ? null : NOW - since,
     eligible,
     focused,
+    yieldsToAuto,
+    startedAt: started == null ? null : NOW - started,
+    leftAt: left == null ? null : NOW - left,
+    inViewAtStart,
+    fullscreen,
   };
 }
 
@@ -227,16 +254,29 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
     want: { id: "tv-directo", owner: "auto" },
   },
   // ── What the visitor chose is theirs ──
+  // (A fight of the Hall of Fame, a click-to-play clip: any visitor's player
+  // but the hero short, which makes way out of view since 21-oct-2026, below.)
   {
     name: "what the visitor started stays while any part of it is visible",
-    s: state([player("hero", 0.2), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
-    want: { id: "hero", owner: "user" },
+    s: state([player("clip", 0.2, { autoStart: false }), player("tv-bucle", 0.9)], {
+      current: { id: "clip", owner: "user" },
+    }),
+    want: { id: "clip", owner: "user" },
   },
   {
     // In PiP the visitor scrolls away: removing the iframe would close it, and
     // the page cannot see a PiP inside a cross-origin iframe.
     name: "what the visitor chose stays at 0 % too, and nothing automatic starts meanwhile",
-    s: state([player("hero", 0), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
+    s: state([player("clip", 0, { autoStart: false }), player("tv-bucle", 0.9)], {
+      current: { id: "clip", owner: "user" },
+    }),
+    want: { id: "clip", owner: "user" },
+  },
+  {
+    // PiP, or the sound on while reading further down, with no automatic
+    // player in view: the short stays, as before 21-oct-2026.
+    name: "the visitor's hero short out of view, with nothing automatic in view, stays",
+    s: state([player("hero", 0), player("tv-bucle", 0.3)], { current: { id: "hero", owner: "user" } }),
     want: { id: "hero", owner: "user" },
   },
   {
@@ -252,6 +292,224 @@ const cases: { name: string; s: TurnState; want: ReturnType<typeof decideTurn> }
   {
     name: "the visitor's choice also survives reduced motion",
     s: state([player("tv-bucle", 0.4)], { reducedMotion: true, current: { id: "tv-bucle", owner: "user" } }),
+    want: { id: "tv-bucle", owner: "user" },
+  },
+  // ── The hero short makes way for the home's slot (the owner, 21-oct-2026) ──
+  // «Cuando haga scroll hacia abajo y llegue al UFC TV en directo, que se pare
+  // el vídeo de arriba y se ponga el directo sin pulsar.»
+  {
+    name: "the visitor's short scrolled out of view: UFC TV, seen for the dwell, takes the turn on its own",
+    s: state([player("hero", 0), player("tv-bucle", 0.9)], { current: { id: "hero", owner: "user" } }),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "exactly half of the short in view is out of view («more than half» is the rule)",
+    s: state([player("hero", 0.5), player("tv-bucle", 0.8)], { current: { id: "hero", owner: "user" } }),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "UFC TV live takes it the same way (the owner's case)",
+    s: state([player("hero", 0.2), player("tv-directo", 0.9)], { current: { id: "hero", owner: "user" } }),
+    want: { id: "tv-directo", owner: "auto" },
+  },
+  {
+    name: "and so does the event's broadcast in the home's slot",
+    s: state([player("hero", 0), player("evento", 1)], { current: { id: "hero", owner: "user" } }),
+    want: { id: "evento", owner: "auto" },
+  },
+  {
+    // PiP, sound, full screen: it makes way all the same (the owner asked for
+    // the video above to stop); the short's iframe goes, and its PiP with it.
+    name: "a short the visitor touched inside makes way too (owner 'user' is all the turn knows)",
+    s: state([player("hero", 0.1), player("tv-bucle", 1, { since: 60_000 })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "a tall screen: the short still more than half in view keeps the turn, UFC TV waits",
+    s: state([player("hero", 0.51), player("tv-bucle", 1, { since: 60_000 })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "UFC TV seen for only 399 ms: the short keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 0.9, { since: 399 })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "UFC TV half in view: the short keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 0.5, { since: 1000 })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    // A PiP while the visitor is in another tab: nothing may start on its own.
+    name: "tab hidden: the short out of view keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 1)], {
+      pageVisible: false,
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "a blocker open (the menu): the short out of view keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 1)], { blocked: true, current: { id: "hero", owner: "user" } }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "reduced motion: the short out of view keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 1)], {
+      reducedMotion: true,
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "the keyboard focus on UFC TV's poster: the short keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 1, { focused: true })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "UFC TV under 200x200: the short keeps the turn",
+    s: state([player("hero", 0), player("tv-bucle", 1, { eligible: false })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    // The tap itself is never undone on the spot: with no Up Next block the
+    // slot sits right under the hero, and on a phone «Siguiente ›» can show
+    // under a frame scrolled half away, with UFC TV playing below it.
+    // Started there, the short stays until the visitor scrolls on.
+    name: "started with UFC TV already in view and the short already half away: nothing moved since the tap, it stays",
+    s: state(
+      [
+        player("hero", 0.3, { started: 200, left: 5_000, inViewAtStart: ["tv-bucle"] }),
+        player("tv-bucle", 0.9, { since: 5_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    // A finger resting on the screen, or a scroll that goes back to where the
+    // tap was: UFC TV crossed its half line again, but it was in view at the
+    // tap and the short did not move on. Until 21-oct-2026's review this
+    // counted as «UFC TV came into view» and undid the tap.
+    name: "UFC TV in view at the tap, out and back since (the same place): the short stays",
+    s: state(
+      [
+        player("hero", 0.3, { started: 5_000, left: 9_000, inViewAtStart: ["tv-bucle"] }),
+        player("tv-bucle", 0.9, { since: 1_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    name: "UFC TV half or less in view at the tap, more than half now: the visitor scrolled to it, it takes the turn",
+    s: state(
+      [
+        player("hero", 0.3, { started: 5_000, left: 9_000, inViewAtStart: [] }),
+        player("tv-bucle", 0.9, { since: 1_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    // A tall screen: UFC TV in view the whole time; the visitor scrolls the
+    // short out of view under it.
+    name: "the short scrolled out of view after the tap, UFC TV in view all along: it takes the turn at once",
+    s: state(
+      [
+        player("hero", 0.4, { started: 30_000, left: 50, inViewAtStart: ["tv-bucle"] }),
+        player("tv-bucle", 1, { since: 60_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    // The IntersectionObserver reports the drop in the same instant as the
+    // tap (the same clock tick): it still came after the tap.
+    name: "the short moved out of view in the very instant of the tap: that counts as after it",
+    s: state(
+      [
+        player("hero", 0.4, { started: 300, left: 300, inViewAtStart: ["tv-bucle"] }),
+        player("tv-bucle", 1, { since: 60_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    name: "the short that left the view BEFORE the tap, UFC TV in view all along: it stays",
+    s: state(
+      [
+        player("hero", 0.4, { started: 30_000, left: 40_000, inViewAtStart: ["tv-bucle"] }),
+        player("tv-bucle", 1, { since: 60_000 }),
+      ],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "hero", owner: "user" },
+  },
+  {
+    // No mount without a start time in production; a state without one is
+    // read as a tap long gone, the rule without its guard.
+    name: "no start time known: the short out of view makes way, as when the tap is long gone",
+    s: state(
+      [player("hero", 0, { started: null, left: null }), player("tv-bucle", 1, { since: 60_000 })],
+      { current: { id: "hero", owner: "user" } },
+    ),
+    want: { id: "tv-bucle", owner: "auto" },
+  },
+  {
+    // The visitor watching the short in full screen cannot scroll the page
+    // behind it; only a relayout there (the viewport grows on entering full
+    // screen, a phone turned) could move it out of view. Not their gesture.
+    name: "the short in full screen, out of view behind it, UFC TV seen for a minute: it stays",
+    s: state([player("hero", 0, { fullscreen: true }), player("tv-bucle", 1, { since: 60_000 })], {
+      current: { id: "hero", owner: "user" },
+    }),
+    want: { id: "hero", owner: "user" },
+  },
+  // ── Only the hero short makes way: every other case as before ──
+  {
+    name: "UFC TV the visitor put on, out of view, with the hero's poster in full view: UFC TV stays",
+    s: state([player("hero", 1, { since: 60_000 }), player("tv-bucle", 0)], {
+      current: { id: "tv-bucle", owner: "user" },
+    }),
+    want: { id: "tv-bucle", owner: "user" },
+  },
+  {
+    name: "a visitor's clip (the Hall of Fame) out of view, with UFC TV seen for a minute: the clip stays",
+    s: state([player("clip", 0, { autoStart: false }), player("tv-bucle", 1, { since: 60_000 })], {
+      current: { id: "clip", owner: "user" },
+    }),
+    want: { id: "clip", owner: "user" },
+  },
+  {
+    // The modal is a blocker of its own while it is open (video-modal.tsx).
+    name: "the videos modal of the news, with UFC TV in view: the modal stays",
+    s: state([player("modal", 1, { autoStart: false }), player("tv-bucle", 1)], {
+      blocked: true,
+      current: { id: "modal", owner: "user" },
+    }),
+    want: { id: "modal", owner: "user" },
+  },
+  {
+    name: "a visitor's player that does not say yieldsToAuto never makes way, out of view or not",
+    s: state([player("tv-bucle", 0, { yieldsToAuto: false }), player("evento", 1, { since: 60_000 })], {
+      current: { id: "tv-bucle", owner: "user" },
+    }),
     want: { id: "tv-bucle", owner: "user" },
   },
   // ── 200x200, and players that go away ──

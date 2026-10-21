@@ -9,7 +9,10 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop, whyNoUfcTvLoop } from "./helpers";
 // only when the visitor taps its ▶ or «Siguiente ›», and when it ends no other
 // one starts (its poster shows the next short). UFC TV and the event's live
 // broadcast still start on their own when they are seen, and make way when
-// the visitor puts a short on: one player at a time.
+// the visitor puts a short on: one player at a time. Since 21-oct-2026 (the
+// owner) it also goes the other way: scrolled down to UFC TV, the visitor's
+// short makes way, and its poster shows that same short (here, and with the
+// mouse wheel in Chromium and WebKit in e2e/short-cede.spec.ts).
 //
 // The rules are unit-tested in src/lib/playback-turn.test.ts and
 // src/components/playback/turn-controller.test.ts; this is the other half:
@@ -26,11 +29,14 @@ import { fakeYouTubeEmbeds, needsUfcTvLoop, whyNoUfcTvLoop } from "./helpers";
 //   · the ▶ works during the hero's entrance, with the headline's font still
 //     on its way (until 30-sep-2026 it did nothing then);
 //   · UFC TV makes way when the visitor puts a short on, and starts on its own
-//     again when that short ends untouched, if it is seen;
+//     again when that short ends untouched, if it is seen, or as soon as the
+//     visitor scrolls the short out of view and UFC TV into it (21-oct-2026);
+//     on a tall screen, with the short still in view, it waits;
 //   · a hidden tab, a pagehide (the back/forward cache) and the mobile menu
 //     take away the AUTOMATIC player only: what the visitor chose (a tap on a
-//     poster, or inside a player) stays, also out of view as in PiP, and
-//     nothing starts on its own meanwhile (DECISIONS.md, 30-sep-2026);
+//     poster, or inside a player) stays, also out of view as in PiP while
+//     nothing automatic is seen, and nothing starts on its own meanwhile
+//     (DECISIONS.md, 30-sep-2026);
 //   · prefers-reduced-motion: only posters, until a tap.
 //
 // No network: the shorts are canned (UFC_SHORTS_FIXTURE=list, ids
@@ -439,7 +445,9 @@ test("un short tocado por dentro es del visitante: al acabar se queda como estab
 
 // In PiP, or with the sound on while reading further down: what the visitor
 // put on is theirs, out of view too (DECISIONS.md, 30-sep-2026). Only an
-// automatic player goes when it drops to half or less in view.
+// automatic player goes when it drops to half or less in view. The jump to
+// the foot of the page passes UFC TV by without stopping on it: seen, it
+// would take the turn from the short (21-oct-2026, further down).
 test("el short que el visitante pone sigue montado fuera de la vista, como en PiP", async ({ page }) => {
   await openHome(page, 1280, 800);
   await heroPoster(page).click();
@@ -448,6 +456,7 @@ test("el short que el visitante pone sigue montado fuera de la vista, como en Pi
 
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(hero(page)).not.toBeInViewport();
+  if ((await tv(page).count()) > 0) await expect(tv(page)).not.toBeInViewport();
   await page.waitForTimeout(1_500);
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expect(markedIframe(hero(page))).toHaveCount(1);
@@ -541,19 +550,54 @@ test("UFC TV arranca solo cuando se ve, se aparta si el visitante pone un short,
   expect(watch.max, "two autoplaying iframes at once").toBeLessThanOrEqual(1);
 });
 
-test("UFC TV, entero a la vista, espera con su ▶ mientras el short del visitante sigue montado, y elegirlo quita el short", async ({
+// The owner, 21-oct-2026: «cuando haga scroll hacia abajo y llegue al UFC TV
+// en directo, que se pare el vídeo de arriba y se ponga el directo sin
+// pulsar». Until then UFC TV waited here, in full view, with its ▶.
+test("con el short del visitante fuera de la vista, UFC TV arranca solo al verse y quita el short, cuyo póster enseña el mismo short", async ({
   page,
 }) => {
   await openHome(page, 1280, 800);
   await needsUfcTvLoop(page);
+  await watchIframes(page);
+  await nextButton(page).click();
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
+  await expectHeroShort(page, SECOND_SHORT);
+
+  // Down to UFC TV: no click, it starts on its own (muted, as every
+  // automatic start) and the short is gone.
+  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(hero(page).locator("iframe")).toHaveCount(0);
+  await expect(autoplaying(page)).toHaveCount(1);
+  await expect(tv(page).locator("iframe")).toHaveAttribute("src", /[?&]mute=1(&|$)/);
+  // Cut, not ended: its poster shows that same short.
+  await expectHeroPosterShows(page, SECOND_SHORT);
+
+  // Back up: nothing starts on its own, and «Siguiente ›» plays the one after.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(1_500);
+  await expect(hero(page)).toHaveAttribute("data-turn-state", "poster");
+  await expect(autoplaying(page)).toHaveCount(0);
+  expect((await watched(page)).max, "two autoplaying iframes at once").toBeLessThanOrEqual(1);
+  await nextButton(page).click();
+  await expectHeroShort(page, THIRD_SHORT);
+});
+
+// What did not change on 21-oct-2026: a short still more than half in view
+// keeps the turn, and picking UFC TV is picking another player.
+test("en una pantalla alta, UFC TV espera con su ▶ mientras el short del visitante se ve, y elegirlo quita el short", async ({
+  page,
+}) => {
+  await openHome(page, 1280, 2400);
+  await needsUfcTvLoop(page);
+  await expect(tv(page)).toHaveAttribute("data-turn-state", "playing-auto");
   await nextButton(page).click();
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");
   await expectHeroShort(page, SECOND_SHORT);
   await markIframe(hero(page));
 
-  // Out of view, as when the visitor scrolls with the short in PiP: it stays,
-  // and UFC TV, fully in view for far longer than the dwell, does not start.
-  await tv(page).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  // UFC TV fully in view for far longer than the dwell: it does not start.
   await page.waitForTimeout(1_500);
   await expect(markedIframe(hero(page))).toHaveCount(1);
   await expect(hero(page)).toHaveAttribute("data-turn-state", "playing-user");

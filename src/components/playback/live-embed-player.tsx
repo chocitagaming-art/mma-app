@@ -32,7 +32,12 @@ import { cn } from "@/lib/utils";
 //     this, UFC TV played muted 700-850 px below the fold (measured on
 //     29-sep-2026), which YouTube's policies forbid.
 //   · If the visitor puts a short on, it makes way (one player at a time),
-//     and it does not start again while that short is theirs.
+//     and it does not start again while that short is theirs, until the
+//     visitor scrolls on from the short down to this one: then the short
+//     makes way and this one starts on its own, muted (the owner, 21-oct-
+//     2026: «se pare el vídeo de arriba y se ponga el directo sin pulsar»).
+//     Not where the visitor tapped the short, nor with it in full screen.
+//     The rule and its guards are lib/playback-turn.ts's, not this file's.
 //   · prefers-reduced-motion: nothing starts on its own; the poster's ▶ does.
 //     (The event's broadcast did not honour it until now.)
 //   · A tap on the poster, or inside the automatic player, makes it the

@@ -147,6 +147,8 @@ describe("playerToFocus with the turn manager's «touched» detection", () => {
       prefersReducedMotion: () => false,
       headerHeight: () => 64,
       activeElement: () => page.active,
+      fullscreenElement: () => null,
+      moveFocusTo: () => {},
     };
     const run = (ms: number) => {
       clock += ms;

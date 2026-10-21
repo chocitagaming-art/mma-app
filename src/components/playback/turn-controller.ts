@@ -38,6 +38,19 @@ import {
 //     started on its own may come back, as before (the owner's decision,
 //     18-oct-2026, about the modal). Any other start of the visitor (the
 //     hero short over their UFC TV) parks nothing: as before R10;
+//   · the hero short (registered with yieldsToAuto) scrolled out of view
+//     makes way for an automatic player that may start (the owner, 21-oct-
+//     2026; the rule is decideTurn's). So that the visitor's tap is never
+//     undone where it was made, the state carries when each mount started,
+//     the players more than half in view at a tap, and the last time each
+//     player moved further out of view (to half or less, or out altogether:
+//     the observer's 0). And whether the full screen element is inside a
+//     box: nothing makes way in full screen, and its end re-observes
+//     (fullscreenChanged). apply() tells the hero first (onYield), in the
+//     same task: its poster goes back to the short it cut, in the same
+//     render as the swap. If the focus was inside the short's iframe it goes
+//     to the new holder's box (moveFocusTo, no scroll), which a focus does
+//     not hold back: the box stays when it mounts;
 //   · "touched": a tap INSIDE a player's iframe blurs the window and leaves
 //     that iframe as document.activeElement. That makes it the visitor's, and
 //     the hero's timer leaves it alone. As a net, every decision and every
@@ -74,6 +87,11 @@ export type TurnEnvironment = {
   prefersReducedMotion(): boolean;
   headerHeight(): number;
   activeElement(): unknown;
+  // document.fullscreenElement (an <iframe> when a player inside it went full
+  // screen), or null.
+  fullscreenElement(): unknown;
+  // Sends the keyboard focus to a player's box, without scrolling the page.
+  moveFocusTo(el: Element): void;
 };
 
 export type PlayerRegistration = {
@@ -87,6 +105,14 @@ export type PlayerRegistration = {
   autoStart?: boolean;
   // Called synchronously on every mount: the hero picks its short here.
   onMount?: (owner: TurnOwner) => void;
+  // The visitor's player that makes way for an automatic one once half or
+  // less of it is in view: the hero short, and nothing else (the owner,
+  // 21-oct-2026). Defaults to false: what the visitor chose stays.
+  yieldsToAuto?: boolean;
+  // Called synchronously when it does, just before it is unmounted and the
+  // automatic one mounted (the same commit): the hero's poster goes back to
+  // the short it cut, not the next one.
+  onYield?: () => void;
   // The name of the blocker the player itself puts up (the videos modal is
   // one: it covers the page, so it blocks the automatic players while it is
   // open). Such a player sits ABOVE the page, and so above whatever else
@@ -124,6 +150,8 @@ type Entry = {
   autoStart: boolean;
   element: Element;
   onMount?: (owner: TurnOwner) => void;
+  yieldsToAuto: boolean;
+  onYield?: () => void;
   ownBlocker: string | null;
   // The visitor's player that the videos modal took away: no automatic start
   // any more, until the visitor starts it again.
@@ -132,6 +160,13 @@ type Entry = {
   ratio: number;
   area: number;
   aboveSince: number | null;
+  // When it last moved further out of view (from more than half visible to
+  // half or less, or out of the view altogether), and when its current mount
+  // started (null while it is a poster).
+  leftAt: number | null;
+  startedAt: number | null;
+  // The other players more than half in view when the visitor started it.
+  inViewAtStart: string[];
   touched: boolean;
   mounted: boolean;
   owner: TurnOwner | null;
@@ -200,10 +235,18 @@ export function createTurnController(env: TurnEnvironment) {
     return fitsMinimum(p.element.getBoundingClientRect());
   }
 
-  // Is the keyboard focus inside this player's box (its poster)?
+  // Is the keyboard focus inside this player's box (its poster)? The box
+  // itself does not count: it stays when the iframe replaces the poster, so a
+  // mount drops nothing (moveFocusTo leaves the focus there).
   function holdsFocus(p: Entry): boolean {
     const active = env.activeElement();
-    return active != null && p.element.contains(active as Node);
+    return active != null && active !== p.element && p.element.contains(active as Node);
+  }
+
+  // Is the page's full screen element inside this player's box?
+  function inFullscreen(p: Entry): boolean {
+    const element = env.fullscreenElement();
+    return element != null && p.element.contains(element as Node);
   }
 
   function snapshot(): TurnState {
@@ -223,6 +266,11 @@ export function createTurnController(env: TurnEnvironment) {
         aboveSince: p.aboveSince,
         eligible: eligible(p),
         focused: holdsFocus(p),
+        yieldsToAuto: p.yieldsToAuto,
+        startedAt: p.startedAt,
+        leftAt: p.leftAt,
+        inViewAtStart: p.inViewAtStart,
+        fullscreen: inFullscreen(p),
       })),
     };
   }
@@ -232,6 +280,9 @@ export function createTurnController(env: TurnEnvironment) {
     p.owner = owner;
     p.mountCount += 1;
     p.touched = false;
+    p.startedAt = env.now();
+    p.inViewAtStart =
+      owner === "user" ? [...players.values()].filter((q) => q !== p && q.ratio > HALF).map((q) => q.id) : [];
     p.onMount?.(owner);
   }
 
@@ -240,6 +291,8 @@ export function createTurnController(env: TurnEnvironment) {
     p.owner = null;
     p.touched = false;
     p.iframe = null;
+    p.startedAt = null;
+    p.inViewAtStart = [];
   }
 
   // Unmount the old one and mount the new one in the same task.
@@ -251,12 +304,24 @@ export function createTurnController(env: TurnEnvironment) {
       return;
     }
     const holder = current ? players.get(current.id) : undefined;
-    if (holder) unmount(holder);
+    // The visitor's player, still big enough, handed to an automatic one:
+    // decideTurn does that only when the hero short makes way out of view.
+    const madeWay =
+      holder != null && current?.owner === "user" && next?.owner === "auto" && holder.yieldsToAuto && eligible(holder);
+    // Its iframe is about to go: with the focus inside, it would drop on <body>.
+    const hadFocus = madeWay && holder.iframe != null && env.activeElement() === holder.iframe;
+    if (holder) {
+      if (madeWay) holder.onYield?.();
+      unmount(holder);
+    }
     current = null;
     const p = next ? players.get(next.id) : undefined;
     if (next && p) {
       mount(p, next.owner);
       current = next;
+      // Where the visitor scrolled to. Its box, not its iframe: a focused
+      // iframe would read as «touched» and make the automatic player theirs.
+      if (hadFocus) env.moveFocusTo(p.element);
     }
   }
 
@@ -290,6 +355,7 @@ export function createTurnController(env: TurnEnvironment) {
     for (const e of entries) {
       const p = byElement.get(e.target);
       if (!p) continue;
+      const before = p.ratio;
       p.ratio = e.isIntersecting ? e.intersectionRatio : 0;
       p.area = e.isIntersecting ? e.intersectionRect.width * e.intersectionRect.height : 0;
       if (p.ratio > HALF) {
@@ -298,6 +364,10 @@ export function createTurnController(env: TurnEnvironment) {
           later(evaluate, DWELL_MS + 20);
         }
       } else {
+        // Further out of view: to half or less, or out of it altogether (the
+        // threshold 0). The second one is how a short started already half
+        // away moves on (21-oct-2026's review).
+        if (p.aboveSince != null || (p.ratio === 0 && before > 0)) p.leftAt = env.now();
         p.aboveSince = null;
       }
     }
@@ -353,12 +423,17 @@ export function createTurnController(env: TurnEnvironment) {
         autoStart: reg.autoStart ?? false,
         element: reg.element,
         onMount: reg.onMount,
+        yieldsToAuto: reg.yieldsToAuto ?? false,
+        onYield: reg.onYield,
         ownBlocker: reg.ownBlocker ?? null,
         parked: false,
         iframe: null,
         ratio: 0,
         area: 0,
         aboveSince: null,
+        leftAt: null,
+        startedAt: null,
+        inViewAtStart: [],
         touched: false,
         mounted: false,
         owner: null,
@@ -458,6 +533,16 @@ export function createTurnController(env: TurnEnvironment) {
 
     reducedMotionChanged() {
       evaluate();
+    },
+
+    // fullscreenchange: the hero short does not make way in full screen, so
+    // its end decides again, on the page as it is NOW. Not on the last
+    // ratios: WebKit puts back, on leaving, the scroll it had on entering,
+    // after this event, and deciding here gave the turn away from a short
+    // that was back in full view (measured on 21-oct-2026). A new observer
+    // reports every player as it is, and that report decides.
+    fullscreenChanged() {
+      observe();
     },
 
     // focusin / focusout anywhere on the page: a poster that had the focus

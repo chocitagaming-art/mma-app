@@ -13,7 +13,8 @@ import {
 // (its own tests); this is only "which short" and "for how long". Since
 // 30-sep-2026 (night) nothing here moves on its own: the poster shows a short,
 // its ▶ plays it, «Siguiente ›» plays the one after the last one played, and at
-// the end of a short the poster shows the next one, waiting for a tap.
+// the end of a short the poster shows the next one, waiting for a tap. One cut
+// before its end (21-oct-2026: it made way for UFC TV) shows itself again.
 
 describe("shortTimerMs", () => {
   it("is the duration plus 2.5 s, counted from the iframe's load", () => {
@@ -122,6 +123,46 @@ describe("createShortsCarousel", () => {
     c.queue(2);
     c.clearQueue();
     expect(c.take()).toBe(0);
+  });
+
+  // 21-oct-2026: the short the visitor scrolled away from makes way for UFC
+  // TV (lib/playback-turn.ts). It was cut, not ended: its poster shows it
+  // again, not the next one.
+  it("a short cut before its end (it made way for UFC TV): the poster shows that same one again", () => {
+    const c = createShortsCarousel(5);
+    c.queue(1);
+    c.take();
+    expect(c.getSnapshot()).toEqual({ current: 1, cursor: 2 });
+    c.interrupt();
+    expect(c.getSnapshot()).toEqual({ current: 1, cursor: 1 });
+    // Its ▶ plays that one again; «Siguiente ›», the one after it.
+    expect(c.nextIndex()).toBe(2);
+    c.queue(c.getSnapshot().cursor);
+    expect(c.take()).toBe(1);
+  });
+
+  it("an interrupt before any short, or a second one, changes nothing and notifies nobody", () => {
+    const c = createShortsCarousel(3);
+    const fn = vi.fn();
+    c.subscribe(fn);
+    const before = c.getSnapshot();
+    c.interrupt();
+    expect(c.getSnapshot()).toBe(before);
+    c.take();
+    c.interrupt();
+    const after = c.getSnapshot();
+    c.interrupt();
+    expect(c.getSnapshot()).toBe(after);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("the last short of the list cut: the poster shows it, not the first", () => {
+    const c = createShortsCarousel(3);
+    c.queue(2);
+    c.take();
+    c.interrupt();
+    expect(c.getSnapshot()).toEqual({ current: 2, cursor: 2 });
+    expect(c.nextIndex()).toBe(0);
   });
 
   it("notifies on every take with a new snapshot object", () => {
