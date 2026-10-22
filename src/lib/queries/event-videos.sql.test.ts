@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // LOS VÍDEOS DE LA FICHA DE EVENTO: QUE LA CONSULTA LOS PIDA Y LOS MAPEE.
 //
@@ -199,5 +199,109 @@ describe("la rueda de prensa (migración 033)", () => {
     const evento = await getEventDetail(1093);
     expect(evento?.pressVideoId).toBeNull();
     expect(evento?.pressVideoTitle).toBeNull();
+  });
+});
+
+// SI LA WEB LLEGA A PRODUCCIÓN ANTES QUE LA 033. Vercel despliega solo con cada
+// merge a main, y la migración la aplica otra mano en otro repo: el orden no lo
+// garantiza nada. El 22-oct, con el rol de solo lectura, producción contestaba
+// `column "press_video_id" does not exist` (SQLSTATE 42703). Sin red, ese error
+// tumba /eventos/[id], /en-vivo y /ufc-hoy, que no lo capturan; y eso en la
+// semana del UFC 333.
+
+/** Un error de Postgres tal y como lo lanza `pg`: con su SQLSTATE en `code`. */
+function pgError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
+/** Todas las consultas de la ficha que recibió el mock, en orden. */
+const consultasDelEvento = () =>
+  sqlMock.mock.calls.map(([query]) => query).filter((q) => q.includes("FROM events WHERE id"));
+
+const COLUMNAS_033 = ["press_video_id", "press_video_title"] as const;
+
+/**
+ * Producción SIN la 033, como Postgres: nombrar la columna de verdad revienta
+ * con 42703; pedirla como `NULL::text AS press_video_id` no, y la devuelve a
+ * NULL. Una columna que la consulta no pide ni así no llega en la fila.
+ */
+function montarBaseSin033(fila: Record<string, unknown>) {
+  const sinRueda = Object.fromEntries(
+    Object.entries(fila).filter(([columna]) => !columna.startsWith("press_video_")),
+  );
+  sqlMock.mockReset();
+  sqlMock.mockImplementation((query: string) => {
+    if (query.includes("FROM events WHERE id")) {
+      const sinAlias = query.replace(/\bAS\s+press_video_\w+/g, "");
+      const real = COLUMNAS_033.find((columna) => sinAlias.includes(columna));
+      if (real) {
+        return Promise.reject(pgError("42703", `column "${real}" does not exist`));
+      }
+      const aNull = COLUMNAS_033.filter((columna) => query.includes(`NULL::text AS ${columna}`));
+      return Promise.resolve([
+        { ...sinRueda, ...Object.fromEntries(aNull.map((columna) => [columna, null])) },
+      ] as never);
+    }
+    return Promise.resolve(responder(query, fila) as never);
+  });
+}
+
+/** La base de siempre, salvo que la PRIMERA consulta de la ficha falla con `error`. */
+function montarBaseQueFallaUnaVez(fila: Record<string, unknown>, error: Error) {
+  montarBase(fila);
+  const normal = sqlMock.getMockImplementation()!;
+  let fallado = false;
+  sqlMock.mockImplementation((query: string, values?: unknown[]) => {
+    if (!fallado && query.includes("FROM events WHERE id")) {
+      fallado = true;
+      return Promise.reject(error);
+    }
+    return normal(query, values);
+  });
+}
+
+describe("si la web se despliega antes que la migración 033", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("🔴 la ficha se sirve entera, sin rueda de prensa, en vez de caerse", async () => {
+    montarBaseSin033(UFC_333);
+    const evento = await getEventDetail(1093);
+    expect(evento, "sin la 033 la ficha del evento se cae").not.toBeNull();
+    expect(evento?.name).toBe("UFC 333: Volkanovski vs. Evloev");
+    expect(evento?.faceoffVideoId).toBe("hVvIw8K754c");
+    expect(evento?.faceoffVideoTitle).toBe("#UFC333 Volkanovski vs Evloev Careos de la Conferencia");
+    // null y no undefined: la página trata los dos igual, pero un undefined aquí
+    // querría decir que la segunda consulta se olvidó de una columna.
+    expect(evento?.pressVideoId).toBeNull();
+    expect(evento?.pressVideoTitle).toBeNull();
+    // Y queda en el log de Vercel POR QUÉ no hay rueda de prensa.
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(String(vi.mocked(console.warn).mock.calls[0][0])).toContain("033");
+  });
+
+  it("🔴 con la 033 aplicada va UNA sola consulta, y con las columnas de verdad", async () => {
+    // La red es para el hueco entre un despliegue y otro, no un camino normal:
+    // ni un segundo viaje a Neon en cada ficha ni la rueda pedida como NULL.
+    montarBase(UFC_333);
+    await getEventDetail(1093);
+    const consultas = consultasDelEvento();
+    expect(consultas).toHaveLength(1);
+    expect(consultas[0]).not.toMatch(/AS\s+press_video_/);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["otra columna que no existe", pgError("42703", 'column "weighin_video_title" does not exist')],
+    ["un GRANT olvidado", pgError("42501", "permission denied for table events")],
+    ["Neon caída", new Error("Connection terminated unexpectedly")],
+  ])("🔴 %s se relanza: no se disfraza de «no hay rueda de prensa»", async (_caso, error) => {
+    montarBaseQueFallaUnaVez(UFC_333, error);
+    await expect(getEventDetail(1093)).rejects.toBe(error);
+    expect(consultasDelEvento(), "se reintentó un fallo que no es la 033").toHaveLength(1);
   });
 });
