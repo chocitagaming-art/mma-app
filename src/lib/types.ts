@@ -486,6 +486,15 @@ export type EventDetail = {
   // verdad qué se está viendo.
   weighinVideoId: string | null;
   weighinVideoTitle: string | null;
+  // El vídeo de la RUEDA DE PRENSA (migración 033), con su título real. Mismo
+  // diseño que el careo y el pesaje: NULL = no se pinta nada. Se fija SOLO a
+  // mano (fijar_videos_evento): ningún cron lo busca ni lo pisa.
+  //
+  // ⚠️ TAMPOCO ES SIEMPRE DE LA UFC: el del UFC 333 lo eligió el dueño en
+  // español, y es una resubida del canal «MMA Español», no la conferencia
+  // oficial (que la UFC publica en inglés). El rótulo lo pone el vídeo.
+  pressVideoId: string | null;
+  pressVideoTitle: string | null;
   broadcast: string | null;
   ticketUrl: string | null;
   tagline: string | null;

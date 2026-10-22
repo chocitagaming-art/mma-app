@@ -300,6 +300,10 @@ type EventRow = {
   // vídeo y no se pinta nada (ni hueco ni «no disponible»).
   weighin_video_id: string | null;
   weighin_video_title: string | null;
+  // Migración 033. La rueda de prensa y su título real, fijados a mano. NULL =
+  // no hay vídeo y no se pinta nada.
+  press_video_id: string | null;
+  press_video_title: string | null;
   // Migración 027. El vídeo que la UFC emite EN ABIERTO la noche de la velada,
   // que NO es el combate estelar: ese es de pago. Suele ser la previa. NULL =
   // no hay directo y no se pinta nada.
@@ -529,6 +533,7 @@ async function getEventDetailUncached(
     `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url, faceoff_video_id,
             faceoff_video_title, weighin_video_id, weighin_video_title,
+            press_video_id, press_video_title,
             live_video_id, live_video_title,
             broadcast, ticket_url, tagline, headliner, source, source_id,
             early_prelims_time::text AS early_prelims_time,
@@ -596,6 +601,8 @@ async function getEventDetailUncached(
     faceoffVideoTitle: event.faceoff_video_title,
     weighinVideoId: event.weighin_video_id,
     weighinVideoTitle: event.weighin_video_title,
+    pressVideoId: event.press_video_id,
+    pressVideoTitle: event.press_video_title,
     liveVideoId: event.live_video_id,
     liveVideoTitle: event.live_video_title,
     broadcast: event.broadcast,

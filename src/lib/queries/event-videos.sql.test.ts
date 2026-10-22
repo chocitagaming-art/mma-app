@@ -145,3 +145,59 @@ describe("los vídeos del evento (migración 029)", () => {
     expect(evento?.weighinVideoTitle).toBeNull();
   });
 });
+
+// LA RUEDA DE PRENSA (migración 033 de mma-ingesta). La ficha tenía sitio para
+// el careo, el pesaje y el directo, pero no para la conferencia. Mismo diseño
+// que las de la 029: id de 11 caracteres + título REAL, NULL = no se pinta, y
+// solo se rellena a mano con fijar_videos_evento.
+
+/**
+ * El UFC 333 con el vídeo que eligió el dueño el 22-oct: una RESUBIDA del canal
+ * «MMA Español», no la conferencia oficial de la UFC (DHLdj5yFWmw, en inglés).
+ * Por eso el título importa: es lo único que dice qué se está viendo.
+ */
+const UFC_333 = {
+  ...UFC_331,
+  id: 1093,
+  name: "UFC 333: Volkanovski vs. Evloev",
+  event_date: "2026-10-24",
+  faceoff_video_id: "hVvIw8K754c",
+  faceoff_video_title: "#UFC333 Volkanovski vs Evloev Careos de la Conferencia",
+  weighin_video_id: null,
+  weighin_video_title: null,
+  press_video_id: "g3h-jwpkxJU",
+  press_video_title: "UFC 333: CONFERENCIA DE PRENSA COMPLETA EN ESPAÑOL",
+};
+
+describe("la rueda de prensa (migración 033)", () => {
+  beforeEach(() => {
+    montarBase(UFC_333);
+  });
+
+  it("🔴 la consulta pide el vídeo de la rueda de prensa y su título", async () => {
+    await getEventDetail(1093);
+    const query = consultaDelEvento();
+    expect(query, "getEventDetail ya no consulta la tabla events").toBeDefined();
+    for (const columna of ["press_video_id", "press_video_title"]) {
+      expect(query, `el SELECT de la ficha no pide ${columna}`).toContain(columna);
+    }
+  });
+
+  it("🔴 id y título llegan tal cual: el título dice que es una resubida en español", async () => {
+    const evento = await getEventDetail(1093);
+    expect(evento?.pressVideoId).toBe("g3h-jwpkxJU");
+    expect(evento?.pressVideoTitle).toBe(
+      "UFC 333: CONFERENCIA DE PRENSA COMPLETA EN ESPAÑOL",
+    );
+  });
+
+  it("🔴 con las columnas a NULL los campos llegan null, no undefined", async () => {
+    // Lo normal: casi ningún evento tiene rueda de prensa fijada. `null` y no
+    // `undefined`, por lo mismo que en la 029: un mapeo roto no debe pasar por
+    // «no hay vídeo».
+    montarBase({ ...UFC_333, press_video_id: null, press_video_title: null });
+    const evento = await getEventDetail(1093);
+    expect(evento?.pressVideoId).toBeNull();
+    expect(evento?.pressVideoTitle).toBeNull();
+  });
+});
