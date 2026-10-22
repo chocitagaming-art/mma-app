@@ -6,6 +6,7 @@ import { CalendarDays, Clapperboard, MapPin, Ticket, Tv } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventLiveEmbed } from "@/components/event-live-embed";
+import { EventPressConferenceSection } from "@/components/event-press-conference";
 import { EventScheduleLine, EventSectionTime } from "@/components/event-schedule";
 import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
@@ -116,7 +117,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   // Solo se pregunta a YouTube con la ventana abierta (fase 'pre' o 'live') y
   // el evento sin terminar: la ficha se abre en cualquier evento del
   // histórico, y en uno de hace meses no hay nada que detectar. Y no se repite
-  // un vídeo que la ficha ya enseña más abajo como careo o como pesaje.
+  // un vídeo que la ficha ya enseña más abajo como careo, rueda de prensa o
+  // pesaje.
   //
   // 🪤 Va con `await` directo, sin <Suspense>: la primera petición de cada
   // tramo de 120 s espera a YouTube (como mucho 3 s: son dos tandas de dos
@@ -129,6 +131,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       : undefined;
   const eventVideo = resolveEventVideo(event.liveVideoId, event.liveVideoTitle, detectedLive, [
     event.faceoffVideoId,
+    event.pressVideoId,
     event.weighinVideoId,
   ]);
 
@@ -391,9 +394,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       ) : null}
 
       {/* Careo oficial (face-off): su propia sección, debajo de las peleas
-          canceladas y justo antes del pesaje. El video id lo casa match_faceoffs
-          (mma-ingesta) desde el RSS del canal de UFC y se rellena solo por cron
-          para los eventos futuros.
+          canceladas y justo antes de la rueda de prensa y del pesaje. El video
+          id lo casa match_faceoffs (mma-ingesta) desde el RSS del canal de UFC
+          y se rellena solo por cron para los eventos futuros.
 
           🪤 «Careo oficial» es el rótulo de la SECCIÓN, no del vídeo: debajo se
           lee el TÍTULO REAL de lo que se va a reproducir (migración 029). El día
@@ -426,6 +429,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </div>
         </section>
       ) : null}
+
+      {/* La rueda de prensa (migración 033), justo después del careo, que a
+          menudo sale de esa misma conferencia (el del UFC 333 se titula
+          «Careos de la Conferencia»). Se fija solo a mano y, sin vídeo, no
+          pinta nada. Si es el mismo vídeo que el careo o el pesaje, no se
+          repite. Fuera del turnero, como el careo y el pesaje (tarea 8). */}
+      <EventPressConferenceSection
+        videoId={event.pressVideoId}
+        videoTitle={event.pressVideoTitle}
+        eventName={event.name}
+        alreadyShown={[event.faceoffVideoId, event.weighinVideoId]}
+      />
 
       {/* BE2: pesaje oficial (solo pinta si hay filas o vídeo). El vídeo del
           pesaje (migración 029) viaja con la sección, encima de la tabla. */}

@@ -300,6 +300,10 @@ type EventRow = {
   // vídeo y no se pinta nada (ni hueco ni «no disponible»).
   weighin_video_id: string | null;
   weighin_video_title: string | null;
+  // Migración 033. La rueda de prensa y su título real, fijados a mano. NULL =
+  // no hay vídeo y no se pinta nada.
+  press_video_id: string | null;
+  press_video_title: string | null;
   // Migración 027. El vídeo que la UFC emite EN ABIERTO la noche de la velada,
   // que NO es el combate estelar: ese es de pago. Suele ser la previa. NULL =
   // no hay directo y no se pinta nada.
@@ -522,21 +526,60 @@ async function fetchEventBouts(
   }));
 }
 
-async function getEventDetailUncached(
-  id: number,
-): Promise<EventDetail | null> {
-  const eventRows = await sql<EventRow>(
-    `SELECT id, name, event_date::text AS event_date, location,
+// La rueda de prensa (migración 033), pedida de verdad o, si la base aún no la
+// tiene, como NULL: la misma consulta sirve antes y después de la migración.
+const PRESS_COLUMNS = "press_video_id, press_video_title";
+const PRESS_COLUMNS_PENDING =
+  "NULL::text AS press_video_id, NULL::text AS press_video_title";
+
+function eventDetailQuery(pressColumns: string): string {
+  return `SELECT id, name, event_date::text AS event_date, location,
             status, start_time::text AS start_time, image_url, faceoff_video_id,
             faceoff_video_title, weighin_video_id, weighin_video_title,
+            ${pressColumns},
             live_video_id, live_video_title,
             broadcast, ticket_url, tagline, headliner, source, source_id,
             early_prelims_time::text AS early_prelims_time,
             prelims_time::text AS prelims_time
-     FROM events WHERE id = $1`,
-    [id],
-  );
-  const event = eventRows[0];
+     FROM events WHERE id = $1`;
+}
+
+// ¿Es la 033 sin aplicar? Solo un 42703 (columna inexistente) que nombra una
+// columna de la rueda de prensa. Cualquier otro error se relanza tal cual: otra
+// columna que falte es un fallo de verdad, y un Neon caído o un GRANT olvidado
+// no se disfrazan de «no hay rueda de prensa».
+function isPressMigrationPending(error: unknown): boolean {
+  const { code, message } = (error ?? {}) as { code?: unknown; message?: unknown };
+  return code === "42703" && typeof message === "string" && message.includes("press_video_");
+}
+
+// 🪤 RED PARA EL ORDEN DE DESPLIEGUE. La 033 la aplica otra mano en mma-ingesta
+// y Vercel despliega solo con cada merge a main: nada garantiza que la columna
+// exista cuando llegue este código. Sin esta red, un merge adelantado tumba
+// /eventos/[id] (también su generateMetadata), /en-vivo y /ufc-hoy, porque
+// ninguna captura el error. Con ella, la ficha sale entera y sin rueda de
+// prensa, como un evento que no la tiene fijada. El mismo patrón que la
+// escalera del Salón de la Fama (hall-of-fame.ts): servir antes Y después.
+//
+// Con la 033 aplicada es una sola consulta, como siempre; el segundo viaje solo
+// se paga en el hueco, y lo de dentro de la caché caduca a los 60 s.
+async function fetchEventRow(id: number): Promise<EventRow | undefined> {
+  try {
+    return (await sql<EventRow>(eventDetailQuery(PRESS_COLUMNS), [id]))[0];
+  } catch (error) {
+    if (!isPressMigrationPending(error)) throw error;
+    console.warn(
+      `getEventDetail(${id}): la base aún no tiene la migración 033; se sirve la ficha sin rueda de prensa:`,
+      (error as { message?: string }).message,
+    );
+    return (await sql<EventRow>(eventDetailQuery(PRESS_COLUMNS_PENDING), [id]))[0];
+  }
+}
+
+async function getEventDetailUncached(
+  id: number,
+): Promise<EventDetail | null> {
+  const event = await fetchEventRow(id);
   if (!event) {
     return null;
   }
@@ -596,6 +639,8 @@ async function getEventDetailUncached(
     faceoffVideoTitle: event.faceoff_video_title,
     weighinVideoId: event.weighin_video_id,
     weighinVideoTitle: event.weighin_video_title,
+    pressVideoId: event.press_video_id,
+    pressVideoTitle: event.press_video_title,
     liveVideoId: event.live_video_id,
     liveVideoTitle: event.live_video_title,
     broadcast: event.broadcast,

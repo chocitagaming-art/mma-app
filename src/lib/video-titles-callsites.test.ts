@@ -123,3 +123,70 @@ describe("el vídeo del pesaje", () => {
     expect(src, "el título real del vídeo dejó de pintarse").toContain("videoTitle");
   });
 });
+
+// LA RUEDA DE PRENSA (migración 033 de mma-ingesta). Lo que se pinta lo juzga
+// `components/event-press-conference.test.ts`; aquí, que la ficha lo cablee en
+// su sitio y que no se cuele en ningún otro.
+describe("el vídeo de la rueda de prensa", () => {
+  const FICHA = "app/eventos/[id]/page.tsx";
+
+  it("la ficha le pasa el vídeo y su título real a la sección", () => {
+    const marca = etiqueta(leerFuente(FICHA), "EventPressConferenceSection");
+    expect(marca, `${FICHA} no pinta la rueda de prensa`).not.toBeNull();
+    expect(marca).toContain("videoId={event.pressVideoId}");
+    expect(marca, "sin su título, la sección rotularía un vídeo que no sabe nombrar").toContain(
+      "videoTitle={event.pressVideoTitle}",
+    );
+  });
+
+  it("y no repite un vídeo que la ficha ya enseña como careo o como pesaje", () => {
+    const marca = etiqueta(leerFuente(FICHA), "EventPressConferenceSection") ?? "";
+    expect(marca).toContain("event.faceoffVideoId");
+    expect(marca).toContain("event.weighinVideoId");
+  });
+
+  it("el directo detectado tampoco repite la rueda de prensa", () => {
+    // resolveEventVideo descarta el vídeo que UFC TV detecta si la ficha ya lo
+    // enseña más abajo: la rueda de prensa entra en esa lista.
+    const src = leerFuente(FICHA);
+    const inicio = src.indexOf("resolveEventVideo(");
+    expect(inicio, `${FICHA} ya no resuelve el directo`).toBeGreaterThan(-1);
+    const llamada = src.slice(inicio, src.indexOf(");", inicio));
+    expect(llamada).toContain("event.pressVideoId");
+  });
+
+  it("va justo después del careo y antes del pesaje", () => {
+    const src = leerFuente(FICHA);
+    const careo = src.indexOf("{event.faceoffVideoId ? (");
+    const rueda = src.indexOf("<EventPressConferenceSection");
+    const pesaje = src.indexOf("<EventWeighInsSection");
+    expect(careo, "no encuentro el bloque del careo").toBeGreaterThan(-1);
+    expect(rueda, "la rueda de prensa no va después del careo").toBeGreaterThan(careo);
+    expect(pesaje, "la rueda de prensa no va antes del pesaje").toBeGreaterThan(rueda);
+    // «Justo después»: del careo a la rueda, la única sección es la del careo y
+    // no se pinta ningún otro bloque del evento (directo, pesaje...).
+    const tramo = src.slice(careo, rueda);
+    expect(tramo.match(/<section\b/g), "hay otra sección entre el careo y la rueda").toHaveLength(1);
+    expect(tramo, "hay otro bloque del evento entre el careo y la rueda").not.toMatch(/<Event\w+/);
+  });
+
+  it("la sección no afirma que el vídeo sea de la UFC", () => {
+    // La rueda del UFC 333 que eligió el dueño es una resubida del canal «MMA
+    // Español», no la conferencia de la UFC (esa es DHLdj5yFWmw, en inglés).
+    // Mismo aviso que el pesaje de TheMacLife: un «oficial» aquí sería falso.
+    const src = leerFuente("components/event-press-conference.tsx");
+    expect(src).not.toContain("canal oficial");
+    expect(src).not.toMatch(/Rueda de prensa oficial/i);
+    expect(src, "el título real del vídeo dejó de pintarse").toContain("videoTitle");
+  });
+
+  it("solo la pinta la ficha del evento: ni /en-vivo ni la portada", () => {
+    const sitios = [...recorrerTsx("app/"), ...recorrerTsx("components/")]
+      .filter((ruta) => {
+        const src = leerFuente(ruta);
+        return src.includes("<EventPressConferenceSection") || src.includes("pressVideo");
+      })
+      .sort();
+    expect(sitios).toEqual([FICHA]);
+  });
+});
