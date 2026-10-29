@@ -396,13 +396,17 @@ for (const motor of ["chromium", "webkit"] as const) {
 
     // La foto de ufc.com se pinta a 112 px en el móvil (caja de 72) y a 150
     // desde 640 (caja de 96): la de 256 vale hasta 2,29x y 1,70x. Un iPhone
-    // (3x) y un iPad (2x) bajan el original; un móvil 1x, la de 256.
-    test("las caras del «Último evento» de la portada piden el original a 390@3x y 768@2x, y la de 256 a 390@1x", async ({
+    // (3x) y un iPad (2x) bajan el original; un móvil 2x o 1x, la de 256.
+    // 🪤 El 2x es el móvil más común y el lado del PESO: si el `sizes` del
+    // móvil sube de 128 px, todos ellos bajarían el original sin que el 3x ni
+    // el 1x lo notaran.
+    test("las caras del «Último evento» de la portada piden el original a 390@3x y 768@2x, y la de 256 a 390@2x y 390@1x", async ({
       abrir,
     }) => {
       const pantallas = [
         { width: 390, height: 844, dpr: 3, original: true },
         { width: 768, height: 1024, dpr: 2, original: true },
+        { width: 390, height: 844, dpr: 2, original: false },
         { width: 390, height: 844, dpr: 1, original: false },
       ];
       for (const { original, ...pantalla } of pantallas) {

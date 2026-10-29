@@ -16,6 +16,8 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //   · Cada pieza (cara, nombre, récord, cuota, GANA) queda DENTRO de su
 //     esquina, la cara no pisa el texto, nada pisa el centro y el anillo del
 //     ganador no lo corta la tarjeta. Sin desbordar la página.
+//   · Las dos caras de cada fila arrancan a la misma altura, y un nombre que no
+//     cabe NUNCA tiene la cara a su lado: la cara grande no le come el ancho.
 //   · 🪤 La MISMA fila pinta /eventos/[id], /en-vivo y /ufc-hoy, y ahí no
 //     cambia nada (el sábado 31 hay velada en /en-vivo): en la ficha del mismo
 //     evento las caras siguen a 36/48 px y sin original.
@@ -165,6 +167,17 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
           continue;
         }
         const rCentro = caja(centro);
+        // Las dos caras de la fila arrancan a la misma altura (lo mismo que
+        // e2e/careo-fotos.spec.ts mide en la ficha del evento).
+        const [arribaRoja, arribaAzul] = esquinas.map((e) => caja(e.firstElementChild ?? e).top);
+        if (Math.abs(arribaRoja - arribaAzul) > tolerancia) {
+          const [roja, azul] = esquinas.map(
+            (e) => e.querySelector("p span.truncate")?.textContent?.trim() ?? "?",
+          );
+          fallos.push(
+            `${roja} vs ${azul}: las caras no arrancan a la misma altura (${(arribaAzul - arribaRoja).toFixed(1)} px)`,
+          );
+        }
         for (const esquina of esquinas) {
           const lado = esquina.dataset.boutCorner ?? "?";
           const cabeza = esquina.firstElementChild as HTMLElement;
@@ -189,6 +202,26 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
             continue;
           }
           if (!dentro(caja(lineaNombre), rEsquina)) fallos.push(`${donde}: el nombre se sale de su esquina`);
+          // 🪤 Un nombre cortado («ALEXANDER VOLKAN…») sigue DENTRO de su caja:
+          // las comprobaciones de arriba no lo ven. En la portada, si un nombre
+          // no cabe, la cara NO puede estar a su lado comiéndole el ancho: por
+          // eso la esquina se apila por debajo de lg (ver ROW_LAYOUTS en
+          // src/components/event-bout-row.tsx). Apilado, el nombre ya tiene la
+          // esquina entera, más que en la fila de siempre, y cortarse ahí no es
+          // nuevo (a 360-390 el estelar más largo aún no cabe del todo).
+          const spanNombre = lineaNombre.querySelector<HTMLElement>("span.truncate");
+          const caraAlLado =
+            Math.min(rCabeza.bottom, rTexto.bottom) - Math.max(rCabeza.top, rTexto.top) > tolerancia;
+          if (
+            ambito === "portada" &&
+            spanNombre &&
+            spanNombre.scrollWidth > spanNombre.clientWidth &&
+            caraAlLado
+          ) {
+            fallos.push(
+              `${donde}: el nombre se corta con la cara al lado (${spanNombre.clientWidth} de ${spanNombre.scrollWidth} px)`,
+            );
+          }
           // Cada pieza de la línea del récord, entera y dentro de su esquina.
           for (const nodo of lineaRecord.childNodes) {
             const pieza = nodo.textContent?.trim() ?? "";
