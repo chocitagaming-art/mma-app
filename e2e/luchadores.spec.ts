@@ -387,7 +387,10 @@ for (const motor of ["chromium", "webkit"] as const) {
       pagina,
     }) => {
       await abrir(pagina, "/fighters", 1280);
-      const tarjeta = pagina.locator(TARJETAS).first();
+      // Una tarjeta que NO sea de campeón: la del campeón sigue en oro al pasar
+      // el ratón (29-oct-2026), y eso lo vigila campeones-oro.spec.ts. La
+      // primera página va por relevancia, con los campeones delante.
+      const tarjeta = pagina.locator(`${TARJETAS}:not([data-champion])`).first();
       const estado = () =>
         tarjeta.evaluate((a) => {
           const barra = getComputedStyle(a, "::after").transform;

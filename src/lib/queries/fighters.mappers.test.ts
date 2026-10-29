@@ -68,6 +68,17 @@ describe("mapFighter", () => {
     expect(mapFighter(fila()).ufcFightCount).toBeNull();
   });
 
+  // 29-oct-2026: los campeones actuales van en oro en /fighters y en la
+  // portada. La consulta trae `is_champion`; el mapper solo lo pasa, y lo que
+  // no sea un `true` de Postgres (la ficha y el cara a cara no lo calculan) es
+  // «no campeón», nunca undefined.
+  it("isChampion es true SOLO con un is_champion true de la consulta", () => {
+    expect(mapFighter(fila({ is_champion: true })).isChampion).toBe(true);
+    expect(mapFighter(fila({ is_champion: false })).isChampion).toBe(false);
+    expect(mapFighter(fila({ is_champion: null })).isChampion).toBe(false);
+    expect(mapFighter(fila()).isChampion).toBe(false);
+  });
+
   it("sigue mapeando el resto de la fila sin cambios", () => {
     const f = mapFighter(fila({ height_cm: "177.8", nickname: "Do Bronxs" }));
 

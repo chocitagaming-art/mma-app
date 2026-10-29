@@ -1,6 +1,6 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { esperarHidratacion, fakeYouTubeEmbeds } from "./helpers";
+import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
 // ── «Mejores libra por libra» de la portada ───────────────────────────────
 //
@@ -169,4 +169,157 @@ test("el libra por libra alterna Masculino y Femenino, y cada pie cuadra con su 
   await expect(femenino).toHaveAttribute("tabindex", "-1");
   await expect(panelM).toBeVisible();
   await expect(panelF).toBeHidden();
+});
+
+// ── Las caras, más grandes y nítidas, y los campeones en oro (29-oct-2026) ──
+//
+// El dueño: «ponemos las fotos de las cabezas más grandes y nítidas, tanto en
+// masculino como en femenino», y el oro de los campeones de /fighters también
+// aquí. La cara era un cuadrado de 64 px con la copia de 256 de ufc.com; ahora
+// es la cara recortada en relieve, de pie sobre la línea de la cabecera como en
+// /fighters y /clasificacion: una caja de 160×100 (la proporción 1,6:1 de la
+// cara de ufc.com, que la llena) con el original de 500w en el srcset y
+// `sizes` exacto, 160px. Son 3,9 veces el área de antes.
+//
+// Los campeones se leen de /clasificacion, que es quien los publica: sin
+// nombres fijos (ver arriba).
+
+/** Los /fighters/<id> de los campeones que publica /clasificacion. */
+async function campeonesPublicados(page: Page): Promise<Set<string>> {
+  await page.goto("/clasificacion");
+  const enlaces = page.locator('[data-testid="ranking-champion"] a[href^="/fighters/"]');
+  await expect(enlaces.first()).toBeAttached();
+  return new Set(await enlaces.evaluateAll((as) => as.map((a) => a.getAttribute("href") ?? "")));
+}
+
+const CARA_ANCHO = 160;
+const CARA_ALTO = 100;
+// La copia guardada de ufc.com, la que tiene original detrás (headshot-hd.ts).
+const GUARDADA = /\/images\/styles\/event_results_athlete_headshot\//;
+
+/** Lo que se mide de cada tarjeta de un panel VISIBLE. */
+async function medirCaras(panel: Locator) {
+  return panel.locator("[data-fighter-card]").evaluateAll((tarjetas) =>
+    tarjetas.map((t) => {
+      const cabecera = t.querySelector<HTMLElement>("a");
+      const caja = t.querySelector<HTMLElement>("[data-p4p-photo]");
+      const img = caja?.querySelector("img");
+      const etiqueta = t.querySelector<HTMLElement>("[data-champion-badge]");
+      const c = cabecera?.getBoundingClientRect();
+      const k = caja?.getBoundingClientRect();
+      const lineaCabecera =
+        c && cabecera ? c.bottom - parseFloat(getComputedStyle(cabecera).borderBottomWidth) : NaN;
+      // Los textos de la cabecera: ni cortados con «…» ni desbordados.
+      const textos = cabecera
+        ? [...cabecera.querySelectorAll<HTMLElement>("p")].map((p) => ({
+            texto: (p.textContent ?? "").trim(),
+            elipsis:
+              getComputedStyle(p).textOverflow === "ellipsis" &&
+              getComputedStyle(p).whiteSpace === "nowrap",
+            desborda: p.scrollWidth > p.clientWidth + 1,
+          }))
+        : [];
+      const barra = t.firstElementChild as HTMLElement | null;
+      const e = etiqueta?.getBoundingClientRect();
+      return {
+        href: cabecera?.getAttribute("href") ?? "",
+        marcador: t.getAttribute("data-champion"),
+        etiqueta: etiqueta && etiqueta.offsetWidth > 0 ? (etiqueta.textContent ?? "").trim() : null,
+        // La etiqueta va ENCIMA de la caja de la cara, no sobre ella.
+        etiquetaSobreLaCara: e && k ? e.bottom > k.top + 2 && e.right > k.left && e.left < k.right : false,
+        barra: barra ? getComputedStyle(barra).backgroundColor : "",
+        caja: k ? { ancho: k.width, alto: k.height, abajo: k.bottom } : null,
+        lineaCabecera,
+        cabeceraAlto: c?.height ?? 0,
+        src: img?.getAttribute("src") ?? "",
+        srcset: img?.getAttribute("srcset") ?? null,
+        sizes: img?.getAttribute("sizes") ?? null,
+        imgAncho: img?.getBoundingClientRect().width ?? 0,
+        textos,
+      };
+    }),
+  );
+}
+
+test("las caras del libra por libra, grandes y nítidas, y los campeones en oro", async ({
+  page,
+}, testInfo) => {
+  const campeones = await campeonesPublicados(page);
+  expect(campeones.size, "/clasificacion no publica campeones").toBeGreaterThan(0);
+
+  await page.goto("/");
+  const lista = page.getByRole("tablist", { name: "Libra por libra" });
+  const masculino = lista.getByRole("tab", { name: "Masculino", exact: true });
+  const femenino = lista.getByRole("tab", { name: "Femenino", exact: true });
+  const panelM = page.locator(`#${await masculino.getAttribute("aria-controls")}`);
+  const panelF = page.locator(`#${await femenino.getAttribute("aria-controls")}`);
+  await panelM.scrollIntoViewIfNeeded();
+
+  let hd = 0;
+  let deOro = 0;
+  const comprobar = async (panel: Locator, nombre: string) => {
+    const tarjetas = await medirCaras(panel);
+    expect(tarjetas, `${nombre}: tarjetas`).toHaveLength(6);
+    for (const t of tarjetas) {
+      const donde = `${nombre} ${t.href}`;
+      expect(t.caja, `${donde}: sin caja de la cara (data-p4p-photo)`).not.toBeNull();
+      // Al menos el tamaño nuevo, 160×100: de sobra el doble de área (64² eran 4.096).
+      expect(t.caja!.ancho, `${donde}: ancho de la cara`).toBeGreaterThanOrEqual(CARA_ANCHO - 0.5);
+      expect(t.caja!.alto, `${donde}: alto de la cara`).toBeGreaterThanOrEqual(CARA_ALTO - 0.5);
+      expect(t.caja!.ancho * t.caja!.alto, `${donde}: área`).toBeGreaterThanOrEqual(2 * 64 * 64);
+      // En relieve: de pie sobre la línea de la cabecera.
+      expect(
+        Math.abs(t.caja!.abajo - t.lineaCabecera),
+        `${donde}: la cara no pisa la línea de la cabecera`,
+      ).toBeLessThanOrEqual(1);
+      // Nítida: la de ufc.com ofrece su original, con `sizes` exacto.
+      if (GUARDADA.test(t.src)) {
+        hd += 1;
+        expect(t.srcset, `${donde}: srcset`).toMatch(/ 256w, https:\/\/www\.ufc\.com\/images\/.+ 500w$/);
+        expect(t.sizes, `${donde}: sizes`).toBe(`${CARA_ANCHO}px`);
+        expect(Math.abs(t.imgAncho - CARA_ANCHO), `${donde}: se pinta a ${t.imgAncho} px`).toBeLessThanOrEqual(0.5);
+      }
+      // Ni «…» ni texto que se salga en la cabecera (nombre, apodo, categoría).
+      for (const p of t.textos) {
+        expect(p.elipsis, `${donde}: «${p.texto}» se corta con …`).toBe(false);
+        expect(p.desborda, `${donde}: «${p.texto}» se sale de su caja`).toBe(false);
+      }
+      if (campeones.has(t.href)) {
+        deOro += 1;
+        expect(t.marcador, `${donde}: campeón sin marcador`).toBe("true");
+        expect(t.etiqueta, `${donde}: campeón sin la etiqueta visible`).toBe("Campeón");
+        expect(t.etiquetaSobreLaCara, `${donde}: la etiqueta tapa la cara`).toBe(false);
+      } else {
+        expect(t.marcador, `${donde}: no es campeón y lleva marcador`).toBeNull();
+        expect(t.etiqueta, `${donde}: no es campeón y lleva la etiqueta`).toBeNull();
+      }
+    }
+    // Con dos o tres columnas, las cabeceras de una fila miden lo mismo y los
+    // datos de debajo quedan alineados: manda la cara, y un nombre en dos
+    // líneas cabe a su lado.
+    if (!testInfo.project.name.startsWith("movil")) {
+      const altos = tarjetas.map((t) => Math.round(t.cabeceraAlto));
+      expect(Math.max(...altos) - Math.min(...altos), `${nombre}: altos de cabecera ${altos}`).toBeLessThanOrEqual(1);
+    }
+    // La barra de arriba: dorada en los campeones, roja en los demás.
+    const barras = new Map(tarjetas.map((t) => [t.marcador === "true", t.barra]));
+    if (barras.has(true) && barras.has(false)) {
+      expect(barras.get(true), `${nombre}: la barra del campeón es la de los demás`).not.toBe(
+        barras.get(false),
+      );
+    }
+  };
+
+  await comprobar(panelM, "masculino");
+  await esperarHidratacion(page);
+  await expect(async () => {
+    await femenino.click();
+    await expect(femenino).toHaveAttribute("aria-selected", "true", { timeout: 1_000 });
+  }).toPass();
+  await expect(panelF).toBeVisible();
+  await comprobar(panelF, "femenino");
+
+  expect(hd, "ninguna cara de ufc.com con original: la nitidez no se ha probado").toBeGreaterThan(0);
+  expect(deOro, "ningún campeón en el libra por libra: el oro no se ha probado").toBeGreaterThan(0);
+  await expectNoHorizontalOverflow(page, "portada, libra por libra");
 });
