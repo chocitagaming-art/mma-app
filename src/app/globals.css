@@ -171,6 +171,17 @@
      Es el mismo error que --corner-red-foreground: una superficie que no
      cambia con el tema no puede pintarse con un token que sí cambia. */
   --brand-ink-primary: #ff4f56; /* 6,09:1 sobre --brand-ink, en ambos temas */
+  /* THE CHAMPION'S GOLD, one value for every page that paints a current
+     champion: the /clasificacion block (where it was born, 21-oct-2026, as
+     --ranking-gold), and since 29-oct-2026 the /fighters cards and the home's
+     pound-for-pound cards (owner: «resaltarlos con un bordeado oro»).
+     --champion-gold is the line (frame, border, bar): amber-500 here and
+     amber-400 in dark. --champion-gold-wash is the tint behind a photo:
+     amber-500 in BOTH themes, because 20 % of amber-400 on the near-black card
+     came out olive (see .ranking-card). Text never takes these: it stays
+     amber-700 / amber-400, the pair that passes AA. */
+  --champion-gold: oklch(76.9% 0.188 70.08);
+  --champion-gold-wash: oklch(76.9% 0.188 70.08);
 }
 
 /* DARK — octagon-canvas black, brighter corner-red accent */
@@ -248,6 +259,8 @@
   --sidebar-accent-foreground: #fafafa;
   --sidebar-border: #27272a;
   --sidebar-ring: #ff4f56;
+  /* amber-400: the line of the gold. The wash stays amber-500 (see :root). */
+  --champion-gold: oklch(82.8% 0.189 84.429);
 }
 
 @layer base {
@@ -585,6 +598,156 @@
     }
   }
 
+  /* A CURRENT champion's card, in gold (owner, 29-oct-2026: «bordear los
+     cuadros donde están los CAMPEONES actuales ... con un bordeado oro»). The
+     language of the /clasificacion champion block: a gold line, a gold glow
+     around it and a gold halo behind the face, plus the «Campeón» badge
+     (champion-badge.tsx) so the meaning is not carried by colour alone.
+     The line is 2 px to the eye but the BORDER stays 1 px: the second pixel is
+     a ring in the box-shadow, which takes no room, so a champion card is
+     exactly as big as its neighbours and the rows of the grid do not move.
+     Hover and keyboard focus keep the gold and light the glow up, instead of
+     turning red like every other card. The Tailwind border utilities are left
+     off these cards in the markup (a utility would beat this layer). */
+  .roster-card--champion {
+    border-color: var(--champion-gold);
+    box-shadow:
+      0 0 0 1px var(--champion-gold),
+      0 0 22px -6px color-mix(in oklch, var(--champion-gold) 60%, transparent);
+  }
+  .roster-card--champion .roster-card-photo {
+    background:
+      radial-gradient(
+        60% 80% at 50% 100%,
+        color-mix(in oklch, var(--champion-gold-wash) 30%, transparent),
+        transparent 72%
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--champion-gold-wash) 9%, transparent),
+        transparent 70%
+      );
+  }
+  .dark .roster-card--champion .roster-card-photo {
+    background:
+      radial-gradient(
+        60% 80% at 50% 100%,
+        color-mix(in oklch, var(--champion-gold-wash) 24%, transparent),
+        transparent 72%
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--champion-gold-wash) 6%, transparent),
+        transparent 70%
+      );
+  }
+  .roster-card--champion::after {
+    background: var(--champion-gold);
+  }
+  .roster-card--champion:focus-visible {
+    box-shadow:
+      0 0 0 1px var(--champion-gold),
+      0 0 30px 0 color-mix(in oklch, var(--champion-gold) 75%, transparent);
+  }
+  .roster-card--champion:focus-visible .roster-card-cutout img {
+    filter: drop-shadow(0 0 16px color-mix(in oklch, var(--champion-gold) 70%, transparent))
+      drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+  }
+  @media (hover: hover) {
+    .roster-card--champion:hover {
+      box-shadow:
+        0 0 0 1px var(--champion-gold),
+        0 0 30px 0 color-mix(in oklch, var(--champion-gold) 75%, transparent);
+    }
+    .roster-card--champion:hover .roster-card-cutout img {
+      filter: drop-shadow(0 0 16px color-mix(in oklch, var(--champion-gold) 70%, transparent))
+        drop-shadow(0 10px 12px rgb(0 0 0 / 0.45));
+    }
+  }
+
+  /* The home's «Mejores libra por libra» card (fighter-card.tsx), since
+     29-oct-2026 with the face of /fighters and /clasificacion: the cut-out
+     standing on the header's bottom border, a soft red halo behind it, and
+     the same gold as the roster card for a current champion. The slot clips
+     at its bottom edge only, like .ranking-row-photo: the bust is cut flat on
+     the line and its shadow does not fall into the data below, while the head
+     keeps room to grow on hover. The drop-shadow sits on the img (the WebKit
+     traps, see .ranking-row-photo). */
+  .p4p-card-photo {
+    clip-path: inset(-40px -24px 0 -24px);
+    background: radial-gradient(
+      55% 80% at 50% 100%,
+      color-mix(in oklch, var(--primary) 16%, transparent),
+      transparent 72%
+    );
+  }
+  .p4p-card-cutout {
+    transform-origin: bottom center;
+    transition: transform 0.25s ease;
+  }
+  .p4p-card-cutout img {
+    filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.35));
+  }
+  .p4p-card:has(:focus-visible) .p4p-card-cutout {
+    transform: scale(1.05);
+  }
+  @media (hover: hover) {
+    .p4p-card:hover .p4p-card-cutout {
+      transform: scale(1.05);
+    }
+  }
+  .p4p-card--champion {
+    border-color: var(--champion-gold);
+    box-shadow:
+      0 0 0 1px var(--champion-gold),
+      0 0 22px -6px color-mix(in oklch, var(--champion-gold) 55%, transparent);
+  }
+  .p4p-card--champion .p4p-card-header {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--champion-gold-wash) 8%, transparent),
+      transparent 75%
+    );
+  }
+  .dark .p4p-card--champion .p4p-card-header {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--champion-gold-wash) 6%, transparent),
+      transparent 75%
+    );
+  }
+  .p4p-card--champion .p4p-card-photo {
+    background: radial-gradient(
+      60% 85% at 50% 100%,
+      color-mix(in oklch, var(--champion-gold-wash) 32%, transparent),
+      transparent 72%
+    );
+  }
+  .dark .p4p-card--champion .p4p-card-photo {
+    background: radial-gradient(
+      60% 85% at 50% 100%,
+      color-mix(in oklch, var(--champion-gold-wash) 24%, transparent),
+      transparent 72%
+    );
+  }
+  .p4p-card--champion:has(:focus-visible) {
+    box-shadow:
+      0 0 0 1px var(--champion-gold),
+      0 0 30px 0 color-mix(in oklch, var(--champion-gold) 70%, transparent);
+  }
+  @media (hover: hover) {
+    .p4p-card--champion:hover {
+      box-shadow:
+        0 0 0 1px var(--champion-gold),
+        0 0 30px 0 color-mix(in oklch, var(--champion-gold) 70%, transparent);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .p4p-card-cutout {
+      transition: none;
+    }
+  }
+
   /* /clasificacion card (ranking-division-card.tsx and its skeleton in
      clasificacion/loading.tsx). Redesign of 21-oct-2026 in the roster card's
      language: every face is the cut-out standing on a border. Colour carries
@@ -594,13 +757,16 @@
      of the card's markup (text stays amber-700 / amber-400 for contrast). */
   .ranking-card {
     container: ranking-card / inline-size;
-    --ranking-gold: oklch(76.9% 0.188 70.08);
+    /* The site's champion gold (:root, generalised on 29-oct-2026 with the
+       very same values: amber-500 / amber-400 for the line, amber-500 for
+       the wash in both themes). */
+    --ranking-gold: var(--champion-gold);
     /* The champion block's wash: its colour and how much of it. 🪤 In light
        the amount is the ceiling for the amber-700 «Campeón» label:
        e2e/accesibilidad.spec.ts measures text on a gradient against its
        WORST stop, and at 20 % that was 4.31:1 (11.2 px text asks 4.5). At
        10 % it is 4.66. */
-    --ranking-gold-wash-color: var(--ranking-gold);
+    --ranking-gold-wash-color: var(--champion-gold-wash);
     --ranking-gold-wash: 10%;
     --ranking-gold-wash-top: 5%;
   }
@@ -610,8 +776,6 @@
      to read as gold, not as a stain. It lives in the radial from the photo,
      with almost nothing in the flat top band. */
   .dark .ranking-card {
-    --ranking-gold: oklch(82.8% 0.189 84.429);
-    --ranking-gold-wash-color: oklch(76.9% 0.188 70.08);
     --ranking-gold-wash: 16%;
     --ranking-gold-wash-top: 3%;
   }

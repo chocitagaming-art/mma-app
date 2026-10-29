@@ -54,6 +54,10 @@ export type FighterCardData = Fighter & {
   // pie cuando falta el récord. null = la consulta no lo calcula (/fighters).
   ufcFightCount: number | null;
   latestWeightClass: string | null;
+  // Campeón ACTUAL: `is_champion` en la última foto del ranking (dueño,
+  // 29-oct-2026: su tarjeta va en oro). Sin lista a mano: el cron semanal del
+  // ranking lo mantiene. Ver src/lib/queries/current-champion.ts.
+  isChampion: boolean;
 };
 
 export type HomeStats = {

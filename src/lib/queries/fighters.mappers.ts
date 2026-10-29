@@ -56,6 +56,9 @@ export function mapFighter(row: FighterRow): FighterCardData {
     fightCount: recordFightTotal(row.wins, row.losses, row.draws),
     ufcFightCount: row.ufc_fight_count == null ? null : Number(row.ufc_fight_count),
     latestWeightClass: row.latest_weight_class ?? null,
+    // Solo un `true` de Postgres: sin la columna (la ficha y el cara a cara no
+    // la piden) es «no campeón», nunca undefined.
+    isChampion: row.is_champion === true,
     winsByKo: row.wins_by_ko ?? null,
     winsBySubmission: row.wins_by_submission ?? null,
     firstRoundFinishes: row.first_round_finishes ?? null,
