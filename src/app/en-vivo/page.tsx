@@ -438,6 +438,9 @@ export default async function LivePage() {
                         // panel que el usuario había cerrado (re-revisión). El
                         // estado 'live' es estable ante esos fallos.
                         panelDefaultOpen={state === "live"}
+                        // Las caras grandes, como en la ficha (el dueño,
+                        // 30-oct-2026). El chip va encima, fuera de la fila.
+                        headshotSize="large"
                       />
                     </div>
                   );

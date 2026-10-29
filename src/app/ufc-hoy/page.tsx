@@ -236,6 +236,8 @@ export default async function UfcHoyPage() {
                     bout={bout}
                     showRanks
                     eventDate={detalle?.eventDate ?? null}
+                    // Caras grandes, como en la ficha del evento (el dueño, 30-oct-2026).
+                    headshotSize="large"
                   />
                 ))}
               </div>

@@ -324,6 +324,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 {/* FE5b: hora local del tramo, si el evento la tiene. */}
                 <EventSectionTime time={sectionTimes[section.key] ?? null} />
               </h2>
+              {/* Caras grandes (72/96 px, con el original de ufc.com): la
+                  misma fila que el «Último evento» de la portada. El dueño,
+                  30-oct-2026: también aquí, en /ufc-hoy y en /en-vivo. */}
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 {section.bouts.map((bout) => (
                   <EventBoutRow
@@ -331,6 +334,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     bout={bout}
                     showRanks={isUpcoming}
                     eventDate={event.eventDate}
+                    headshotSize="large"
                   />
                 ))}
               </div>
@@ -357,6 +361,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </span>
             Peleas canceladas ({event.cancelledBouts.length})
           </summary>
+          {/* Caras PEQUEÑAS a propósito (el dueño, 30-oct-2026): estos
+              combates no se van a celebrar, y la fila pequeña lo dice sin
+              palabras. El mismo luchador puede estar también en la cartelera
+              (en la 1099, Randy Brown). */}
           <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card opacity-70">
             {event.cancelledBouts.map((bout) => (
               <EventBoutRow
