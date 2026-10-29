@@ -231,8 +231,10 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
         {/* T3-A (pedido del dueño): cuando el evento se aproxima o está en
             marcha, CTA directo a /en-vivo (mismo destino que el chip HOY). */}
         <LiveCtaButton />
+        {/* 15 px like LiveCtaButton (see why there): on fight days both
+            fit in one row on a 390 px phone, as they did before. */}
         <Link href={`/eventos/${event.id}`}>
-          <Button size="lg" className="h-10">
+          <Button size="lg" className="h-10 text-[15px]">
             Ver cartelera
             <ArrowRight strokeWidth={2.5} />
           </Button>

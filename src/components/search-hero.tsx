@@ -264,7 +264,15 @@ export function SearchHero() {
             className="h-12 border-border bg-card pl-11 text-base text-foreground placeholder:text-muted-foreground"
           />
         </div>
-        <Button type="submit" size="lg" className="h-12 px-6 sm:px-8">
+        {/* px-4.5, not the px-8 it had (review, 29-oct-2026): from 640 px the
+            button shares the row with the field, and in the UFC voice (16 px
+            caps, as «Predecir una pelea» right below) px-8 took it from 171
+            to 196 px. The field lost those 25 px and its placeholder got cut
+            at 1024 (iPad landscape). With 18 px a side it is 168 px wide,
+            and the placeholder fits whole from 912 px (916 before the UFC
+            voice; e2e/botones.spec.ts).
+            Below 640 it is full width and the padding does not show. */}
+        <Button type="submit" size="lg" className="h-12 px-4.5">
           Explorar plantilla
         </Button>
       </form>

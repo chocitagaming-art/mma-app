@@ -56,12 +56,15 @@ const buttonCva = cva(
       },
     },
     // link is the inline text-link look, a link inside a sentence or a card:
-    // it keeps the body font as written. In caps it would shout like a CTA.
+    // it keeps the body font and the sizes it had before the UFC voice
+    // (14 px, 12.8 sm, 12 xs). In caps it would shout like a CTA.
     compoundVariants: [
       {
         variant: "link",
         class: "font-sans font-medium normal-case tracking-normal text-sm",
       },
+      { variant: "link", size: "sm", class: "text-[0.8rem]" },
+      { variant: "link", size: "xs", class: "text-xs" },
     ],
     defaultVariants: {
       variant: "default",
