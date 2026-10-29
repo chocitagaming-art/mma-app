@@ -45,6 +45,9 @@ export type FighterRow = {
   // consultas que lo calculan; el total de carrera sale de wins/losses/draws.
   ufc_fight_count?: string | null;
   latest_weight_class?: string | null;
+  // Campeón en la última foto del ranking (current-champion.ts). Solo la traen
+  // las consultas de las tarjetas: la ficha y el cara a cara no la piden.
+  is_champion?: boolean | null;
   // S2-E (migración 015): Fighter Facts + Q&A en español. pg parsea JSONB a
   // JSON automáticamente; `unknown` porque la forma se valida en el mapper.
   fighter_facts?: unknown;

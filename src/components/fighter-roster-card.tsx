@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { ChampionBadge } from "@/components/champion-badge";
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
 import { formatRecord, formatStance, formatWeightClass } from "@/lib/format";
@@ -27,26 +28,54 @@ export function FighterRosterCard({ fighter, priority = false, className, style 
   const nameId = `roster-card-${fighter.id}-name`;
   const nicknameId = `roster-card-${fighter.id}-nickname`;
   const detailsId = `roster-card-${fighter.id}-details`;
+  const championId = `roster-card-${fighter.id}-champion`;
   const weightClass = fighter.latestWeightClass
     ? formatWeightClass(fighter.latestWeightClass)
     : "Sin límite";
+  // A CURRENT champion's card goes in gold (owner, 29-oct-2026), and the
+  // description starts with the visible «Campeón» badge. Every other card
+  // renders exactly the markup it had before.
+  const champion = fighter.isChampion;
+  const describedBy = fighter.nickname ? `${nicknameId} ${detailsId}` : detailsId;
 
   return (
     <Link
       href={`/fighters/${fighter.id}`}
       aria-labelledby={nameId}
-      aria-describedby={fighter.nickname ? `${nicknameId} ${detailsId}` : detailsId}
+      aria-describedby={champion ? `${championId} ${describedBy}` : describedBy}
       data-testid="roster-card"
+      data-champion={champion ? "true" : undefined}
       style={style}
       className={cn(
-        "roster-card relative flex flex-col overflow-hidden rounded-[16px] border border-border bg-card text-foreground transition-[border-color] duration-200 motion-reduce:transition-none hover:border-primary/75 focus-visible:border-primary/75",
+        // The champion's border colour, glow and hover live in globals.css
+        // (.roster-card--champion): no border-colour utility here, it would
+        // beat that layer and turn the card red on hover.
+        champion
+          ? "roster-card roster-card--champion relative flex flex-col overflow-hidden rounded-[16px] border bg-card text-foreground transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none"
+          : "roster-card relative flex flex-col overflow-hidden rounded-[16px] border border-border bg-card text-foreground transition-[border-color] duration-200 motion-reduce:transition-none hover:border-primary/75 focus-visible:border-primary/75",
         className,
       )}
     >
+      {champion ? (
+        // Over the photo's top-left corner, where the ufc.com bust leaves
+        // transparent background (the head is centred), compact below lg
+        // (see champion-badge.tsx). Outside the aria-hidden photo zone: it is
+        // read, as the start of the description.
+        <ChampionBadge
+          id={championId}
+          compact
+          className="absolute left-1.5 top-1 z-10 lg:left-2.5 lg:top-2.5"
+        />
+      ) : null}
       <div
         data-testid="roster-card-photo"
         aria-hidden="true"
-        className="roster-card-photo relative h-[138px] border-b border-border lg:h-[186px]"
+        className={
+          // The line the champion stands on: the /clasificacion block's own.
+          champion
+            ? "roster-card-photo relative h-[138px] border-b border-amber-500/40 lg:h-[186px] dark:border-amber-400/30"
+            : "roster-card-photo relative h-[138px] border-b border-border lg:h-[186px]"
+        }
       >
         <FighterHeadshot
           name={fighter.name}

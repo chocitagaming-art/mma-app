@@ -21,6 +21,7 @@ import type {
   SearchRow,
   UpcomingBoutRow,
 } from "./fighters.types";
+import { currentChampionSql } from "./current-champion";
 import { currentWeightClassSql } from "./current-weight-class";
 import { mapFighter } from "./fighters.mappers";
 
@@ -71,12 +72,15 @@ async function getFeaturedFightersUncached(
   // Destacados = los mejores del libra por libra pedido, en la última foto del
   // ranking oficial. La división va por parámetro: hasta el 28-sep-2026 estaba
   // escrita a mano ('mens_pound_for_pound') y la portada no tenía mujeres.
+  // 🪤 El oro (is_champion) NO sale de `r`: las filas del libra por libra nunca
+  // llevan is_champion; el cinturón está en la fila de su división de peso.
   const rows = await sql<FighterRow>(
     `with latest as (select max(snapshot_date) as d from rankings)
     select
       f.*,
       count(fi.id)::text as ufc_fight_count,
-      ${currentWeightClassSql("f")} as latest_weight_class
+      ${currentWeightClassSql("f")} as latest_weight_class,
+      ${currentChampionSql("f")} as is_champion
     from rankings r
     join fighters f on f.id = r.fighter_id
     ${ufcFightsJoin}
@@ -103,7 +107,8 @@ async function getFeaturedFightersUncached(
     `select
       f.*,
       count(fi.id)::text as ufc_fight_count,
-      ${currentWeightClassSql("f")} as latest_weight_class
+      ${currentWeightClassSql("f")} as latest_weight_class,
+      ${currentChampionSql("f")} as is_champion
     from fighters f
     ${ufcFightsJoin}
     group by f.id
@@ -236,8 +241,11 @@ export async function getFighters(
   const fighters = await sql<FighterRow>(
     `with latest as (select max(snapshot_date) as d from rankings),
     rel as (
+      -- is_champion: el oro de la tarjeta (dueño, 29-oct-2026), de la MISMA
+      -- última foto que ordena, sin volver a la tabla (current-champion.ts).
       select fighter_id,
-             min(case when is_champion then 0 else rank_position end) as best_rank
+             min(case when is_champion then 0 else rank_position end) as best_rank,
+             bool_or(is_champion) as is_champion
       from rankings
       where snapshot_date = (select d from latest)
       group by fighter_id
@@ -257,7 +265,8 @@ export async function getFighters(
       f.*,
       -- fight_counts solo ORDENA (relevancia): no se pinta. El total de peleas
       -- que se enseña sale del récord, en mapFighter.
-      ${currentWeightClassSql("f")} as latest_weight_class
+      ${currentWeightClassSql("f")} as latest_weight_class,
+      coalesce(rel.is_champion, false) as is_champion
     from fighters f
     left join rel on rel.fighter_id = f.id
     left join fight_counts fc on fc.fighter_id = f.id
