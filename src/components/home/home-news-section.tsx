@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { TrendingCard } from "@/components/trending-card";
@@ -60,12 +61,14 @@ export async function HomeNewsSection({ articles }: { articles: NewsArticle[] })
       <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-center">
         <Link href="/tendencias" className="w-full sm:w-auto">
           <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
-            Más noticias y vídeos →
+            Más noticias y vídeos
+            <ArrowRight strokeWidth={2.5} />
           </Button>
         </Link>
         <Link href="/eventos?view=proximos" className="w-full sm:w-auto">
           <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
-            Próximas carteleras →
+            Próximas carteleras
+            <ArrowRight strokeWidth={2.5} />
           </Button>
         </Link>
       </div>

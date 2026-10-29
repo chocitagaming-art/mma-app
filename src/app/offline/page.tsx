@@ -14,6 +14,12 @@ export const metadata: Metadata = {
 //
 // Ojo: el layout raíz ya envuelve el contenido en un <main>, así que aquí va un
 // <div> (un <main> anidado es HTML inválido).
+//
+// «Reintentar» in the buttons' UFC type (owner, 29-oct-2026; buttonType in
+// components/ui/button.tsx), written out because this page has no Tailwind of
+// its own. `font:inherit` goes FIRST: it used to come after the weight and
+// reset it. Without the cached CSS --font-saira does not exist, the
+// declaration drops and the button keeps the body's font: still a button.
 export default function OfflinePage() {
   return (
     <>
@@ -25,8 +31,10 @@ export default function OfflinePage() {
         .offline-text{max-width:34rem;margin:0;opacity:.75;line-height:1.6}
         .offline-mark{opacity:.9}
         .offline-btn{display:inline-block;padding:.65rem 1.4rem;border-radius:.5rem;
-          border:1px solid currentColor;font-weight:600;background:none;
-          color:inherit;cursor:pointer;font:inherit;text-decoration:none}
+          border:1px solid currentColor;background:none;
+          color:inherit;cursor:pointer;font:inherit;text-decoration:none;
+          font-family:var(--font-saira),sans-serif;font-weight:600;font-size:15px;
+          text-transform:uppercase;letter-spacing:.025em}
       `}</style>
       <div className="offline-wrap">
         <svg

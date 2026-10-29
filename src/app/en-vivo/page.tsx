@@ -11,6 +11,7 @@ import {
 } from "@/components/live/live-bout-stats";
 import { EventCountdown } from "@/components/home/event-countdown";
 import { FightVideoPlayer } from "@/components/fight-video-player";
+import { buttonType } from "@/components/ui/button";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate, formatMethod } from "@/lib/format";
 import { diasHastaLaVelada, formatFechaVeladaCorta } from "@/lib/ufc-today";
@@ -176,10 +177,16 @@ export default async function LivePage() {
           combate está en la jaula y los resultados según van cayendo.
         </p>
         <div className="mt-6">
+          {/* The button type, not a <Button>: the event's whole name rides in
+              the label and has to be able to wrap on a phone; a Button never
+              wraps (whitespace-nowrap). */}
           {candidate ? (
             <Link
               href={`/eventos/${candidate.id}`}
-              className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+              className={cn(
+                buttonType,
+                "inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+              )}
             >
               Próximo evento: {candidate.name}
               {fechaProxima ? ` · ${fechaProxima}` : ""}
@@ -187,7 +194,10 @@ export default async function LivePage() {
           ) : (
             <Link
               href="/eventos?view=proximos"
-              className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+              className={cn(
+                buttonType,
+                "inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+              )}
             >
               Ver próximos eventos
             </Link>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Tv } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, Tv } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { EventStartTime } from "@/components/event-start-time";
@@ -231,9 +231,12 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
         {/* T3-A (pedido del dueño): cuando el evento se aproxima o está en
             marcha, CTA directo a /en-vivo (mismo destino que el chip HOY). */}
         <LiveCtaButton />
+        {/* 15 px like LiveCtaButton (see why there): on fight days both
+            fit in one row on a 390 px phone, as they did before. */}
         <Link href={`/eventos/${event.id}`}>
-          <Button size="lg" className="h-10">
-            Ver cartelera →
+          <Button size="lg" className="h-10 text-[15px]">
+            Ver cartelera
+            <ArrowRight strokeWidth={2.5} />
           </Button>
         </Link>
       </div>

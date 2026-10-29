@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { EventWatchOptions } from "@/components/event-watch-options";
+import { buttonType } from "@/components/ui/button";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { getEventDetail } from "@/lib/queries/events";
 import { getLiveEventCandidate } from "@/lib/queries/live";
@@ -13,6 +14,7 @@ import {
   formatMadridTime,
   resolveUfcToday,
 } from "@/lib/ufc-today";
+import { cn } from "@/lib/utils";
 
 // FASE 7. La pregunta se repite cada semana en el buscador y hoy no la responde
 // nadie en español con la hora peninsular delante.
@@ -189,7 +191,10 @@ export default async function UfcHoyPage() {
           {resultado.verdict === "en-directo" ? (
             <Link
               href="/en-vivo"
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+              className={cn(
+                buttonType,
+                "inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[15px] leading-4 text-primary-foreground transition-opacity hover:opacity-90",
+              )}
             >
               <span className="live-dot inline-block size-1.5 rounded-full bg-white" />
               Seguirlo en directo
@@ -198,7 +203,10 @@ export default async function UfcHoyPage() {
           {candidato && resultado.verdict !== "en-directo" ? (
             <Link
               href={`/eventos/${candidato.id}`}
-              className="inline-flex items-center rounded-md border border-border px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-colors hover:bg-accent"
+              className={cn(
+                buttonType,
+                "inline-flex items-center rounded-md border border-border px-4 py-2 text-[15px] leading-4 transition-colors hover:bg-accent",
+              )}
             >
               Ver la velada
             </Link>

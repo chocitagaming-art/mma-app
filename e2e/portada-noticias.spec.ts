@@ -166,7 +166,7 @@ for (const motor of ["chromium", "webkit"] as const) {
       // La columna «Lo último en vídeo» ya no existe, ni ningún aside en la sección.
       await expect(pagina.getByRole("heading", { name: "Lo último en vídeo", includeHidden: true })).toHaveCount(0);
       await expect(seccion(pagina).locator("aside")).toHaveCount(0);
-      // «Más noticias y vídeos →» lleva a /tendencias, que mezcla las dos cosas.
+      // «Más noticias y vídeos» lleva a /tendencias, que mezcla las dos cosas.
       const mas = seccion(pagina).getByRole("link", { name: /Más noticias y vídeos/ });
       await expect(mas).toHaveAttribute("href", "/tendencias");
       await expect(pagina.getByText("Más noticias →", { exact: true })).toHaveCount(0);
