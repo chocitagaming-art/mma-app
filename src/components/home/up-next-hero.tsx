@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Tv } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, Tv } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { EventStartTime } from "@/components/event-start-time";
@@ -233,7 +233,8 @@ export function UpNextHero({ event }: { event: NextEventHero }) {
         <LiveCtaButton />
         <Link href={`/eventos/${event.id}`}>
           <Button size="lg" className="h-10">
-            Ver cartelera →
+            Ver cartelera
+            <ArrowRight strokeWidth={2.5} />
           </Button>
         </Link>
       </div>

@@ -1,6 +1,8 @@
 import { ExternalLink } from "lucide-react";
 
+import { buttonType } from "@/components/ui/button";
 import { YtLite } from "@/components/yt-lite";
+import { cn } from "@/lib/utils";
 import type { ChannelWithVideos } from "@/lib/youtube";
 
 // Suscriptores compactos en español: 399000 → "399 mil", 1010000 → "1 M".
@@ -50,7 +52,10 @@ export function ChannelDirectoryCard({
           href={channel.channelUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+          className={cn(
+            buttonType,
+            "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-primary px-3 py-1.5 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+          )}
         >
           <ExternalLink className="size-3.5" />
           <span className="hidden sm:inline">Ver canal</span>

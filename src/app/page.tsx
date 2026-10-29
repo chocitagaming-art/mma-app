@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Saira_Extra_Condensed } from "next/font/google";
+import { ArrowRight } from "lucide-react";
 
 import { FavoritesStrip } from "@/components/home/favorites-strip";
 import { FighterCard } from "@/components/fighter-card";
@@ -312,7 +313,8 @@ export default async function HomePage() {
               // dark:: hacen falta porque outline trae dark:border-input/dark:bg-input.
               className="h-10 border-primary/60 font-semibold text-primary hover:border-primary hover:bg-primary/10 hover:text-primary dark:border-primary/60 dark:bg-transparent dark:hover:border-primary dark:hover:bg-primary/10 dark:hover:text-primary"
             >
-              Ver clasificación →
+              Ver clasificación
+              <ArrowRight strokeWidth={2.5} />
             </Button>
           </Link>
         </div>

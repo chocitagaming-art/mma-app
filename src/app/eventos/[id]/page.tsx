@@ -12,6 +12,7 @@ import { EventStartTime } from "@/components/event-start-time";
 import { EventWatchOptions } from "@/components/event-watch-options";
 import { EventWeighInsSection } from "@/components/event-weigh-ins";
 import { FightVideoPlayer } from "@/components/fight-video-player";
+import { buttonType } from "@/components/ui/button";
 import { groupBoutsBySegment } from "@/lib/event-sections";
 import { formatDate } from "@/lib/format";
 import { formatFechaVeladaCorta } from "@/lib/ufc-today";
@@ -22,6 +23,7 @@ import { getLiveFightStats } from "@/lib/queries/live";
 import { parseId } from "@/lib/route-params";
 import { buildEventJsonLd, serializeJsonLd } from "@/lib/structured-data";
 import { getLivePick, needsLiveDetection, resolveEventVideo } from "@/lib/ufc-tv";
+import { cn } from "@/lib/utils";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -273,11 +275,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                    sin prometer directo. */
                 <Link
                   href="/en-vivo"
-                  className={
+                  className={cn(
+                    buttonType,
                     livePhase === "live"
-                      ? "inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
-                      : "inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
-                  }
+                      ? "inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[15px] leading-4 text-primary-foreground transition-opacity hover:opacity-90"
+                      : "inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-2 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+                  )}
                 >
                   {livePhase === "live" ? (
                     <>
@@ -294,7 +297,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                   href={event.ticketUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary-foreground transition-opacity hover:opacity-90"
+                  className={cn(
+                    buttonType,
+                    "inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[15px] leading-4 text-primary-foreground transition-opacity hover:opacity-90",
+                  )}
                 >
                   <Ticket className="size-3.5" />
                   Entradas

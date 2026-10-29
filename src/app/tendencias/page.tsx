@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { SectionHeading } from "@/components/section-heading";
 import { TrendingCard } from "@/components/trending-card";
+import { buttonType } from "@/components/ui/button";
 import { formatNewsCategory } from "@/lib/format";
 import { getNewsCategories, getTrendingNews } from "@/lib/queries/news";
 import {
@@ -147,7 +148,10 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
                 aria-current={isActive ? "page" : undefined}
                 href={createHref({ tipo: tab.key, categoria: "", mostrar: 0 })}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.12em] transition-colors",
+                  // The voice of the home's P4P tabs and the Salón's (owner,
+                  // 29-oct-2026: the buttons in the UFC type). The category
+                  // chips below stay mono: they are tags, not buttons.
+                  "rounded-full border px-4 py-1.5 font-display text-sm font-semibold uppercase tracking-wide transition-colors",
                   isActive
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
@@ -219,7 +223,10 @@ export default async function TendenciasPage({ searchParams }: TendenciasPagePro
                   mostrar: shown + TRENDING_STEP,
                 })}
                 scroll={false}
-                className="inline-flex items-center gap-2 rounded-md border border-primary px-5 py-2.5 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+                className={cn(
+                  buttonType,
+                  "inline-flex items-center gap-2 rounded-md border border-primary px-5 py-2.5 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+                )}
               >
                 Cargar más
               </Link>

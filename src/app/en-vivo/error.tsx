@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 
+import { buttonType } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 // T3-A (revisión adversarial, HIGH): un hipo transitorio de la BD durante un
 // router.refresh() automático caía en el error boundary RAÍZ, que desmonta
 // AutoRefresh y deja /en-vivo muerta hasta un clic manual — inaceptable en la
@@ -37,7 +40,10 @@ export default function LiveError({
       <button
         type="button"
         onClick={() => reset()}
-        className="mt-6 inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+        className={cn(
+          buttonType,
+          "mt-6 inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+        )}
       >
         Reintentar ahora
       </button>

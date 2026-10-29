@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { EventBoutRow } from "@/components/event-bout-row";
 import { SectionHeading } from "@/components/section-heading";
@@ -46,7 +47,8 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
       <div className="flex justify-center">
         <Link href={`/eventos/${event.id}`} className="w-full sm:w-auto">
           <Button size="lg" className="h-10 w-full px-6 sm:w-auto">
-            Ver resultados completos →
+            Ver resultados completos
+            <ArrowRight strokeWidth={2.5} />
           </Button>
         </Link>
       </div>

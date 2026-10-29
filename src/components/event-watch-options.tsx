@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { ChevronDown, Tv } from "lucide-react";
 
+import { buttonType } from "@/components/ui/button";
 import { buildWatchOptions } from "@/lib/watch-options";
+import { cn } from "@/lib/utils";
 
 // Botón "Ver el combate" (S2-F) para eventos próximos: despliega el módulo
 // "Dónde verlo" con las opciones oficiales en España etiquetadas GRATIS /
@@ -20,7 +22,10 @@ export function EventWatchOptions({ hasEarlyPrelims }: { hasEarlyPrelims: boolea
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="donde-verlo"
-        className="inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-primary transition-colors hover:bg-primary/10"
+        className={cn(
+          buttonType,
+          "inline-flex items-center gap-1.5 rounded-md border border-primary px-4 py-2 text-[15px] leading-4 text-primary transition-colors hover:bg-primary/10",
+        )}
       >
         <Tv className="size-3.5" aria-hidden />
         Ver el combate
