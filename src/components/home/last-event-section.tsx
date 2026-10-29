@@ -9,6 +9,9 @@ import type { LastEventResults } from "@/lib/types";
 // Sección "Acaba de pasar" de la home (FE10): último evento completado con los
 // resultados de su cartelera estelar, reutilizando EventBoutRow como en
 // /eventos/[id]. showRanks=false: en resultados el ranking ACTUAL mentiría.
+// headshotSize="large" (el dueño, 29-oct-2026: «ponemos las fotos de las
+// cabezas más grandes y nítidas»): caras de 72/96 px con el original de
+// ufc.com. Solo aquí: la ficha del evento, /en-vivo y /ufc-hoy no cambian.
 export function LastEventSection({ event }: { event: LastEventResults }) {
   const relative = formatRelativeDate(event.eventDate);
   const description = [
@@ -37,6 +40,7 @@ export function LastEventSection({ event }: { event: LastEventResults }) {
             bout={bout}
             showRanks={false}
             eventDate={event.eventDate}
+            headshotSize="large"
           />
         ))}
       </div>

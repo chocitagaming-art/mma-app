@@ -156,25 +156,96 @@ function hasTapeData(fighter: EventBoutFighter): boolean {
   );
 }
 
+type RowLayout = {
+  row: string;
+  redCorner: string;
+  blueCorner: string;
+  // The box of each face (twMerge overrides the size-* of FighterHeadshot's
+  // `size`, which then only picks the initials' text size).
+  headshot: string;
+  photo: { size: "sm" | "lg"; quality?: "hd"; sizes?: string };
+  text: string;
+  centre: string;
+};
+
+// The two ways of drawing the row (headshotSize). "default" is the one of
+// always, class by class: /eventos/[id], /en-vivo and /ufc-hoy do not change by
+// a single byte (and on Saturday 31-oct /en-vivo carries the event).
+//
+// "large" is the home's «Último evento» (owner, 29-oct-2026: «ponemos las
+// fotos de las cabezas más grandes y nítidas»): a 72 px face on phones and 96
+// from sm, where it used to be 36/48. Measured on 29-oct (UFC 333 on the home,
+// 360 to 1920): side by side, a bigger face eats the NAME's width — at 768 the
+// red corner of the main event is 231 px and «Alexander Volkanovski» with his
+// flag needs 151, so any face over 68 px beside it truncates it (and at 640
+// the corners are 151-167 px). So below lg each corner STACKS
+// (face on top, name and record under it, full corner width: 98 px at 360
+// where the name had 52), and only from lg (corners of 335+ px) does the face
+// go back beside the text, which still keeps 223+ px. The centre column stays
+// as tall as the faces, so «VS» sits on their midline.
+//
+// Sharpness = file px / painted px × DPR. The 1.6:1 ufc.com face covers the
+// square box minus its 1 px border: painted 112 px wide in the 72 box and 150
+// in the 96 one, which is the exact `sizes`. The 256 copy is kept up to DPR
+// 2.29 on phones (1x 2.29 · 2x 1.14) and 1.70 from sm (1x 1.70); above that
+// the browser takes the ufc.com original (500-520 px): phone 3x 1.5, tablet
+// and desktop 2x 1.7, 3x 1.1. Checked in Chromium and WebKit at 2x: phones
+// keep the 256 copy, 768 and up take the original. ESPN faces (600×436, no
+// srcset) are 4.6 at 1x and 1.5 at 3x in the 96 box.
+const ROW_LAYOUTS: Record<"default" | "large", RowLayout> = {
+  default: {
+    row: "group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5",
+    redCorner: "flex min-w-0 items-center gap-2.5 sm:gap-3",
+    blueCorner: "flex min-w-0 flex-row-reverse items-center gap-2.5 text-right sm:gap-3",
+    // F4: headshot más pequeño en móvil (36px) para dar aire al nombre; en sm+
+    // vuelve a 48px (twMerge sobreescribe el size-12 de sizeClasses).
+    headshot: "size-9 shrink-0 sm:size-12",
+    photo: { size: "sm" },
+    text: "min-w-0",
+    centre: "flex shrink-0 flex-col items-center text-center",
+  },
+  large: {
+    // items-start below lg: the corners grow downwards with their record, and
+    // a centred short corner would put its face lower than the other one.
+    row: "group grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5 lg:items-center",
+    redCorner: "flex min-w-0 flex-col items-start gap-2 lg:flex-row lg:items-center lg:gap-4",
+    blueCorner:
+      "flex min-w-0 flex-col items-end gap-2 text-right lg:flex-row-reverse lg:items-center lg:gap-4",
+    headshot: "size-18 shrink-0 sm:size-24",
+    // "lg" only for the initials (text-2xl in a 72-96 px box).
+    photo: { size: "lg", quality: "hd", sizes: "(min-width: 640px) 150px, 112px" },
+    // w-full while stacked: the name truncates against the corner, not
+    // against its own width.
+    text: "w-full min-w-0 lg:w-auto",
+    centre:
+      "flex min-h-18 shrink-0 flex-col items-center justify-center text-center sm:min-h-24 lg:min-h-0",
+  },
+};
+
 // showRanks: los badges de ranking usan el snapshot ACTUAL, así que solo
 // tienen sentido en eventos futuros — en carteleras históricas el "#3" de hoy
 // leería como el ranking que tenía el luchador al pelear, y sería falso.
 // statsPanel (T3-A fase B): panel extra server-rendered (stats en vivo de
 // /en-vivo) que se apila ENCIMA de la comparativa física dentro del mismo
 // acordeón. Opcional y default off: /eventos/[id] y la home no cambian.
+// headshotSize: "large" solo en el «Último evento» de la portada (ver
+// ROW_LAYOUTS); por defecto, la fila de siempre.
 export function EventBoutRow({
   bout,
   showRanks = false,
   eventDate,
   statsPanel,
   panelDefaultOpen = false,
+  headshotSize = "default",
 }: {
   bout: EventBout;
   showRanks?: boolean;
   eventDate?: string | Date | null;
   statsPanel?: React.ReactNode;
   panelDefaultOpen?: boolean;
+  headshotSize?: "default" | "large";
 }) {
+  const layout = ROW_LAYOUTS[headshotSize];
   const redWon = bout.winnerId != null && bout.winnerId === bout.red.id;
   const blueWon = bout.winnerId != null && bout.winnerId === bout.blue.id;
 
@@ -215,24 +286,24 @@ export function EventBoutRow({
     <Link
       href={`/fights/${bout.fightId}`}
       data-testid="bout-row"
-      className="group grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3 transition-colors hover:bg-muted/50 sm:gap-4 sm:px-5"
+      className={layout.row}
     >
       {/* Esquina roja. data-bout-corner: e2e/careo-fotos.spec.ts mide que su
           primer hijo (el headshot) empiece a la altura del de la azul. */}
       <div
         data-bout-corner="red"
-        className="flex min-w-0 items-center gap-2.5 sm:gap-3"
+        className={layout.redCorner}
       >
         <FighterHeadshot
           name={bout.red.name}
           headshotUrl={bout.red.headshotUrl}
           division={bout.weightClass}
-          size="sm"
-          // F4: headshot más pequeño en móvil (36px) para dar aire al nombre; en
-          // sm+ vuelve a 48px (twMerge sobreescribe el size-12 de sizeClasses).
-          className={cn("size-9 shrink-0 sm:size-12", redWon && "ring-2 ring-win")}
+          size={layout.photo.size}
+          quality={layout.photo.quality}
+          sizes={layout.photo.sizes}
+          className={cn(layout.headshot, redWon && "ring-2 ring-win")}
         />
-        <div className="min-w-0">
+        <div className={layout.text}>
           <p
             className={cn(
               "flex items-center gap-1.5 truncate font-display text-sm font-bold uppercase tracking-tight transition-colors group-hover:text-primary",
@@ -291,7 +362,7 @@ export function EventBoutRow({
       </div>
 
       {/* Centro */}
-      <div className="flex shrink-0 flex-col items-center text-center">
+      <div className={layout.centre}>
         <span className="font-mono text-[0.6rem] font-bold uppercase tracking-[0.15em] text-muted-foreground">
           VS
         </span>
@@ -341,17 +412,18 @@ export function EventBoutRow({
       {/* Esquina azul */}
       <div
         data-bout-corner="blue"
-        className="flex min-w-0 flex-row-reverse items-center gap-2.5 text-right sm:gap-3"
+        className={layout.blueCorner}
       >
         <FighterHeadshot
           name={bout.blue.name}
           headshotUrl={bout.blue.headshotUrl}
           division={bout.weightClass}
-          size="sm"
-          // F4: headshot 36px en móvil, 48px en sm+.
-          className={cn("size-9 shrink-0 sm:size-12", blueWon && "ring-2 ring-win")}
+          size={layout.photo.size}
+          quality={layout.photo.quality}
+          sizes={layout.photo.sizes}
+          className={cn(layout.headshot, blueWon && "ring-2 ring-win")}
         />
-        <div className="min-w-0">
+        <div className={layout.text}>
           <p
             className={cn(
               "flex flex-row-reverse items-center gap-1.5 truncate font-display text-sm font-bold uppercase tracking-tight transition-colors group-hover:text-primary",
