@@ -32,13 +32,15 @@ import { esperarHidratacion, expectNoHorizontalOverflow } from "./helpers";
 //   · La ficha de cada campeona dice «Campeona» en su insignia roja de la
 //     cabecera, «El #1 (y la campeona) aparecen arriba.» y «Campeona» en los
 //     puntos de su trayectoria; la de un campeón sigue diciendo «Campeón».
+//   · La de una mujer que NO es campeona también dice «(y la campeona)», y
+//     ningún punto suyo dice «Campeón».
 //
 // 🪤 SIN NOMBRES FIJOS: el ranking cambia cada semana. Los campeones se leen de
 // /clasificacion, que es quien los publica (sus bloques dorados), y se cruzan
 // por el /fighters/<id> del enlace.
 //
 // Corre en los seis proyectos: el dorado se mide en claro y en oscuro, y la
-// etiqueta a 390, 768 y 1280. Los dos de /clasificacion y la ficha, solo en
+// etiqueta a 390, 768 y 1280. Los tres de /clasificacion y la ficha, solo en
 // movil-light: comparan textos, que no dependen ni del ancho ni del tema.
 //
 // 🪤 Los colores se pasan a RGB pintándolos en un <canvas>. Si el navegador no
@@ -400,6 +402,53 @@ test("la ficha de cada campeona dice «Campeona» (insignia, frase y trayectoria
     expect(
       puntos.filter((p) => p.includes(` — ${otra} (`)),
       `${donde}: puntos «${otra}» en la trayectoria`,
+    ).toEqual([]);
+  }
+});
+
+// La frase «El #1 (y la campeona)…» sale en la ficha de CUALQUIER mujer con
+// trayectoria, no solo en la de una campeona: la regla «es mujer» de la ficha
+// (detail.latestWeightClass) no puede depender de que tenga el título. Se
+// abre la ficha del #1 de cada división femenina (sin el libra por libra, que
+// mezcla campeonas), leído de /clasificacion: sin nombres fijos. Si alguna fue
+// campeona (Zhang Weili lo fue), sus puntos de entonces dicen «Campeona».
+test("la ficha de una mujer que no es campeona dice «la campeona» en su trayectoria, y nunca «Campeón»", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "movil-light", "compara textos: no depende del ancho ni del tema");
+  test.setTimeout(120_000);
+  await page.goto("/clasificacion");
+  await expect(page.locator('main [data-testid="ranking-card"]').first()).toBeVisible();
+  const aspirantes = await page
+    .locator('main [data-testid="ranking-card"][data-division^="womens_"]:not([data-division*="pound"])')
+    .evaluateAll((tarjetas) =>
+      tarjetas
+        .map((t) => ({
+          division: t.getAttribute("data-division") ?? "",
+          // El #1 de la lista (el campeón va en su bloque, fuera de la lista).
+          href: t.querySelector('ol > li a[href^="/fighters/"]')?.getAttribute("href") ?? null,
+        }))
+        .filter((a) => a.href),
+    );
+  expect(aspirantes.length, "/clasificacion no publica ninguna división femenina con aspirantes").toBeGreaterThan(0);
+  testInfo.annotations.push({
+    type: "fichas",
+    description: aspirantes.map((a) => `${a.href} (${a.division})`).join(", "),
+  });
+
+  for (const a of aspirantes) {
+    const donde = `${a.href} (#1 de ${a.division})`;
+    await page.goto(a.href!);
+    await expect(page.locator("main"), `${donde}: la frase de la trayectoria`).toContainText(
+      "El #1 (y la campeona) aparecen arriba.",
+    );
+    const puntos = await page
+      .locator("main svg circle > title")
+      .evaluateAll((ts) => ts.map((t) => t.textContent ?? ""));
+    expect(puntos.length, `${donde}: la trayectoria sin puntos`).toBeGreaterThan(0);
+    expect(
+      puntos.filter((p) => p.includes(" — Campeón (")),
+      `${donde}: puntos «Campeón» en la trayectoria`,
     ).toEqual([]);
   }
 });
