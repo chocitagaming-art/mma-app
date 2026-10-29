@@ -57,6 +57,19 @@ describe("buttonVariants: the UFC voice", () => {
     expect(c).toEqual(expect.arrayContaining(["font-sans", "normal-case", "tracking-normal"]));
   });
 
+  it("link keeps the body size it had at each size: 14 px, 14 lg, 12.8 sm, 12 xs", () => {
+    // Before the UFC voice, link took its size from the size variant like any
+    // button. A flat text-sm on link would have grown xs and sm.
+    const size = (s: (typeof SIZES)[number]) =>
+      classes(buttonVariants({ variant: "link", size: s })).filter((c) =>
+        /^text-(\[\d|xs|sm|base)/.test(c),
+      );
+    expect(size("default")).toEqual(["text-sm"]);
+    expect(size("lg")).toEqual(["text-sm"]);
+    expect(size("sm")).toEqual(["text-[0.8rem]"]);
+    expect(size("xs")).toEqual(["text-xs"]);
+  });
+
   it("is merged on its own: no two classes fight for the same property, used bare as a className", () => {
     // buttonVariants({ variant: "link" }) straight into a Link's className
     // (the shadcn idiom) must not carry font-display AND font-sans: which one
@@ -98,11 +111,38 @@ function sourceFiles(): { file: string; text: string }[] {
     .map((file) => ({ file: file.replaceAll("\\", "/"), text: readFileSync(SRC + file, "utf8") }));
 }
 
+// The children of every <Button>…</Button> in a file. A self-closing
+// <Button /> has none, and must not swallow the text up to the next
+// </Button>. The opening tag ends at the first ">" outside braces (two levels,
+// enough for className={cn(…, { … })} and onClick={() => …}).
+function buttonChildren(text: string): string[] {
+  const button = /<Button\b(?:[^>{}]|\{(?:[^{}]|\{[^{}]*\})*\})*(?<!\/)>([\s\S]*?)<\/Button>/g;
+  return [...text.matchAll(button)].map((match) => match[1]);
+}
+
+describe("buttonChildren, the reader of the arrow guard", () => {
+  it("reads the children of each <Button>…</Button>", () => {
+    const src = `<Button size="lg" onClick={() => go(a > b)}>Ver cartelera <ArrowRight /></Button>`;
+    expect(buttonChildren(src)).toEqual(["Ver cartelera <ArrowRight />"]);
+  });
+
+  it("a self-closing <Button /> does not swallow the text up to the next </Button>", () => {
+    const src = [
+      `<Button aria-label="Cerrar" className={cn("a", { b: c })} />`,
+      `<Link href="/x">Ver más →</Link>`,
+      `<Button>Enviar</Button>`,
+    ].join("\n");
+    expect(buttonChildren(src)).toEqual(["Enviar"]);
+  });
+});
+
 describe("the button-looking links and buttons that are not <Button>", () => {
   it("none keeps the old IBM Plex Mono voice of the CTAs (/eventos, /en-vivo, /ufc-hoy, /tendencias, /videos)", () => {
     // The look of those CTAs: a padded box with a border or the red fill,
     // and mono semibold caps. Tags and chips (rounded-full, rounded-sm,
     // no padding box) are not CTAs and do not match.
+    // 🪤 It reads LINE by line, as all those CTAs were written: one whose
+    // classes are spread over several lines of a cn(…) would slip past it.
     const offenders: string[] = [];
     for (const { file, text } of sourceFiles()) {
       text.split("\n").forEach((line, i) => {
@@ -123,8 +163,8 @@ describe("the button-looking links and buttons that are not <Button>", () => {
   it("no <Button> carries a text arrow: «→» is not in Saira, it fell back to Arial, thin and low", () => {
     const offenders: string[] = [];
     for (const { file, text } of sourceFiles()) {
-      for (const match of text.matchAll(/<Button\b[\s\S]*?<\/Button>/g)) {
-        if (match[0].includes("→")) offenders.push(file);
+      for (const children of buttonChildren(text)) {
+        if (children.includes("→")) offenders.push(file);
       }
     }
     expect(offenders).toEqual([]);

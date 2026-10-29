@@ -18,7 +18,9 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //     360 a la pantalla de 1920 (cada proyecto barre sus tres anchos);
 //   · cada letra de cada botón la dibuja Saira. La «→» no está en su
 //     subconjunto latino: caía en la Arial de reserva, fina y 2,5 px por
-//     debajo de las mayúsculas. Ahora es un icono, centrado con el botón.
+//     debajo de las mayúsculas. Ahora es un icono, centrado con el botón;
+//   · y el botón, más ancho, no le quita sitio al vecino: el buscador del hero
+//     y la fila de la cartelera en día de velada (al final del fichero).
 //
 // Los CTA de la portada salen de la base de producción (el último evento, el
 // próximo): si un día faltan, ese botón se salta con su motivo.
@@ -56,9 +58,8 @@ async function medir(target: Locator): Promise<Medida> {
     const r = el.getBoundingClientRect();
     const svg = el.querySelector("svg");
     const s = svg?.getBoundingClientRect();
-    // A glyph comes from Saira when the same text measures the same with two
-    // different fallbacks behind it: with a missing glyph, each fallback
-    // paints its own.
+    // Una letra la dibuja Saira si mide lo mismo con dos reservas distintas
+    // detrás: si a Saira le falta, cada reserva pinta la suya, con su ancho.
     const ctx = document.createElement("canvas").getContext("2d")!;
     const width = (font: string, ch: string) => {
       ctx.font = font;
@@ -111,10 +112,20 @@ function expectFlechaIcono(m: Medida, nombre: string) {
   }
 }
 
+// 🪤 «load» y la hidratación no bastan: la página llega por streaming y React
+// puede destapar el contenido unos cientos de ms DESPUÉS. Hasta entonces vive
+// en un <div hidden id="S:1">, fuera del árbol de accesibilidad y con todo a
+// 0 px: un `count()` da 0 y el test se SALTA callado («/en-vivo está en
+// directo», sin estarlo), o mide «el botón mide 0.0» (visto el 29-oct).
 async function abrir(page: Page, ruta: string) {
   const respuesta = await page.goto(ruta, { waitUntil: "load" });
   expect(respuesta?.status(), `HTTP en ${ruta}`).toBeLessThan(400);
   await esperarHidratacion(page);
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll('div[hidden][id^="S:"]').length), {
+      message: `${ruta}: el contenido sigue sin destaparse`,
+    })
+    .toBe(0);
   await page.evaluate(async () => {
     await document.fonts.load('600 16px "Saira Condensed"');
     await document.fonts.ready;
@@ -143,9 +154,11 @@ test("portada: los CTA de la home en Saira, mayúsculas y con su flecha centrada
   } else {
     testInfo.annotations.push({ type: "info", description: "sin último evento en la base: «Ver resultados completos» no sale" });
   }
+  // «Ver cartelera» va a 15: comparte fila con «Ver en directo (hoy)» en día
+  // de velada (ver «la fila de la cartelera», abajo).
   const cartelera = page.getByRole("link", { name: /Ver cartelera/ });
   if ((await cartelera.count()) > 0) {
-    ctas.push({ nombre: "Ver cartelera", target: cartelera.first(), flecha: true, minSize: 16 });
+    ctas.push({ nombre: "Ver cartelera", target: cartelera.first(), flecha: true, minSize: 15 });
   }
 
   for (const ancho of anchosDe(testInfo.project.name)) {
@@ -159,7 +172,16 @@ test("portada: los CTA de la home en Saira, mayúsculas y con su flecha centrada
   }
 });
 
-test("las acentuadas en mayúscula las dibuja Saira, y la «→» no", async ({ page }) => {
+// Las mayúsculas acentuadas de la lengua, todas en Saira: si un día se cambia
+// el subconjunto de la fuente, los botones no se quedan con letras de reserva.
+// (La «→» no está, y por eso ningún <Button> la escribe como texto: lo vigila
+// button.test.ts leyendo el código. Aquí no se afirma que falte: un subconjunto
+// que la añadiera no rompería nada.)
+test("las acentuadas en mayúscula las dibuja Saira", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "escritorio-light",
+    "la fuente es la misma en todos los anchos y temas: basta un proyecto",
+  );
   await abrir(page, "/");
   const cobertura = await page.evaluate(() => {
     const ctx = document.createElement("canvas").getContext("2d")!;
@@ -169,12 +191,9 @@ test("las acentuadas en mayúscula las dibuja Saira, y la «→» no", async ({ 
       ctx.font = `600 40px "Saira Condensed", serif`;
       return mono === ctx.measureText(ch).width;
     };
-    return Object.fromEntries([..."ÁÉÍÓÚÑÜ→"].map((ch) => [ch, desde(ch)]));
+    return Object.fromEntries([..."ÁÉÍÓÚÑÜ"].map((ch) => [ch, desde(ch)]));
   });
-  // Las de la lengua, todas en Saira.
   for (const ch of "ÁÉÍÓÚÑÜ") expect(cobertura[ch], `«${ch}» no está en Saira`).toBe(true);
-  // La flecha no: por eso ningún botón la escribe como texto.
-  expect(cobertura["→"], "la «→» ya está en Saira: el icono sobraría").toBe(false);
 });
 
 test("/fighters: «Restablecer filtros» y la paginación, en la misma voz", async ({ page }, testInfo) => {
@@ -198,7 +217,7 @@ test("/tendencias: las pestañas y «Cargar más», que eran IBM Plex Mono", asy
   if (!hayMas) testInfo.annotations.push({ type: "info", description: "/tendencias no tiene más que cargar hoy" });
   for (const ancho of anchosDe(testInfo.project.name)) {
     await page.setViewportSize({ width: ancho, height: 900 });
-    // The tabs match the P4P/Salón tabs: 14 px, like the nav.
+    // Las pestañas, como las del libra por libra y el Salón: 14 px, como la cabecera.
     await expectVozUfc(activa, `pestaña activa a ${ancho} px`, 14);
     if (hayMas) await expectVozUfc(cargar, `Cargar más a ${ancho} px`);
     await expectNoHorizontalOverflow(page, `/tendencias a ${ancho} px`);
@@ -224,34 +243,145 @@ test("ficha del próximo evento: «Ver el combate» y compañía, que eran IBM P
   }
 });
 
-test("/contacto, /ufc-hoy y /en-vivo: el envío y los CTA de la velada", async ({ page }, testInfo) => {
+// Uno por página: si el primero falla, los otros dos se siguen viendo.
+test("/contacto: «Enviar mensaje»", async ({ page }, testInfo) => {
   await abrir(page, "/contacto");
-  await expectVozUfc(page.getByRole("button", { name: /Enviar mensaje/ }), "Enviar mensaje", 16);
+  const enviar = page.getByRole("button", { name: /Enviar mensaje/ });
+  for (const ancho of anchosDe(testInfo.project.name)) {
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await expectVozUfc(enviar, `Enviar mensaje a ${ancho} px`, 16);
+    await expectNoHorizontalOverflow(page, `/contacto a ${ancho} px`);
+  }
+});
 
-  // /ufc-hoy: «Ver la velada» (o «Seguirlo en directo» si está en el aire).
+test("/ufc-hoy: «Ver la velada» (o «Seguirlo en directo» si está en el aire)", async ({ page }, testInfo) => {
   await abrir(page, "/ufc-hoy");
   const velada = page.getByRole("link", { name: /^(Ver la velada|Seguirlo en directo)$/ });
-  if ((await velada.count()) > 0) {
-    for (const ancho of anchosDe(testInfo.project.name)) {
-      await page.setViewportSize({ width: ancho, height: 900 });
-      await expectVozUfc(velada.first(), `/ufc-hoy a ${ancho} px`);
-      await expectNoHorizontalOverflow(page, `/ufc-hoy a ${ancho} px`);
-    }
-  } else {
-    testInfo.annotations.push({ type: "info", description: "/ufc-hoy sin velada candidata" });
+  test.skip((await velada.count()) === 0, "/ufc-hoy sin velada candidata");
+  for (const ancho of anchosDe(testInfo.project.name)) {
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await expectVozUfc(velada.first(), `/ufc-hoy a ${ancho} px`);
+    await expectNoHorizontalOverflow(page, `/ufc-hoy a ${ancho} px`);
   }
+});
 
-  // /en-vivo sin directo: «Próximo evento: …» lleva el nombre entero del
-  // evento y PUEDE partirse en dos líneas (no es whitespace-nowrap).
+// /en-vivo sin directo: «Próximo evento: …» lleva el nombre entero del evento
+// y PUEDE partirse en dos líneas (no es whitespace-nowrap).
+test("/en-vivo: «Próximo evento: …» o «Ver próximos eventos»", async ({ page }, testInfo) => {
   await abrir(page, "/en-vivo");
   const proximo = page.getByRole("link", { name: /^(Próximo evento: |Ver próximos eventos)/ });
-  if ((await proximo.count()) > 0) {
-    for (const ancho of anchosDe(testInfo.project.name)) {
-      await page.setViewportSize({ width: ancho, height: 900 });
-      await expectVozUfc(proximo.first(), `/en-vivo a ${ancho} px`);
-      await expectNoHorizontalOverflow(page, `/en-vivo a ${ancho} px`);
-    }
-  } else {
-    testInfo.annotations.push({ type: "info", description: "/en-vivo está en directo: sin el CTA de próximo evento" });
+  test.skip((await proximo.count()) === 0, "/en-vivo está en directo: sin el CTA de próximo evento");
+  for (const ancho of anchosDe(testInfo.project.name)) {
+    await page.setViewportSize({ width: ancho, height: 900 });
+    await expectVozUfc(proximo.first(), `/en-vivo a ${ancho} px`);
+    await expectNoHorizontalOverflow(page, `/en-vivo a ${ancho} px`);
   }
+});
+
+// ── Lo que un botón más ancho le quita al vecino (revisión del 29-oct) ───────
+//
+// Medir solo las etiquetas no basta. La letra nueva ensancha los botones, y
+// donde un botón comparte fila, cada píxel que gana lo pierde el de al lado:
+//
+//   · «Explorar plantilla» va junto al buscador del hero desde 640 px. A 16 px
+//     y con su px-8 de antes pasó de 171 a 196 px, y el texto de ayuda
+//     («Buscar luchadores, eventos o noticias...») se cortaba a 1024 (el iPad
+//     en horizontal) y desde 916, donde en producción cabía entero.
+//   · En día de velada, «Ver en directo (hoy)» se pone al lado de «Ver
+//     cartelera»: a 16 px los dos dejaban de caber en una fila a 390 y 414 px,
+//     los iPhone más comunes, donde antes cabían.
+//
+// Cada test fija sus anchos y el hero es oscuro en los dos temas: basta un
+// proyecto.
+test.describe("lo que un botón más ancho le quita al vecino", () => {
+  // Sin el service worker de la PWA, como portada-hero.spec.ts: estos tests
+  // recargan la portada y miden cajas, y el SW sirve el CSS que tenga guardado.
+  test.use({ serviceWorkers: "block" });
+
+  test.beforeEach(({}, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "escritorio-light",
+      "cada test fija sus anchos y el tema no cambia la geometría: basta un proyecto",
+    );
+  });
+
+  test("portada: «Explorar plantilla» no le quita al buscador el sitio que tenía", async ({ page }) => {
+    await page.route("**/api/live/now", (route) => route.fulfill({ status: 200, json: { phase: "none" } }));
+    await abrir(page, "/");
+    const medirBuscador = () =>
+      page.evaluate(() => {
+        const campo = document.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+        const boton = [...document.querySelectorAll("button")].find((b) =>
+          /Explorar plantilla/i.test(b.textContent ?? ""),
+        )!;
+        const cs = getComputedStyle(campo);
+        const ctx = document.createElement("canvas").getContext("2d")!;
+        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        return {
+          ayuda: ctx.measureText(campo.placeholder).width,
+          hueco: campo.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+          campo: campo.getBoundingClientRect().width,
+          boton: boton.getBoundingClientRect().width,
+        };
+      });
+    // Desde 916 px el texto de ayuda cabía entero en producción: que siga cabiendo.
+    for (const ancho of [920, 1024, 1280]) {
+      await page.setViewportSize({ width: ancho, height: 900 });
+      const m = await medirBuscador();
+      expect(
+        m.ayuda,
+        `a ${ancho} px el texto de ayuda (${m.ayuda.toFixed(1)} px) no cabe en el campo (${m.hueco.toFixed(1)} px); el botón mide ${m.boton.toFixed(1)}`,
+      ).toBeLessThanOrEqual(m.hueco + 0.5);
+    }
+    // En el iPad vertical ya se cortaba; que no vaya a peor: el buscador es
+    // lo principal, y sigue siendo más ancho que su botón.
+    for (const ancho of [768, 820]) {
+      await page.setViewportSize({ width: ancho, height: 900 });
+      const m = await medirBuscador();
+      expect(
+        m.campo,
+        `a ${ancho} px el buscador (${m.campo.toFixed(1)} px) es más estrecho que su botón (${m.boton.toFixed(1)} px)`,
+      ).toBeGreaterThan(m.boton);
+    }
+  });
+
+  test("portada: en día de velada, «Ver en directo» y «Ver cartelera» caben en una fila donde ya cabían", async ({
+    page,
+  }) => {
+    // El CTA de directo solo sale con la velada a menos de 24 h: se le da la
+    // fase con /api/live/now. Donde ya no cabían en producción (360 px, y 390
+    // con «(mañana)») se apilan como antes, sin desbordar.
+    let directo = { phase: "pre", live: false, daysUntil: 0 as number | null };
+    await page.route("**/api/live/now", (route) =>
+      route.fulfill({ status: 200, json: { ...directo, eventId: null, eventName: null } }),
+    );
+    await abrir(page, "/");
+    const cartelera = page.getByRole("link", { name: /Ver cartelera/ });
+    test.skip((await cartelera.count()) === 0, "no hay próximo evento en la base");
+
+    const casos = [
+      { fase: { phase: "pre", live: false, daysUntil: 0 }, etiqueta: "Ver en directo (hoy)", anchos: [390, 414] },
+      { fase: { phase: "pre", live: false, daysUntil: 1 }, etiqueta: "Ver en directo (mañana)", anchos: [414] },
+      { fase: { phase: "live", live: true, daysUntil: 0 }, etiqueta: "Ver en directo", anchos: [360, 390, 414] },
+    ];
+    for (const caso of casos) {
+      directo = caso.fase;
+      // sessionStorage guarda la fase anterior: se borra para no leerla.
+      await page.evaluate(() => sessionStorage.removeItem("mma-live-now"));
+      await abrir(page, "/");
+      const enDirecto = page.getByRole("link", { name: caso.etiqueta, exact: true });
+      await expect(enDirecto, `el CTA «${caso.etiqueta}»`).toBeVisible();
+      for (const ancho of caso.anchos) {
+        await page.setViewportSize({ width: ancho, height: 900 });
+        const a = (await enDirecto.boundingBox())!;
+        const b = (await cartelera.first().boundingBox())!;
+        expect(
+          Math.abs(a.y - b.y),
+          `a ${ancho} px «${caso.etiqueta}» (${a.width.toFixed(1)} px) y «Ver cartelera» (${b.width.toFixed(1)} px) ya no caben en una fila`,
+        ).toBeLessThanOrEqual(4);
+        await expectVozUfc(enDirecto, `${caso.etiqueta} a ${ancho} px`);
+        await expectNoHorizontalOverflow(page, `portada con el CTA de directo a ${ancho} px`);
+      }
+    }
+  });
 });
