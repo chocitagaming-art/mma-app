@@ -23,12 +23,23 @@ import { esperarHidratacion, expectNoHorizontalOverflow } from "./helpers";
 //     se pone rojo.
 //   · La etiqueta cumple el contraste AA en los dos temas.
 //
+// ── Y «Campeona» también en /clasificacion y en la ficha (el dueño, 30-oct-2026) ──
+//
+// Con la MISMA regla que las tarjetas (inferFighterGender: «women» en la
+// división). Lo que se vigila:
+//   · En /clasificacion, cada bloque de campeón dice «Campeona» en una división
+//     femenina y «Campeón» en una masculina (la de su cabecera, «(F)»).
+//   · La ficha de cada campeona dice «Campeona» en su insignia roja de la
+//     cabecera, «El #1 (y la campeona) aparecen arriba.» y «Campeona» en los
+//     puntos de su trayectoria; la de un campeón sigue diciendo «Campeón».
+//
 // 🪤 SIN NOMBRES FIJOS: el ranking cambia cada semana. Los campeones se leen de
 // /clasificacion, que es quien los publica (sus bloques dorados), y se cruzan
 // por el /fighters/<id> del enlace.
 //
 // Corre en los seis proyectos: el dorado se mide en claro y en oscuro, y la
-// etiqueta a 390, 768 y 1280.
+// etiqueta a 390, 768 y 1280. Los dos de /clasificacion y la ficha, solo en
+// movil-light: comparan textos, que no dependen ni del ancho ni del tema.
 //
 // 🪤 Los colores se pasan a RGB pintándolos en un <canvas>. Si el navegador no
 // entendiera la sintaxis (oklch), fillStyle se quedaría con el color de antes y
@@ -302,6 +313,96 @@ async function medirEtiquetas(page: Page, selector: string) {
     });
   }, CENTINELA);
 }
+
+type BloqueDeCampeon = {
+  division: string;
+  /** La cabecera de su tarjeta: «Peso Gallo (F)». */
+  categoria: string;
+  /** El texto «Campeón» / «Campeona» del bloque, o null si no lo tiene. */
+  etiqueta: string | null;
+  href: string | null;
+};
+
+/** Cada bloque de campeón de /clasificacion, con la cabecera de su tarjeta. */
+async function bloquesDeCampeon(page: Page): Promise<BloqueDeCampeon[]> {
+  await page.goto("/clasificacion");
+  // 🪤 En streaming, React deja el contenido unos cientos de ms en un div
+  // oculto fuera de <main>: se espera a que el primer bloque SE VEA en <main>
+  // (la página no tiene más Suspense: entra todo a la vez).
+  await expect(page.locator('main [data-testid="ranking-champion"]').first()).toBeVisible();
+  return page.locator('main [data-testid="ranking-card"]').evaluateAll((tarjetas) =>
+    tarjetas
+      .filter((t) => t.querySelector('[data-testid="ranking-champion"]'))
+      .map((t) => {
+        const bloque = t.querySelector('[data-testid="ranking-champion"]')!;
+        const etiqueta = [...bloque.querySelectorAll("p")].find((p) =>
+          /^Campe(ón|ona)$/.test(p.textContent?.trim() ?? ""),
+        );
+        return {
+          division: t.getAttribute("data-division") ?? "",
+          categoria: t.querySelector("h3")?.textContent?.trim() ?? "",
+          etiqueta: etiqueta?.textContent?.trim() ?? null,
+          href: bloque.querySelector('a[href^="/fighters/"]')?.getAttribute("href") ?? null,
+        };
+      }),
+  );
+}
+
+test("/clasificacion: «Campeona» en las divisiones femeninas y «Campeón» en las masculinas", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "movil-light", "compara textos: no depende del ancho ni del tema");
+  const bloques = await bloquesDeCampeon(page);
+  const mujeres = bloques.filter((b) => etiquetaEsperada(b.categoria) === "Campeona");
+  // Sin una de cada, el test pasaría sin haber mirado la mitad de la regla.
+  expect(mujeres.length, "ninguna división femenina con campeona: «Campeona» no se ha probado").toBeGreaterThan(0);
+  expect(bloques.length - mujeres.length, "ninguna división masculina con campeón").toBeGreaterThan(0);
+  for (const b of bloques) {
+    expect(b.etiqueta, `${b.division} (${b.categoria}): la etiqueta del campeón`).toBe(etiquetaEsperada(b.categoria));
+  }
+});
+
+test("la ficha de cada campeona dice «Campeona» (insignia, frase y trayectoria), y la de un campeón «Campeón»", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "movil-light", "compara textos: no depende del ancho ni del tema");
+  test.setTimeout(120_000);
+  const bloques = (await bloquesDeCampeon(page)).filter((b) => b.href);
+  const campeonas = bloques.filter((b) => etiquetaEsperada(b.categoria) === "Campeona");
+  // El control: UN campeón (el primero que publica /clasificacion).
+  const campeon = bloques.find((b) => etiquetaEsperada(b.categoria) === "Campeón");
+  expect(campeonas.length, "/clasificacion no publica ninguna campeona con ficha").toBeGreaterThan(0);
+  expect(campeon, "/clasificacion no publica ningún campeón con ficha").toBeDefined();
+
+  for (const b of [...campeonas, campeon!]) {
+    const esperada = etiquetaEsperada(b.categoria);
+    const otra = esperada === "Campeona" ? "Campeón" : "Campeona";
+    const donde = `${b.href} (${b.categoria})`;
+    await page.goto(b.href!);
+    // La insignia roja de la cabecera: una sola, y en su género.
+    const insignia = page.locator('main [data-slot="badge"]').filter({ hasText: /^Campe(ón|ona)$/ });
+    await expect(insignia, `${donde}: insignias de campeón`).toHaveCount(1);
+    await expect(insignia, `${donde}: la insignia`).toHaveText(esperada);
+    // La frase de «Trayectoria de ranking».
+    const articulo = esperada === "Campeona" ? "la campeona" : "el campeón";
+    await expect(page.locator("main"), `${donde}: la frase de la trayectoria`).toContainText(
+      `El #1 (y ${articulo}) aparecen arriba.`,
+    );
+    // Los puntos de la trayectoria (el <title> de cada uno): alguno de campeón,
+    // y ninguno del otro género.
+    const puntos = await page
+      .locator("main svg circle > title")
+      .evaluateAll((ts) => ts.map((t) => t.textContent ?? ""));
+    expect(
+      puntos.filter((p) => p.includes(` — ${esperada} (`)).length,
+      `${donde}: ningún punto «${esperada}» en la trayectoria (${puntos.length} puntos)`,
+    ).toBeGreaterThan(0);
+    expect(
+      puntos.filter((p) => p.includes(` — ${otra} (`)),
+      `${donde}: puntos «${otra}» en la trayectoria`,
+    ).toEqual([]);
+  }
+});
 
 test("la etiqueta «Campeón» cumple el contraste AA, en /fighters y en la portada", async ({ page }) => {
   const tema = test.info().project.name.endsWith("-dark") ? "dark" : "light";
