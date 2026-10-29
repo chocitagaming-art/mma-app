@@ -1,8 +1,9 @@
-import { createElement } from "react";
+import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { EventBoutRow } from "@/components/event-bout-row";
+import { FighterHeadshot } from "@/components/fighter-headshot";
 import { LastEventSection } from "@/components/home/last-event-section";
 import type { EventBout, EventBoutFighter, LastEventResults } from "@/lib/types";
 
@@ -17,7 +18,8 @@ import type { EventBout, EventBoutFighter, LastEventResults } from "@/lib/types"
 //     original de ufc.com en el srcset y un `sizes` EXACTO (el ancho al que se
 //     pinta la foto, no el de la caja).
 //   · El ganador conserva su anillo verde.
-//   · Sin pedirlo, la fila es la de siempre: 36/48 px y sin original.
+//   · Sin pedirlo, la fila es la de siempre: 36/48 px y sin original, y la
+//     cara recibe las mismas props que antes (el payload RSC no crece).
 
 // El estelar del UFC 333 (consulta de solo lectura del 29-oct-2026): cara de
 // ufc.com del estilo event_results en la roja, de ESPN en la azul.
@@ -165,4 +167,29 @@ describe("la fila de cartelera sin pedir nada (/eventos/[id], /en-vivo, /ufc-hoy
     expect(cara(html, "Alexander Volkanovski").caja).toBe(`${DEFAULT_CAJA} ring-2 ring-win`);
     expect(html).not.toContain('data-headshot-quality="hd"');
   });
+
+  // 🪤 El HTML igual no basta: FighterHeadshot es de cliente, así que sus props
+  // viajan en el payload RSC, y React Flight escribe una prop PRESENTE con valor
+  // undefined como «"quality":"$undefined"» (unos 44 bytes por cara, en cada
+  // router.refresh de /en-vivo). La fila de siempre le pasa las mismas props
+  // que antes, en el mismo orden (Flight las escribe en ese orden).
+  it("🔴 el payload RSC tampoco cambia: la cara recibe las props de antes, ni quality ni sizes", () => {
+    for (const props of [{}, { statsPanel: createElement("div", null, "stats"), panelDefaultOpen: true }]) {
+      const caras = propsDeLasCaras(EventBoutRow({ bout: ESTELAR, ...props }));
+      expect(caras).toHaveLength(2);
+      for (const cara of caras) {
+        expect(Object.keys(cara)).toEqual(["name", "headshotUrl", "division", "size", "className"]);
+      }
+    }
+  });
 });
+
+/** Las props con que la fila llama a FighterHeadshot, buscadas en el árbol de
+ *  elementos SIN pintarlo (en cualquier prop: la fila va en `row` del acordeón). */
+function propsDeLasCaras(nodo: unknown): Record<string, unknown>[] {
+  if (Array.isArray(nodo)) return nodo.flatMap(propsDeLasCaras);
+  if (!isValidElement(nodo)) return [];
+  const props = nodo.props as Record<string, unknown>;
+  const propias = nodo.type === FighterHeadshot ? [props] : [];
+  return [...propias, ...Object.values(props).flatMap(propsDeLasCaras)];
+}

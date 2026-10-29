@@ -163,14 +163,18 @@ type RowLayout = {
   // The box of each face (twMerge overrides the size-* of FighterHeadshot's
   // `size`, which then only picks the initials' text size).
   headshot: string;
+  // Spread onto FighterHeadshot. 🪤 Leave a prop OUT rather than undefined: it
+  // is a client component, and React Flight writes a present undefined prop
+  // into the RSC payload as "$undefined" (on every /en-vivo refresh).
   photo: { size: "sm" | "lg"; quality?: "hd"; sizes?: string };
   text: string;
   centre: string;
 };
 
-// The two ways of drawing the row (headshotSize). "default" is the one of
-// always, class by class: /eventos/[id], /en-vivo and /ufc-hoy do not change by
-// a single byte (and on Saturday 31-oct /en-vivo carries the event).
+// The two ways of drawing the row (headshotSize). "default" is the existing
+// row, class for class and prop for prop: on /eventos/[id], /en-vivo and
+// /ufc-hoy neither the HTML nor the RSC payload changes (and on Saturday
+// 31-oct /en-vivo carries the event).
 //
 // "large" is the home's «Último evento» (owner, 29-oct-2026: «ponemos las
 // fotos de las cabezas más grandes y nítidas»): a 72 px face on phones and 96
@@ -298,9 +302,7 @@ export function EventBoutRow({
           name={bout.red.name}
           headshotUrl={bout.red.headshotUrl}
           division={bout.weightClass}
-          size={layout.photo.size}
-          quality={layout.photo.quality}
-          sizes={layout.photo.sizes}
+          {...layout.photo}
           className={cn(layout.headshot, redWon && "ring-2 ring-win")}
         />
         <div className={layout.text}>
@@ -418,9 +420,7 @@ export function EventBoutRow({
           name={bout.blue.name}
           headshotUrl={bout.blue.headshotUrl}
           division={bout.weightClass}
-          size={layout.photo.size}
-          quality={layout.photo.quality}
-          sizes={layout.photo.sizes}
+          {...layout.photo}
           className={cn(layout.headshot, blueWon && "ring-2 ring-win")}
         />
         <div className={layout.text}>
