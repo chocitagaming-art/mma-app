@@ -17,6 +17,9 @@ import { expect, test as base, type Browser, type Page } from "@playwright/test"
 //     NO la silueta. Antes de R5, un fallo saltaba directo a la silueta.
 //   · Las caras pequeñas (filas de evento) siguen con la de 256: el peso de
 //     una velada no sube.
+//   · Salvo en el «Último evento» de la portada (el dueño, 29-oct-2026: «las
+//     fotos de las cabezas más grandes y nítidas»): ahí la misma fila pinta
+//     caras de 72/96 px con el original en el srcset.
 //
 // 🪤 Las fotos externas se sirven ENLATADAS con su medida real (256×160 la
 // guardada y 500×325 el original), y el original se reconoce por la URL: un
@@ -206,6 +209,8 @@ const CARAS_TARJETA = '[data-testid="roster-card-photo"] img';
 const CARA_FICHA = 'main img[alt="Foto de Heath Herring"], main img[alt^="Silueta de Heath Herring"]';
 // La esquina del careo que pinta la cara (sin cuerpo) en vez de la foto de cuerpo.
 const CARA_CAREO = '[data-photo-kind="headshot"] img';
+// Las caras del «Último evento»: en la portada no hay otras filas de cartelera.
+const CARAS_PORTADA = '[data-bout-corner] img[alt^="Foto de "]';
 
 for (const motor of ["chromium", "webkit"] as const) {
   test.describe(motor, () => {
@@ -387,6 +392,44 @@ for (const motor of ["chromium", "webkit"] as const) {
         expect(cara.actual, `[${motor}] ${cara.alt}: la de 256`).toMatch(GUARDADA);
       }
       expect(pedidas.original, `[${motor}] ningún original en toda la página del evento`).toEqual([]);
+    });
+
+    // La foto de ufc.com se pinta a 112 px en el móvil (caja de 72) y a 150
+    // desde 640 (caja de 96): la de 256 vale hasta 2,29x y 1,70x. Un iPhone
+    // (3x) y un iPad (2x) bajan el original; un móvil 2x o 1x, la de 256.
+    // 🪤 El 2x es el móvil más común y el lado del PESO: si el `sizes` del
+    // móvil sube de 128 px, todos ellos bajarían el original sin que el 3x ni
+    // el 1x lo notaran.
+    test("las caras del «Último evento» de la portada piden el original a 390@3x y 768@2x, y la de 256 a 390@2x y 390@1x", async ({
+      abrir,
+    }) => {
+      const pantallas = [
+        { width: 390, height: 844, dpr: 3, original: true },
+        { width: 768, height: 1024, dpr: 2, original: true },
+        { width: 390, height: 844, dpr: 2, original: false },
+        { width: 390, height: 844, dpr: 1, original: false },
+      ];
+      for (const { original, ...pantalla } of pantallas) {
+        const donde = `[${motor}] ${pantalla.width}@${pantalla.dpr}x`;
+        const pagina = await abrir(pantalla);
+        await pagina.goto("/");
+        const deUfc = (await caras(pagina, CARAS_PORTADA)).filter((c) => GUARDADA.test(c.src));
+        // 🪤 El «Último evento» cambia cada semana: uno con todas las caras de
+        // ESPN (600×436, nítidas ya) es legítimo y no tiene original que pedir.
+        test.skip(deUfc.length === 0, "el «Último evento» no tiene caras de ufc.com del estilo event_results");
+        for (const cara of deUfc) {
+          expect(cara.srcset, `${donde} ${cara.alt}: srcset con la guardada y el original`).toMatch(
+            / 256w, https:\/\/www\.ufc\.com\/images\/.+ 500w$/,
+          );
+          if (original) {
+            expect(cara.actual, `${donde} ${cara.alt}: baja el original`).toMatch(ORIGINAL);
+            expect(cara.ancho, `${donde} ${cara.alt}: naturalWidth`).toBeGreaterThanOrEqual(500);
+          } else {
+            expect(cara.actual, `${donde} ${cara.alt}: sigue con la de 256`).toMatch(GUARDADA);
+            expect(cara.ancho, `${donde} ${cara.alt}: naturalWidth`).toBe(256);
+          }
+        }
+      }
     });
   });
 }
