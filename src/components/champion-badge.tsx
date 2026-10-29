@@ -5,26 +5,34 @@ import { cn } from "@/lib/utils";
 // The «Campeón» label of a CURRENT champion's card (owner, 29-oct-2026), on
 // the /fighters roster card and the home's pound-for-pound card. The gold
 // border says it to the eye; this says it in words, so the meaning is not
-// carried by colour alone (WCAG 1.4.1).
+// carried by colour alone (WCAG 1.4.1). «Campeona» on a woman's card: the
+// review of 29-oct saw «CAMPEÓN» in big letters over Kayla Harrison, Natalia
+// Silva and Mackenzie Dern. (/clasificacion still says «Campeón» on its
+// women's divisions: that one is the owner's call, not this change's.)
 //
 // The text is the /clasificacion «Campeón» (mono, uppercase, amber-700 /
-// amber-400), on an OPAQUE card-coloured pill: it sits over a gold wash and
-// the corner of a photo, and a background of its own keeps the contrast fixed
-// and decidable (amber-700 on white 5.0:1, amber-400 on the dark card 10:1;
+// amber-400), on an OPAQUE card-coloured pill: it sits over a gold line and a
+// gold wash, and a background of its own keeps the contrast fixed and
+// decidable (amber-700 on white 5.0:1, amber-400 on the dark card 10:1;
 // e2e/campeones-oro.spec.ts measures it). A <span>, never a <p>: the roster
 // card's tests read its paragraphs by position.
 //
+// Where it goes is each card's business, and in both it is kept OFF the photo
+// (a head's hair reaches different corners at different widths, and grows on
+// hover): on the roster card it sits on the line the photo stands on, on the
+// pound-for-pound card above the name.
+//
 // `compact` (the roster card below lg): 10 px text and a 10 px trophy, a
-// 75×16 px pill instead of 88×20. On the 157-245 px cards of phones and
-// tablets the head is centred and reaches the top of the photo zone, and the
-// full-size pill grazed the hair of Joshua Van and Alexander Volkanovski
-// (measured on 29-oct at 360, 390 and 768); the compact one ends before it.
+// 75×16 px pill instead of 89×20, in proportion to the 157-245 px cards of
+// phones and tablets.
 export function ChampionBadge({
   id,
+  female = false,
   compact = false,
   className,
 }: {
   id?: string;
+  female?: boolean;
   compact?: boolean;
   className?: string;
 }) {
@@ -45,7 +53,7 @@ export function ChampionBadge({
       )}
     >
       <Trophy className={cn("shrink-0", compact ? "size-2.5 lg:size-3" : "size-3")} aria-hidden />
-      Campeón
+      {female ? "Campeona" : "Campeón"}
     </span>
   );
 }

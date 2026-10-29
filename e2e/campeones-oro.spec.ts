@@ -10,8 +10,13 @@ import { esperarHidratacion, expectNoHorizontalOverflow } from "./helpers";
 // llegando». Lo que se vigila:
 //   · La tarjeta de un campeón actual lleva el marcador, la etiqueta visible
 //     «Campeón» (el significado no va solo en el color) y el borde dorado; la
-//     de cualquier otro, nada de eso.
+//     de cualquier otro, nada de eso. Una campeona lleva «Campeona».
 //   · «Campeón» también en la descripción accesible del enlace.
+//   · La etiqueta va montada en la línea sobre la que se apoya la foto, en el
+//     centro, y no en una esquina de la foto: ahí tapaba el pelo de Natalia
+//     Silva, Kayla Harrison y Carlos Ulberg entre 414 y 460 px, entre 640 y 700
+//     y entre 1100 y 1175 (revisión visual del 29-oct-2026), y la cabeza se le
+//     metía debajo al crecer con el ratón.
 //   · El oro NO mueve la rejilla: mismo grosor de borde (el segundo píxel de
 //     oro es un anillo que no ocupa sitio) y la misma zona de foto.
 //   · Al pasar el ratón o con el foco del teclado sigue en oro y brilla más; no
@@ -24,8 +29,17 @@ import { esperarHidratacion, expectNoHorizontalOverflow } from "./helpers";
 //
 // Corre en los seis proyectos: el dorado se mide en claro y en oscuro, y la
 // etiqueta a 390, 768 y 1280.
+//
+// 🪤 Los colores se pasan a RGB pintándolos en un <canvas>. Si el navegador no
+// entendiera la sintaxis (oklch), fillStyle se quedaría con el color de antes y
+// dos colores ilegibles saldrían «iguales»: la comparación pasaría sin mirar
+// nada. Por eso se pinta primero un CENTINELA y, si sigue ahí, el test revienta.
 
 const TARJETAS = '[data-testid="roster-card"]';
+const CENTINELA = "#fe01fd";
+
+/** «Campeona» si la categoría de la tarjeta es femenina («Peso Mosca (F)»). */
+const etiquetaEsperada = (categoria: string) => (/\(F\)/.test(categoria) ? "Campeona" : "Campeón");
 
 /** Los /fighters/<id> de los campeones que publica /clasificacion. */
 async function campeonesPublicados(page: Page): Promise<Set<string>> {
@@ -55,7 +69,9 @@ type Medida = {
   href: string;
   marcador: string | null;
   etiqueta: string | null;
-  etiquetaDentro: boolean;
+  categoria: string;
+  /** La etiqueta, respecto de la línea de la foto, del centro y del apodo. */
+  etiquetaPos: { sobreLaLinea: boolean; descentrada: number; dentro: boolean; libreDelTexto: boolean } | null;
   describe: string;
   borde: number[];
   bordeAncho: string;
@@ -70,14 +86,15 @@ type Medida = {
  * forma en que serialice el color.
  */
 async function medirTarjetas(page: Page): Promise<{ tarjetas: Medida[]; oro: number[]; borde: number[] }> {
-  return page.evaluate((selector) => {
+  return page.evaluate(([selector, centinela]) => {
     const lienzo = document.createElement("canvas");
     lienzo.width = lienzo.height = 1;
     const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
     const aRgb = (color: string) => {
       ctx.clearRect(0, 0, 1, 1);
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = centinela;
       ctx.fillStyle = color;
+      if (ctx.fillStyle === centinela) throw new Error(`el navegador no entiende el color «${color}»`);
       ctx.fillRect(0, 0, 1, 1);
       return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
     };
@@ -94,14 +111,25 @@ async function medirTarjetas(page: Page): Promise<{ tarjetas: Medida[]; oro: num
       const zona = a.querySelector<HTMLElement>('[data-testid="roster-card-photo"]');
       const t = a.getBoundingClientRect();
       const e = etiqueta?.getBoundingClientRect();
+      const z = zona?.getBoundingClientRect();
+      // La primera línea de texto bajo la foto: el apodo (o su hueco).
+      const apodo = zona?.nextElementSibling?.querySelector("p")?.getBoundingClientRect();
       const estilo = getComputedStyle(a);
       return {
         href: a.getAttribute("href") ?? "",
         marcador: a.getAttribute("data-champion"),
         etiqueta: etiqueta && etiqueta.offsetWidth > 0 ? (etiqueta.textContent ?? "").trim() : null,
-        etiquetaDentro: e
-          ? e.left >= t.left && e.right <= t.right && e.top >= t.top && e.bottom <= (zona?.getBoundingClientRect().bottom ?? t.bottom)
-          : true,
+        categoria: (a.querySelector('[id$="-details"] .truncate')?.textContent ?? "").trim(),
+        etiquetaPos:
+          e && z && apodo
+            ? {
+                // Montada en la línea: empieza por encima y acaba por debajo.
+                sobreLaLinea: e.top < z.bottom - 2 && e.bottom > z.bottom,
+                descentrada: Math.abs((e.left + e.right) / 2 - (t.left + t.right) / 2),
+                dentro: e.left >= t.left && e.right <= t.right,
+                libreDelTexto: e.bottom <= apodo.top + 0.5,
+              }
+            : null,
         describe: (a.getAttribute("aria-describedby") ?? "")
           .split(/\s+/)
           .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
@@ -114,7 +142,7 @@ async function medirTarjetas(page: Page): Promise<{ tarjetas: Medida[]; oro: num
       };
     });
     return { tarjetas, oro: token("--champion-gold"), borde: token("--border") };
-  }, TARJETAS);
+  }, [TARJETAS, CENTINELA] as const);
 }
 
 const igual = (a: number[], b: number[]) => a.every((v, i) => Math.abs(v - b[i]) <= 2);
@@ -124,6 +152,7 @@ test("/fighters: los campeones actuales llevan el oro y la etiqueta, y nadie má
   expect(campeones.size, "/clasificacion no publica campeones").toBeGreaterThan(0);
 
   let vistosCampeones = 0;
+  let vistasCampeonas = 0;
   let vistosOtros = 0;
   // La primera página (por relevancia: los campeones primero) y la de más
   // victorias (veteranos): entre las dos salen campeones y no campeones.
@@ -141,16 +170,23 @@ test("/fighters: los campeones actuales llevan el oro y la etiqueta, y nadie má
       expect(t.bordeAncho, `${donde}: grosor del borde`).toBe("1px");
       if (campeones.has(t.href)) {
         vistosCampeones += 1;
+        const esperada = etiquetaEsperada(t.categoria);
+        if (esperada === "Campeona") vistasCampeonas += 1;
         expect(t.marcador, `${donde}: campeón sin marcador`).toBe("true");
-        expect(t.etiqueta, `${donde}: campeón sin la etiqueta visible`).toBe("Campeón");
-        expect(t.etiquetaDentro, `${donde}: la etiqueta se sale de la tarjeta o de la foto`).toBe(true);
-        expect(t.describe, `${donde}: el lector no oye «Campeón»`).toMatch(/^Campeón\b/);
+        expect(t.etiqueta, `${donde} (${t.categoria}): la etiqueta visible`).toBe(esperada);
+        expect(t.etiquetaPos, `${donde}: sin etiqueta, foto o apodo que medir`).not.toBeNull();
+        const pos = t.etiquetaPos!;
+        expect(pos.sobreLaLinea, `${donde}: la etiqueta no va montada en la línea de la foto`).toBe(true);
+        expect(pos.descentrada, `${donde}: la etiqueta no va en el centro`).toBeLessThanOrEqual(1);
+        expect(pos.dentro, `${donde}: la etiqueta se sale de la tarjeta`).toBe(true);
+        expect(pos.libreDelTexto, `${donde}: la etiqueta pisa el apodo`).toBe(true);
+        expect(t.describe, `${donde}: el lector no oye «${esperada}»`).toMatch(new RegExp(`^${esperada}\\b`));
         expect(igual(t.borde, oro), `${donde}: borde ${t.borde} en vez del oro ${oro}`).toBe(true);
       } else {
         vistosOtros += 1;
         expect(t.marcador, `${donde}: no es campeón y lleva marcador`).toBeNull();
         expect(t.etiqueta, `${donde}: no es campeón y lleva la etiqueta`).toBeNull();
-        expect(t.describe, `${donde}: no es campeón y el lector oye «Campeón»`).not.toMatch(/Campeón/);
+        expect(t.describe, `${donde}: no es campeón y el lector oye «Campeón»`).not.toMatch(/Campe(ón|ona)/);
         expect(igual(t.borde, borde), `${donde}: borde ${t.borde} en vez del normal ${borde}`).toBe(true);
       }
     }
@@ -166,6 +202,7 @@ test("/fighters: los campeones actuales llevan el oro y la etiqueta, y nadie má
     }
   }
   expect(vistosCampeones, "ningún campeón en las páginas mirada").toBeGreaterThan(0);
+  expect(vistasCampeonas, "ninguna campeona: «Campeona» no se ha probado").toBeGreaterThan(0);
   expect(vistosOtros, "ningún no campeón en las páginas miradas").toBeGreaterThan(0);
 });
 
@@ -179,14 +216,15 @@ test("/fighters: al pasar el ratón y con el teclado, el campeón sigue en oro y
   await expect(campeon, "la primera página no trae campeones").toBeVisible();
 
   const estado = () =>
-    campeon.evaluate((a) => {
+    campeon.evaluate((a, centinela) => {
       const lienzo = document.createElement("canvas");
       lienzo.width = lienzo.height = 1;
       const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
       const aRgb = (color: string) => {
         ctx.clearRect(0, 0, 1, 1);
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = centinela;
         ctx.fillStyle = color;
+        if (ctx.fillStyle === centinela) throw new Error(`el navegador no entiende el color «${color}»`);
         ctx.fillRect(0, 0, 1, 1);
         return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3).join(",");
       };
@@ -201,7 +239,7 @@ test("/fighters: al pasar el ratón y con el teclado, el campeón sigue en oro y
         primario: aRgb(getComputedStyle(document.documentElement).getPropertyValue("--primary")),
         oro: aRgb(getComputedStyle(document.documentElement).getPropertyValue("--champion-gold")),
       };
-    });
+    }, CENTINELA);
 
   const reposo = await estado();
   expect(reposo.borde, "en reposo el borde es el oro").toBe(reposo.oro);
@@ -231,14 +269,15 @@ test("/fighters: al pasar el ratón y con el teclado, el campeón sigue en oro y
  * sintaxis CSS, oklch incluido, a RGB).
  */
 async function medirEtiquetas(page: Page, selector: string) {
-  return page.locator(selector).evaluateAll((nodos) => {
+  return page.locator(selector).evaluateAll((nodos, centinela) => {
     const lienzo = document.createElement("canvas");
     lienzo.width = lienzo.height = 1;
     const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
     const aRgba = (color: string) => {
       ctx.clearRect(0, 0, 1, 1);
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = centinela;
       ctx.fillStyle = color;
+      if (ctx.fillStyle === centinela) throw new Error(`el navegador no entiende el color «${color}»`);
       ctx.fillRect(0, 0, 1, 1);
       const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
       return [r, g, b, a / 255];
@@ -261,7 +300,7 @@ async function medirEtiquetas(page: Page, selector: string) {
         tamano: parseFloat(estilo.fontSize),
       };
     });
-  });
+  }, CENTINELA);
 }
 
 test("la etiqueta «Campeón» cumple el contraste AA, en /fighters y en la portada", async ({ page }) => {

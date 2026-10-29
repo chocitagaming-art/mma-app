@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { ChampionBadge } from "@/components/champion-badge";
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { inferFighterGender } from "@/lib/fighter-silhouette";
 import { formatRecord, formatStance, formatWeightClass } from "@/lib/format";
 import type { FighterCardData } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -33,8 +34,8 @@ export function FighterRosterCard({ fighter, priority = false, className, style 
     ? formatWeightClass(fighter.latestWeightClass)
     : "Sin límite";
   // A CURRENT champion's card goes in gold (owner, 29-oct-2026), and the
-  // description starts with the visible «Campeón» badge. Every other card
-  // renders exactly the markup it had before.
+  // description starts with the visible «Campeón» / «Campeona» badge. Every
+  // other card renders exactly the markup it had before.
   const champion = fighter.isChampion;
   const describedBy = fighter.nickname ? `${nicknameId} ${detailsId}` : detailsId;
 
@@ -57,14 +58,22 @@ export function FighterRosterCard({ fighter, priority = false, className, style 
       )}
     >
       {champion ? (
-        // Over the photo's top-left corner, where the ufc.com bust leaves
-        // transparent background (the head is centred), compact below lg
-        // (see champion-badge.tsx). Outside the aria-hidden photo zone: it is
-        // read, as the start of the description.
+        // Mounted on the line the photo stands on, centred, right above the
+        // nickname: it heads the card's text, and only the bottom of the bust
+        // (the chest, cut flat on that line) goes under it. Until the review
+        // of 29-oct-2026 it sat in the photo's top-left corner, and there the
+        // hair of Natalia Silva, Kayla Harrison and Carlos Ulberg ran under it
+        // at 414-460, 640-700 and 1100-1175 px (where the card is just wide
+        // enough for the 1.6:1 face to fill it), and every head grew under it
+        // on hover. top = the photo zone's height (138 / 186 px, below), and
+        // 60 % of the pill above it: 2-3 px clear of the nickname's line.
+        // Compact below lg (champion-badge.tsx). Outside the aria-hidden photo
+        // zone: it is read, as the start of the description.
         <ChampionBadge
           id={championId}
+          female={inferFighterGender(fighter.name, fighter.latestWeightClass) === "female"}
           compact
-          className="absolute left-1.5 top-1 z-10 lg:left-2.5 lg:top-2.5"
+          className="absolute left-1/2 top-[138px] z-10 -translate-x-1/2 -translate-y-[60%] lg:top-[186px]"
         />
       ) : null}
       <div

@@ -17,7 +17,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //
 // LA TÉCNICA es la de featured-fighters.sql.test.ts: el mock de `sql()` contesta
 // según el TEXTO de la consulta, como Postgres. Si la consulta no pide la
-// columna `is_champion`, la fila no la trae, igual que en la base de verdad.
+// columna `is_champion`, la fila no la trae, igual que en la base de verdad. Y
+// si la pide SIN limitarse a la última foto, el cinturón de una foto vieja
+// cuenta, como contaría en la base: Topuria y Shevchenko saldrían en oro.
+// (Revisión del 29-oct-2026: el mock daba el oro de hoy a cualquier consulta,
+// y «Topuria (lo fue) no» pasaba aunque el SQL mirase cualquier foto.)
 
 vi.mock("@/lib/db", () => ({ sql: vi.fn() }));
 vi.mock("next/cache", () => ({
@@ -43,6 +47,23 @@ const SHEVCHENKO = { id: 6260, name: "Valentina Shevchenko" };
 const PANTOJA = { id: 7084, name: "Alexandre Pantoja" };
 
 const CAMPEONES_HOY = new Set([MAKHACHEV.id, VOLKANOVSKI.id, HARRISON.id]);
+const CAMPEONES_ANTES = new Set([TOPURIA.id, SHEVCHENKO.id]);
+
+/**
+ * ¿La consulta lee `is_champion` SOLO de la última foto? Las dos formas de la
+ * casa: el helper de la portada (current-champion.ts) y el CTE `rel` de
+ * /fighters, que ya lee esa foto para ordenar.
+ */
+function soloLaUltimaFoto(query: string): boolean {
+  if (query.includes("cch_r.snapshot_date = (select max(snapshot_date) from rankings)")) {
+    return true;
+  }
+  const rel = /rel as \(([\s\S]*?)\n\s*\),/.exec(query)?.[1] ?? "";
+  return (
+    rel.includes("bool_or(is_champion)") &&
+    rel.includes("where snapshot_date = (select d from latest)")
+  );
+}
 
 function aFila(l: { id: number; name: string }, query: string): Fila {
   const fila: Fila = {
@@ -65,7 +86,8 @@ function aFila(l: { id: number; name: string }, query: string): Fila {
   };
   // Postgres solo devuelve la columna si la consulta la PIDE.
   if (/\bas is_champion\b/.test(query)) {
-    fila.is_champion = CAMPEONES_HOY.has(l.id);
+    fila.is_champion =
+      CAMPEONES_HOY.has(l.id) || (!soloLaUltimaFoto(query) && CAMPEONES_ANTES.has(l.id));
   }
   return fila;
 }
