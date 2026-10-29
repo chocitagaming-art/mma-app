@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Trophy } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
 import { FighterHeadshot } from "@/components/fighter-headshot";
+import { inferFighterGender } from "@/lib/fighter-silhouette";
 import { formatRecord } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DivisionRanking, RankingEntry } from "@/lib/types";
@@ -116,6 +117,10 @@ function record(entry: RankingEntry): string | null {
 
 function ChampionBlock({ champion, division }: { champion: RankingEntry; division: string }) {
   const championRecord = record(champion);
+  // «Campeona» in the women's divisions (owner, 30-oct-2026): the rule of the
+  // /fighters and home pound-for-pound cards (champion-badge.tsx). `division`
+  // is the ranking slug («womens_bantamweight»), which isWomensDivision reads.
+  const female = inferFighterGender(champion.fighterName, division) === "female";
   return (
     <div
       data-testid="ranking-champion"
@@ -142,9 +147,16 @@ function ChampionBlock({ champion, division }: { champion: RankingEntry; divisio
           />
         </div>
         <div className="ranking-champion-label min-w-0">
-          <p className="flex items-center gap-1.5 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
-            <Trophy className="size-3.5 shrink-0" aria-hidden />
-            Campeón
+          {/* Below 21rem of card (phones under ~368 px) the label tightens
+              (0.1em, a 4 px gap, a 12 px trophy): «CAMPEONA» is 89.9 px and
+              this column is 82 at 360 (measured 29-oct, Chromium and WebKit);
+              tightened, 78.7. From 375 px the column is 97+ and nothing
+              changes, the owner's 390 included. Same container query as the
+              rows (.ranking-card, globals.css); e2e/clasificacion.spec.ts
+              pins both sides. */}
+          <p className="flex items-center gap-1.5 font-mono text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400 @max-[21rem]:gap-1 @max-[21rem]:tracking-[0.1em]">
+            <Trophy className="size-3.5 shrink-0 @max-[21rem]:size-3" aria-hidden />
+            {female ? "Campeona" : "Campeón"}
           </p>
           {/* The nickname, as the roster card shows it (mono, in quotes).
               Two lines, not an ellipsis: at 360 px this column is 82 px and

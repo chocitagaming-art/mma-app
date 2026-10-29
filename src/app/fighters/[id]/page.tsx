@@ -59,6 +59,7 @@ import {
 import { fighterExternalLinks } from "@/lib/external-links";
 import { mergeFightHistories } from "@/lib/fight-history";
 import { computeRecentForm } from "@/lib/fighter-form";
+import { inferFighterGender } from "@/lib/fighter-silhouette";
 import {
   computeAge,
   countFirstRoundFinishes,
@@ -184,6 +185,10 @@ export default async function FighterDetailPage({
   const division = detail.latestWeightClass
     ? formatWeightClass(detail.latestWeightClass)
     : null;
+  // «Campeona» / «la campeona» on a woman's page (owner, 30-oct-2026): the rule
+  // of the /fighters and pound-for-pound cards (champion-badge.tsx), with the
+  // category this page already gives the photos for their silhouette.
+  const isFemale = inferFighterGender(fighter.name, detail.latestWeightClass) === "female";
 
   // Récord DENTRO de los combates registrados (BE9a). Se oculta si coincide
   // con el récord total (carrera entera ya en la BD): sería redundante.
@@ -367,7 +372,7 @@ export default async function FighterDetailPage({
                 detail.ranking.isChampion ? (
                   <Badge className="bg-primary text-primary-foreground">
                     <Trophy />
-                    Campeón
+                    {isFemale ? "Campeona" : "Campeón"}
                   </Badge>
                 ) : (
                   <Badge className="border-primary/30 bg-primary/10 text-primary">
@@ -840,7 +845,7 @@ export default async function FighterDetailPage({
           <SectionHeading
             eyebrow="Ranking"
             title="Trayectoria de ranking"
-            description={`Evolución de la posición de ${fighter.name} en el ranking oficial a lo largo del tiempo. El #1 (y el campeón) aparecen arriba.`}
+            description={`Evolución de la posición de ${fighter.name} en el ranking oficial a lo largo del tiempo. El #1 (y ${isFemale ? "la campeona" : "el campeón"}) aparecen arriba.`}
             descriptionClassName="max-w-none"
           />
           <RankingTrajectory history={rankingHistory} />
