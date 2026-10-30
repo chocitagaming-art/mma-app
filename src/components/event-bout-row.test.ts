@@ -13,7 +13,7 @@ import type { EventBout, EventBoutFighter, LastEventResults } from "@/lib/types"
 //
 // El dueño, el 29-oct-2026, sobre el «Último evento» de la portada: «ponemos
 // las fotos de las cabezas más grandes y nítidas»; y el 30-oct, la misma fila
-// grande en la cartelera de /eventos/[id], en /ufc-hoy y en /en-vivo. Solo las
+// grande en la cartelera de /eventos/[id] y en /ufc-hoy. /en-vivo y las
 // «Peleas canceladas» de la ficha se quedan con la de siempre (quién pide qué
 // lo fija src/lib/bout-row-callsites.test.ts). Lo que se juzga aquí:
 //   · La fila grande: 72 px en el móvil y 96 desde sm, con el original de
@@ -22,7 +22,8 @@ import type { EventBout, EventBoutFighter, LastEventResults } from "@/lib/types"
 //   · El ganador conserva su anillo verde.
 //   · Con rankings (eventos futuros), el #12 va pegado al nombre: el nombre de
 //     la fila grande no lleva flex-1.
-//   · En /en-vivo, la fila grande con el panel de estadísticas abierto (el
+//   · La fila grande con lo que añade el marcador del directo (por si /en-vivo
+//     la adopta tras ver una velada): el panel de estadísticas abierto (el
 //     combate en curso), con resultado (terminado) y con rankings (por empezar).
 //   · Sin pedirlo, la fila es la de siempre, byte a byte: el HTML de a5d3ad2
 //     (__snapshots__/) y las mismas props de la cara (el payload RSC no crece).
@@ -186,10 +187,11 @@ describe("la fila de cartelera grande (headshotSize «large»)", () => {
   });
 });
 
-// /en-vivo pinta la misma fila grande con lo suyo encima: el panel de
+// Lo que /en-vivo le pone a la fila, con la fila GRANDE: el panel de
 // estadísticas del combate en curso, que llega ABIERTO (panelDefaultOpen), y el
-// resultado de los que ya acabaron. El directo de verdad se simula en
-// e2e/evento-caras.spec.ts; aquí, cada estado del marcado, sin red ni base.
+// resultado de los que ya acabaron. Hoy /en-vivo pinta la de siempre (el dueño,
+// 30-oct, hasta ver una velada real); esto deja probada la grande para cuando
+// la adopte. Aquí, cada estado del marcado, sin red ni base.
 describe("la fila grande en /en-vivo: en curso, terminado y por empezar", () => {
   const STATS = createElement("div", { "data-stats-en-vivo": "" }, "Golpes significativos");
 

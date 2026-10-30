@@ -164,9 +164,10 @@ function hasTapeData(fighter: EventBoutFighter): boolean {
 // /en-vivo) que se apila ENCIMA de la comparativa física dentro del mismo
 // acordeón. Opcional y default off: /eventos/[id] y la home no cambian.
 // headshotSize: "large" en el «Último evento» de la portada y en la cartelera
-// de /eventos/[id], /ufc-hoy y /en-vivo; por defecto, la fila de siempre, que
-// ya solo pintan las «Peleas canceladas» de la ficha (ver ROW_LAYOUTS en
-// event-bout-row-layout.ts y el mapa de src/lib/bout-row-callsites.test.ts).
+// de /eventos/[id] y /ufc-hoy; por defecto, la fila de siempre, que pintan
+// /en-vivo (hasta ver una velada real con la grande) y las «Peleas canceladas»
+// de la ficha (ver ROW_LAYOUTS en event-bout-row-layout.ts y el mapa de
+// src/lib/bout-row-callsites.test.ts).
 export function EventBoutRow({
   bout,
   showRanks = false,
