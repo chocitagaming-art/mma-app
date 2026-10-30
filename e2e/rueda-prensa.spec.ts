@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
@@ -154,4 +157,43 @@ test(`${EVENTO}: el ▶ de la rueda de prensa monta ESE vídeo en su sitio, como
   const iframe = rueda.locator("iframe");
   await expect(iframe).toHaveAttribute("src", `https://www.youtube-nocookie.com/embed/${VIDEO}?autoplay=1`);
   await expect(iframe).toHaveAttribute("title", TITULO);
+});
+
+// La portada de los vídeos del evento: sddefault, y hqdefault de reserva. El
+// 30-oct-2026 YouTube sirvió durante horas la portada VIEJA del pesaje de la
+// 1099 en hqdefault (13 de 40) y la buena en sddefault (40 de 40). Un vídeo
+// subido por debajo de 480p no tiene sddefault: YouTube contesta 404 con una
+// imagen gris de 120×90, y la fachada tiene que caer a hqdefault, no quedarse
+// en gris. El beforeEach contesta las imágenes de fuera con un PNG de 1×1:
+// aquí la de sddefault lleva una de tamaño real (o el 404).
+const FOTO_REAL = readFileSync(path.join(__dirname, "fixtures", "headshot-hd-500x325.png"));
+const SDDEFAULT = /^https:\/\/i\.ytimg\.com\/vi\/[^/]+\/sddefault\.jpg/;
+
+test(`${EVENTO}: la portada de los vídeos pide sddefault, y cae a hqdefault si YouTube no tiene ese tamaño`, async ({
+  page,
+}) => {
+  await page.route(SDDEFAULT, (route) => route.fulfill({ status: 200, contentType: "image/png", body: FOTO_REAL }));
+  await abrir(page);
+  for (const rotulo of ["Careo oficial", "Rueda de prensa"]) {
+    const portada = seccion(page, rotulo).seccion.locator("button img").first();
+    await expect(portada, `${rotulo}: la portada no es la de sddefault`).toHaveAttribute("src", SDDEFAULT);
+    await expect
+      .poll(() => portada.evaluate((img: HTMLImageElement) => img.naturalWidth), { message: `${rotulo}: no cargó` })
+      .toBe(500);
+  }
+
+  // Un vídeo sin sddefault: 404 y la imagen gris (aquí, el PNG de 1×1).
+  await page.unroute(SDDEFAULT);
+  await page.route(SDDEFAULT, (route) =>
+    route.fulfill({ status: 404, contentType: "image/png", body: PNG_RELLENO }),
+  );
+  await page.reload();
+  await abrir(page);
+  for (const rotulo of ["Careo oficial", "Rueda de prensa"]) {
+    const portada = seccion(page, rotulo).seccion.locator("button img").first();
+    await expect(portada, `${rotulo}: sin sddefault no cayó a hqdefault`).toHaveAttribute(
+      "src",
+      /^https:\/\/i\.ytimg\.com\/vi\/[^/]+\/hqdefault\.jpg$/,
+    );
+  }
 });
