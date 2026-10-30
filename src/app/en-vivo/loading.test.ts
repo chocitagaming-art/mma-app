@@ -4,14 +4,15 @@ import { describe, expect, it } from "vitest";
 import LivePageLoading from "@/app/en-vivo/loading";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// EL ESQUELETO DE /en-vivo, con las filas grandes del marcador.
+// EL ESQUELETO DE /en-vivo, con las filas del marcador.
 //
-// Desde el 30-oct /en-vivo pinta la fila grande (caras de 72/96 px, esquinas
-// apiladas por debajo de lg) con su franja de estado encima y la columna del
-// chevron al lado (el panel de estadísticas). El esqueleto tenía caras de 48 en
-// todos los anchos y ninguna columna: al llegar la página, cada fila crecía y
-// todo saltaba. Mismo método que src/app/eventos/[id]/loading.test.ts, contado
-// por estructura.
+// /en-vivo pinta la fila de siempre (caras de 36/48 px, al lado del nombre: el
+// dueño, 30-oct, la deja así hasta ver una velada real con la grande) con su
+// franja de estado encima y la columna del chevron al lado (el panel de
+// estadísticas). El esqueleto tenía caras de 48 en todos los anchos y ninguna
+// columna. Mismo método que src/app/eventos/[id]/loading.test.ts, contado por
+// estructura: si /en-vivo adopta la fila grande, este test y el esqueleto
+// cambian con ella (src/lib/bout-row-callsites.test.ts lo fija).
 
 type El = ReactElement<{ className?: string; children?: unknown }>;
 type Nodo = { el: El; padres: Nodo[] };
@@ -43,18 +44,19 @@ describe("el esqueleto de /en-vivo", () => {
     expect(filas.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("🔴 todas las caras con la caja grande (size-18, sm:size-24) y las esquinas apiladas hasta lg", () => {
+  it("🔴 todas las caras con la caja de la fila de siempre (size-9, sm:size-12), al lado del nombre", () => {
     const caras: El[] = [];
     for (const fila of filas) {
       const [roja, , azul] = hijos(fila.el);
-      expect(clases(roja)).toEqual(expect.arrayContaining(["flex-col", "lg:flex-row"]));
-      expect(clases(azul)).toEqual(expect.arrayContaining(["flex-col", "lg:flex-row-reverse"]));
+      expect(clases(roja)).not.toContain("flex-col");
+      expect(clases(azul)).toEqual(expect.arrayContaining(["flex-row-reverse"]));
+      expect(clases(azul)).not.toContain("flex-col");
       caras.push(hijos(roja)[0], hijos(azul)[0]);
     }
     expect(caras).toHaveLength(filas.length * 2);
     for (const cara of caras) {
-      expect(clases(cara)).toEqual(expect.arrayContaining(["size-18", "sm:size-24"]));
-      expect(clases(cara).filter((c) => /(^|:)size-(9|12)$/.test(c))).toEqual([]);
+      expect(clases(cara)).toEqual(expect.arrayContaining(["size-9", "sm:size-12"]));
+      expect(clases(cara).filter((c) => /(^|:)size-(18|24)$/.test(c))).toEqual([]);
     }
   });
 

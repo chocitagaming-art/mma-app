@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils";
 // Loading UI de /en-vivo: cabecera (eyebrow + título + meta) y una sección de
 // cartelera con franja de estado por fila, espejo del layout real.
 //
-// Las filas, con la fila GRANDE de la cartelera (el dueño, 30-oct-2026): las
-// mismas cajas que EventBoutRow con headshotSize="large" (ROW_LAYOUTS.large,
-// solo su geometría: el esqueleto no es un enlace y no se ilumina al pasar el
-// ratón) y la columna del chevron de EventBoutDisclosure al lado.
+// Las filas, con las mismas cajas que la fila de siempre de EventBoutRow
+// (ROW_LAYOUTS.default, solo su geometría: el esqueleto no es un enlace y no se
+// ilumina al pasar el ratón) y la columna del chevron de EventBoutDisclosure al
+// lado. /en-vivo sigue con la fila de siempre hasta ver una velada real con la
+// grande (el dueño, 30-oct-2026): si la adopta, este esqueleto pasa a
+// ROW_LAYOUTS.large con ella (lo vigila loading.test.ts).
 
-const L = ROW_LAYOUTS.large;
+const L = ROW_LAYOUTS.default;
 const FILA = rowGeometry(L);
 
 /** Una línea de texto: una caja tan alta como la real, con su barra dentro. */
