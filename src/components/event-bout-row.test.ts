@@ -192,7 +192,7 @@ describe("la fila de cartelera grande (headshotSize «large»)", () => {
 // resultado de los que ya acabaron. Hoy /en-vivo pinta la de siempre (el dueño,
 // 30-oct, hasta ver una velada real); esto deja probada la grande para cuando
 // la adopte. Aquí, cada estado del marcado, sin red ni base.
-describe("la fila grande en /en-vivo: en curso, terminado y por empezar", () => {
+describe("la fila grande con lo del marcador del directo: en curso, terminado y por empezar", () => {
   const STATS = createElement("div", { "data-stats-en-vivo": "" }, "Golpes significativos");
 
   function cajasGrandes(html: string): void {
