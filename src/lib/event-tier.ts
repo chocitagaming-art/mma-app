@@ -66,7 +66,9 @@ export const TIERS_SECUNDARIOS = EVENT_TIERS.filter(
  * Va SOLO donde la pregunta es "¿cuál es EL evento que enseño / grabo /
  * vigilo?". Donde la pregunta es "¿qué eventos existen?" —la lista de /eventos,
  * la ficha del evento, el buscador, el sitemap, los favoritos—
- * ponerlo es una REGRESIÓN: dejaría un evento de la UFC inaccesible.
+ * ponerlo es una REGRESIÓN: dejaría un evento de la UFC inaccesible. (La lista
+ * de /eventos tiene su propio filtro, enListaDeEventosSql, que solo saca el
+ * Road To UFC.)
  */
 export function eventoPrincipalSql(alias = "e"): string {
   const lista = TIERS_SECUNDARIOS.map((tier) => `'${tier}'`).join(",");
@@ -77,6 +79,34 @@ export function eventoPrincipalSql(alias = "e"): string {
   // evento equivocado. Lo cazó event-tier.test.ts antes de desplegar.
   const prefijo = alias ? `${alias}.` : "";
   return `${prefijo}tier NOT IN (${lista})`;
+}
+
+/**
+ * Qué tipos salen en la LISTA de /eventos («Pasados» y «Próximos»). Es otra
+ * pregunta que la del destacado, con otra respuesta: el dueño, el 30-oct-2026,
+ * mirando «Pasados», sacó de ahí los Road To UFC (2 combates, sin póster ni
+ * sede: «no queda bien») y SOLO ellos. El Contender Series y el TUF, si un día
+ * los hay, se listan. La ficha y el buscador no filtran nada: un Road To UFC
+ * sigue alcanzable desde la ficha de sus luchadores y buscándolo
+ * (event-tier-callsites.test.ts vigila dónde va).
+ */
+export const TIER_EN_LISTA: Record<EventTier, boolean> = {
+  numbered: true,
+  fight_night: true,
+  tuf_finale: true,
+  unknown: true,
+  road_to_ufc: false,
+  dwcs: true,
+  tuf_series: true,
+};
+
+/** El predicado SQL de «este evento sale en la lista de /eventos». */
+export function enListaDeEventosSql(alias = "e"): string {
+  const fuera = EVENT_TIERS.filter((tier) => !TIER_EN_LISTA[tier])
+    .map((tier) => `'${tier}'`)
+    .join(",");
+  const prefijo = alias ? `${alias}.` : "";
+  return `${prefijo}tier NOT IN (${fuera})`;
 }
 
 /**

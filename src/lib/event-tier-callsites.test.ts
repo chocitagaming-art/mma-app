@@ -172,13 +172,52 @@ describe("el filtro del evento destacado · dentro de events.ts", () => {
     ["getPastEventsUncached", "la lista de eventos pasados"],
     ["searchEvents", "el buscador"],
     ["getEventDetailUncached", "la ficha del evento"],
-  ])("🪤 %s (%s) NO filtra por tier", (funcion, queEs) => {
-    // Filtrar aquí no esconde el Road To UFC: lo BORRA del sitio. La ficha es la
-    // peor de las cuatro —devolvería null y la página daría 404— y el buscador
-    // la segunda: alguien que escribe "road to ufc" no encontraría nada.
+  ])("🪤 %s (%s) NO lleva el filtro del destacado", (funcion, queEs) => {
+    // El filtro del destacado esconde también el Contender Series y el TUF. La
+    // ficha es la peor de las cuatro —devolvería null y la página daría 404— y
+    // el buscador la segunda: alguien que escribe "road to ufc" no encontraría
+    // nada. Las dos listas llevan su PROPIO filtro (abajo), que solo saca el
+    // Road To UFC.
     const cuerpo = FUNCIONES.get(funcion);
     // Un rename dejaría este aserto sin nada que mirar y el test pasaría solo.
     expect(cuerpo, `${funcion} ya no existe en events.ts (${queEs})`).toBeDefined();
     expect(llamadas(cuerpo as string), queEs).toBe(0);
+  });
+});
+
+// LA LISTA DE /eventos SIN ROAD TO UFC (el dueño, 30-oct-2026: «solo los Road to
+// UFC»: dos combates, sin póster ni sede, «no queda bien»). Es otra pregunta que
+// la del destacado y lleva su propio predicado, `enListaDeEventosSql`, en las DOS
+// listas y en nada más: la ficha y el buscador lo siguen encontrando (la ficha
+// de un luchador enlaza su combate, y quien escribe "road to ufc" lo encuentra).
+function llamadasLista(fuente: string): number {
+  return (fuente.match(/enListaDeEventosSql\(/g) ?? []).length;
+}
+
+describe("la lista de /eventos sin Road To UFC · dónde se usa", () => {
+  it("🔴 lo llevan las dos listas de events.ts, y ningún otro sitio de src/", () => {
+    const reparto: Record<string, number> = {};
+    for (const ruta of FUENTES) {
+      if (ruta === DEFINICION) continue;
+      const cuantas = llamadasLista(leerFuente(ruta));
+      if (cuantas > 0) reparto[ruta] = cuantas;
+    }
+    // getPastEventsUncached lo usa una vez, en el WHERE que comparten el conteo
+    // (la paginación) y las filas.
+    expect(reparto).toEqual({ "lib/queries/events.ts": 2 });
+    const conFiltro = [...FUNCIONES]
+      .filter(([, cuerpo]) => llamadasLista(cuerpo) > 0)
+      .map(([nombre]) => nombre)
+      .sort();
+    expect(conFiltro).toEqual(["getPastEventsUncached", "getUpcomingEventsUncached"]);
+  });
+
+  it.each([
+    ["searchEvents", "el buscador"],
+    ["getEventDetailUncached", "la ficha del evento"],
+  ])("🪤 %s (%s) no lo lleva: el Road To UFC sigue alcanzable", (funcion, queEs) => {
+    const cuerpo = FUNCIONES.get(funcion);
+    expect(cuerpo, `${funcion} ya no existe en events.ts (${queEs})`).toBeDefined();
+    expect(llamadasLista(cuerpo as string), queEs).toBe(0);
   });
 });

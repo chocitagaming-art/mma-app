@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  enListaDeEventosSql,
   ETIQUETA_TIER,
   EVENT_TIERS,
   eventoPrincipalSql,
   TIER_DESTACABLE,
+  TIER_EN_LISTA,
   TIERS_SECUNDARIOS,
   type EventTier,
 } from "@/lib/event-tier";
@@ -74,6 +76,33 @@ describe("eventoPrincipalSql", () => {
     for (const tier of EVENT_TIERS.filter((t) => TIER_DESTACABLE[t])) {
       expect(eventoPrincipalSql()).not.toContain(`'${tier}'`);
     }
+  });
+});
+
+// LA LISTA DE /eventos ES OTRA PREGUNTA, CON OTRA RESPUESTA. El dueño, el
+// 30-oct-2026: los Road To UFC (2 combates, sin póster ni sede) fuera de la
+// lista de /eventos, «solo los Road to UFC». No es el filtro del destacado: ese
+// esconde además el Contender Series y el TUF, y la lista los enseñaría. La
+// ficha y el buscador no filtran nada (event-tier-callsites.test.ts).
+describe("enListaDeEventosSql", () => {
+  it("🔴 deja fuera de la lista de /eventos solo los Road To UFC", () => {
+    expect(enListaDeEventosSql()).toBe("e.tier NOT IN ('road_to_ufc')");
+  });
+
+  it("honra el alias, y con alias vacío no deja el punto delante", () => {
+    expect(enListaDeEventosSql("events")).toBe("events.tier NOT IN ('road_to_ufc')");
+    expect(enListaDeEventosSql("")).toBe("tier NOT IN ('road_to_ufc')");
+  });
+
+  it("🔴 el Contender Series y el TUF siguen en la lista: solo sale el Road To UFC", () => {
+    const fuera = EVENT_TIERS.filter((tier) => !TIER_EN_LISTA[tier]);
+    expect(fuera).toEqual(["road_to_ufc"]);
+    expect(TIER_EN_LISTA.dwcs).toBe(true);
+    expect(TIER_EN_LISTA.tuf_series).toBe(true);
+  });
+
+  it("TIER_EN_LISTA tiene una entrada por tier y ninguna de más", () => {
+    expect(Object.keys(TIER_EN_LISTA).sort()).toEqual([...EVENT_TIERS].sort());
   });
 });
 
