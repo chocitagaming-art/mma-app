@@ -10,10 +10,8 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 // El dueño, el 30-oct-2026: las caras grandes del «Último evento» de la portada
 // (72 px en el móvil y 96 desde 640, con el original de ufc.com, la cara encima
 // del nombre por debajo de 1024) también en la cartelera de /eventos/[id] y en
-// /ufc-hoy. Las «Peleas canceladas» de la ficha, pequeñas, y /en-vivo también,
-// hasta ver una velada real (su reproductor va debajo de la cartelera y con la
-// fila grande bajaría ~960 px en el móvil). Lo que se vigila aquí, con la página
-// servida de verdad:
+// /ufc-hoy, y esa misma noche en /en-vivo. Las «Peleas canceladas» de la ficha,
+// pequeñas. Lo que se vigila aquí, con la página servida de verdad:
 //   · /eventos/1093 (UFC 333: fijo, con resultados, TÍTULO, FOTN, POTN y GANA),
 //     de 360 a 1920: caras de 72/96, cada pieza dentro de su esquina, el
 //     resultado y las insignias dentro del centro, el chevron con la altura de
@@ -24,9 +22,9 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //     debajo del VS (/eventos/1099, 29-oct).
 //   · Las canceladas, plegadas, siguen a 36/48 px.
 //   · /ufc-hoy, con las caras grandes.
-//   · /en-vivo, el marcador del directo, con la fila de siempre (36/48 px): el
-//     chip de estado encima de cada fila, el panel del combate en curso
-//     abierto, y el refresco de cada 20 s no mueve nada.
+//   · /en-vivo, el marcador del directo, con las caras grandes: el chip de
+//     estado encima de cada fila, el panel del combate en curso abierto, y el
+//     refresco de cada 20 s no mueve nada.
 //   · El esqueleto de carga de la ficha cae donde cae la página: el póster, la
 //     primera fila y la caja de las caras.
 //
@@ -495,7 +493,7 @@ async function bloquesEnVivo(page: Page): Promise<BloqueEnVivo[]> {
   );
 }
 
-test("/en-vivo: el marcador con la fila de siempre (36/48 px), el chip encima, el panel en curso abierto y el refresco quieto", async ({
+test("/en-vivo: el marcador con las caras grandes (72/96 px), el chip encima, el panel en curso abierto y el refresco quieto", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -506,17 +504,13 @@ test("/en-vivo: el marcador con la fila de siempre (36/48 px), el chip encima, e
   );
   let enCurso = 0;
   for (const width of ANCHOS_CORTOS) {
-    // La fila de siempre: caras de 36/48 con la foto guardada, sin el original.
-    await asentar(page, width);
-    const m = await medir(page, "cartelera");
-    expect(m.filas, `/en-vivo a ${width}: sin filas`).toBeGreaterThan(0);
-    expect(m.caras, `/en-vivo a ${width}: no se midieron las dos caras de cada fila`).toHaveLength(m.filas * 2);
-    expect.soft(m.fallos, `/en-vivo a ${width}: piezas fuera de su sitio`).toEqual([]);
-    for (const cara of m.caras) {
-      expect.soft(cara.ancho, `/en-vivo a ${width}: ${cara.donde}`).toBeCloseTo(LADO_PEQUENO(width), 0);
-      expect.soft(cara.srcset, `/en-vivo: ${cara.donde} con el original`).toBeNull();
-    }
-    await expectNoHorizontalOverflow(page, `/en-vivo a ${width}`);
+    // La fila grande, como la ficha y /ufc-hoy: caras de 72/96 con el original
+    // de ufc.com, cada pieza en su esquina, el ranking pegado al nombre y sin
+    // desbordar.
+    // Sin exigir un chevron por fila: un combate de dos debutantes sin ficha
+    // física y sin stats no lo lleva, y eso no es un fallo. El que hay, lo mide
+    // comprobarFilasGrandes (la altura de su fila).
+    await comprobarFilasGrandes(page, "/en-vivo", width);
     const bloques = await bloquesEnVivo(page);
     expect(bloques.length, `/en-vivo a ${width}: filas sin su bloque`).toBeGreaterThan(0);
     enCurso += bloques.filter((b) => b.chip.startsWith("En curso")).length;
@@ -582,7 +576,12 @@ test("/en-vivo: el marcador con la fila de siempre (36/48 px), el chip encima, e
 // preliminares (el caso de casi todas las semanas), y la tolerancia cubre la
 // mitad de ese abanico con margen. Antes de este cambio el salto era de 175 px
 // a 390 y de 534 a 1280.
-const TOLERANCIA_PRIMERA_FILA: Record<number, number> = { 390: 60, 768: 40, 1280: 30 };
+// 🪤 Y en las 24 h antes de la velada la cabecera crece: sale «Seguir la
+// velada» (a /en-vivo) y a 390 los botones parten en dos filas. Medido el
+// 30-oct a las 22:40 con la 1099 al día siguiente: la real en y=811 y el
+// esqueleto en 748, 62 px (a 768, 20; a 1280, 0,3). El abanico de 390 pasa a
+// 692-811, y la tolerancia a 70.
+const TOLERANCIA_PRIMERA_FILA: Record<number, number> = { 390: 70, 768: 40, 1280: 30 };
 // La altura de una fila: la real crece si el récord parte de línea (140-158 px
 // a 390); el esqueleto dibuja la de una línea.
 const TOLERANCIA_ALTO_FILA = 20;
@@ -685,9 +684,12 @@ test("el esqueleto de la ficha cae donde cae la página: póster, primera fila y
     expect
       .soft(Math.abs((esqueleto.altoFila ?? 0) - (real.altoFila ?? 0)), `${donde}: alto de la primera fila`)
       .toBeLessThanOrEqual(TOLERANCIA_ALTO_FILA);
-    expect(
-      Math.abs((esqueleto.primeraFila ?? 0) - (real.primeraFila ?? 0)),
-      `${donde}: la primera fila del esqueleto en y=${esqueleto.primeraFila} y la real en y=${real.primeraFila}`,
-    ).toBeLessThanOrEqual(TOLERANCIA_PRIMERA_FILA[width]);
+    // Soft: un ancho que se pasa no deja sin medir los otros dos.
+    expect
+      .soft(
+        Math.abs((esqueleto.primeraFila ?? 0) - (real.primeraFila ?? 0)),
+        `${donde}: la primera fila del esqueleto en y=${esqueleto.primeraFila} y la real en y=${real.primeraFila}`,
+      )
+      .toBeLessThanOrEqual(TOLERANCIA_PRIMERA_FILA[width]);
   }
 });

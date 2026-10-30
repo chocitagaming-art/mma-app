@@ -43,9 +43,9 @@ export function rowGeometry(layout: RowLayout): string {
 //
 // "large" is the home's «Último evento» (owner, 29-oct-2026: «ponemos las
 // fotos de las cabezas más grandes y nítidas») and, since 30-oct, the card of
-// /eventos/[id] and /ufc-hoy (not /en-vivo yet: its live player sits BELOW the
-// card and would drop ~960 px on phones): a 72 px face on phones and 96 from
-// sm, where it used to be 36/48. Measured on 29-oct (UFC 333 on the home,
+// /eventos/[id], /ufc-hoy and /en-vivo (whose live player sits BELOW the card,
+// so on phones it moves down with it): a 72 px face on phones and 96 from sm,
+// where it used to be 36/48. Measured on 29-oct (UFC 333 on the home,
 // 360 to 1920): side by side, a bigger face eats the NAME's width — at 768 the
 // red corner of the main event is 231 px and «Alexander Volkanovski» with his
 // flag needs 151, so any face over 68 px beside it truncates it (and at 640

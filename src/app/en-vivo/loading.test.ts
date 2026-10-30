@@ -2,17 +2,18 @@ import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import LivePageLoading from "@/app/en-vivo/loading";
+import { ROW_LAYOUTS, rowGeometry } from "@/components/event-bout-row-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // EL ESQUELETO DE /en-vivo, con las filas del marcador.
 //
-// /en-vivo pinta la fila de siempre (caras de 36/48 px, al lado del nombre: el
-// dueño, 30-oct, la deja así hasta ver una velada real con la grande) con su
-// franja de estado encima y la columna del chevron al lado (el panel de
-// estadísticas). El esqueleto tenía caras de 48 en todos los anchos y ninguna
-// columna. Mismo método que src/app/eventos/[id]/loading.test.ts, contado por
-// estructura: si /en-vivo adopta la fila grande, este test y el esqueleto
-// cambian con ella (src/lib/bout-row-callsites.test.ts lo fija).
+// /en-vivo pinta la fila grande (caras de 72/96 px, encima del nombre por
+// debajo de lg: el dueño, 30-oct-2026 por la noche, como la ficha y /ufc-hoy)
+// con su franja de estado encima y la columna del chevron al lado (el panel de
+// estadísticas). Mismo método que src/app/eventos/[id]/loading.test.ts, contado
+// por estructura: si /en-vivo cambia de fila, este test y el esqueleto cambian
+// con ella (src/lib/bout-row-callsites.test.ts lo fija). La fila de verdad
+// contra ROW_LAYOUTS.large la vigila el test del esqueleto de la ficha.
 
 type El = ReactElement<{ className?: string; children?: unknown }>;
 type Nodo = { el: El; padres: Nodo[] };
@@ -44,19 +45,29 @@ describe("el esqueleto de /en-vivo", () => {
     expect(filas.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("🔴 todas las caras con la caja de la fila de siempre (size-9, sm:size-12), al lado del nombre", () => {
+  it("🔴 cada fila, con la geometría de la fila grande", () => {
+    const grande = rowGeometry(ROW_LAYOUTS.large).split(" ");
+    for (const fila of filas) {
+      expect(new Set(clases(fila.el))).toEqual(new Set(grande));
+    }
+  });
+
+  it("🔴 todas las caras con la caja grande (size-18, sm:size-24), encima del nombre por debajo de lg", () => {
+    const L = ROW_LAYOUTS.large;
     const caras: El[] = [];
     for (const fila of filas) {
-      const [roja, , azul] = hijos(fila.el);
-      expect(clases(roja)).not.toContain("flex-col");
-      expect(clases(azul)).toEqual(expect.arrayContaining(["flex-row-reverse"]));
-      expect(clases(azul)).not.toContain("flex-col");
+      const [roja, centro, azul] = hijos(fila.el);
+      expect(new Set(clases(roja))).toEqual(new Set(L.redCorner.split(" ")));
+      expect(new Set(clases(azul))).toEqual(new Set(L.blueCorner.split(" ")));
+      expect(new Set(clases(centro))).toEqual(new Set(L.centre.split(" ")));
+      expect(clases(roja)).toEqual(expect.arrayContaining(["flex-col", "lg:flex-row"]));
+      expect(clases(azul)).toEqual(expect.arrayContaining(["flex-col", "lg:flex-row-reverse"]));
       caras.push(hijos(roja)[0], hijos(azul)[0]);
     }
     expect(caras).toHaveLength(filas.length * 2);
     for (const cara of caras) {
-      expect(clases(cara)).toEqual(expect.arrayContaining(["size-9", "sm:size-12"]));
-      expect(clases(cara).filter((c) => /(^|:)size-(18|24)$/.test(c))).toEqual([]);
+      expect(clases(cara)).toEqual(expect.arrayContaining(["size-18", "sm:size-24", "shrink-0"]));
+      expect(clases(cara).filter((c) => /(^|:)size-(9|12)$/.test(c))).toEqual([]);
     }
   });
 
