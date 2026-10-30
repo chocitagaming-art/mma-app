@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { VideoModal } from "@/components/video-modal";
 import { cn } from "@/lib/utils";
+import { isYouTubePlaceholder } from "@/lib/youtube-thumbnail";
 
 // Shared "facade": render the thumbnail + play button first and only mount the
 // player after the user clicks (keeps pages fast, no 3rd-party player scripts
@@ -21,6 +22,7 @@ export function YouTubeFacade({
   videoId,
   title,
   thumbnail,
+  fallbackThumbnail,
   sizes = "(max-width:768px) 100vw, 768px",
   priority = false,
   lightbox = false,
@@ -28,11 +30,21 @@ export function YouTubeFacade({
   videoId: string;
   title: string;
   thumbnail: string;
+  // Painted instead of `thumbnail` when that one fails or loads as YouTube's
+  // grey 120×90 placeholder (a size the video does not have).
+  fallbackThumbnail?: string;
   sizes?: string;
   priority?: boolean;
   lightbox?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
+  // The thumbnail that failed, so a new one (another video) starts over.
+  const [failedThumbnail, setFailedThumbnail] = useState<string | null>(null);
+  const src =
+    fallbackThumbnail && failedThumbnail === thumbnail ? fallbackThumbnail : thumbnail;
+  const switchToFallback = () => {
+    if (fallbackThumbnail && failedThumbnail !== thumbnail) setFailedThumbnail(thumbnail);
+  };
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   // Lightbox: the focus goes back to this ▶ when the modal closes. After the
@@ -86,11 +98,21 @@ export function YouTubeFacade({
         )}
       >
         <Image
-          src={thumbnail}
+          src={src}
           alt=""
           fill
           sizes={sizes}
           preload={priority || undefined}
+          // next/image re-sets the src after hydration when onError is given,
+          // so an error that happened before React attached it is not lost.
+          onError={fallbackThumbnail ? switchToFallback : undefined}
+          onLoad={
+            fallbackThumbnail
+              ? (event) => {
+                  if (isYouTubePlaceholder(event.currentTarget.naturalWidth)) switchToFallback();
+                }
+              : undefined
+          }
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <span className="absolute inset-0 bg-black/30 transition group-hover:bg-black/45" />
