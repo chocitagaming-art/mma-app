@@ -95,19 +95,46 @@ async function asentar(page: Page, width: number): Promise<void> {
   );
 }
 
-async function abrir(page: Page, url: string): Promise<boolean> {
+// Lo que pinta cada página cuando de verdad NO hay cartelera. Solo eso cuenta
+// como «no hay qué medir»: una página que tarda, se queda en el esqueleto o se
+// rompe tampoco pinta filas, y eso es ROJO, no un salto (si no, el spec del
+// marcador del directo saldría verde sin haber medido nada).
+//   · /en-vivo: el estado vacío (src/app/en-vivo/page.tsx, «Ahora mismo no hay
+//     ningún evento en directo») o la velada sin combates («Cartelera por
+//     confirmar.»).
+//   · /ufc-hoy: sin velada candidata («Ahora mismo no hay ninguna velada
+//     anunciada en el calendario.»). Con candidata, aunque el veredicto sea
+//     «Hoy no hay UFC.», pinta la cartelera de la próxima: tiene que haber filas.
+const SIN_CARTELERA: Record<string, RegExp> = {
+  "/en-vivo": /^(Ahora mismo no hay ningún evento en directo|Cartelera por confirmar\.)$/,
+  "/ufc-hoy": /^Ahora mismo no hay ninguna velada anunciada en el calendario\.$/,
+};
+
+/** Abre `url` y espera a una fila VISIBLE. Devuelve "vacia" SOLO si la página
+ *  dice que no hay cartelera (SIN_CARTELERA); cualquier otra cosa sin filas
+ *  en 15 s es ROJO, con el motivo. */
+async function abrir(page: Page, url: string): Promise<"filas" | "vacia"> {
   await page.goto(url);
   await esperarHidratacion(page);
   // 🪤 React deja el contenido unos cientos de ms en div[hidden][id^="S:"]:
-  // se espera a una fila VISIBLE, o a que la página diga que no hay ninguna.
+  // se espera a una fila VISIBLE, o al texto VISIBLE de «no hay cartelera».
   const fila = page.locator('[data-testid="bout-row"]:visible').first();
+  const vacio = SIN_CARTELERA[url];
+  const aviso = vacio
+    ? page.locator("h1:visible, p:visible").filter({ hasText: vacio }).first()
+    : null;
   try {
-    await fila.waitFor({ state: "visible", timeout: 8_000 });
+    await (aviso ? fila.or(aviso) : fila).first().waitFor({ state: "visible", timeout: 15_000 });
   } catch {
-    return false;
+    throw new Error(
+      vacio
+        ? `${url} no pinta filas y tampoco dice que no haya velada (¿esqueleto, error o página lenta?)`
+        : `${url} no pinta su cartelera`,
+    );
   }
+  if (!(await fila.isVisible())) return "vacia";
   await page.evaluate(() => document.fonts.ready);
-  return true;
+  return "filas";
 }
 
 type Cara = {
@@ -336,7 +363,7 @@ async function comprobarFilasGrandes(page: Page, donde: string, width: number): 
 test(`${EVENTO_FIJO} (UFC 333, con resultados): caras grandes y todo en su sitio, de 360 a 1920`, async ({
   page,
 }) => {
-  expect(await abrir(page, EVENTO_FIJO), `${EVENTO_FIJO} no pinta su cartelera`).toBe(true);
+  expect(await abrir(page, EVENTO_FIJO), `${EVENTO_FIJO} no pinta su cartelera`).toBe("filas");
   for (const width of ANCHOS) {
     const m = await comprobarFilasGrandes(page, EVENTO_FIJO, width);
     expect.soft(m.chevrons, `${EVENTO_FIJO} a ${width}: filas sin chevron`).toBe(m.filas);
@@ -370,7 +397,7 @@ async function proximoEvento(page: Page): Promise<string | null> {
 test("el próximo evento (con rankings): cada ranking pegado a su nombre, de 360 a 1280", async ({ page }) => {
   const href = await proximoEvento(page);
   test.skip(href === null, "la portada no tiene próximo evento: no hay rankings que medir");
-  expect(await abrir(page, href!), `${href} no pinta su cartelera`).toBe(true);
+  expect(await abrir(page, href!), `${href} no pinta su cartelera`).toBe("filas");
   let vistos = 0;
   for (const width of ANCHOS_CORTOS) {
     const m = await comprobarFilasGrandes(page, href!, width);
@@ -394,7 +421,7 @@ test("las «Peleas canceladas» de un evento futuro siguen pequeñas (36/48 px)"
     }
   }
   test.skip(conCanceladas === null, "ningún evento de «Próximos» tiene peleas canceladas");
-  expect(await abrir(page, conCanceladas!)).toBe(true);
+  expect(await abrir(page, conCanceladas!)).toBe("filas");
   await page.locator("summary", { hasText: "Peleas canceladas" }).click();
   for (const width of [390, 1280]) {
     await asentar(page, width);
@@ -414,8 +441,11 @@ test("las «Peleas canceladas» de un evento futuro siguen pequeñas (36/48 px)"
 });
 
 test("/ufc-hoy: la cartelera de la velada con las caras grandes", async ({ page }) => {
-  const hayFilas = await abrir(page, "/ufc-hoy");
-  test.skip(!hayFilas, "/ufc-hoy no tiene velada candidata: no pinta cartelera");
+  const estado = await abrir(page, "/ufc-hoy");
+  test.skip(
+    estado === "vacia",
+    "/ufc-hoy dice «Ahora mismo no hay ninguna velada anunciada en el calendario.»: no pinta cartelera",
+  );
   for (const width of ANCHOS_CORTOS) {
     await comprobarFilasGrandes(page, "/ufc-hoy", width);
   }
@@ -466,8 +496,11 @@ test("/en-vivo: el marcador con las caras grandes, el chip encima, el panel en c
   page,
 }) => {
   test.setTimeout(120_000);
-  const hayFilas = await abrir(page, "/en-vivo");
-  test.skip(!hayFilas, "/en-vivo sin velada (fuera de las 24 h previas y del directo): no pinta filas");
+  const estado = await abrir(page, "/en-vivo");
+  test.skip(
+    estado === "vacia",
+    "/en-vivo dice que no hay evento en directo (o «Cartelera por confirmar.»): fuera de las 24 h previas y del directo no pinta filas",
+  );
   let enCurso = 0;
   for (const width of ANCHOS_CORTOS) {
     await comprobarFilasGrandes(page, "/en-vivo", width);
@@ -523,9 +556,9 @@ test("/en-vivo: el marcador con las caras grandes, el chip encima, el panel en c
 });
 
 // ── El esqueleto de carga de la ficha, contra la página que llega ──
-// De «Próximos» se pincha la primera velada con la navegación RSC RETENIDA (la
-// cabecera rsc, sin next-router-prefetch): mientras, se ve loading.tsx. Se mide
-// y se suelta.
+// De «Próximos» se pincha la primera velada con póster y cartelera, con la
+// navegación RSC RETENIDA (la cabecera rsc, sin next-router-prefetch):
+// mientras, se ve loading.tsx. Se mide y se suelta.
 //
 // 🪤 TOLERANCIA DECLARADA de la primera fila: el esqueleto no sabe qué evento
 // llega, y la cabecera real cambia con él (un nombre de una o dos líneas, el
@@ -582,8 +615,20 @@ test("el esqueleto de la ficha cae donde cae la página: póster, primera fila y
   for (const width of [390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/eventos");
-    const tarjeta = page.locator('a[href^="/eventos/"]').filter({ hasNotText: /^$/ }).first();
-    test.skip((await tarjeta.count()) === 0, "«Próximos» no tiene ninguna velada que abrir");
+    // La primera tarjeta de «Próximos» CON póster y con cartelera: el
+    // esqueleto dibuja siempre el póster y las filas, y una velada sin póster
+    // (1 de las 9 próximas el 29-oct) o «por confirmar» no tiene con qué
+    // compararse. Cuál es la primera cambia cada semana: se elige, no se exige.
+    const tarjeta = page
+      .locator("div.group")
+      .filter({ has: page.locator('img[alt^="Póster de"]') })
+      .filter({ hasNotText: "Cartelera por confirmar" })
+      .locator('a[href^="/eventos/"]')
+      .first();
+    test.skip(
+      (await tarjeta.count()) === 0,
+      "ninguna velada de «Próximos» tiene póster y cartelera: el esqueleto no tiene con qué compararse",
+    );
     const href = (await tarjeta.getAttribute("href")) ?? "";
     expect(href).toMatch(/^\/eventos\/\d+$/);
     await esperarHidratacion(page);
@@ -618,7 +663,7 @@ test("el esqueleto de la ficha cae donde cae la página: póster, primera fila y
     const donde = `${href} a ${width}`;
     console.log(`${donde}: esqueleto ${JSON.stringify(esqueleto)} · real ${JSON.stringify(real)}`);
     expect(esqueleto.poster, `${donde}: el esqueleto sin póster`).not.toBeNull();
-    expect(real.poster, `${donde}: la ficha sin póster (elige otra velada)`).not.toBeNull();
+    expect(real.poster, `${donde}: la tarjeta tenía póster y la ficha no`).not.toBeNull();
     for (const k of ["left", "top", "width", "height"] as const) {
       expect.soft(Math.abs(esqueleto.poster![k] - real.poster![k]), `${donde}: póster, ${k}`).toBeLessThanOrEqual(1);
     }
