@@ -178,6 +178,33 @@ test("/eventos filtra por año", async ({ page }) => {
   }
 });
 
+// El dueño, el 30-oct-2026: los Road To UFC (2 combates, sin póster ni sede)
+// fuera de la lista de /eventos, «solo los Road to UFC». En la base, dos: el
+// 1094 (28-ago-2026) y el 317 (22-ago-2025). Se recorren TODAS las páginas de su
+// año, porque la paginación cambia con cada velada. Y su ficha sigue abriendo:
+// la enlazan las fichas de sus luchadores (e2e/historial-espn.spec.ts).
+test("/eventos no enseña los Road To UFC, y su ficha sigue abriendo", async ({ page }) => {
+  for (const [anio, id] of [
+    [2026, 1094],
+    [2025, 317],
+  ] as const) {
+    const vistos: string[] = [];
+    for (let pagina = 1; pagina <= 10; pagina++) {
+      await page.goto(`/eventos?view=pasados&anio=${anio}&page=${pagina}`);
+      const hrefs = await page
+        .locator('a[href^="/eventos/"]')
+        .evaluateAll((as) => as.map((a) => a.getAttribute("href") ?? ""));
+      const propios = hrefs.filter((h) => /^\/eventos\/\d+$/.test(h));
+      if (propios.length === 0) break;
+      vistos.push(...propios);
+    }
+    expect(vistos.length, `/eventos de ${anio}: sin tarjetas que mirar`).toBeGreaterThan(10);
+    expect(vistos, `/eventos de ${anio} enseña el Road To UFC ${id}`).not.toContain(`/eventos/${id}`);
+  }
+  await page.goto("/eventos/1094");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Road To UFC");
+});
+
 test("las pestañas de /eventos cambian de vista", async ({ page }) => {
   await page.goto("/eventos");
 

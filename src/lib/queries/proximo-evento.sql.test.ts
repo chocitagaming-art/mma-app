@@ -145,26 +145,27 @@ describe("¿cuál es EL próximo evento? · 1065 (sábado) y no 1094 (Road To UF
   // Y AHORA EL ASERTO NEGATIVO, que vale tanto como los tres de arriba.
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("🪤 /eventos SIGUE listando el Road To UFC, y de primero", async () => {
-    // LA REGRESIÓN MÁS FÁCIL DE METER: "arreglar" /eventos escondiendo también
-    // aquí el Road To UFC. Esto es una LISTA ("¿qué eventos hay?"), no una
-    // elección ("¿cuál destaco?"): filtrarla dejaría un evento de la UFC
-    // INACCESIBLE desde la navegación —sin tarjeta, sin enlace, sin ficha
-    // alcanzable— que es peor que el problema que arreglamos.
+  it("🪤 /eventos ya no lista el Road To UFC, pero con SU filtro, no con el del destacado", async () => {
+    // Hasta el 30-oct-2026 este aserto decía lo contrario: /eventos listaba el
+    // Road To UFC, rotulado. Ese día el dueño lo sacó de la lista («solo los
+    // Road to UFC»: dos combates, sin póster ni sede). La regresión que sigue
+    // vigilada es la otra: meter aquí el filtro del destacado, que escondería
+    // también el Contender Series y el TUF. La ficha y el buscador no filtran
+    // (event-tier-callsites.test.ts).
     const proximos = await getUpcomingEvents();
 
-    expect(proximos.map((e) => e.id)).toEqual([1094, 1065]);
-    expect(consultaDeLaCartelera()).not.toContain("tier NOT IN");
+    expect(proximos.map((e) => e.id)).toEqual([1065]);
+    expect(consultaDeLaCartelera()).toContain("e.tier NOT IN ('road_to_ufc')");
+    expect(consultaDeLaCartelera()).not.toContain("'dwcs'");
   });
 
   it("y trae el `tier` de cada uno para poder rotularlos", async () => {
-    // El Road To UFC no se esconde: se ETIQUETA (ETIQUETA_TIER), para que se vea
-    // qué es y no parezca la velada de la semana. Si el SELECT dejara de traer
-    // la columna, la tarjeta perdería el rótulo en silencio y volveríamos al
-    // "hay dos eventos y parecen lo mismo" del 26-ago.
+    // Lo que sí se lista y es secundario (Contender Series, TUF) se ETIQUETA
+    // (ETIQUETA_TIER), para que no parezca la velada de la semana. Si el SELECT
+    // dejara de traer la columna, la tarjeta perdería el rótulo en silencio.
     const proximos = await getUpcomingEvents();
 
-    expect(proximos.map((e) => e.tier)).toEqual(["road_to_ufc", "fight_night"]);
-    expect(consultaDeLaCartelera()).toContain("e.tier");
+    expect(proximos.map((e) => e.tier)).toEqual(["fight_night"]);
+    expect(consultaDeLaCartelera()).toContain("e.tier,");
   });
 });

@@ -2,7 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
 import { sql } from "@/lib/db";
-import { eventoPrincipalSql, type EventTier } from "@/lib/event-tier";
+import { enListaDeEventosSql, eventoPrincipalSql, type EventTier } from "@/lib/event-tier";
 import { containsPattern, startsWithPattern } from "@/lib/sql-like";
 import type {
   EventBout,
@@ -78,12 +78,19 @@ async function getPastEventsUncached(
   const currentPage = Math.max(1, page);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
+  // Sin los Road To UFC (el dueño, 30-oct-2026; ver TIER_EN_LISTA). En el WHERE
+  // que comparten el conteo y las filas, para que la paginación no cuente lo
+  // que no se pinta; y sin año, con el OR entre paréntesis: un AND suelto
+  // detrás solo filtraría su última rama.
+  const enLista = enListaDeEventosSql("e");
   const whereClause =
     year != null
       ? `WHERE (e.event_date < CURRENT_DATE OR ${MAIN_EVENT_FINISHED_SQL})
-           AND extract(year FROM e.event_date) = $1`
-      : `WHERE e.event_date < CURRENT_DATE OR e.event_date IS NULL
-           OR ${MAIN_EVENT_FINISHED_SQL}`;
+           AND extract(year FROM e.event_date) = $1
+           AND ${enLista}`
+      : `WHERE (e.event_date < CURRENT_DATE OR e.event_date IS NULL
+           OR ${MAIN_EVENT_FINISHED_SQL})
+           AND ${enLista}`;
   const whereParams = year != null ? [year] : [];
 
   const countRows = await sql<{ total: string }>(
@@ -214,11 +221,12 @@ type UpcomingEventRow = {
   tier: EventTier;
 };
 
-// ⚠️ AQUÍ NO SE FILTRA POR TIER, Y ES A PROPÓSITO. Esto es una LISTA ("¿qué
-// eventos hay?"), no una elección ("¿cuál destaco?"): no tiene LIMIT. El Road To
-// UFC sale el primero porque ES el primero por fecha, y eso es cierto. Sacarlo
-// de aquí dejaría un evento de la UFC inaccesible desde la navegación, que es
-// peor que el problema que arreglamos. Solo se trae `tier` para poder rotularlo.
+// ⚠️ AQUÍ NO VA EL FILTRO DEL DESTACADO, Y ES A PROPÓSITO. Esto es una LISTA
+// ("¿qué eventos hay?"), no una elección ("¿cuál destaco?"): no tiene LIMIT, y
+// el filtro del destacado escondería también el Contender Series y el TUF. Lleva
+// el suyo, enListaDeEventosSql, que solo saca los Road To UFC (el dueño,
+// 30-oct-2026: «solo los Road to UFC»); su ficha y el buscador los siguen
+// encontrando. Se trae `tier` para rotular lo que sí se lista (Contender, TUF).
 async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
   const rows = await sql<UpcomingEventRow>(
     `SELECT e.id, e.name, e.headliner, e.event_date::text AS event_date,
@@ -242,6 +250,7 @@ async function getUpcomingEventsUncached(): Promise<UpcomingEventItem[]> {
      WHERE e.status = 'upcoming'
        AND (e.event_date >= CURRENT_DATE OR e.event_date IS NULL)
        AND NOT ${MAIN_EVENT_FINISHED_SQL}
+       AND ${enListaDeEventosSql("e")}
      GROUP BY e.id, e.name, e.headliner, e.event_date, e.start_time,
               e.location, e.image_url, e.broadcast, e.ticket_url, e.tagline,
               e.tier
