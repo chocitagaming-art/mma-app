@@ -438,12 +438,12 @@ export default async function LivePage() {
                         // panel que el usuario había cerrado (re-revisión). El
                         // estado 'live' es estable ante esos fallos.
                         panelDefaultOpen={state === "live"}
-                        // Sin headshotSize: aquí la fila de siempre (36/48 px).
-                        // El dueño, 30-oct-2026: las caras grandes van a la
-                        // ficha y a /ufc-hoy, y /en-vivo espera a ver una
-                        // velada real. El reproductor del directo va DEBAJO de
-                        // la cartelera y con la fila grande bajaría ~960 px en
-                        // el móvil.
+                        // La fila grande, como la ficha y /ufc-hoy (el dueño,
+                        // 30-oct-2026 por la noche: el «Ver en directo» de la
+                        // ficha llevaba a caras pequeñas). El reproductor del
+                        // directo sigue DEBAJO de la cartelera, así que en el
+                        // móvil baja con ella.
+                        headshotSize="large"
                       />
                     </div>
                   );

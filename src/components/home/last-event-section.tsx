@@ -13,7 +13,7 @@ import type { LastEventResults } from "@/lib/types";
 // headshotSize="large" (el dueño, 29-oct-2026: «ponemos las fotos de las
 // cabezas más grandes y nítidas»): caras de 72/96 px con el original de
 // ufc.com. Desde el 30-oct, la misma fila grande en la cartelera de la ficha
-// del evento y /ufc-hoy (src/lib/bout-row-callsites.test.ts).
+// del evento, /ufc-hoy y /en-vivo (src/lib/bout-row-callsites.test.ts).
 export function LastEventSection({ event }: { event: LastEventResults }) {
   const relative = formatRelativeDate(event.eventDate);
   const description = [
