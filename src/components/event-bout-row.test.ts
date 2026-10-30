@@ -8,18 +8,24 @@ import { LastEventSection } from "@/components/home/last-event-section";
 import type { EventBout, EventBoutFighter, LastEventResults } from "@/lib/types";
 
 // LAS CARAS DE LA FILA DE CARTELERA, pintadas en servidor (sin DOM: la
-// geometría de verdad, a cada ancho, la mide e2e/portada-cartelera.spec.ts).
+// geometría de verdad, a cada ancho, la miden e2e/portada-cartelera.spec.ts y
+// e2e/evento-caras.spec.ts).
 //
 // El dueño, el 29-oct-2026, sobre el «Último evento» de la portada: «ponemos
-// las fotos de las cabezas más grandes y nítidas». SOLO la portada: la misma
-// fila pinta /eventos/[id], /en-vivo y /ufc-hoy, y el sábado 31 hay velada en
-// /en-vivo. Lo que se juzga aquí:
-//   · La portada pide la fila grande: 72 px en el móvil y 96 desde sm, con el
-//     original de ufc.com en el srcset y un `sizes` EXACTO (el ancho al que se
-//     pinta la foto, no el de la caja).
+// las fotos de las cabezas más grandes y nítidas»; y el 30-oct, la misma fila
+// grande en la cartelera de /eventos/[id], en /ufc-hoy y en /en-vivo. Solo las
+// «Peleas canceladas» de la ficha se quedan con la de siempre (quién pide qué
+// lo fija src/lib/bout-row-callsites.test.ts). Lo que se juzga aquí:
+//   · La fila grande: 72 px en el móvil y 96 desde sm, con el original de
+//     ufc.com en el srcset y un `sizes` EXACTO (el ancho al que se pinta la
+//     foto, no el de la caja).
 //   · El ganador conserva su anillo verde.
-//   · Sin pedirlo, la fila es la de siempre: 36/48 px y sin original, y la
-//     cara recibe las mismas props que antes (el payload RSC no crece).
+//   · Con rankings (eventos futuros), el #12 va pegado al nombre: el nombre de
+//     la fila grande no lleva flex-1.
+//   · En /en-vivo, la fila grande con el panel de estadísticas abierto (el
+//     combate en curso), con resultado (terminado) y con rankings (por empezar).
+//   · Sin pedirlo, la fila es la de siempre, byte a byte: el HTML de a5d3ad2
+//     (__snapshots__/) y las mismas props de la cara (el payload RSC no crece).
 
 // El estelar del UFC 333 (consulta de solo lectura del 29-oct-2026): cara de
 // ufc.com del estilo event_results en la roja, de ESPN en la azul.
@@ -96,7 +102,26 @@ function fila(props: Partial<Parameters<typeof EventBoutRow>[0]> = {}): string {
   return renderToStaticMarkup(createElement(EventBoutRow, { bout: ESTELAR, ...props }));
 }
 
-describe("la fila de cartelera en la portada (headshotSize «large»)", () => {
+/** La línea del nombre de `nombre`: la clase de su <span> y el ranking que le
+ *  sigue en el marcado (null si no lleva). */
+function lineaDelNombre(html: string, nombre: string): { clase: string; rango: string | null } {
+  const encontrado = new RegExp(
+    `<span class="([^"]*)">${nombre}</span>(?:<span class="[^"]*">([^<]*)</span>)?`,
+  ).exec(html);
+  if (!encontrado) throw new Error(`no encuentro la línea del nombre de ${nombre}`);
+  return { clase: encontrado[1], rango: encontrado[2] ?? null };
+}
+
+// El mismo combate antes de pelearse: sin ganador, sin método y sin bonos.
+const SIN_PELEAR: EventBout = {
+  ...ESTELAR,
+  winnerId: null,
+  method: null,
+  endRound: null,
+  endTime: null,
+};
+
+describe("la fila de cartelera grande (headshotSize «large»)", () => {
   it("🔴 la cara de ufc.com: 72 px en el móvil y 96 desde sm, con el original y su sizes exacto", () => {
     const { caja, img } = cara(fila({ headshotSize: "large" }), "Alexander Volkanovski");
     expect(caja).toMatch(/(^| )size-18( |$)/);
@@ -142,13 +167,128 @@ describe("la fila de cartelera en la portada (headshotSize «large»)", () => {
     expect(atributo(img, "sizes")).toBe(SIZES_PORTADA);
     expect(atributo(img, "srcset")).toMatch(/ 500w$/);
   });
+
+  // 🪤 Apilada (por debajo de lg) la línea del nombre ocupa la esquina entera,
+  // y con flex-1 el nombre se estiraba hasta el otro lado: el «#12» acababa
+  // debajo del VS, a 27-135 px de su nombre (medido en /eventos/1099 a 390 y a
+  // 768 el 29-oct). La portada no lo tenía porque no enseña rankings.
+  it("🔴 con rankings, el ranking va pegado al nombre: el nombre de la fila grande no lleva flex-1", () => {
+    const html = fila({ headshotSize: "large", showRanks: true, bout: SIN_PELEAR });
+    const roja = lineaDelNombre(html, "Alexander Volkanovski");
+    const azul = lineaDelNombre(html, "Movsar Evloev");
+    expect(roja.clase.split(" ")).not.toContain("flex-1");
+    expect(azul.clase.split(" ")).not.toContain("flex-1");
+    expect(roja.clase.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
+    expect(azul.clase.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
+    // El ranking sigue justo detrás del nombre (0 = campeón, «C»).
+    expect(roja.rango).toBe("C");
+    expect(azul.rango).toBe("#1");
+  });
 });
 
-describe("la fila de cartelera sin pedir nada (/eventos/[id], /en-vivo, /ufc-hoy)", () => {
+// /en-vivo pinta la misma fila grande con lo suyo encima: el panel de
+// estadísticas del combate en curso, que llega ABIERTO (panelDefaultOpen), y el
+// resultado de los que ya acabaron. El directo de verdad se simula en
+// e2e/evento-caras.spec.ts; aquí, cada estado del marcado, sin red ni base.
+describe("la fila grande en /en-vivo: en curso, terminado y por empezar", () => {
+  const STATS = createElement("div", { "data-stats-en-vivo": "" }, "Golpes significativos");
+
+  function cajasGrandes(html: string): void {
+    for (const nombre of ["Alexander Volkanovski", "Movsar Evloev"]) {
+      const { caja } = cara(html, nombre);
+      expect(caja, nombre).toMatch(/(^| )size-18( |$)/);
+      expect(caja, nombre).toMatch(/(^| )sm:size-24( |$)/);
+    }
+  }
+
+  it("en curso: el panel de estadísticas llega abierto, encima de la comparativa", () => {
+    const html = fila({
+      headshotSize: "large",
+      showRanks: true,
+      bout: SIN_PELEAR,
+      statsPanel: STATS,
+      panelDefaultOpen: true,
+    });
+    cajasGrandes(html);
+    expect(html).toContain('aria-label="Ver estadísticas y comparativa"');
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain("grid-rows-[1fr]");
+    expect(html.indexOf("data-stats-en-vivo")).toBeGreaterThan(-1);
+    expect(html.indexOf("data-stats-en-vivo")).toBeLessThan(html.indexOf("Altura"));
+    // La columna del chevron va FUERA del enlace: desplegar nunca navega.
+    expect(html).toMatch(/<\/a><\/div><button type="button"/);
+    expect(html).not.toContain("GANA");
+    expect(lineaDelNombre(html, "Alexander Volkanovski").rango).toBe("C");
+  });
+
+  it("terminado: GANA, el anillo y el resultado en el centro; el panel, cerrado", () => {
+    const html = fila({
+      headshotSize: "large",
+      showRanks: true,
+      statsPanel: STATS,
+      panelDefaultOpen: false,
+    });
+    cajasGrandes(html);
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("grid-rows-[0fr]");
+    expect(cara(html, "Alexander Volkanovski").caja).toMatch(/(^| )ring-win( |$)/);
+    expect(html).toMatch(/text-win">GANA</);
+    expect(html).toContain("R2 · 4:54");
+  });
+
+  it("por empezar: sin panel de estadísticas, la comparativa plegada y los rankings pegados", () => {
+    const html = fila({ headshotSize: "large", showRanks: true, bout: SIN_PELEAR });
+    cajasGrandes(html);
+    expect(html).toContain('aria-label="Ver comparativa física"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("ring-win");
+    expect(lineaDelNombre(html, "Movsar Evloev").rango).toBe("#1");
+  });
+});
+
+describe("la fila de cartelera sin pedir nada (las «Peleas canceladas» de /eventos/[id])", () => {
   // Guarda, no rojo: esto ya era así antes del cambio y tiene que seguir
-  // siéndolo. El byte a byte del marcado se comprobó aparte el 29-oct.
+  // siéndolo.
   const DEFAULT_CAJA =
     "relative overflow-hidden rounded-md border border-border bg-muted size-9 shrink-0 sm:size-12";
+
+  // 🪤 BYTE A BYTE: el HTML de la fila de siempre, congelado en a5d3ad2 (el
+  // commit de producción del 30-oct) en __snapshots__/. Cualquier clase de
+  // más, de menos o en otro orden lo pone en rojo. Se escribió corriendo este
+  // mismo test contra a5d3ad2; no se regenera (`vitest -u`) para «arreglar» un
+  // rojo: un rojo aquí es la fila de siempre cambiando.
+  const SIN_FICHA = (f: EventBoutFighter): EventBoutFighter => ({
+    ...f,
+    heightCm: null,
+    reachCm: null,
+    stance: null,
+    birthDate: null,
+  });
+  const CASOS: Record<string, Partial<Parameters<typeof EventBoutRow>[0]>> = {
+    "con-comparativa": {},
+    "con-rankings": { showRanks: true },
+    "en-vivo-abierta": {
+      showRanks: true,
+      statsPanel: createElement("div", null, "stats"),
+      panelDefaultOpen: true,
+    },
+    "sin-comparativa": {
+      bout: { ...SIN_PELEAR, red: SIN_FICHA(ESTELAR.red), blue: SIN_FICHA(ESTELAR.blue) },
+    },
+  };
+  for (const [caso, props] of Object.entries(CASOS)) {
+    it(`el HTML no cambia ni un byte: ${caso}`, async () => {
+      await expect(fila(props)).toMatchFileSnapshot(
+        `./__snapshots__/event-bout-row.fila-de-siempre.${caso}.html`,
+      );
+    });
+  }
+
+  it("el nombre sigue con flex-1", () => {
+    const html = fila({ showRanks: true });
+    expect(lineaDelNombre(html, "Alexander Volkanovski").clase).toBe("min-w-0 flex-1 truncate");
+    expect(lineaDelNombre(html, "Movsar Evloev").clase).toBe("min-w-0 flex-1 truncate");
+  });
 
   it("las caras siguen a 36/48 px y sin el original de ufc.com", () => {
     const html = fila();

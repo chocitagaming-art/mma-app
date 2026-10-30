@@ -18,9 +18,9 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //     ganador no lo corta la tarjeta. Sin desbordar la página.
 //   · Las dos caras de cada fila arrancan a la misma altura, y un nombre que no
 //     cabe NUNCA tiene la cara a su lado: la cara grande no le come el ancho.
-//   · 🪤 La MISMA fila pinta /eventos/[id], /en-vivo y /ufc-hoy, y ahí no
-//     cambia nada (el sábado 31 hay velada en /en-vivo): en la ficha del mismo
-//     evento las caras siguen a 36/48 px y sin original.
+//   · La ficha del mismo evento, con las MISMAS caras grandes (el dueño,
+//     30-oct: la fila grande también en la cartelera de /eventos/[id], /ufc-hoy
+//     y /en-vivo; lo mide además e2e/evento-caras.spec.ts) y las mismas reglas.
 //
 // 🪤 SIN NOMBRES FIJOS: el «Último evento» cambia cada semana. Todo se mide por
 // estructura, y el evento de la ficha se saca del «Ver resultados completos».
@@ -46,7 +46,6 @@ const GUARDADA = /\/images\/styles\/event_results_athlete_headshot\//;
 // sm de Tailwind: desde aquí las caras pasan a su tamaño grande.
 const SM = 640;
 const LADO_PORTADA = (ancho: number) => (ancho >= SM ? 96 : 72);
-const LADO_EVENTO = (ancho: number) => (ancho >= SM ? 48 : 36);
 // (72 − 2) × 1,6 y (96 − 2) × 1,6: el ancho al que se pinta la cara de
 // ufc.com, que cubre su caja cuadrada (1 px de borde por lado).
 const SIZES_PORTADA = "(min-width: 640px) 150px, 112px";
@@ -141,6 +140,20 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
         Math.min(a.right, b.right) - Math.max(a.left, b.left) > tolerancia &&
         Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > tolerancia;
       // Los fragmentos de un nodo de texto o de un span (un texto partido da dos).
+      // El ancho que el nombre NECESITA, con decimales. 🪤 scrollWidth y
+      // clientWidth son enteros: un nombre cortado por medio píxel sale con
+      // «…» y los dos dan lo mismo (Lebosnoyani en /eventos/1099 a 360:
+      // 117,8 de 118,3 px, y scrollWidth = clientWidth = 118).
+      const anchoNatural = (el: HTMLElement) => {
+        const estilo = el.getAttribute("style");
+        el.style.setProperty("width", "max-content");
+        el.style.setProperty("max-width", "none");
+        el.style.setProperty("flex", "none");
+        const ancho = el.getBoundingClientRect().width;
+        if (estilo === null) el.removeAttribute("style");
+        else el.setAttribute("style", estilo);
+        return ancho;
+      };
       const fragmentos = (nodo: Node) => {
         const rango = document.createRange();
         rango.selectNodeContents(nodo);
@@ -203,23 +216,21 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
           }
           if (!dentro(caja(lineaNombre), rEsquina)) fallos.push(`${donde}: el nombre se sale de su esquina`);
           // 🪤 Un nombre cortado («ALEXANDER VOLKAN…») sigue DENTRO de su caja:
-          // las comprobaciones de arriba no lo ven. En la portada, si un nombre
-          // no cabe, la cara NO puede estar a su lado comiéndole el ancho: por
-          // eso la esquina se apila por debajo de lg (ver ROW_LAYOUTS en
-          // src/components/event-bout-row.tsx). Apilado, el nombre ya tiene la
-          // esquina entera, más que en la fila de siempre, y cortarse ahí no es
-          // nuevo (a 360-390 el estelar más largo aún no cabe del todo).
+          // las comprobaciones de arriba no lo ven. En la fila grande (la
+          // portada y, desde el 30-oct, la ficha), si un nombre no cabe, la
+          // cara NO puede estar a su lado comiéndole el ancho: por eso la
+          // esquina se apila por debajo de lg (ver ROW_LAYOUTS en
+          // src/components/event-bout-row-layout.ts). Apilado, el nombre ya
+          // tiene la esquina entera, más que en la fila de siempre, y cortarse
+          // ahí no es nuevo (a 360-390 el estelar más largo aún no cabe del todo).
           const spanNombre = lineaNombre.querySelector<HTMLElement>("span.truncate");
           const caraAlLado =
             Math.min(rCabeza.bottom, rTexto.bottom) - Math.max(rCabeza.top, rTexto.top) > tolerancia;
-          if (
-            ambito === "portada" &&
-            spanNombre &&
-            spanNombre.scrollWidth > spanNombre.clientWidth &&
-            caraAlLado
-          ) {
+          const visible = spanNombre?.getBoundingClientRect().width ?? 0;
+          const total = spanNombre ? anchoNatural(spanNombre) : 0;
+          if (total - visible > 0.01 && caraAlLado) {
             fallos.push(
-              `${donde}: el nombre se corta con la cara al lado (${spanNombre.clientWidth} de ${spanNombre.scrollWidth} px)`,
+              `${donde}: el nombre se corta con la cara al lado (${visible.toFixed(1)} de ${total.toFixed(1)} px)`,
             );
           }
           // Cada pieza de la línea del récord, entera y dentro de su esquina.
@@ -267,29 +278,32 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
   );
 }
 
-async function comprobarPortada(page: Page, width: number): Promise<void> {
+// Las reglas de la fila grande, a un ancho: en la portada (su «Último evento»)
+// o en la ficha del evento (toda su cartelera).
+async function comprobar(page: Page, width: number, ambito: "portada" | "evento" = "portada"): Promise<void> {
   await asentar(page, width);
-  const m = await medir(page, "portada");
+  const m = await medir(page, ambito);
   const lado = LADO_PORTADA(width);
-  expect(m.filas, `a ${width}: el «Último evento» no tiene filas`).toBeGreaterThan(0);
-  expect(m.caras, `a ${width}: no se midieron las dos caras de cada fila`).toHaveLength(m.filas * 2);
-  expect.soft(m.fallos, `a ${width}: piezas fuera de su sitio`).toEqual([]);
+  const donde = ambito === "portada" ? "la portada" : page.url().replace(/^https?:\/\/[^/]+/, "");
+  expect(m.filas, `${donde} a ${width}: sin filas de cartelera`).toBeGreaterThan(0);
+  expect(m.caras, `${donde} a ${width}: no se midieron las dos caras de cada fila`).toHaveLength(m.filas * 2);
+  expect.soft(m.fallos, `${donde} a ${width}: piezas fuera de su sitio`).toEqual([]);
   for (const cara of m.caras) {
-    expect.soft(cara.ancho, `a ${width}: ${cara.donde} mide ${cara.ancho} px de ancho`).toBeGreaterThanOrEqual(lado - 0.5);
-    expect.soft(cara.alto, `a ${width}: ${cara.donde} mide ${cara.alto} px de alto`).toBeGreaterThanOrEqual(lado - 0.5);
-    expect.soft(Math.abs(cara.ancho - cara.alto), `a ${width}: ${cara.donde} ya no es cuadrada`).toBeLessThanOrEqual(0.5);
+    expect.soft(cara.ancho, `${donde} a ${width}: ${cara.donde} mide ${cara.ancho} px de ancho`).toBeGreaterThanOrEqual(lado - 0.5);
+    expect.soft(cara.alto, `${donde} a ${width}: ${cara.donde} mide ${cara.alto} px de alto`).toBeGreaterThanOrEqual(lado - 0.5);
+    expect.soft(Math.abs(cara.ancho - cara.alto), `${donde} a ${width}: ${cara.donde} ya no es cuadrada`).toBeLessThanOrEqual(0.5);
     if (cara.ganador) {
-      expect.soft(cara.anillo, `a ${width}: ${cara.donde} gana y no se le ve el anillo`).toBeGreaterThanOrEqual(2);
+      expect.soft(cara.anillo, `${donde} a ${width}: ${cara.donde} gana y no se le ve el anillo`).toBeGreaterThanOrEqual(2);
     }
   }
   // Las de ufc.com, con su original: la versión nítida.
   for (const cara of m.caras.filter((c) => GUARDADA.test(c.src))) {
-    expect.soft(cara.srcset, `a ${width}: ${cara.donde} sin el original en el srcset`).toMatch(
+    expect.soft(cara.srcset, `${donde} a ${width}: ${cara.donde} sin el original en el srcset`).toMatch(
       / 256w, https:\/\/www\.ufc\.com\/images\/(?!styles\/).+ 500w$/,
     );
-    expect.soft(cara.sizes, `a ${width}: ${cara.donde}: sizes`).toBe(SIZES_PORTADA);
+    expect.soft(cara.sizes, `${donde} a ${width}: ${cara.donde}: sizes`).toBe(SIZES_PORTADA);
   }
-  await expectNoHorizontalOverflow(page, `la portada a ${width}`);
+  await expectNoHorizontalOverflow(page, `${donde} a ${width}`);
 }
 
 test("portada: las caras del «Último evento», grandes, con su original y todo dentro de su esquina", async ({
@@ -297,7 +311,7 @@ test("portada: las caras del «Último evento», grandes, con su original y todo
 }) => {
   await abrirPortada(page);
   const width = page.viewportSize()?.width ?? 0;
-  await comprobarPortada(page, width);
+  await comprobar(page, width);
 
   // Sin una sola cara de ufc.com no se habría probado el srcset: se dice, no
   // se da por bueno en silencio (un evento con todas de ESPN es legítimo).
@@ -320,13 +334,14 @@ test("portada: el mismo barrido a 360, 414, 820, 1024, 1440 y 1920", async ({ pa
   );
   await abrirPortada(page);
   for (const width of OTROS_ANCHOS) {
-    await comprobarPortada(page, width);
+    await comprobar(page, width);
   }
 });
 
-test("la ficha del mismo evento no cambia: sus caras siguen a 36/48 px y sin el original", async ({
-  page,
-}) => {
+// Invertido a propósito el 30-oct (antes: «la ficha del mismo evento no cambia:
+// sus caras siguen a 36/48 px y sin el original»): el dueño pidió la fila
+// grande también en la cartelera de /eventos/[id].
+async function abrirFichaDelUltimoEvento(page: Page): Promise<{ href: string; nombres: string[] }> {
   const seccion = await abrirPortada(page);
   const enlace = seccion.getByRole("link", { name: /Ver resultados completos/ });
   const href = await enlace.getAttribute("href");
@@ -334,14 +349,15 @@ test("la ficha del mismo evento no cambia: sus caras siguen a 36/48 px y sin el 
   const nombres = await seccion.locator('[data-bout-corner] img[alt^="Foto de "]').evaluateAll((imgs) =>
     imgs.map((img) => img.getAttribute("alt") ?? ""),
   );
-
   await page.goto(href!);
-  await expect(page.locator('[data-testid="bout-row"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="bout-row"]:visible').first()).toBeVisible();
   await esperarHidratacion(page);
-  const width = page.viewportSize()?.width ?? 0;
-  await asentar(page, width);
-  const m = await medir(page, "evento");
-  expect(m.caras.length, `${href}: no encuentro las caras de la cartelera`).toBeGreaterThan(0);
+  await page.evaluate(() => document.fonts.ready);
+  return { href: href!, nombres };
+}
+
+test("la ficha del mismo evento, con las mismas caras grandes y las mismas reglas", async ({ page }) => {
+  const { href, nombres } = await abrirFichaDelUltimoEvento(page);
   // Las mismas caras que la portada están aquí: se compara lo mismo.
   const aqui = new Set(
     await page.locator('[data-bout-corner] img[alt^="Foto de "]').evaluateAll((imgs) =>
@@ -349,10 +365,16 @@ test("la ficha del mismo evento no cambia: sus caras siguen a 36/48 px y sin el 
     ),
   );
   expect(nombres.filter((n) => !aqui.has(n)), `${href}: caras de la portada que no están en la ficha`).toEqual([]);
-  for (const cara of m.caras) {
-    expect.soft(cara.ancho, `${href} a ${width}: ${cara.donde}`).toBeCloseTo(LADO_EVENTO(width), 0);
-    expect.soft(cara.alto, `${href} a ${width}: ${cara.donde}`).toBeCloseTo(LADO_EVENTO(width), 0);
-    expect.soft(cara.srcset, `${href}: ${cara.donde} no debe ofrecer el original`).toBeNull();
+  await comprobar(page, page.viewportSize()?.width ?? 0, "evento");
+});
+
+test("la ficha del mismo evento: el mismo barrido a 360, 414, 820, 1024, 1440 y 1920", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "escritorio-light",
+    "cada ancho se fija a mano y el tema no cambia la geometría: basta un proyecto",
+  );
+  await abrirFichaDelUltimoEvento(page);
+  for (const width of OTROS_ANCHOS) {
+    await comprobar(page, width, "evento");
   }
-  await expectNoHorizontalOverflow(page, `${href} a ${width}`);
 });

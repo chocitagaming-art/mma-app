@@ -710,9 +710,12 @@ for (const motor of ["chromium", "webkit"] as const) {
     }
 
     // ── Filas de cartelera: los dos headshots de cada fila a la misma altura.
-    // Van centrados en la fila (items-center), así que una línea de récord que
-    // parte en dos no los mueve: aquí se vigila que siga así, con los datos
-    // reales y metiendo texto de más en una esquina.
+    // Desde el 30-oct la ficha pinta la fila grande (ROW_LAYOUTS.large): por
+    // debajo de lg cada esquina se apila con la cara ARRIBA y la fila va con
+    // items-start, así que una línea de récord que parte en dos crece hacia
+    // abajo y no mueve la cara; desde lg vuelven a ir centradas (items-center).
+    // Aquí se vigila que siga así, con los datos reales y metiendo texto de más
+    // en una esquina.
 
     async function medirCartelera(pagina: Page, url: string): Promise<void> {
       await pagina.goto(url);
