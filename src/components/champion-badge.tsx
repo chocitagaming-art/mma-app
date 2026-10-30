@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
 // border says it to the eye; this says it in words, so the meaning is not
 // carried by colour alone (WCAG 1.4.1). «Campeona» on a woman's card: the
 // review of 29-oct saw «CAMPEÓN» in big letters over Kayla Harrison, Natalia
-// Silva and Mackenzie Dern. (/clasificacion still says «Campeón» on its
-// women's divisions: that one is the owner's call, not this change's.)
+// Silva and Mackenzie Dern. /clasificacion (ranking-division-card.tsx) and the
+// fighter page (its header badge and ranking trajectory) say «Campeona» by
+// this same rule.
 //
 // The text is the /clasificacion «Campeón» (mono, uppercase, amber-700 /
 // amber-400), on an OPAQUE card-coloured pill: it sits over a gold line and a

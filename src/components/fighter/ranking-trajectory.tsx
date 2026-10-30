@@ -1,4 +1,5 @@
 import { PREMIUM_TILE } from "@/components/fighter/premium-tile";
+import { isWomensDivision } from "@/lib/fighter-silhouette";
 import {
   buildRankingTrajectory,
   scaleX,
@@ -29,8 +30,13 @@ function formatAxisDate(date: string): string {
   }).format(d);
 }
 
-function positionLabel(position: number, isChampion: boolean): string {
-  return isChampion || position === 0 ? "Campeón" : `#${position}`;
+// «Campeona» on a women's division series (owner, 30-oct-2026): each series
+// decides by its own slug («womens_bantamweight»), the rule of the cards
+// (isWomensDivision), so the chart needs nothing from the page. The axis
+// «Camp.» is neutral and stays.
+function positionLabel(position: number, isChampion: boolean, women: boolean): string {
+  if (!(isChampion || position === 0)) return `#${position}`;
+  return women ? "Campeona" : "Campeón";
 }
 
 // Ticks enteros del eje Y (posiciones), ~5 como mucho, incluyendo siempre los extremos.
@@ -173,7 +179,7 @@ export function RankingTrajectory({ history }: RankingTrajectoryProps) {
                 stroke={p.isChampion ? "var(--background)" : "none"}
                 strokeWidth={p.isChampion ? 1.5 : 0}
               >
-                <title>{`${s.label} — ${positionLabel(p.position, p.isChampion)} (${formatAxisDate(p.date)})`}</title>
+                <title>{`${s.label} — ${positionLabel(p.position, p.isChampion, isWomensDivision(s.division))} (${formatAxisDate(p.date)})`}</title>
               </circle>
             ))}
           </g>

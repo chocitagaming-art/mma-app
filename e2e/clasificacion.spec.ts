@@ -19,7 +19,12 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //     navegador baja el original SOLO donde hace falta: en las filas a 3x y en
 //     el campeón a 2x y 3x. A 1x, ningún original en toda la página.
 //   · Sin desbordamiento de 360 a 1920 y ningún nombre cortado; tampoco el
-//     texto del bloque del campeón («Campeón», el apodo, el récord).
+//     texto del bloque del campeón («Campeón» o «Campeona», el apodo, el
+//     récord), y se miden TODOS los bloques de campeón de la página.
+//   · «CAMPEONA» (30-oct-2026) mide 89,9 px y la columna de su etiqueta, 82 a
+//     360: SOLO en tarjetas de menos de 21rem (336 px) la etiqueta se aprieta
+//     (letter-spacing 0,1em, hueco de 4 px y trofeo de 12 px). En las demás,
+//     la de siempre (0,18em, 6 px y 14 px): el 390 del dueño no cambia.
 //   · La foto no repite el nombre al lector de pantalla: lo dice el enlace.
 //   · En oscuro el marco sigue dorado (amber-400), no solo en claro.
 //   · El foco de teclado dibuja un anillo de 2 px alrededor de TODA la fila.
@@ -29,8 +34,14 @@ import { expectNoHorizontalOverflow } from "./helpers";
 //
 // 🪤 Los selectores valen para la versión de antes Y para la de ahora (filas =
 // `main ol > li`, caras = img con alt «Foto de…» o «Silueta de…», campeón = el
-// bloque con el texto «Campeón»): contra producción, el test tiene que fallar
-// por lo que mide, no por un data-testid que entonces no existía.
+// bloque con la etiqueta «Campeón» o «Campeona», /^Campe(ón|ona)$/): contra
+// producción, el test tiene que fallar por lo que mide, no por un data-testid
+// que entonces no existía. Que se han medido TODOS los bloques se comprueba
+// contando `.ranking-champion`, la clase con la que se pinta el bloque (también
+// en la versión de antes), no por un data-testid. Con el texto exacto
+// «Campeón» de la primera versión, las tres campeonas habrían dejado de
+// medirse en silencio y el test habría seguido en verde (8 de 11 bloques, justo
+// el mínimo que pedía).
 //
 // 🪤 Las fotos externas se sirven ENLATADAS con su medida real: 256×160 la
 // guardada de ufc.com, 500×325 su original (un /images/ de ufc.com SIN
@@ -197,6 +208,10 @@ type CaraMedida = {
   // Solo el campeón: los textos de su bloque (fuera del nombre) que no caben
   // en su caja, a lo ancho (una elipsis) o a lo alto (un line-clamp).
   recortes: string[];
+  // Solo el campeón: su etiqueta «Campeón»/«Campeona» (letter-spacing en em,
+  // hueco y trofeo en px) y el ancho de contenido de su tarjeta, el que mira
+  // la container query. null en una fila.
+  etiqueta: { texto: string; espaciado: number; hueco: number; trofeo: number; tarjeta: number } | null;
 };
 
 // Mide las caras de las filas y de los campeones, y sus nombres, en UN solo
@@ -301,23 +316,35 @@ function medir(pagina: Page): Promise<CaraMedida[]> {
         oculta: img.closest('[aria-hidden="true"]') != null,
         borde: null,
         recortes: [],
+        etiqueta: null,
         ...nombre(fila, img, "fila"),
       });
     }
-    const etiquetas = [...document.querySelectorAll("main p")].filter(
-      (p) => p.textContent?.trim() === "Campeón",
+    const etiquetas = [...document.querySelectorAll<HTMLElement>("main p")].filter((p) =>
+      /^Campe(ón|ona)$/.test(p.textContent?.trim() ?? ""),
     );
     for (const etiqueta of etiquetas) {
       let bloque: Element | null = etiqueta.parentElement;
       while (bloque && !bloque.querySelector(CARA)) bloque = bloque.parentElement;
       const img = bloque?.querySelector<HTMLImageElement>(CARA);
       if (!bloque || !img) continue;
+      const estilo = getComputedStyle(etiqueta);
+      const trofeo = etiqueta.querySelector("svg")?.getBoundingClientRect();
+      const tarjeta = etiqueta.closest(".ranking-card");
       medidas.push({
         zona: "campeon",
         alto: img.getBoundingClientRect().height,
         oculta: img.closest('[aria-hidden="true"]') != null,
         borde: bordeHasta(img, bloque),
         recortes: recortesDe(bloque),
+        etiqueta: {
+          texto: etiqueta.textContent?.trim() ?? "",
+          espaciado: (parseFloat(estilo.letterSpacing) || 0) / parseFloat(estilo.fontSize),
+          hueco: parseFloat(estilo.columnGap) || 0,
+          trofeo: trofeo?.width ?? 0,
+          // clientWidth: sin el borde de 1 px; la tarjeta no tiene padding.
+          tarjeta: tarjeta?.clientWidth ?? 0,
+        },
         ...nombre(bloque, img, "campeon"),
       });
     }
@@ -397,7 +424,7 @@ async function cargarCaras(pagina: Page): Promise<CaraCargada[]> {
         const sonda = new Image();
         sonda.src = img.currentSrc;
         await sonda.decode().catch(() => undefined);
-        // Campeón: su bloque es el que tiene el texto «Campeón» (en una fila no está).
+        // Campeón: la cara que no está en una fila (la de su bloque dorado).
         const enFila = img.closest("ol > li") != null;
         return {
           zona: (enFila ? "fila" : "campeon") as "fila" | "campeon",
@@ -1197,6 +1224,24 @@ for (const motor of ["chromium", "webkit"] as const) {
         // con menos, la página no ha pintado la clasificación entera.
         expect(filas.length, `${donde} filas con cara`).toBeGreaterThanOrEqual(150);
         expect(campeones.length, `${donde} campeones con cara`).toBeGreaterThanOrEqual(8);
+        // Y TODOS los bloques de campeón medidos: uno cuya etiqueta no
+        // reconociera el selector saldría de la cuenta en silencio.
+        const bloques = await pagina.locator("main .ranking-champion").count();
+        expect(campeones.length, `${donde} bloques de campeón medidos (de ${bloques})`).toBe(bloques);
+
+        // La etiqueta se aprieta SOLO en tarjetas de menos de 21rem (336 px).
+        const etiquetasMal = campeones
+          .filter((m) => m.etiqueta != null)
+          .filter((m) => {
+            const e = m.etiqueta!;
+            const [espaciado, hueco, trofeo] = e.tarjeta < 336 ? [0.1, 4, 12] : [0.18, 6, 14];
+            return Math.abs(e.espaciado - espaciado) > 0.005 || Math.abs(e.hueco - hueco) > 0.5 || Math.abs(e.trofeo - trofeo) > 0.5;
+          })
+          .map((m) => {
+            const e = m.etiqueta!;
+            return `${m.nombre}: «${e.texto}» ${e.espaciado.toFixed(3)}em, hueco ${e.hueco}, trofeo ${e.trofeo.toFixed(1)} en una tarjeta de ${e.tarjeta}`;
+          });
+        expect.soft(resumen(etiquetasMal), `${donde} etiquetas de campeón con la medida que no toca`).toEqual([]);
 
         const filasBajas = filas
           .filter((m) => m.alto < ALTO_MIN_CARA_FILA)
@@ -1286,6 +1331,8 @@ for (const motor of ["chromium", "webkit"] as const) {
           .toBeGreaterThanOrEqual(150);
         const campeones = (await medir(pagina)).filter((m) => m.zona === "campeon");
         expect(campeones.length, `${donde} campeones con cara`).toBeGreaterThanOrEqual(8);
+        const bloques = await pagina.locator("main .ranking-champion").count();
+        expect(campeones.length, `${donde} bloques de campeón medidos (de ${bloques})`).toBe(bloques);
         expect.soft(resumen(sinMarcoDorado(campeones)), `${donde} campeones sin el marco dorado`).toEqual([]);
         const recortes = campeones.flatMap((m) => m.recortes.map((texto) => `${m.nombre}: «${texto}»`));
         expect.soft(resumen(recortes), `${donde} textos cortados en el bloque del campeón`).toEqual([]);
