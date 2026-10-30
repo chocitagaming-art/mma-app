@@ -19,8 +19,8 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //   · Las dos caras de cada fila arrancan a la misma altura, y un nombre que no
 //     cabe NUNCA tiene la cara a su lado: la cara grande no le come el ancho.
 //   · La ficha del mismo evento, con las MISMAS caras grandes (el dueño,
-//     30-oct: la fila grande también en la cartelera de /eventos/[id], /ufc-hoy
-//     y /en-vivo; lo mide además e2e/evento-caras.spec.ts) y las mismas reglas.
+//     30-oct: la fila grande también en la cartelera de /eventos/[id] y
+//     /ufc-hoy; lo mide además e2e/evento-caras.spec.ts) y las mismas reglas.
 //
 // 🪤 SIN NOMBRES FIJOS: el «Último evento» cambia cada semana. Todo se mide por
 // estructura, y el evento de la ficha se saca del «Ver resultados completos».

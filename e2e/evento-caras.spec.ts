@@ -5,13 +5,15 @@ import { expect, test, type Page, type Request } from "@playwright/test";
 
 import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } from "./helpers";
 
-// ── Las caras grandes en la cartelera: /eventos/[id], /ufc-hoy y /en-vivo ────
+// ── Las caras grandes en la cartelera: /eventos/[id] y /ufc-hoy ─────────────
 //
 // El dueño, el 30-oct-2026: las caras grandes del «Último evento» de la portada
 // (72 px en el móvil y 96 desde 640, con el original de ufc.com, la cara encima
-// del nombre por debajo de 1024) también en la cartelera de /eventos/[id], en
-// /ufc-hoy y en /en-vivo. Las «Peleas canceladas» de la ficha, pequeñas. Lo que
-// se vigila aquí, con la página servida de verdad:
+// del nombre por debajo de 1024) también en la cartelera de /eventos/[id] y en
+// /ufc-hoy. Las «Peleas canceladas» de la ficha, pequeñas, y /en-vivo también,
+// hasta ver una velada real (su reproductor va debajo de la cartelera y con la
+// fila grande bajaría ~960 px en el móvil). Lo que se vigila aquí, con la página
+// servida de verdad:
 //   · /eventos/1093 (UFC 333: fijo, con resultados, TÍTULO, FOTN, POTN y GANA),
 //     de 360 a 1920: caras de 72/96, cada pieza dentro de su esquina, el
 //     resultado y las insignias dentro del centro, el chevron con la altura de
@@ -21,9 +23,10 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //     esquina apilada y el nombre con flex-1, el «#12» se iba a 27-135 px,
 //     debajo del VS (/eventos/1099, 29-oct).
 //   · Las canceladas, plegadas, siguen a 36/48 px.
-//   · /ufc-hoy y /en-vivo, con las caras grandes. /en-vivo es el marcador del
-//     directo: el chip de estado encima de cada fila, el panel del combate en
-//     curso abierto, y el refresco de cada 20 s no mueve nada.
+//   · /ufc-hoy, con las caras grandes.
+//   · /en-vivo, el marcador del directo, con la fila de siempre (36/48 px): el
+//     chip de estado encima de cada fila, el panel del combate en curso
+//     abierto, y el refresco de cada 20 s no mueve nada.
 //   · El esqueleto de carga de la ficha cae donde cae la página: el póster, la
 //     primera fila y la caja de las caras.
 //
@@ -492,7 +495,7 @@ async function bloquesEnVivo(page: Page): Promise<BloqueEnVivo[]> {
   );
 }
 
-test("/en-vivo: el marcador con las caras grandes, el chip encima, el panel en curso abierto y el refresco quieto", async ({
+test("/en-vivo: el marcador con la fila de siempre (36/48 px), el chip encima, el panel en curso abierto y el refresco quieto", async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -503,7 +506,17 @@ test("/en-vivo: el marcador con las caras grandes, el chip encima, el panel en c
   );
   let enCurso = 0;
   for (const width of ANCHOS_CORTOS) {
-    await comprobarFilasGrandes(page, "/en-vivo", width);
+    // La fila de siempre: caras de 36/48 con la foto guardada, sin el original.
+    await asentar(page, width);
+    const m = await medir(page, "cartelera");
+    expect(m.filas, `/en-vivo a ${width}: sin filas`).toBeGreaterThan(0);
+    expect(m.caras, `/en-vivo a ${width}: no se midieron las dos caras de cada fila`).toHaveLength(m.filas * 2);
+    expect.soft(m.fallos, `/en-vivo a ${width}: piezas fuera de su sitio`).toEqual([]);
+    for (const cara of m.caras) {
+      expect.soft(cara.ancho, `/en-vivo a ${width}: ${cara.donde}`).toBeCloseTo(LADO_PEQUENO(width), 0);
+      expect.soft(cara.srcset, `/en-vivo: ${cara.donde} con el original`).toBeNull();
+    }
+    await expectNoHorizontalOverflow(page, `/en-vivo a ${width}`);
     const bloques = await bloquesEnVivo(page);
     expect(bloques.length, `/en-vivo a ${width}: filas sin su bloque`).toBeGreaterThan(0);
     enCurso += bloques.filter((b) => b.chip.startsWith("En curso")).length;
@@ -537,8 +550,8 @@ test("/en-vivo: el marcador con las caras grandes, el chip encima, el panel en c
     return;
   }
 
-  // El refresco del directo (AutoRefresh, router.refresh cada 20 s): con la
-  // fila grande, nada se mueve si no cambia nada.
+  // El refresco del directo (AutoRefresh, router.refresh cada 20 s): nada se
+  // mueve si no cambia nada.
   await asentar(page, 390);
   const antes = await bloquesEnVivo(page);
   const refresco = page.waitForRequest(

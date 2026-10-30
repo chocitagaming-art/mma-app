@@ -18,7 +18,7 @@ import { expect, test as base, type Browser, type Page } from "@playwright/test"
 //   · Las filas de cartelera, desde que la cara se ve grande ahí: el «Último
 //     evento» de la portada (el dueño, 29-oct-2026: «las fotos de las cabezas
 //     más grandes y nítidas») y, desde el 30-oct, la cartelera de
-//     /eventos/[id], /ufc-hoy y /en-vivo. Caras de 72/96 px con el original en
+//     /eventos/[id] y /ufc-hoy (/en-vivo aún no). Caras de 72/96 px con el original en
 //     el srcset: lo bajan un iPhone (3x) y un iPad (2x); un móvil 2x o 1x
 //     sigue con la de 256. La regla de R5 sigue en pie («la grande solo donde
 //     la cara se ve grande»): lo que cambió es dónde se ve grande.

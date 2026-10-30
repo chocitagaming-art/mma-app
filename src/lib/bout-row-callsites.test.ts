@@ -9,8 +9,10 @@ import { describe, expect, it } from "vitest";
 // original de ufc.com) y la de siempre (36/48). Qué sitio pide cuál lo decidió
 // el dueño, y no se deduce de nada: el 29-oct-2026 la portada («ponemos las
 // fotos de las cabezas más grandes y nítidas») y el 30-oct la cartelera de
-// /eventos/[id], /ufc-hoy y /en-vivo. Las «Peleas canceladas» de la ficha se
-// quedan pequeñas: son combates que no se van a celebrar.
+// /eventos/[id] y /ufc-hoy. Las «Peleas canceladas» de la ficha se quedan
+// pequeñas: son combates que no se van a celebrar. /en-vivo, también pequeña
+// hasta ver una velada real: su reproductor va DEBAJO de la cartelera y con la
+// fila grande bajaría ~960 px en el móvil (el dueño, 30-oct).
 //
 // Ningún test de geometría ve un sitio que se queda con la fila de siempre: la
 // pequeña también cabe. Por eso el guard va sobre el CÓDIGO FUENTE, como
@@ -75,8 +77,9 @@ const MAPA: Record<string, "large" | "default"> = {
   "app/eventos/[id]/page.tsx · event.cancelledBouts": "default",
   // /ufc-hoy, la cartelera de la velada (30-oct).
   "app/ufc-hoy/page.tsx · seccion.bouts": "large",
-  // /en-vivo, el marcador del directo (30-oct).
-  "app/en-vivo/page.tsx · section.bouts": "large",
+  // /en-vivo, el marcador del directo: la de siempre hasta ver una velada real
+  // con la fila grande (el dueño, 30-oct).
+  "app/en-vivo/page.tsx · section.bouts": "default",
 };
 
 describe("sitios que pintan EventBoutRow", () => {

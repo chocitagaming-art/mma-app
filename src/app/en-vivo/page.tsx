@@ -438,9 +438,12 @@ export default async function LivePage() {
                         // panel que el usuario había cerrado (re-revisión). El
                         // estado 'live' es estable ante esos fallos.
                         panelDefaultOpen={state === "live"}
-                        // Las caras grandes, como en la ficha (el dueño,
-                        // 30-oct-2026). El chip va encima, fuera de la fila.
-                        headshotSize="large"
+                        // Sin headshotSize: aquí la fila de siempre (36/48 px).
+                        // El dueño, 30-oct-2026: las caras grandes van a la
+                        // ficha y a /ufc-hoy, y /en-vivo espera a ver una
+                        // velada real. El reproductor del directo va DEBAJO de
+                        // la cartelera y con la fila grande bajaría ~960 px en
+                        // el móvil.
                       />
                     </div>
                   );
