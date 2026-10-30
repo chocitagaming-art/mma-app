@@ -16,7 +16,7 @@ import { esperarHidratacion, expectNoHorizontalOverflow, fakeYouTubeEmbeds } fro
 //     de 360 a 1920: caras de 72/96, cada pieza dentro de su esquina, el
 //     resultado y las insignias dentro del centro, el chevron con la altura de
 //     su fila y sin desbordar. Un nombre que no cabe nunca tiene la cara al
-//     lado, y desde 414 no se corta ninguno.
+//     lado, y desde 768 no se corta ninguno.
 //   · El próximo evento (con rankings): cada ranking pegado a su nombre. Con la
 //     esquina apilada y el nombre con flex-1, el «#12» se iba a 27-135 px,
 //     debajo del VS (/eventos/1099, 29-oct).
@@ -53,10 +53,11 @@ const CHEVRON = (ancho: number) => (ancho >= SM ? 40 : 36);
 // (72 − 2) × 1,6 y (96 − 2) × 1,6: el ancho al que se pinta la cara de ufc.com.
 const SIZES = "(min-width: 640px) 150px, 112px";
 // Desde aquí no se corta ningún nombre en la 1093. Medido el 30-oct con el
-// cambio: a 360 y 390 se cortan dos (Volkanovski 98/125 y 113/125 px,
-// Yakhyaev 118/135 y 133/135), con la cara ENCIMA, no al lado; con la fila de
-// siempre eran 19 y 11.
-const SIN_CORTES_DESDE = 414;
+// cambio, con decimales: a 360 y 390 se cortan dos (Volkanovski 97,8 y 112,8
+// de 125 px; Yakhyaev 117,8 y 132,8 de 135,1) y a 414 uno, por 0,2 px
+// (Volkanovski, 124,8 de 125: ya sale con «…»), siempre con la cara ENCIMA,
+// no al lado. Con la fila de siempre eran 19 a 360 y 11 a 390.
+const SIN_CORTES_DESDE = 768;
 // gap-1.5 entre el nombre y su ranking: 6 px. Con flex-1 eran 27-135.
 const RANGO_MAX_PX = 8;
 const TOLERANCIA_PX = 1;
@@ -147,6 +148,20 @@ async function medir(page: Page, zona: "cartelera" | "canceladas"): Promise<Medi
       const pisa = (a: DOMRect, b: DOMRect) =>
         Math.min(a.right, b.right) - Math.max(a.left, b.left) > tolerancia &&
         Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > tolerancia;
+      // El ancho que el nombre NECESITA, con decimales. 🪤 scrollWidth y
+      // clientWidth son enteros: un nombre cortado por medio píxel sale con
+      // «…» y los dos dan lo mismo (Lebosnoyani en /eventos/1099 a 360:
+      // 117,8 de 118,3 px, y scrollWidth = clientWidth = 118).
+      const anchoNatural = (el: HTMLElement) => {
+        const estilo = el.getAttribute("style");
+        el.style.setProperty("width", "max-content");
+        el.style.setProperty("max-width", "none");
+        el.style.setProperty("flex", "none");
+        const ancho = el.getBoundingClientRect().width;
+        if (estilo === null) el.removeAttribute("style");
+        else el.setAttribute("style", estilo);
+        return ancho;
+      };
       const fragmentos = (nodo: Node) => {
         const rango = document.createRange();
         rango.selectNodeContents(nodo);
@@ -243,8 +258,12 @@ async function medir(page: Page, zona: "cartelera" | "canceladas"): Promise<Medi
           const spanNombre = lineaNombre.querySelector<HTMLElement>("span.truncate");
           const caraAlLado =
             Math.min(rCabeza.bottom, rTexto.bottom) - Math.max(rCabeza.top, rTexto.top) > tolerancia;
-          if (spanNombre && spanNombre.scrollWidth > spanNombre.clientWidth) {
-            cortados.push({ donde, visible: spanNombre.clientWidth, total: spanNombre.scrollWidth, caraAlLado });
+          if (spanNombre) {
+            const visible = spanNombre.getBoundingClientRect().width;
+            const total = anchoNatural(spanNombre);
+            if (total - visible > 0.01) {
+              cortados.push({ donde, visible: +visible.toFixed(1), total: +total.toFixed(1), caraAlLado });
+            }
           }
           // El ranking (#12, «C»): el <span> que sigue al nombre en su línea.
           const rango = spanNombre?.nextElementSibling as HTMLElement | null;

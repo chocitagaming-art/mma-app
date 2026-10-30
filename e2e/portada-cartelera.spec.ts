@@ -140,6 +140,20 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
         Math.min(a.right, b.right) - Math.max(a.left, b.left) > tolerancia &&
         Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > tolerancia;
       // Los fragmentos de un nodo de texto o de un span (un texto partido da dos).
+      // El ancho que el nombre NECESITA, con decimales. 🪤 scrollWidth y
+      // clientWidth son enteros: un nombre cortado por medio píxel sale con
+      // «…» y los dos dan lo mismo (Lebosnoyani en /eventos/1099 a 360:
+      // 117,8 de 118,3 px, y scrollWidth = clientWidth = 118).
+      const anchoNatural = (el: HTMLElement) => {
+        const estilo = el.getAttribute("style");
+        el.style.setProperty("width", "max-content");
+        el.style.setProperty("max-width", "none");
+        el.style.setProperty("flex", "none");
+        const ancho = el.getBoundingClientRect().width;
+        if (estilo === null) el.removeAttribute("style");
+        else el.setAttribute("style", estilo);
+        return ancho;
+      };
       const fragmentos = (nodo: Node) => {
         const rango = document.createRange();
         rango.selectNodeContents(nodo);
@@ -212,9 +226,11 @@ async function medir(page: Page, ambito: "portada" | "evento"): Promise<Medida> 
           const spanNombre = lineaNombre.querySelector<HTMLElement>("span.truncate");
           const caraAlLado =
             Math.min(rCabeza.bottom, rTexto.bottom) - Math.max(rCabeza.top, rTexto.top) > tolerancia;
-          if (spanNombre && spanNombre.scrollWidth > spanNombre.clientWidth && caraAlLado) {
+          const visible = spanNombre?.getBoundingClientRect().width ?? 0;
+          const total = spanNombre ? anchoNatural(spanNombre) : 0;
+          if (total - visible > 0.01 && caraAlLado) {
             fallos.push(
-              `${donde}: el nombre se corta con la cara al lado (${spanNombre.clientWidth} de ${spanNombre.scrollWidth} px)`,
+              `${donde}: el nombre se corta con la cara al lado (${visible.toFixed(1)} de ${total.toFixed(1)} px)`,
             );
           }
           // Cada pieza de la línea del récord, entera y dentro de su esquina.
